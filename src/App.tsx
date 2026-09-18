@@ -3,9 +3,6 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-route
 import { Navbar } from './components/Navbar';
 import { Footer } from './components/Footer';
 import { HomePage } from './pages/HomePage';
-import { AboutPage } from './pages/AboutPage';
-import { ContactsPage } from './pages/ContactsPage';
-import { FaqPage } from './pages/FaqPage';
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -34,7 +31,7 @@ export function App() {
   return (
     <BrowserRouter>
       <ScrollToTop />
-      <div className="min-h-screen flex flex-col bg-gray-50 text-gray-900 overflow-x-hidden selection:bg-[#C8102E] selection:text-white pb-16 md:pb-0">
+      <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900 overflow-x-hidden selection:bg-[#C8102E] selection:text-white">
         {/* Toast Notification */}
         {toast && (
           <div className="fixed top-20 right-6 z-50 bg-gray-900 text-white px-5 py-3.5 rounded-2xl shadow-2xl flex items-center gap-3 border border-gray-700 animate-fade-in-down">
@@ -62,17 +59,13 @@ export function App() {
           </div>
         )}
 
-        {/* Navbar */}
+        {/* Fixed Navbar */}
         <Navbar onSignInClick={handleSignIn} />
 
-        {/* Routes */}
-        <main className="flex-grow">
+        {/* Single Page Content */}
+        <main className="flex-grow pt-16 lg:pt-20">
           <Routes>
             <Route path="/" element={<HomePage onSignInClick={handleSignIn} />} />
-            <Route path="/about" element={<AboutPage />} />
-            <Route path="/contacts" element={<ContactsPage />} />
-            <Route path="/faqs" element={<FaqPage />} />
-            <Route path="/faq" element={<Navigate to="/faqs" replace />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </main>
