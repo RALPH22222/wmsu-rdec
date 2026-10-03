@@ -13,6 +13,16 @@ export const TemplateModal: React.FC<TemplateModalProps> = ({
   templateUrl = '/DOST_Form_No.1b.pdf',
   templateDocxUrl = '/DOST_Form_No.1b.docx',
 }) => {
+  React.useEffect(() => {
+    if (isOpen) {
+      const originalOverflow = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = originalOverflow;
+      };
+    }
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   const handleDownloadWord = () => {
@@ -28,7 +38,7 @@ export const TemplateModal: React.FC<TemplateModalProps> = ({
     <div
       role="dialog"
       aria-modal="true"
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 animate-in fade-in duration-200"
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-4 overflow-hidden"
     >
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl h-full max-h-[95vh] flex flex-col overflow-hidden relative">
         {/* Header */}

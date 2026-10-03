@@ -2,6 +2,7 @@
 
 @theme {
   --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  --font-brand: 'Outfit', 'Plus Jakarta Sans', sans-serif;
   --color-brand: #C8102E;
   --color-brand-light: #E03A52;
   --color-brand-dark: #A00D26;
@@ -9,6 +10,10 @@
 }
 
 @layer utilities {
+  .font-brand {
+    font-family: 'Outfit', 'Plus Jakarta Sans', sans-serif;
+  }
+
   html {
     scroll-behavior: smooth;
     font-family: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -149,3 +154,16 @@
 .animation-delay-4000 {
   animation-delay: 4000ms;
 }
+
+@keyframes arrowMove {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  50% {
+    transform: translateX(6px);
+  }
+}
+
+.animate-arrow-move {
+  animation: arrowMove 1.1s ease-in-out infinite;
+}

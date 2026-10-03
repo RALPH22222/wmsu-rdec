@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation, Outlet } from 'react-router-dom';
 import { Navbar } from './components/Navbar';
 import { Footer } from './components/Footer';
 import { HomePage } from './pages/HomePage';
+import { CallForProposalsProvider, AdminDashboard, RpduDashboard, AdminLayout, RpduLayout } from './users';
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -12,6 +13,23 @@ function ScrollToTop() {
   }, [pathname]);
 
   return null;
+}
+
+function PublicLayout({ onSignInClick }: { onSignInClick: () => void }) {
+  return (
+    <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900 overflow-x-hidden selection:bg-[#C8102E] selection:text-white">
+      {/* Public Top Navbar */}
+      <Navbar onSignInClick={onSignInClick} />
+
+      {/* Public Page Content */}
+      <main className="flex-grow pt-16 lg:pt-20">
+        <Outlet />
+      </main>
+
+      {/* Public Footer */}
+      <Footer />
+    </div>
+  );
 }
 
 export function App() {
@@ -29,10 +47,11 @@ export function App() {
   };
 
   return (
-    <BrowserRouter>
-      <ScrollToTop />
-      <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900 overflow-x-hidden selection:bg-[#C8102E] selection:text-white">
-        {/* Toast Notification */}
+    <CallForProposalsProvider>
+      <BrowserRouter>
+        <ScrollToTop />
+
+        {/* Global Toast Notification */}
         {toast && (
           <div className="fixed top-20 right-6 z-50 bg-gray-900 text-white px-5 py-3.5 rounded-2xl shadow-2xl flex items-center gap-3 border border-gray-700 animate-fade-in-down">
             <div className="w-8 h-8 rounded-xl bg-[#C8102E] flex items-center justify-center text-white shrink-0">
@@ -59,21 +78,27 @@ export function App() {
           </div>
         )}
 
-        {/* Fixed Navbar */}
-        <Navbar onSignInClick={handleSignIn} />
-
-        {/* Single Page Content */}
-        <main className="flex-grow pt-16 lg:pt-20">
-          <Routes>
+        <Routes>
+          {/* Public Portal Layout with Navbar & Footer */}
+          <Route element={<PublicLayout onSignInClick={handleSignIn} />}>
             <Route path="/" element={<HomePage onSignInClick={handleSignIn} />} />
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </main>
+          </Route>
 
-        {/* Footer */}
-        <Footer />
-      </div>
-    </BrowserRouter>
+          {/* Dedicated Admin Layout */}
+          <Route element={<AdminLayout />}>
+            <Route path="/admin" element={<AdminDashboard />} />
+          </Route>
+
+          {/* Dedicated RPDU Layout */}
+          <Route element={<RpduLayout />}>
+            <Route path="/rpdu" element={<RpduDashboard />} />
+          </Route>
+
+          {/* Catch-all redirect */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </BrowserRouter>
+    </CallForProposalsProvider>
   );
 }
 

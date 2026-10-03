@@ -65,6 +65,18 @@ export const Navbar: React.FC<NavbarProps> = ({ onSignInClick }) => {
 
           {/* Desktop Navigation Links */}
           <nav className="hidden md:flex items-center gap-7 text-sm font-medium text-white/90">
+            <Link
+              to="/admin"
+              className="bg-white/10 hover:bg-white/20 text-white font-bold px-2.5 py-1.5 rounded-lg transition-colors text-xs border border-white/20 flex items-center gap-1.5"
+            >
+              <span>Admin Page</span>
+            </Link>
+            <Link
+              to="/rpdu"
+              className="bg-white/10 hover:bg-white/20 text-white font-bold px-2.5 py-1.5 rounded-lg transition-colors text-xs border border-white/20 flex items-center gap-1.5"
+            >
+              <span>RPDU Page</span>
+            </Link>
             <a
               href="#call-for-proposals"
               className="hover:text-white transition-colors py-1 hover:underline underline-offset-4"
@@ -123,6 +135,20 @@ export const Navbar: React.FC<NavbarProps> = ({ onSignInClick }) => {
         {/* Mobile Dropdown Menu */}
         {mobileMenuOpen && (
           <div className="md:hidden py-4 border-t border-red-800/40 bg-[#C8102E] rounded-b-2xl shadow-lg px-2 space-y-2 text-white">
+            <Link
+              to="/admin"
+              onClick={() => setMobileMenuOpen(false)}
+              className="block px-3 py-2 rounded-lg text-sm font-bold bg-white/10 hover:bg-white/20 text-white"
+            >
+              ⚙️ Admin Page
+            </Link>
+            <Link
+              to="/rpdu"
+              onClick={() => setMobileMenuOpen(false)}
+              className="block px-3 py-2 rounded-lg text-sm font-bold bg-white/10 hover:bg-white/20 text-white"
+            >
+              📑 RPDU Page
+            </Link>
             <a
               href="#call-for-proposals"
               onClick={() => setMobileMenuOpen(false)}
