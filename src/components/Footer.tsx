@@ -88,11 +88,6 @@ export const Footer: React.FC = () => {
         {/* Footer Bottom Bar */}
         <div className="pt-8 text-xs text-slate-500 flex flex-col sm:flex-row justify-between items-center gap-3">
           <p>© {new Date().getFullYear()} Western Mindanao State University · All rights reserved.</p>
-          <div className="flex items-center gap-4 text-slate-400">
-            <span>RDEC Proposal Management System</span>
-            <span>·</span>
-            <span>Philippine Standard Time (PST)</span>
-          </div>
         </div>
       </div>
     </footer>
