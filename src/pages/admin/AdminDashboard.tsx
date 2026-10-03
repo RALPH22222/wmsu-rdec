@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { Calendar, FileCheck, Layers, Users } from 'lucide-react';
 import { useCallForProposals } from '../../context/CallForProposalsContext';
-import { CallForProposalsManager } from '../../admin/components/CallForProposalsManager';
+import { CallForProposalsManager } from '../../components/adminComponent/CallForProposalsManager';
 
-export const RpduDashboard: React.FC = () => {
+export const AdminDashboard: React.FC = () => {
   const { activeCall, calls, currentUser } = useCallForProposals();
   const [activeTab, setActiveTab] = useState<'calls' | 'proposals' | 'evaluators'>('calls');
 
@@ -11,18 +11,18 @@ export const RpduDashboard: React.FC = () => {
 
   return (
     <div className="space-y-8 max-w-7xl mx-auto">
-      {/* RPDU Header */}
+      {/* Admin Header */}
       <div className="space-y-1.5">
         <div className="flex items-center gap-2">
           <span className="inline-block px-2.5 py-0.5 rounded-md text-[11px] font-bold bg-[#C8102E] text-white uppercase tracking-wider shadow-2xs">
-            RPDU Page
+            Admin Page
           </span>
         </div>
         <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
           Welcome back, {currentUser.name}
         </h1>
         <p className="text-xs sm:text-sm text-slate-500 font-medium">
-          Research, Publication &amp; Development Unit (RPDU) — WMSU
+          {currentUser.department}
         </p>
       </div>
 
@@ -172,3 +172,5 @@ export const RpduDashboard: React.FC = () => {
     </div>
   );
 };
+
+export default AdminDashboard;

@@ -1,6 +1,5 @@
-
 import { Outlet, Navigate } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../context/AuthContext';
 import { LogOut, User as UserIcon } from 'lucide-react';
 
 export default function Layout() {
@@ -37,7 +36,7 @@ export default function Layout() {
           </div>
           <button
             onClick={signOut}
-            className="text-sm text-slate-600 hover:text-red-800 font-medium flex items-center gap-2 transition-colors"
+            className="text-sm text-slate-600 hover:text-red-800 font-medium flex items-center gap-2 transition-colors cursor-pointer"
           >
             <LogOut className="w-4 h-4" />
             Logout

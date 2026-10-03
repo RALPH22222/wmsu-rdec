@@ -3,10 +3,13 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation, Outlet } from 'rea
 import { Navbar } from './components/Navbar';
 import { Footer } from './components/Footer';
 import { HomePage } from './pages/HomePage';
-import { CallForProposalsProvider, AdminDashboard, RpduDashboard, AdminLayout, RpduLayout } from './users';
-
 import { AuthProvider } from './context/AuthContext';
-import Layout from './components/layout/Layout';
+import { CallForProposalsProvider } from './context/CallForProposalsContext';
+import { AdminLayout } from './layouts/AdminLayout';
+import { RpduLayout } from './layouts/RpduLayout';
+import Layout from './layouts/Layout';
+import { AdminDashboard } from './pages/admin/AdminDashboard';
+import { RpduDashboard } from './pages/rpdu/RpduDashboard';
 import Login from './pages/auth/Login';
 import Register from './pages/auth/Register';
 import { Toast } from './components/Toast';

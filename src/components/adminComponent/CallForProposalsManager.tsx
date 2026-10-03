@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import { Plus, Search, Calendar, Lock, Edit3, Trash2, Clock, CheckCircle2, AlertCircle, FilePlus } from 'lucide-react';
 import { useCallForProposals } from '../../context/CallForProposalsContext';
 import type { CallForProposals, CallStatus } from '../../types';
-import { CallFormModal } from '../modals/CallFormModal';
-import { CloseCallDialog } from '../modals/CloseCallDialog';
+import { CallFormModal } from './modals/CallFormModal';
+import { CloseCallDialog } from './modals/CloseCallDialog';
 
 export const CallForProposalsManager: React.FC = () => {
   const { calls, createCall, updateCall, closeCall, reopenCall, deleteCall } = useCallForProposals();
@@ -122,11 +122,10 @@ export const CallForProposalsManager: React.FC = () => {
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`px-3.5 py-2 rounded-xl text-xs font-bold capitalize transition-all cursor-pointer shrink-0 ${
-                activeTab === tab
-                  ? 'bg-slate-900 text-white shadow-xs'
-                  : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-              }`}
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold capitalize transition-all cursor-pointer shrink-0 ${activeTab === tab
+                ? 'bg-slate-900 text-white shadow-xs'
+                : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                }`}
             >
               {tab === 'all' ? 'All Calls' : tab}
               <span className="ml-1.5 px-1.5 py-0.5 rounded-full text-[10px] bg-slate-200 text-slate-700 font-extrabold group-hover:bg-slate-300">
@@ -182,11 +181,10 @@ export const CallForProposalsManager: React.FC = () => {
           filteredCalls.map((call) => (
             <div
               key={call.id}
-              className={`bg-white rounded-2xl border transition-all p-5 sm:p-6 shadow-xs hover:shadow-md flex flex-col lg:flex-row lg:items-center justify-between gap-6 ${
-                call.status === 'active'
-                  ? 'border-emerald-300/80 bg-gradient-to-r from-emerald-50/20 via-white to-white'
-                  : 'border-slate-200/90'
-              }`}
+              className={`bg-white rounded-2xl border transition-all p-5 sm:p-6 shadow-xs hover:shadow-md flex flex-col lg:flex-row lg:items-center justify-between gap-6 ${call.status === 'active'
+                ? 'border-emerald-300/80 bg-gradient-to-r from-emerald-50/20 via-white to-white'
+                : 'border-slate-200/90'
+                }`}
             >
               {/* Call Details */}
               <div className="space-y-3 flex-grow">

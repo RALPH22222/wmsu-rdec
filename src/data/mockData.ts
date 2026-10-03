@@ -1,4 +1,4 @@
-import type { CallForProposals, UserProfile, ProposalItem } from './types';
+import type { CallForProposals, UserProfile, ProposalItem } from '../types';
 
 export const MOCK_USERS: UserProfile[] = [
   {

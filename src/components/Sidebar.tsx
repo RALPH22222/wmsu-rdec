@@ -8,7 +8,7 @@ import {
   Plus,
   X
 } from 'lucide-react';
-import { useCallForProposals } from '../users/context/CallForProposalsContext';
+import { useCallForProposals } from '../context/CallForProposalsContext';
 
 export interface SidebarProps {
   mobileOpen?: boolean;
@@ -62,9 +62,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
       {/* Sidebar Container */}
       <aside
-        className={`fixed top-0 bottom-0 left-0 z-50 w-72 max-w-[85vw] bg-white text-slate-800 border-r border-slate-200 flex flex-col justify-between transition-transform duration-300 ease-in-out lg:translate-x-0 ${
-          mobileOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full lg:translate-x-0'
-        }`}
+        className={`fixed top-0 bottom-0 left-0 z-50 w-72 max-w-[85vw] bg-white text-slate-800 border-r border-slate-200 flex flex-col justify-between transition-transform duration-300 ease-in-out lg:translate-x-0 ${mobileOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full lg:translate-x-0'
+          }`}
       >
         {/* Top Header / Branding */}
         <div className="p-5 border-b border-slate-100">
@@ -127,11 +126,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 key={item.name}
                 to={item.path}
                 onClick={onCloseMobile}
-                className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all group ${
-                  isActive
-                    ? 'bg-[#C8102E] text-white shadow-sm shadow-red-900/20'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
-                }`}
+                className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all group ${isActive
+                  ? 'bg-[#C8102E] text-white shadow-sm shadow-red-900/20'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                  }`}
               >
                 <div className="flex items-center gap-3">
                   <Icon className={`w-4 h-4 transition-colors ${isActive ? 'text-white' : 'text-slate-400 group-hover:text-slate-700'}`} />
@@ -140,9 +138,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
                 {item.badge && (
                   <span
-                    className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                      isActive ? 'bg-white/20 text-white' : item.badgeColor
-                    }`}
+                    className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${isActive ? 'bg-white/20 text-white' : item.badgeColor
+                      }`}
                   >
                     {item.badge}
                   </span>

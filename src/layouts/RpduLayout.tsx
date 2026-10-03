@@ -1,15 +1,17 @@
 import React, { useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { Menu, Bell, ChevronRight } from 'lucide-react';
-import { Sidebar } from '../../../components/Sidebar';
+import { Sidebar } from '../components/Sidebar';
 
-export const AdminLayout: React.FC = () => {
+export const RpduLayout: React.FC = () => {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const location = useLocation();
 
   const getPageTitle = () => {
-    if (location.pathname.startsWith('/admin/proposals')) return 'Proposals Queue';
-    if (location.pathname.startsWith('/admin/evaluators')) return 'Evaluators Panel';
+    if (location.pathname.startsWith('/rpdu/proposals')) return 'Proposals Queue';
+    if (location.pathname.startsWith('/rpdu/evaluators')) return 'Evaluators Panel';
+    if (location.pathname.startsWith('/rpdu/evaluations')) return 'Technical Evaluations Pipeline';
+    if (location.pathname.startsWith('/rpdu/grants')) return 'Approved Institutional Grants';
     return 'Call for Proposals & Grants Management';
   };
 
@@ -38,7 +40,7 @@ export const AdminLayout: React.FC = () => {
           }
         `}</style>
 
-        {/* Admin Header / Navbar (Clean White, Fully Responsive) */}
+        {/* RPDU Header / Navbar */}
         <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200/80 px-3.5 sm:px-6 lg:px-8 py-3 sm:py-3.5 flex items-center justify-between shadow-xs">
           <div className="flex items-center gap-2.5 sm:gap-3.5 min-w-0 flex-1 mr-2">
             {/* Mobile Hamburger Button */}
@@ -51,7 +53,7 @@ export const AdminLayout: React.FC = () => {
               <Menu className="w-5 h-5" />
             </button>
 
-            {/* Current Page Indicator with Bigger Animated Moving Arrow ">" */}
+            {/* Current Page Indicator with Animated Moving Arrow ">" */}
             <div className="flex items-center gap-2 sm:gap-3 min-w-0">
               <ChevronRight className="w-6 h-6 sm:w-6.5 sm:h-6.5 text-[#C8102E] animate-arrow-move shrink-0" strokeWidth={2.5} />
               <h1 className="text-sm sm:text-base lg:text-lg font-semibold text-slate-800 tracking-tight truncate">
@@ -74,7 +76,7 @@ export const AdminLayout: React.FC = () => {
           </div>
         </header>
 
-        {/* Dashboard Main Workspace */}
+        {/* RPDU Main Workspace */}
         <main className="flex-1 p-3.5 sm:p-6 lg:p-8 w-full max-w-full overflow-x-hidden">
           <Outlet />
         </main>
@@ -82,3 +84,5 @@ export const AdminLayout: React.FC = () => {
     </div>
   );
 };
+
+export default RpduLayout;

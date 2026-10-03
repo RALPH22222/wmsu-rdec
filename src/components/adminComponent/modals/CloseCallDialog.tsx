@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { AlertTriangle, Lock, Calendar, X, Check } from 'lucide-react';
-import type { CallForProposals } from '../../types';
+import type { CallForProposals } from '../../../types';
 
 interface CloseCallDialogProps {
   isOpen: boolean;
@@ -76,11 +76,10 @@ export const CloseCallDialog: React.FC<CloseCallDialogProps> = ({
           <button
             type="button"
             onClick={() => setMode('close')}
-            className={`py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer ${
-              mode === 'close'
+            className={`py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer ${mode === 'close'
                 ? 'bg-[#C8102E] text-white shadow-2xs'
                 : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
-            }`}
+              }`}
           >
             <Lock className="w-3.5 h-3.5" />
             <span>Close Call Window</span>
@@ -89,11 +88,10 @@ export const CloseCallDialog: React.FC<CloseCallDialogProps> = ({
           <button
             type="button"
             onClick={() => setMode('extend')}
-            className={`py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer ${
-              mode === 'extend'
+            className={`py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer ${mode === 'extend'
                 ? 'bg-emerald-600 text-white shadow-2xs'
                 : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
-            }`}
+              }`}
           >
             <Calendar className="w-3.5 h-3.5" />
             <span>Extend Submission Deadline</span>
@@ -151,9 +149,8 @@ export const CloseCallDialog: React.FC<CloseCallDialogProps> = ({
             </button>
             <button
               type="submit"
-              className={`px-4.5 py-2 rounded-lg text-xs font-bold text-white transition-all flex items-center gap-1.5 shadow-xs cursor-pointer ${
-                mode === 'close' ? 'bg-[#C8102E] hover:bg-[#a00c24]' : 'bg-emerald-600 hover:bg-emerald-700'
-              }`}
+              className={`px-4.5 py-2 rounded-lg text-xs font-bold text-white transition-all flex items-center gap-1.5 shadow-xs cursor-pointer ${mode === 'close' ? 'bg-[#C8102E] hover:bg-[#a00c24]' : 'bg-emerald-600 hover:bg-emerald-700'
+                }`}
             >
               <Check className="w-4 h-4" />
               <span>{mode === 'close' ? 'Confirm Close Call' : 'Apply Extended Deadline'}</span>

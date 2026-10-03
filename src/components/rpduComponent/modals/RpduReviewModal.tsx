@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, FileText, CheckCircle2, AlertTriangle, XCircle, Send, User, Building, DollarSign, Calendar, Tag } from 'lucide-react';
-import type { ProposalItem } from '../../types';
+import type { ProposalItem } from '../../../types';
 
 interface RpduReviewModalProps {
   isOpen: boolean;
@@ -121,11 +121,10 @@ export const RpduReviewModal: React.FC<RpduReviewModalProps> = ({
               <button
                 type="button"
                 onClick={() => setSelectedStatus('approved')}
-                className={`p-3 rounded-xl border text-left flex items-start gap-2.5 transition-all cursor-pointer ${
-                  selectedStatus === 'approved'
+                className={`p-3 rounded-xl border text-left flex items-start gap-2.5 transition-all cursor-pointer ${selectedStatus === 'approved'
                     ? 'border-emerald-500 bg-emerald-50/50 ring-1 ring-emerald-500 text-emerald-900'
                     : 'border-slate-200 hover:border-slate-300 text-slate-700 bg-white'
-                }`}
+                  }`}
               >
                 <CheckCircle2 className={`w-4 h-4 mt-0.5 shrink-0 ${selectedStatus === 'approved' ? 'text-emerald-600' : 'text-slate-400'}`} />
                 <div>
@@ -137,11 +136,10 @@ export const RpduReviewModal: React.FC<RpduReviewModalProps> = ({
               <button
                 type="button"
                 onClick={() => setSelectedStatus('revision_requested')}
-                className={`p-3 rounded-xl border text-left flex items-start gap-2.5 transition-all cursor-pointer ${
-                  selectedStatus === 'revision_requested'
+                className={`p-3 rounded-xl border text-left flex items-start gap-2.5 transition-all cursor-pointer ${selectedStatus === 'revision_requested'
                     ? 'border-amber-500 bg-amber-50/50 ring-1 ring-amber-500 text-amber-900'
                     : 'border-slate-200 hover:border-slate-300 text-slate-700 bg-white'
-                }`}
+                  }`}
               >
                 <AlertTriangle className={`w-4 h-4 mt-0.5 shrink-0 ${selectedStatus === 'revision_requested' ? 'text-amber-600' : 'text-slate-400'}`} />
                 <div>
@@ -153,11 +151,10 @@ export const RpduReviewModal: React.FC<RpduReviewModalProps> = ({
               <button
                 type="button"
                 onClick={() => setSelectedStatus('rejected')}
-                className={`p-3 rounded-xl border text-left flex items-start gap-2.5 transition-all cursor-pointer ${
-                  selectedStatus === 'rejected'
+                className={`p-3 rounded-xl border text-left flex items-start gap-2.5 transition-all cursor-pointer ${selectedStatus === 'rejected'
                     ? 'border-red-500 bg-red-50/50 ring-1 ring-red-500 text-red-900'
                     : 'border-slate-200 hover:border-slate-300 text-slate-700 bg-white'
-                }`}
+                  }`}
               >
                 <XCircle className={`w-4 h-4 mt-0.5 shrink-0 ${selectedStatus === 'rejected' ? 'text-red-600' : 'text-slate-400'}`} />
                 <div>

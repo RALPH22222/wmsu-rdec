@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import type { CallForProposals, UserProfile, UserRole, ProposalItem } from '../types';
-import { INITIAL_CALLS, MOCK_USERS, MOCK_PROPOSALS } from '../mockData';
+import { INITIAL_CALLS, MOCK_USERS, MOCK_PROPOSALS } from '../data/mockData';
 
 interface CallForProposalsContextType {
   calls: CallForProposals[];

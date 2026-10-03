@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { Search, FileText, Eye, Building, DollarSign } from 'lucide-react';
-import { MOCK_PROPOSALS } from '../../mockData';
+import { MOCK_PROPOSALS } from '../../data/mockData';
 import type { ProposalItem } from '../../types';
-import { RpduReviewModal } from '../modals/RpduReviewModal';
+import { RpduReviewModal } from './modals/RpduReviewModal';
 
 export const RpduProposalsManager: React.FC = () => {
   const [proposals, setProposals] = useState<ProposalItem[]>(MOCK_PROPOSALS);
@@ -46,11 +46,10 @@ export const RpduProposalsManager: React.FC = () => {
               key={status}
               type="button"
               onClick={() => setStatusFilter(status)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold capitalize transition-all cursor-pointer shrink-0 ${
-                statusFilter === status
-                  ? 'bg-slate-900 text-white shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-              }`}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold capitalize transition-all cursor-pointer shrink-0 ${statusFilter === status
+                ? 'bg-slate-900 text-white shadow-xs'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                }`}
             >
               {status.replace('_', ' ')}
             </button>
@@ -88,26 +87,24 @@ export const RpduProposalsManager: React.FC = () => {
                     {proposal.code}
                   </span>
                   <span
-                    className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full capitalize flex items-center gap-1 ${
-                      isApproved
-                        ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                        : isReview
+                    className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full capitalize flex items-center gap-1 ${isApproved
+                      ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                      : isReview
                         ? 'bg-blue-50 text-blue-700 border border-blue-200'
                         : isRevision
-                        ? 'bg-amber-50 text-amber-700 border border-amber-200'
-                        : 'bg-red-50 text-red-700 border border-red-200'
-                    }`}
+                          ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                          : 'bg-red-50 text-red-700 border border-red-200'
+                      }`}
                   >
                     <span
-                      className={`w-1.5 h-1.5 rounded-full ${
-                        isApproved
-                          ? 'bg-emerald-500'
-                          : isReview
+                      className={`w-1.5 h-1.5 rounded-full ${isApproved
+                        ? 'bg-emerald-500'
+                        : isReview
                           ? 'bg-blue-500 animate-pulse'
                           : isRevision
-                          ? 'bg-amber-500'
-                          : 'bg-red-500'
-                      }`}
+                            ? 'bg-amber-500'
+                            : 'bg-red-500'
+                        }`}
                     />
                     {proposal.status.replace('_', ' ')}
                   </span>

@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { Calendar, FileCheck, Layers, Users } from 'lucide-react';
 import { useCallForProposals } from '../../context/CallForProposalsContext';
-import { CallForProposalsManager } from '../components/CallForProposalsManager';
+import { CallForProposalsManager } from '../../components/adminComponent/CallForProposalsManager';
 
-export const AdminDashboard: React.FC = () => {
+export const RpduDashboard: React.FC = () => {
   const { activeCall, calls, currentUser } = useCallForProposals();
   const [activeTab, setActiveTab] = useState<'calls' | 'proposals' | 'evaluators'>('calls');
 
@@ -11,18 +11,18 @@ export const AdminDashboard: React.FC = () => {
 
   return (
     <div className="space-y-8 max-w-7xl mx-auto">
-      {/* Admin Header */}
+      {/* RPDU Header */}
       <div className="space-y-1.5">
         <div className="flex items-center gap-2">
           <span className="inline-block px-2.5 py-0.5 rounded-md text-[11px] font-bold bg-[#C8102E] text-white uppercase tracking-wider shadow-2xs">
-            Admin Page
+            RPDU Page
           </span>
         </div>
         <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
           Welcome back, {currentUser.name}
         </h1>
         <p className="text-xs sm:text-sm text-slate-500 font-medium">
-          {currentUser.department}
+          Research, Publication &amp; Development Unit (RPDU) — WMSU
         </p>
       </div>
 
@@ -51,8 +51,9 @@ export const AdminDashboard: React.FC = () => {
               Active Call Status
             </span>
             <div
-              className={`w-9 h-9 rounded-xl flex items-center justify-center ${activeCall ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-400'
-                }`}
+              className={`w-9 h-9 rounded-xl flex items-center justify-center ${
+                activeCall ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-400'
+              }`}
             >
               <Calendar className="w-5 h-5" />
             </div>
@@ -102,10 +103,11 @@ export const AdminDashboard: React.FC = () => {
           <button
             type="button"
             onClick={() => setActiveTab('calls')}
-            className={`py-3.5 px-1 border-b-2 font-bold text-xs sm:text-sm transition-colors cursor-pointer flex items-center gap-2 ${activeTab === 'calls'
-              ? 'border-[#C8102E] text-[#C8102E]'
-              : 'border-transparent text-slate-500 hover:text-slate-800'
-              }`}
+            className={`py-3.5 px-1 border-b-2 font-bold text-xs sm:text-sm transition-colors cursor-pointer flex items-center gap-2 ${
+              activeTab === 'calls'
+                ? 'border-[#C8102E] text-[#C8102E]'
+                : 'border-transparent text-slate-500 hover:text-slate-800'
+            }`}
           >
             <Calendar className="w-4 h-4" />
             <span>Call for Proposals Manager</span>
@@ -117,10 +119,11 @@ export const AdminDashboard: React.FC = () => {
           <button
             type="button"
             onClick={() => setActiveTab('proposals')}
-            className={`py-3.5 px-1 border-b-2 font-bold text-xs sm:text-sm transition-colors cursor-pointer flex items-center gap-2 ${activeTab === 'proposals'
-              ? 'border-[#C8102E] text-[#C8102E]'
-              : 'border-transparent text-slate-500 hover:text-slate-800'
-              }`}
+            className={`py-3.5 px-1 border-b-2 font-bold text-xs sm:text-sm transition-colors cursor-pointer flex items-center gap-2 ${
+              activeTab === 'proposals'
+                ? 'border-[#C8102E] text-[#C8102E]'
+                : 'border-transparent text-slate-500 hover:text-slate-800'
+            }`}
           >
             <FileCheck className="w-4 h-4" />
             <span>Proposals Review</span>
@@ -132,10 +135,11 @@ export const AdminDashboard: React.FC = () => {
           <button
             type="button"
             onClick={() => setActiveTab('evaluators')}
-            className={`py-3.5 px-1 border-b-2 font-bold text-xs sm:text-sm transition-colors cursor-pointer flex items-center gap-2 ${activeTab === 'evaluators'
-              ? 'border-[#C8102E] text-[#C8102E]'
-              : 'border-transparent text-slate-500 hover:text-slate-800'
-              }`}
+            className={`py-3.5 px-1 border-b-2 font-bold text-xs sm:text-sm transition-colors cursor-pointer flex items-center gap-2 ${
+              activeTab === 'evaluators'
+                ? 'border-[#C8102E] text-[#C8102E]'
+                : 'border-transparent text-slate-500 hover:text-slate-800'
+            }`}
           >
             <Users className="w-4 h-4" />
             <span>Evaluators Roster</span>
@@ -168,3 +172,5 @@ export const AdminDashboard: React.FC = () => {
     </div>
   );
 };
+
+export default RpduDashboard;

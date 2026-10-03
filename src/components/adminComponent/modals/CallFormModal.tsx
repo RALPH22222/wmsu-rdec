@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, Calendar, DollarSign, FileText, Plus, CheckCircle, Tag, Clock, Edit3, FilePlus } from 'lucide-react';
-import type { CallForProposals, CallStatus } from '../../types';
+import type { CallForProposals, CallStatus } from '../../../types';
 
 interface CallFormModalProps {
   isOpen: boolean;
@@ -246,17 +246,16 @@ export const CallFormModal: React.FC<CallFormModalProps> = ({
                         key={st}
                         type="button"
                         onClick={() => setStatus(st)}
-                        className={`py-2 px-2 text-center text-xs font-bold rounded-lg capitalize transition-all border cursor-pointer ${
-                          status === st
+                        className={`py-2 px-2 text-center text-xs font-bold rounded-lg capitalize transition-all border cursor-pointer ${status === st
                             ? st === 'active'
                               ? 'bg-emerald-600 text-white border-emerald-600 shadow-2xs'
                               : st === 'upcoming'
-                              ? 'bg-amber-500 text-white border-amber-500 shadow-2xs'
-                              : st === 'closed'
-                              ? 'bg-slate-700 text-white border-slate-700 shadow-2xs'
-                              : 'bg-slate-200 text-slate-800 border-slate-300'
+                                ? 'bg-amber-500 text-white border-amber-500 shadow-2xs'
+                                : st === 'closed'
+                                  ? 'bg-slate-700 text-white border-slate-700 shadow-2xs'
+                                  : 'bg-slate-200 text-slate-800 border-slate-300'
                             : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
-                        }`}
+                          }`}
                       >
                         {st}
                       </button>
@@ -390,11 +389,10 @@ export const CallFormModal: React.FC<CallFormModalProps> = ({
                       key={area}
                       type="button"
                       onClick={() => togglePriorityArea(area)}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 border cursor-pointer ${
-                        isSelected
+                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 border cursor-pointer ${isSelected
                           ? 'bg-red-50 text-[#C8102E] border-red-200 ring-1 ring-red-200'
                           : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
-                      }`}
+                        }`}
                     >
                       {isSelected && <CheckCircle className="w-3.5 h-3.5 text-[#C8102E]" />}
                       <span>{area}</span>
@@ -432,11 +430,10 @@ export const CallFormModal: React.FC<CallFormModalProps> = ({
                   return (
                     <label
                       key={form}
-                      className={`p-2.5 rounded-lg border text-xs font-medium flex items-center gap-2 cursor-pointer transition-colors ${
-                        isChecked
+                      className={`p-2.5 rounded-lg border text-xs font-medium flex items-center gap-2 cursor-pointer transition-colors ${isChecked
                           ? 'bg-slate-900 text-white border-slate-900'
                           : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
-                      }`}
+                        }`}
                     >
                       <input
                         type="checkbox"
