@@ -38,7 +38,7 @@ export const RpduProposalsManager: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Search and Filters Header */}
-      <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col md:flex-row gap-3.5 items-stretch md:items-center justify-between">
+      <div className="bg-white p-4 sm:p-5 rounded-sm border border-slate-200/80 shadow-xs flex flex-col md:flex-row gap-3.5 items-stretch md:items-center justify-between">
         {/* Status Filter Buttons */}
         <div className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0 scrollbar-none">
           {(['all', 'under_review', 'approved', 'revision_requested', 'rejected'] as const).map((status) => (
@@ -46,7 +46,7 @@ export const RpduProposalsManager: React.FC = () => {
               key={status}
               type="button"
               onClick={() => setStatusFilter(status)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold capitalize transition-all cursor-pointer shrink-0 ${statusFilter === status
+              className={`px-3 py-1.5 rounded-sm text-xs font-bold capitalize transition-all cursor-pointer shrink-0 ${statusFilter === status
                 ? 'bg-slate-900 text-white shadow-xs'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
                 }`}
@@ -64,7 +64,7 @@ export const RpduProposalsManager: React.FC = () => {
             placeholder="Search proposals, proponents..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs font-medium py-2 pl-9 pr-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#C8102E]/20 focus:border-[#C8102E]"
+            className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs font-medium py-2 pl-9 pr-3 rounded-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]/20 focus:border-[#C8102E]"
           />
         </div>
       </div>
@@ -79,15 +79,15 @@ export const RpduProposalsManager: React.FC = () => {
           return (
             <div
               key={proposal.id}
-              className="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-xs hover:shadow-md transition-all flex flex-col md:flex-row md:items-center md:justify-between gap-4"
+              className="bg-white rounded-sm border border-slate-200/90 p-5 sm:p-6 shadow-xs hover:shadow-md transition-all flex flex-col md:flex-row md:items-center md:justify-between gap-4"
             >
               <div className="space-y-2 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-xs font-mono font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-700">
+                  <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-sm bg-slate-100 text-slate-700">
                     {proposal.code}
                   </span>
                   <span
-                    className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full capitalize flex items-center gap-1 ${isApproved
+                    className={`text-[11px] font-bold px-2.5 py-0.5 rounded-sm capitalize flex items-center gap-1 ${isApproved
                       ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                       : isReview
                         ? 'bg-blue-50 text-blue-700 border border-blue-200'
@@ -136,7 +136,7 @@ export const RpduProposalsManager: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => handleOpenReview(proposal)}
-                  className="px-4 py-2 rounded-xl text-xs font-bold text-slate-700 bg-slate-100 hover:bg-[#C8102E] hover:text-white transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                  className="px-4 py-2 rounded-sm text-xs font-bold text-slate-700 bg-slate-100 hover:bg-[#C8102E] hover:text-white transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs"
                 >
                   <Eye className="w-4 h-4" />
                   <span>Review Proposal</span>
@@ -148,7 +148,7 @@ export const RpduProposalsManager: React.FC = () => {
       </div>
 
       {filteredProposals.length === 0 && (
-        <div className="bg-white p-12 text-center rounded-2xl border border-slate-200">
+        <div className="bg-white p-12 text-center rounded-sm border border-slate-200">
           <FileText className="w-10 h-10 text-slate-300 mx-auto mb-2" />
           <h4 className="text-sm font-bold text-slate-800">No proposals match your filters</h4>
           <p className="text-xs text-slate-500 mt-1">Try resetting the status filter or search query.</p>

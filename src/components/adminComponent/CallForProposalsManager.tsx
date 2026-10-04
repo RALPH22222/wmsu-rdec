@@ -92,7 +92,7 @@ export const CallForProposalsManager: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Top Header Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-3xl border border-slate-200/90 shadow-sm">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-sm border border-slate-200 shadow-sm">
         <div>
           <span className="text-xs uppercase font-bold tracking-wider text-[#C8102E]">
             RPDU Administration
@@ -107,7 +107,7 @@ export const CallForProposalsManager: React.FC = () => {
 
         <button
           onClick={handleOpenCreateModal}
-          className="px-5 py-3 rounded-2xl bg-[#C8102E] text-white text-xs font-bold shadow-md hover:bg-[#a00c24] hover:shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer shrink-0"
+          className="px-5 py-3 rounded-sm bg-[#C8102E] text-white text-xs font-bold shadow-sm hover:bg-[#a00c24] hover:shadow transition-all flex items-center justify-center gap-2 cursor-pointer shrink-0"
         >
           <Plus className="w-4 h-4" />
           <span>Create New Call</span>
@@ -122,13 +122,13 @@ export const CallForProposalsManager: React.FC = () => {
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`px-3.5 py-2 rounded-xl text-xs font-bold capitalize transition-all cursor-pointer shrink-0 ${activeTab === tab
+              className={`px-3.5 py-2 rounded-sm text-xs font-bold capitalize transition-all cursor-pointer shrink-0 ${activeTab === tab
                 ? 'bg-slate-900 text-white shadow-xs'
                 : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
                 }`}
             >
               {tab === 'all' ? 'All Calls' : tab}
-              <span className="ml-1.5 px-1.5 py-0.5 rounded-full text-[10px] bg-slate-200 text-slate-700 font-extrabold group-hover:bg-slate-300">
+              <span className="ml-1.5 px-1.5 py-0.5 rounded-sm text-[10px] bg-slate-200 text-slate-700 font-extrabold group-hover:bg-slate-300">
                 {tab === 'all' ? calls.length : calls.filter((c) => c.status === tab).length}
               </span>
             </button>
@@ -144,14 +144,14 @@ export const CallForProposalsManager: React.FC = () => {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search call title or code..."
-              className="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:ring-2 focus:ring-[#C8102E]"
+              className="w-full pl-9 pr-3 py-2 rounded-sm border border-slate-200 text-xs focus:outline-none focus:ring-2 focus:ring-[#C8102E]"
             />
           </div>
 
           <select
             value={selectedYear}
             onChange={(e) => setSelectedYear(e.target.value === 'all' ? 'all' : Number(e.target.value))}
-            className="px-3 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:ring-2 focus:ring-[#C8102E] cursor-pointer"
+            className="px-3 py-2 rounded-sm border border-slate-200 text-xs focus:outline-none focus:ring-2 focus:ring-[#C8102E] cursor-pointer"
           >
             <option value="all">All Fiscal Years</option>
             <option value={2026}>FY 2026</option>
@@ -164,7 +164,7 @@ export const CallForProposalsManager: React.FC = () => {
       {/* Cards List Grid (Full-width Horizontal Cards) */}
       <div className="grid grid-cols-1 gap-4">
         {filteredCalls.length === 0 ? (
-          <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center space-y-3">
+          <div className="bg-white rounded-sm border border-slate-200 p-12 text-center space-y-3 shadow-xs">
             <AlertCircle className="w-10 h-10 text-slate-300 mx-auto" />
             <h4 className="text-base font-bold text-slate-800">No Call for Proposals Found</h4>
             <p className="text-xs text-slate-500 max-w-sm mx-auto">
@@ -172,7 +172,7 @@ export const CallForProposalsManager: React.FC = () => {
             </p>
             <button
               onClick={handleOpenCreateModal}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-[#C8102E] text-white rounded-xl text-xs font-bold shadow-xs hover:bg-[#a00c24] transition-all cursor-pointer"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-[#C8102E] text-white rounded-sm text-xs font-bold shadow-xs hover:bg-[#a00c24] transition-all cursor-pointer"
             >
               <Plus className="w-4 h-4" /> Create Call
             </button>
@@ -181,7 +181,7 @@ export const CallForProposalsManager: React.FC = () => {
           filteredCalls.map((call) => (
             <div
               key={call.id}
-              className={`bg-white rounded-2xl border transition-all p-5 sm:p-6 shadow-xs hover:shadow-md flex flex-col lg:flex-row lg:items-center justify-between gap-6 ${call.status === 'active'
+              className={`bg-white rounded-sm border transition-all p-5 sm:p-6 shadow-xs hover:shadow-md flex flex-col lg:flex-row lg:items-center justify-between gap-6 ${call.status === 'active'
                 ? 'border-emerald-300/80 bg-gradient-to-r from-emerald-50/20 via-white to-white'
                 : 'border-slate-200/90'
                 }`}
@@ -190,7 +190,7 @@ export const CallForProposalsManager: React.FC = () => {
               <div className="space-y-3 flex-grow">
                 <div className="flex flex-wrap items-center gap-2">
                   {getStatusBadge(call.status)}
-                  <span className="text-xs font-mono font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md">
+                  <span className="text-xs font-mono font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-sm">
                     {call.code}
                   </span>
                   <span className="text-xs font-semibold text-slate-400">
@@ -233,7 +233,7 @@ export const CallForProposalsManager: React.FC = () => {
                     {call.priorityAreas.slice(0, 3).map((area, idx) => (
                       <span
                         key={idx}
-                        className="px-2 py-0.5 bg-slate-100 text-slate-600 rounded-md text-[11px] font-medium"
+                        className="px-2 py-0.5 bg-slate-100 text-slate-600 rounded-sm text-[11px] font-medium"
                       >
                         {area}
                       </span>
@@ -251,7 +251,7 @@ export const CallForProposalsManager: React.FC = () => {
               <div className="flex items-center gap-2 shrink-0 border-t lg:border-t-0 pt-3 lg:pt-0 border-slate-100">
                 <button
                   onClick={() => handleOpenEditModal(call)}
-                  className="px-3.5 py-2 rounded-xl text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 transition-colors flex items-center gap-1.5 cursor-pointer"
+                  className="px-3.5 py-2 rounded-sm text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 transition-colors flex items-center gap-1.5 cursor-pointer"
                   title="Edit dates, details & requirements"
                 >
                   <Edit3 className="w-3.5 h-3.5" />
@@ -261,7 +261,7 @@ export const CallForProposalsManager: React.FC = () => {
                 {call.status === 'active' ? (
                   <button
                     onClick={() => handleOpenCloseDialog(call)}
-                    className="px-3.5 py-2 rounded-xl text-xs font-bold text-red-700 bg-red-50 hover:bg-red-100 border border-red-200 transition-colors flex items-center gap-1.5 cursor-pointer"
+                    className="px-3.5 py-2 rounded-sm text-xs font-bold text-red-700 bg-red-50 hover:bg-red-100 border border-red-200 transition-colors flex items-center gap-1.5 cursor-pointer"
                     title="Close or extend submission window"
                   >
                     <Lock className="w-3.5 h-3.5" />
@@ -270,7 +270,7 @@ export const CallForProposalsManager: React.FC = () => {
                 ) : (
                   <button
                     onClick={() => reopenCall(call.id, call.endDate)}
-                    className="px-3.5 py-2 rounded-xl text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 transition-colors flex items-center gap-1.5 cursor-pointer"
+                    className="px-3.5 py-2 rounded-sm text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 transition-colors flex items-center gap-1.5 cursor-pointer"
                     title="Re-open submission call window"
                   >
                     <CheckCircle2 className="w-3.5 h-3.5" />
@@ -284,7 +284,7 @@ export const CallForProposalsManager: React.FC = () => {
                       deleteCall(call.id);
                     }
                   }}
-                  className="p-2 rounded-xl text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
+                  className="p-2 rounded-sm text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
                   title="Delete call record"
                 >
                   <Trash2 className="w-4 h-4" />

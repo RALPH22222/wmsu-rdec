@@ -129,7 +129,7 @@ export const SubmissionPeriodPortal: React.FC<SubmissionPeriodPortalProps> = ({ 
           </p>
 
           {/* Submission Window Card (Minimalist & Crisp) */}
-          <div className="max-w-2xl mx-auto bg-white rounded-2xl border border-slate-200/90 shadow-sm p-5 sm:p-6 mb-8 text-left">
+          <div className="max-w-2xl mx-auto bg-white rounded-sm border border-slate-200/90 shadow-sm p-5 sm:p-6 mb-8 text-left">
             <div className="flex items-center gap-2 pb-4 border-b border-slate-100">
               <Calendar className="w-4 h-4 text-[#C8102E]" />
               <span className="text-xs uppercase tracking-wider font-semibold text-slate-500">
@@ -138,7 +138,7 @@ export const SubmissionPeriodPortal: React.FC<SubmissionPeriodPortalProps> = ({ 
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4">
-              <div className="bg-slate-50/70 rounded-xl p-3.5 border border-slate-100">
+              <div className="bg-slate-50/70 rounded-sm p-3.5 border border-slate-100">
                 <span className="text-xs font-medium text-slate-500 block mb-1">
                   Submission Opens
                 </span>
@@ -148,7 +148,7 @@ export const SubmissionPeriodPortal: React.FC<SubmissionPeriodPortalProps> = ({ 
                 <span className="text-[11px] text-slate-400 block mt-0.5">8:00 AM PST</span>
               </div>
 
-              <div className="bg-red-50/40 rounded-xl p-3.5 border border-red-100/80">
+              <div className="bg-red-50/40 rounded-sm p-3.5 border border-red-100/80">
                 <span className="text-xs font-medium text-[#C8102E] block mb-1">
                   Submission Deadline
                 </span>
@@ -165,7 +165,7 @@ export const SubmissionPeriodPortal: React.FC<SubmissionPeriodPortalProps> = ({ 
             <button
               type="button"
               onClick={onSignInClick}
-              className="group w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-semibold text-sm text-white bg-[#C8102E] hover:bg-[#A00D26] shadow-sm hover:shadow transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[#C8102E]/30 focus:ring-offset-2 cursor-pointer"
+              className="group w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 rounded-sm font-semibold text-sm text-white bg-[#C8102E] hover:bg-[#A00D26] shadow-sm hover:shadow transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[#C8102E]/30 focus:ring-offset-2 cursor-pointer"
             >
               <span>Submit Proposal</span>
               <ArrowRight className="w-4 h-4 transition-transform duration-300 ease-out group-hover:translate-x-1.5" />
@@ -174,7 +174,7 @@ export const SubmissionPeriodPortal: React.FC<SubmissionPeriodPortalProps> = ({ 
             <a
               href="/DOST_Form_No.1b.docx"
               download
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl font-medium text-sm text-slate-700 bg-white hover:bg-slate-50 border border-slate-200/90 shadow-2xs hover:border-slate-300 transition-all duration-200"
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-3 rounded-sm font-medium text-sm text-slate-700 bg-white hover:bg-slate-50 border border-slate-200/90 shadow-2xs hover:border-slate-300 transition-all duration-200"
             >
               <Download className="w-4 h-4 text-slate-500" />
               <span>Download DOST Form 1B</span>
@@ -182,7 +182,7 @@ export const SubmissionPeriodPortal: React.FC<SubmissionPeriodPortalProps> = ({ 
 
             <a
               href="#how-to-submit"
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-4 py-3 rounded-xl font-medium text-sm text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 transition-colors"
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-4 py-3 rounded-sm font-medium text-sm text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 transition-colors"
             >
               <span>How It Works</span>
             </a>
@@ -199,7 +199,7 @@ export const SubmissionPeriodPortal: React.FC<SubmissionPeriodPortalProps> = ({ 
             <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
               Priority Research Areas
             </h2>
-            <div className="w-12 h-1 bg-[#C8102E] rounded-full mx-auto mt-1.5 mb-3" />
+            <div className="w-12 h-1 bg-[#C8102E] rounded-sm mx-auto mt-1.5 mb-3" />
             <p className="text-sm sm:text-base font-semibold text-slate-700 mt-2 leading-relaxed">
               Proposals directly aligned with these key thematic domains are given priority evaluation for 2027 grant allocation.
             </p>
@@ -209,7 +209,7 @@ export const SubmissionPeriodPortal: React.FC<SubmissionPeriodPortalProps> = ({ 
               <button
                 type="button"
                 onClick={() => setSelectedCategory('all')}
-                className={`px-3.5 py-1.5 rounded-full text-xs font-medium transition-all ${
+                className={`px-3.5 py-1.5 rounded-sm text-xs font-medium transition-all ${
                   selectedCategory === 'all'
                     ? 'bg-slate-900 text-white shadow-xs'
                     : 'bg-white text-slate-600 border border-slate-200 hover:border-slate-300'
@@ -222,7 +222,7 @@ export const SubmissionPeriodPortal: React.FC<SubmissionPeriodPortalProps> = ({ 
                   key={area.id}
                   type="button"
                   onClick={() => setSelectedCategory(area.id)}
-                  className={`px-3.5 py-1.5 rounded-full text-xs font-medium transition-all ${
+                  className={`px-3.5 py-1.5 rounded-sm text-xs font-medium transition-all ${
                     selectedCategory === area.id
                       ? 'bg-[#C8102E] text-white shadow-xs'
                       : 'bg-white text-slate-600 border border-slate-200 hover:border-slate-300'
@@ -239,14 +239,14 @@ export const SubmissionPeriodPortal: React.FC<SubmissionPeriodPortalProps> = ({ 
             {filteredAreas.map((area) => (
               <div
                 key={area.id}
-                className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-2xs hover:shadow-md hover:border-slate-300 transition-all duration-200 flex flex-col justify-between"
+                className="bg-white rounded-sm p-5 border border-slate-200/80 shadow-2xs hover:shadow-md hover:border-slate-300 transition-all duration-200 flex flex-col justify-between"
               >
                 <div>
                   <div className="flex items-center justify-between mb-4">
-                    <div className="w-10 h-10 rounded-xl bg-red-50/70 border border-red-100 flex items-center justify-center">
+                    <div className="w-10 h-10 rounded-sm bg-red-50/70 border border-red-100 flex items-center justify-center">
                       {area.icon}
                     </div>
-                    <span className="text-[11px] font-semibold text-slate-400 bg-slate-50 px-2 py-0.5 rounded-md border border-slate-100">
+                    <span className="text-[11px] font-semibold text-slate-400 bg-slate-50 px-2 py-0.5 rounded-sm border border-slate-100">
                       {area.topics.length} topics
                     </span>
                   </div>
@@ -268,7 +268,7 @@ export const SubmissionPeriodPortal: React.FC<SubmissionPeriodPortalProps> = ({ 
                     {area.topics.map((topic, idx) => (
                       <span
                         key={idx}
-                        className="inline-block text-[11px] font-medium px-2.5 py-1 rounded-lg bg-slate-50 text-slate-700 border border-slate-100 hover:bg-red-50 hover:text-[#C8102E] hover:border-red-100 transition-colors"
+                        className="inline-block text-[11px] font-medium px-2.5 py-1 rounded-sm bg-slate-50 text-slate-700 border border-slate-100 hover:bg-red-50 hover:text-[#C8102E] hover:border-red-100 transition-colors"
                       >
                         {topic}
                       </span>
@@ -288,7 +288,7 @@ export const SubmissionPeriodPortal: React.FC<SubmissionPeriodPortalProps> = ({ 
             <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
               Simple 3-Step Submission Process
             </h2>
-            <div className="w-12 h-1 bg-[#C8102E] rounded-full mx-auto mt-1.5 mb-3" />
+            <div className="w-12 h-1 bg-[#C8102E] rounded-sm mx-auto mt-1.5 mb-3" />
             <p className="text-sm sm:text-base font-semibold text-slate-700 mt-2">
               Everything you need to successfully submit your research project proposal.
             </p>
@@ -298,14 +298,14 @@ export const SubmissionPeriodPortal: React.FC<SubmissionPeriodPortalProps> = ({ 
             {submissionSteps.map((stepItem, idx) => (
               <div
                 key={idx}
-                className="bg-white rounded-2xl p-6 border border-slate-200/90 shadow-2xs hover:border-slate-300 transition-all flex flex-col justify-between"
+                className="bg-white rounded-sm p-6 border border-slate-200/90 shadow-2xs hover:border-slate-300 transition-all flex flex-col justify-between"
               >
                 <div>
                   <div className="flex items-center justify-between mb-4">
                     <span className="text-2xl font-black text-slate-300 group-hover:text-[#C8102E] transition-colors">
                       {stepItem.step}
                     </span>
-                    <span className="w-8 h-8 rounded-full bg-slate-50 border border-slate-200/80 flex items-center justify-center text-xs font-bold text-slate-600">
+                    <span className="w-8 h-8 rounded-sm bg-slate-50 border border-slate-200/80 flex items-center justify-center text-xs font-bold text-slate-600">
                       {idx + 1}
                     </span>
                   </div>
@@ -357,7 +357,7 @@ export const SubmissionPeriodPortal: React.FC<SubmissionPeriodPortalProps> = ({ 
       {/* TEMPLATES & DOWNLOADS SECTION */}
       <section id="templates" className="py-16 bg-slate-50/60 border-t border-slate-100">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="bg-white rounded-2xl p-6 sm:p-8 border border-slate-200/90 shadow-sm flex flex-col md:flex-row items-center justify-between gap-6">
+          <div className="bg-white rounded-sm p-6 sm:p-8 border border-slate-200/90 shadow-sm flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="space-y-2 text-center md:text-left">
               <h3 className="text-lg sm:text-xl font-bold text-slate-900 flex items-center justify-center md:justify-start gap-2">
                 <FileText className="w-5 h-5 text-[#C8102E]" />
@@ -372,7 +372,7 @@ export const SubmissionPeriodPortal: React.FC<SubmissionPeriodPortalProps> = ({ 
               <a
                 href="/DOST_Form_No.1b.docx"
                 download
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-xs sm:text-sm text-white bg-[#C8102E] hover:bg-[#A00D26] shadow-xs hover:shadow transition-all"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-sm font-semibold text-xs sm:text-sm text-white bg-[#C8102E] hover:bg-[#A00D26] shadow-xs hover:shadow transition-all"
               >
                 <Download className="w-4 h-4" />
                 <span>Download Word (.docx)</span>
@@ -381,7 +381,7 @@ export const SubmissionPeriodPortal: React.FC<SubmissionPeriodPortalProps> = ({ 
                 href="/DOST_Form_No.1b.pdf"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-medium text-xs sm:text-sm text-slate-700 bg-slate-50 hover:bg-slate-100 border border-slate-200 transition-colors"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-sm font-medium text-xs sm:text-sm text-slate-700 bg-slate-50 hover:bg-slate-100 border border-slate-200 transition-colors"
               >
                 <span>View PDF Guide</span>
                 <ExternalLink className="w-3.5 h-3.5 text-slate-400" />
@@ -394,7 +394,7 @@ export const SubmissionPeriodPortal: React.FC<SubmissionPeriodPortalProps> = ({ 
       {/* QUICK ASSISTANCE BANNER */}
       <section className="py-12 bg-white border-t border-slate-100">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="rounded-2xl bg-gradient-to-r from-slate-900 to-slate-800 text-white p-6 sm:p-8 flex flex-col md:flex-row items-center justify-between gap-6 shadow-sm">
+          <div className="rounded-sm bg-gradient-to-r from-slate-900 to-slate-800 text-white p-6 sm:p-8 flex flex-col md:flex-row items-center justify-between gap-6 shadow-sm">
             <div className="space-y-1.5 text-center md:text-left">
               <span className="text-xs uppercase tracking-wider text-red-400 font-semibold">
                 RPDU Help &amp; Consultation
@@ -410,7 +410,7 @@ export const SubmissionPeriodPortal: React.FC<SubmissionPeriodPortalProps> = ({ 
             <div className="flex flex-col sm:flex-row items-center gap-3 shrink-0">
               <a
                 href="mailto:rpdu@wmsu.edu.ph"
-                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 border border-white/15 text-xs sm:text-sm font-medium transition-colors"
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-sm bg-white/10 hover:bg-white/20 border border-white/15 text-xs sm:text-sm font-medium transition-colors"
               >
                 <Mail className="w-4 h-4 text-red-400" />
                 <span>rpdu@wmsu.edu.ph</span>
@@ -418,7 +418,7 @@ export const SubmissionPeriodPortal: React.FC<SubmissionPeriodPortalProps> = ({ 
               <button
                 type="button"
                 onClick={onSignInClick}
-                className="group inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#C8102E] hover:bg-[#A00D26] text-xs sm:text-sm font-semibold transition-colors cursor-pointer"
+                className="group inline-flex items-center gap-2 px-5 py-2.5 rounded-sm bg-[#C8102E] hover:bg-[#A00D26] text-xs sm:text-sm font-semibold transition-colors cursor-pointer"
               >
                 <span>Sign In to Portal</span>
                 <ArrowRight className="w-4 h-4 transition-transform duration-300 ease-out group-hover:translate-x-1.5" />

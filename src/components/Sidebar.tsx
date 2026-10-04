@@ -87,7 +87,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             {/* Close button on mobile */}
             <button
               onClick={onCloseMobile}
-              className="lg:hidden p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+              className="lg:hidden p-1.5 rounded-sm text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
               aria-label="Close Sidebar"
             >
               <X className="w-5 h-5" />
@@ -110,13 +110,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 <div
                   key={item.name}
                   title="Coming soon"
-                  className="flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-400 opacity-60 cursor-not-allowed select-none bg-slate-50/50"
+                  className="flex items-center justify-between px-3.5 py-2.5 rounded-sm text-xs font-semibold text-slate-400 opacity-60 cursor-not-allowed select-none bg-slate-50/50"
                 >
                   <div className="flex items-center gap-3">
                     <Icon className="w-4 h-4 text-slate-400" />
                     <span>{item.name}</span>
                   </div>
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-400 border border-slate-200/60">Soon</span>
+                  <span className="px-2 py-0.5 rounded-sm text-[10px] font-bold bg-slate-100 text-slate-400 border border-slate-200/60">Soon</span>
                 </div>
               );
             }
@@ -126,7 +126,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 key={item.name}
                 to={item.path}
                 onClick={onCloseMobile}
-                className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all group ${isActive
+                className={`flex items-center justify-between px-3.5 py-2.5 rounded-sm text-xs font-semibold transition-all group ${isActive
                   ? 'bg-[#C8102E] text-white shadow-sm shadow-red-900/20'
                   : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
                   }`}
@@ -138,7 +138,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
                 {item.badge && (
                   <span
-                    className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${isActive ? 'bg-white/20 text-white' : item.badgeColor
+                    className={`px-2 py-0.5 rounded-sm text-[10px] font-bold ${isActive ? 'bg-white/20 text-white' : item.badgeColor
                       }`}
                   >
                     {item.badge}
@@ -157,7 +157,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   if (onCloseMobile) onCloseMobile();
                   onOpenCreateCall();
                 }}
-                className="w-full py-2.5 px-3.5 rounded-xl bg-gradient-to-r from-red-600 to-[#C8102E] hover:from-red-700 hover:to-[#990B21] text-white text-xs font-bold shadow-sm shadow-red-600/20 flex items-center justify-center gap-2 transition-all cursor-pointer"
+                className="w-full py-2.5 px-3.5 rounded-sm bg-gradient-to-r from-red-600 to-[#C8102E] hover:from-red-700 hover:to-[#990B21] text-white text-xs font-bold shadow-sm shadow-red-600/20 flex items-center justify-center gap-2 transition-all cursor-pointer"
               >
                 <Plus className="w-4 h-4" />
                 <span>Create New Call</span>
@@ -168,15 +168,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
         {/* Footer: Merged User Profile & Sign Out */}
         <div className="p-3 border-t border-slate-100">
-          <div className="p-2.5 rounded-2xl bg-slate-50 border border-slate-200/80">
+          <div className="p-2.5 rounded-sm bg-slate-50 border border-slate-200/80">
             <div className="flex items-center gap-3">
               <div className="relative shrink-0">
                 <img
                   src={currentUser.avatarUrl || '/RDEC-WMSU.png'}
                   alt={currentUser.name}
-                  className="w-10 h-10 rounded-xl object-cover ring-1 ring-slate-200"
+                  className="w-10 h-10 rounded-sm object-cover ring-1 ring-slate-200"
                 />
-                <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-white" />
               </div>
               <div className="min-w-0 flex-1">
                 <p className="text-xs font-bold text-slate-900 truncate">{currentUser.name}</p>
@@ -187,9 +186,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <button
               type="button"
               onClick={() => alert(`Logged out from ${isRpdu ? 'RPDU' : 'Admin'} Portal`)}
-              className="mt-2.5 w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-xs font-semibold text-red-600 hover:text-red-700 hover:bg-red-50 transition-colors cursor-pointer border border-red-100 bg-white shadow-2xs"
+              className="group mt-2.5 w-full flex items-center justify-center gap-2 py-2 px-3 rounded-sm text-xs font-semibold text-red-600 hover:text-red-700 hover:bg-red-50 transition-all duration-200 cursor-pointer border border-red-100 bg-white shadow-2xs"
             >
-              <LogOut className="w-3.5 h-3.5" />
+              <LogOut className="w-3.5 h-3.5 transition-transform duration-200 ease-out group-hover:translate-x-1" />
               <span>Sign Out</span>
             </button>
           </div>

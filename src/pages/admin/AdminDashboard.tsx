@@ -27,14 +27,15 @@ export const AdminDashboard: React.FC = () => {
       </div>
 
       {/* Metrics Grid */}
+      {/* Metrics Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-5">
         {/* Card 1: Total Proposals */}
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex flex-col justify-between space-y-4">
+        <div className="bg-white p-5 rounded-sm border border-slate-200 shadow-xs flex flex-col justify-between space-y-4">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
               Total Proposals Received
             </span>
-            <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+            <div className="w-9 h-9 rounded-sm bg-blue-50 text-blue-600 flex items-center justify-center">
               <FileCheck className="w-5 h-5" />
             </div>
           </div>
@@ -45,13 +46,13 @@ export const AdminDashboard: React.FC = () => {
         </div>
 
         {/* Card 2: Active Call Window */}
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex flex-col justify-between space-y-4">
+        <div className="bg-white p-5 rounded-sm border border-slate-200 shadow-xs flex flex-col justify-between space-y-4">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
               Active Call Status
             </span>
             <div
-              className={`w-9 h-9 rounded-xl flex items-center justify-center ${
+              className={`w-9 h-9 rounded-sm flex items-center justify-center ${
                 activeCall ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-400'
               }`}
             >
@@ -81,12 +82,12 @@ export const AdminDashboard: React.FC = () => {
         </div>
 
         {/* Card 3: Calls In System */}
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex flex-col justify-between space-y-4 sm:col-span-2 lg:col-span-1">
+        <div className="bg-white p-5 rounded-sm border border-slate-200 shadow-xs flex flex-col justify-between space-y-4 sm:col-span-2 lg:col-span-1">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
               Total Call Cycles
             </span>
-            <div className="w-9 h-9 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center">
+            <div className="w-9 h-9 rounded-sm bg-purple-50 text-purple-600 flex items-center justify-center">
               <Layers className="w-5 h-5" />
             </div>
           </div>
@@ -151,7 +152,7 @@ export const AdminDashboard: React.FC = () => {
       {activeTab === 'calls' && <CallForProposalsManager />}
 
       {activeTab === 'proposals' && (
-        <div className="bg-white p-12 text-center rounded-2xl border border-slate-200">
+        <div className="bg-white p-12 text-center rounded-sm border border-slate-200 shadow-xs">
           <FileCheck className="w-12 h-12 text-slate-300 mx-auto mb-3" />
           <h3 className="text-lg font-bold text-slate-800">Proposals Management Pipeline</h3>
           <p className="text-xs sm:text-sm text-slate-500 max-w-md mx-auto mt-1">
@@ -161,7 +162,7 @@ export const AdminDashboard: React.FC = () => {
       )}
 
       {activeTab === 'evaluators' && (
-        <div className="bg-white p-12 text-center rounded-2xl border border-slate-200">
+        <div className="bg-white p-12 text-center rounded-sm border border-slate-200 shadow-xs">
           <Users className="w-12 h-12 text-slate-300 mx-auto mb-3" />
           <h3 className="text-lg font-bold text-slate-800">Technical Evaluators Panel</h3>
           <p className="text-xs sm:text-sm text-slate-500 max-w-md mx-auto mt-1">
