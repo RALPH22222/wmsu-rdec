@@ -1,7 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import {
   Search,
-  Filter,
   CheckCircle2,
   XCircle,
   Clock,
@@ -9,10 +8,6 @@ import {
   Building,
   Calendar,
   FileText,
-  AlertTriangle,
-  Sparkles,
-  ChevronRight,
-  ShieldCheck,
   CheckSquare,
   Square,
   ListFilter,
@@ -28,7 +23,7 @@ interface PreliminaryScreeningManagerProps {
 }
 
 export const PreliminaryScreeningManager: React.FC<PreliminaryScreeningManagerProps> = ({
-  role = 'rpdu',
+  role: _role = 'rpdu',
 }) => {
   const {
     conceptProposals,
@@ -36,7 +31,6 @@ export const PreliminaryScreeningManager: React.FC<PreliminaryScreeningManagerPr
     failConceptProposal,
     resetScreeningStatus,
     bulkPassConceptProposals,
-    showToast,
   } = useCallForProposals();
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -47,7 +41,6 @@ export const PreliminaryScreeningManager: React.FC<PreliminaryScreeningManagerPr
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');
-  const [quickPassConfirmId, setQuickPassConfirmId] = useState<string | null>(null);
 
   // Derived Statistics
   const stats = useMemo(() => {
@@ -95,7 +88,6 @@ export const PreliminaryScreeningManager: React.FC<PreliminaryScreeningManagerPr
   const handleQuickPass = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     passConceptProposal(id);
-    setQuickPassConfirmId(null);
   };
 
   const handleQuickFailPrompt = (proposal: ConceptProposal, e: React.MouseEvent) => {
@@ -617,7 +609,6 @@ export const PreliminaryScreeningManager: React.FC<PreliminaryScreeningManagerPr
               {filteredProposals.map((proposal) => {
                 const isPassed = proposal.screeningStatus === 'passed';
                 const isFailed = proposal.screeningStatus === 'failed';
-                const isPending = proposal.screeningStatus === 'pending';
 
                 return (
                   <tr key={proposal.id} className="hover:bg-slate-50/80 transition-colors">

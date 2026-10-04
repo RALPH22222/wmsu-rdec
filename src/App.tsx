@@ -67,8 +67,9 @@ export function App() {
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
 
-            {/* Proponent Dashboard Layout (Requires Auth) */}
+            {/* Proponent Dashboard Layout */}
             <Route element={<Layout />}>
+              <Route path="/proponent" element={<ProponentDashboard />} />
               <Route path="/dashboard" element={<ProponentDashboard />} />
               <Route path="/evaluator" element={<EvaluatorDashboard />} />
             </Route>

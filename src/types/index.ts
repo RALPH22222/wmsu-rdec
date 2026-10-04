@@ -112,3 +112,38 @@ export interface ConceptProposal {
   screenedAt?: string;
 }
 
+export type BudgetCategory =
+  | 'Personal Services (PS)'
+  | 'Maintenance & Other Operating Expenses (MOOE)'
+  | 'Equipment Outlay (EO)'
+  | 'Travel & Transportation'
+  | 'Supplies & Materials'
+  | 'Sundry / Others';
+
+export interface BudgetLineItem {
+  id: string;
+  category: BudgetCategory;
+  description: string;
+  quantity: number;
+  unitCost: number;
+  totalCost: number;
+  justification?: string;
+}
+
+export interface HybridBudgetAllocation {
+  id: string;
+  proposalId: string;
+  proposalCode?: string;
+  proposalTitle?: string;
+  totalLineItemAmount: number;
+  lineItems: BudgetLineItem[];
+  pdfFile?: {
+    name: string;
+    size: number;
+    uploadedAt: string;
+    dataUrl?: string;
+  } | null;
+  status: 'draft' | 'submitted';
+  updatedAt: string;
+}
+

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Calendar, FileCheck, Layers, Users, ClipboardCheck, ArrowRight } from 'lucide-react';
+import { Calendar, FileCheck, Layers, Users, ClipboardCheck } from 'lucide-react';
 import { useCallForProposals } from '../../context/CallForProposalsContext';
 import { CallForProposalsManager } from '../../components/adminComponent/CallForProposalsManager';
 

@@ -5,13 +5,9 @@ import {
   CheckCircle2,
   XCircle,
   Download,
-  AlertTriangle,
   MessageSquare,
   ArrowLeft,
   Check,
-  Info,
-  Eye,
-  EyeOff,
   ChevronLeft,
   ChevronRight
 } from 'lucide-react';

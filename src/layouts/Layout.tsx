@@ -1,53 +1,77 @@
-import { Outlet, Navigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
-import { LogOut, User as UserIcon } from 'lucide-react';
+import { useState } from 'react';
+import { Outlet } from 'react-router-dom';
+import { Menu, Bell, ChevronRight } from 'lucide-react';
+import { ProponentSidebar } from '../components/proponentComponent/ProponentSidebar';
 
 export default function Layout() {
-  const { user, loading, signOut } = useAuth();
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-neutral-50 p-8 flex flex-col gap-6">
-        <div className="h-16 w-full bg-slate-200 animate-pulse rounded-sm"></div>
-        <div className="flex-1 flex gap-6">
-          <div className="w-64 bg-slate-200 animate-pulse rounded-sm h-full min-h-[500px]"></div>
-          <div className="flex-1 bg-slate-200 animate-pulse rounded-sm h-full min-h-[500px]"></div>
-        </div>
-      </div>
-    );
-  }
-
-  if (!user) {
-    return <Navigate to="/login" replace />;
-  }
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-neutral-50 flex flex-col">
-      {/* Top Navigation */}
-      <header className="bg-white px-6 py-4 flex items-center justify-between shadow-sm">
-        <div className="flex items-center gap-4">
-          <h1 className="text-xl font-bold text-red-800 tracking-tight">WMSU RPDS</h1>
-        </div>
-        
-        <div className="flex items-center gap-6">
-          <div className="flex items-center gap-2 text-sm text-slate-600">
-            <UserIcon className="w-4 h-4" />
-            <span className="font-medium">{user.email}</span>
-          </div>
-          <button
-            onClick={signOut}
-            className="text-sm text-slate-600 hover:text-red-800 font-medium flex items-center gap-2 transition-colors cursor-pointer"
-          >
-            <LogOut className="w-4 h-4" />
-            Logout
-          </button>
-        </div>
-      </header>
+    <div className="min-h-screen bg-slate-100 flex flex-col lg:flex-row text-slate-800 font-sans selection:bg-[#C8102E] selection:text-white">
+      {/* Shared Proponent Sidebar (w-72 matching RPDU) */}
+      <ProponentSidebar
+        mobileOpen={mobileSidebarOpen}
+        onCloseMobile={() => setMobileSidebarOpen(false)}
+      />
 
-      {/* Main Content Area */}
-      <main className="flex-1 p-8 max-w-7xl w-full mx-auto">
-        <Outlet />
-      </main>
+      {/* Main Content Column */}
+      <div className="flex-1 flex flex-col min-w-0 lg:pl-72">
+        {/* Scoped Arrow Animation */}
+        <style>{`
+          @keyframes arrowMove {
+            0%, 100% {
+              transform: translateX(0);
+            }
+            50% {
+              transform: translateX(6px);
+            }
+          }
+          .animate-arrow-move {
+            animation: arrowMove 1.1s ease-in-out infinite;
+          }
+        `}</style>
+
+        {/* Proponent Header / Navbar matching RPDU */}
+        <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200/80 px-3.5 sm:px-6 lg:px-8 py-3 sm:py-3.5 flex items-center justify-between shadow-xs">
+          <div className="flex items-center gap-2.5 sm:gap-3.5 min-w-0 flex-1 mr-2">
+            {/* Mobile Hamburger Button */}
+            <button
+              type="button"
+              onClick={() => setMobileSidebarOpen(true)}
+              className="lg:hidden p-2 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer shrink-0"
+              aria-label="Open Sidebar Menu"
+            >
+              <Menu className="w-5 h-5" />
+            </button>
+
+            {/* Current Page Indicator with Animated Moving Arrow ">" */}
+            <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+              <ChevronRight className="w-6 h-6 sm:w-6.5 sm:h-6.5 text-[#C8102E] animate-arrow-move shrink-0" strokeWidth={2.5} />
+              <h1 className="text-sm sm:text-base lg:text-lg font-semibold text-slate-800 tracking-tight truncate">
+                Budget Allocation
+              </h1>
+            </div>
+          </div>
+
+          {/* Right Header: Notifications matching RPDU */}
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+            <button
+              type="button"
+              className="relative p-2 rounded-xl text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition-colors cursor-pointer"
+              title="Notifications"
+              aria-label="Notifications"
+            >
+              <Bell className="w-5 h-5" />
+              <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-[#C8102E]" />
+            </button>
+          </div>
+        </header>
+
+        {/* Proponent Main Workspace */}
+        <main className="flex-1 p-3.5 sm:p-6 lg:p-8 w-full max-w-full overflow-x-hidden">
+          <Outlet />
+        </main>
+      </div>
     </div>
   );
 }
