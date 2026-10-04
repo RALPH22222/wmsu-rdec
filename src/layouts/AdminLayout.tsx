@@ -8,10 +8,12 @@ export const AdminLayout: React.FC = () => {
   const location = useLocation();
 
   const getPageTitle = () => {
+    if (location.pathname.startsWith('/admin/screening')) return 'Preliminary Screening — Concept Proposals';
     if (location.pathname.startsWith('/admin/proposals')) return 'Proposals Queue';
     if (location.pathname.startsWith('/admin/evaluators')) return 'Evaluators Panel';
     return 'Call for Proposals & Grants Management';
   };
+
 
   return (
     <div className="min-h-screen bg-slate-100 flex flex-col lg:flex-row text-slate-800 font-sans selection:bg-[#C8102E] selection:text-white">

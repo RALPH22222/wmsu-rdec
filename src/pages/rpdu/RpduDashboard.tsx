@@ -1,13 +1,17 @@
 import React, { useState } from 'react';
-import { Calendar, FileCheck, Layers, Users } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Calendar, FileCheck, Layers, Users, ClipboardCheck, ArrowRight } from 'lucide-react';
 import { useCallForProposals } from '../../context/CallForProposalsContext';
 import { CallForProposalsManager } from '../../components/adminComponent/CallForProposalsManager';
 
 export const RpduDashboard: React.FC = () => {
-  const { activeCall, calls, currentUser } = useCallForProposals();
+  const navigate = useNavigate();
+  const { activeCall, calls, currentUser, conceptProposals } = useCallForProposals();
   const [activeTab, setActiveTab] = useState<'calls' | 'proposals' | 'evaluators'>('calls');
 
   const totalSubmissions = calls.reduce((acc, curr) => acc + curr.submissionCount, 0);
+  const pendingScreeningCount = conceptProposals.filter((p) => p.screeningStatus === 'pending').length;
+  const passedScreeningCount = conceptProposals.filter((p) => p.screeningStatus === 'passed').length;
 
   return (
     <div className="space-y-8 max-w-7xl mx-auto">
@@ -28,7 +32,7 @@ export const RpduDashboard: React.FC = () => {
 
       {/* Metrics Grid */}
       {/* Metrics Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-5">
         {/* Card 1: Total Proposals */}
         <div className="bg-white p-5 rounded-sm border border-slate-200 shadow-xs flex flex-col justify-between space-y-4">
           <div className="flex items-center justify-between">
@@ -52,9 +56,8 @@ export const RpduDashboard: React.FC = () => {
               Active Call Status
             </span>
             <div
-              className={`w-9 h-9 rounded-sm flex items-center justify-center ${
-                activeCall ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-400'
-              }`}
+              className={`w-9 h-9 rounded-sm flex items-center justify-center ${activeCall ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-400'
+                }`}
             >
               <Calendar className="w-5 h-5" />
             </div>
@@ -82,7 +85,7 @@ export const RpduDashboard: React.FC = () => {
         </div>
 
         {/* Card 3: Calls In System */}
-        <div className="bg-white p-5 rounded-sm border border-slate-200 shadow-xs flex flex-col justify-between space-y-4 sm:col-span-2 lg:col-span-1">
+        <div className="bg-white p-5 rounded-sm border border-slate-200 shadow-xs flex flex-col justify-between space-y-4">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
               Total Call Cycles
@@ -96,19 +99,45 @@ export const RpduDashboard: React.FC = () => {
             <p className="text-xs text-slate-500 mt-1 font-medium">Active, draft, and closed calls</p>
           </div>
         </div>
+
+        {/* Card 4: Preliminary Screening Queue */}
+        <div
+          onClick={() => navigate('/rpdu/screening')}
+          className="bg-white p-5 rounded-sm border border-amber-200 hover:border-amber-300 shadow-xs flex flex-col justify-between space-y-4 cursor-pointer transition-all hover:shadow-md bg-amber-50/20 group"
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold uppercase tracking-wider text-amber-700">
+              Screening Queue
+            </span>
+            <div className="w-9 h-9 rounded-sm bg-amber-100 text-amber-700 flex items-center justify-center group-hover:scale-105 transition-transform">
+              <ClipboardCheck className="w-5 h-5" />
+            </div>
+          </div>
+          <div>
+            <div className="flex items-baseline gap-2">
+              <span className="text-3xl font-extrabold text-amber-900">{pendingScreeningCount}</span>
+              <span className="text-xs font-bold text-amber-700">Pending Review</span>
+            </div>
+            <p className="text-xs text-slate-500 mt-1 flex items-center justify-between font-medium">
+              <span>{passedScreeningCount} passed</span>
+              <span className="text-[#C8102E] font-bold inline-flex items-center gap-0.5 group-hover:translate-x-0.5 transition-transform">
+                Screen Now &rarr;
+              </span>
+            </p>
+          </div>
+        </div>
       </div>
 
       {/* Main Tab Navigation */}
       <div className="border-b border-slate-200">
-        <nav className="flex space-x-6 sm:space-x-8">
+        <nav className="flex space-x-6 sm:space-x-8 overflow-x-auto scrollbar-none">
           <button
             type="button"
             onClick={() => setActiveTab('calls')}
-            className={`py-3.5 px-1 border-b-2 font-bold text-xs sm:text-sm transition-colors cursor-pointer flex items-center gap-2 ${
-              activeTab === 'calls'
+            className={`py-3.5 px-1 border-b-2 font-bold text-xs sm:text-sm transition-colors cursor-pointer flex items-center gap-2 whitespace-nowrap ${activeTab === 'calls'
                 ? 'border-[#C8102E] text-[#C8102E]'
                 : 'border-transparent text-slate-500 hover:text-slate-800'
-            }`}
+              }`}
           >
             <Calendar className="w-4 h-4" />
             <span>Call for Proposals Manager</span>
@@ -120,11 +149,10 @@ export const RpduDashboard: React.FC = () => {
           <button
             type="button"
             onClick={() => setActiveTab('proposals')}
-            className={`py-3.5 px-1 border-b-2 font-bold text-xs sm:text-sm transition-colors cursor-pointer flex items-center gap-2 ${
-              activeTab === 'proposals'
+            className={`py-3.5 px-1 border-b-2 font-bold text-xs sm:text-sm transition-colors cursor-pointer flex items-center gap-2 whitespace-nowrap ${activeTab === 'proposals'
                 ? 'border-[#C8102E] text-[#C8102E]'
                 : 'border-transparent text-slate-500 hover:text-slate-800'
-            }`}
+              }`}
           >
             <FileCheck className="w-4 h-4" />
             <span>Proposals Review</span>
@@ -136,11 +164,10 @@ export const RpduDashboard: React.FC = () => {
           <button
             type="button"
             onClick={() => setActiveTab('evaluators')}
-            className={`py-3.5 px-1 border-b-2 font-bold text-xs sm:text-sm transition-colors cursor-pointer flex items-center gap-2 ${
-              activeTab === 'evaluators'
+            className={`py-3.5 px-1 border-b-2 font-bold text-xs sm:text-sm transition-colors cursor-pointer flex items-center gap-2 whitespace-nowrap ${activeTab === 'evaluators'
                 ? 'border-[#C8102E] text-[#C8102E]'
                 : 'border-transparent text-slate-500 hover:text-slate-800'
-            }`}
+              }`}
           >
             <Users className="w-4 h-4" />
             <span>Evaluators Roster</span>

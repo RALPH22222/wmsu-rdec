@@ -50,3 +50,65 @@ export interface ProposalItem {
   budgetRequested: number;
   thematicArea: string;
 }
+
+export type ScreeningStatus = 'pending' | 'passed' | 'failed';
+
+export interface ConceptProposalAttachment {
+  name: string;
+  size: string;
+  type: string;
+}
+
+export interface ConceptProposalCriteria {
+  eligibleProponent: boolean;
+  withinBudgetCap: boolean;
+  alignedPriority: boolean;
+  requiredFormsAttached: boolean;
+}
+
+export interface ConceptProposalOutputs {
+  publications?: string;
+  patents?: string;
+  products?: string;
+  peopleServices?: string;
+  placesPartnerships?: string;
+  policies?: string;
+}
+
+export interface ScreeningSectionComments {
+  title?: string;
+  rationaleSignificance?: string;
+  objectives?: string;
+  estimatedBudget?: string;
+}
+
+export interface ConceptProposal {
+  id: string;
+  code: string;
+  title: string;
+  callId: string;
+  callTitle: string;
+  leadInvestigator: string;
+  leadInvestigatorEmail: string;
+  coInvestigators: string[];
+  college: string;
+  department: string;
+  submittedAt: string;
+  submittedTime?: string;
+  screeningStatus: ScreeningStatus;
+  budgetRequested: number;
+  thematicArea: string;
+  durationMonths: number;
+  executiveSummary: string;
+  objectives: string[];
+  expectedOutputs: ConceptProposalOutputs;
+  methodologySummary: string;
+  criteriaChecklist: ConceptProposalCriteria;
+  attachments: ConceptProposalAttachment[];
+  screeningRemarks?: string;
+  failureReasons?: string[];
+  sectionComments?: ScreeningSectionComments;
+  screenedBy?: string;
+  screenedAt?: string;
+}
+

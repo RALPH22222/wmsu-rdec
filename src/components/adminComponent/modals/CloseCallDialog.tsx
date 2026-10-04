@@ -58,7 +58,7 @@ export const CloseCallDialog: React.FC<CloseCallDialogProps> = ({
             <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0" />
             <div>
               <h3 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">Manage Active Call Window</h3>
-              <p className="text-xs text-slate-500 font-medium">{call.code} — {call.title}</p>
+              <p className="text-xs text-slate-500 font-medium">{call.title}</p>
             </div>
           </div>
           <button

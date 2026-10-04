@@ -8,12 +8,14 @@ export const RpduLayout: React.FC = () => {
   const location = useLocation();
 
   const getPageTitle = () => {
+    if (location.pathname.startsWith('/rpdu/screening')) return 'Preliminary Screening — Concept Proposals';
     if (location.pathname.startsWith('/rpdu/proposals')) return 'Proposals Queue';
     if (location.pathname.startsWith('/rpdu/evaluators')) return 'Evaluators Panel';
     if (location.pathname.startsWith('/rpdu/evaluations')) return 'Technical Evaluations Pipeline';
     if (location.pathname.startsWith('/rpdu/grants')) return 'Approved Institutional Grants';
     return 'Call for Proposals & Grants Management';
   };
+
 
   return (
     <div className="min-h-screen bg-slate-100 flex flex-col lg:flex-row text-slate-800 font-sans selection:bg-[#C8102E] selection:text-white">

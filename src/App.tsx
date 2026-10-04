@@ -12,6 +12,7 @@ import { AdminDashboard } from './pages/admin/AdminDashboard';
 import { RpduDashboard } from './pages/rpdu/RpduDashboard';
 import ProponentDashboard from './pages/proponents/ProponentDashboard';
 import EvaluatorDashboard from './pages/evaluator/evaluatorDashboard';
+import { PreliminaryScreeningPage } from './pages/screening/PreliminaryScreeningPage';
 import Login from './pages/auth/Login';
 import Register from './pages/auth/Register';
 import { Toast } from './components/Toast';
@@ -75,11 +76,13 @@ export function App() {
             {/* Dedicated Admin Layout */}
             <Route element={<AdminLayout />}>
               <Route path="/admin" element={<AdminDashboard />} />
+              <Route path="/admin/screening" element={<PreliminaryScreeningPage role="admin" />} />
             </Route>
 
             {/* Dedicated RPDU Layout */}
             <Route element={<RpduLayout />}>
               <Route path="/rpdu" element={<RpduDashboard />} />
+              <Route path="/rpdu/screening" element={<PreliminaryScreeningPage role="rpdu" />} />
             </Route>
 
             {/* Catch-all redirect */}

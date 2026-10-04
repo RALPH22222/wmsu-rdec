@@ -190,9 +190,6 @@ export const CallForProposalsManager: React.FC = () => {
               <div className="space-y-3 flex-grow">
                 <div className="flex flex-wrap items-center gap-2">
                   {getStatusBadge(call.status)}
-                  <span className="text-xs font-mono font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-sm">
-                    {call.code}
-                  </span>
                   <span className="text-xs font-semibold text-slate-400">
                     FY {call.fiscalYear}
                   </span>

@@ -2,6 +2,7 @@ import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
   Calendar,
+  ClipboardCheck,
   BarChart3,
   Settings,
   LogOut,
@@ -22,7 +23,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onOpenCreateCall,
 }) => {
   const location = useLocation();
-  const { currentUser, activeCall } = useCallForProposals();
+  const { currentUser } = useCallForProposals();
 
   const isRpdu = location.pathname.startsWith('/rpdu');
   const basePath = isRpdu ? '/rpdu' : '/admin';
@@ -32,8 +33,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
       name: 'Call for Proposals',
       path: basePath,
       icon: Calendar,
-      badge: activeCall ? 'Active' : undefined,
-      badgeColor: 'bg-emerald-50 text-emerald-700 border border-emerald-200',
+      disabled: false,
+    },
+    {
+      name: 'Preliminary Screening',
+      path: `${basePath}/screening`,
+      icon: ClipboardCheck,
       disabled: false,
     },
     {
@@ -42,6 +47,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       icon: BarChart3,
       disabled: true,
     },
+
     {
       name: 'System Settings',
       path: `${basePath}/settings`,
@@ -110,13 +116,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 <div
                   key={item.name}
                   title="Coming soon"
-                  className="flex items-center justify-between px-3.5 py-2.5 rounded-sm text-xs font-semibold text-slate-400 opacity-60 cursor-not-allowed select-none bg-slate-50/50"
+                  className="flex items-center gap-3 px-3.5 py-2.5 rounded-sm text-xs font-semibold text-slate-400 opacity-60 cursor-not-allowed select-none bg-slate-50/50"
                 >
-                  <div className="flex items-center gap-3">
-                    <Icon className="w-4 h-4 text-slate-400" />
-                    <span>{item.name}</span>
-                  </div>
-                  <span className="px-2 py-0.5 rounded-sm text-[10px] font-bold bg-slate-100 text-slate-400 border border-slate-200/60">Soon</span>
+                  <Icon className="w-4 h-4 text-slate-400" />
+                  <span>{item.name}</span>
                 </div>
               );
             }
@@ -126,24 +129,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 key={item.name}
                 to={item.path}
                 onClick={onCloseMobile}
-                className={`flex items-center justify-between px-3.5 py-2.5 rounded-sm text-xs font-semibold transition-all group ${isActive
+                className={`flex items-center gap-3 px-3.5 py-2.5 rounded-sm text-xs font-semibold transition-all group ${isActive
                   ? 'bg-[#C8102E] text-white shadow-sm shadow-red-900/20'
                   : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
                   }`}
               >
-                <div className="flex items-center gap-3">
-                  <Icon className={`w-4 h-4 transition-colors ${isActive ? 'text-white' : 'text-slate-400 group-hover:text-slate-700'}`} />
-                  <span>{item.name}</span>
-                </div>
-
-                {item.badge && (
-                  <span
-                    className={`px-2 py-0.5 rounded-sm text-[10px] font-bold ${isActive ? 'bg-white/20 text-white' : item.badgeColor
-                      }`}
-                  >
-                    {item.badge}
-                  </span>
-                )}
+                <Icon className={`w-4 h-4 transition-colors ${isActive ? 'text-white' : 'text-slate-400 group-hover:text-slate-700'}`} />
+                <span>{item.name}</span>
               </Link>
             );
           })}
@@ -166,29 +158,21 @@ export const Sidebar: React.FC<SidebarProps> = ({
           )}
         </div>
 
-        {/* Footer: Merged User Profile & Sign Out */}
+        {/* Footer: User Profile & Sign Out */}
         <div className="p-3 border-t border-slate-100">
-          <div className="p-2.5 rounded-sm bg-slate-50 border border-slate-200/80">
-            <div className="flex items-center gap-3">
-              <div className="relative shrink-0">
-                <img
-                  src={currentUser.avatarUrl || '/RDEC-WMSU.png'}
-                  alt={currentUser.name}
-                  className="w-10 h-10 rounded-sm object-cover ring-1 ring-slate-200"
-                />
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-xs font-bold text-slate-900 truncate">{currentUser.name}</p>
-                <p className="text-[11px] text-slate-500 truncate">{currentUser.title}</p>
-              </div>
+          <div className="flex items-center justify-between gap-2.5 p-2.5 rounded-sm bg-slate-50 border border-slate-200/80">
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-bold text-slate-900 truncate">{currentUser.name}</p>
+              <p className="text-[11px] text-slate-500 truncate">{currentUser.title}</p>
             </div>
 
             <button
               type="button"
               onClick={() => alert(`Logged out from ${isRpdu ? 'RPDU' : 'Admin'} Portal`)}
-              className="group mt-2.5 w-full flex items-center justify-center gap-2 py-2 px-3 rounded-sm text-xs font-semibold text-red-600 hover:text-red-700 hover:bg-red-50 transition-all duration-200 cursor-pointer border border-red-100 bg-white shadow-2xs"
+              title="Sign Out"
+              className="group shrink-0 inline-flex items-center gap-1.5 py-1.5 px-2.5 rounded-sm text-xs font-semibold text-red-600 hover:text-white hover:bg-red-600 border border-red-200 hover:border-red-600 bg-white shadow-2xs transition-all duration-200 cursor-pointer"
             >
-              <LogOut className="w-3.5 h-3.5 transition-transform duration-200 ease-out group-hover:translate-x-1" />
+              <LogOut className="w-3.5 h-3.5 transition-transform duration-200 ease-out group-hover:translate-x-0.5" />
               <span>Sign Out</span>
             </button>
           </div>

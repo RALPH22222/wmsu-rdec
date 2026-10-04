@@ -166,7 +166,7 @@ export const CallFormModal: React.FC<CallFormModalProps> = ({
               </h3>
               <p className="text-xs text-slate-500 font-medium">
                 {isEditing && initialData
-                  ? `${initialData.code} — ${initialData.title}`
+                  ? initialData.title
                   : 'Configure submission window, budget limits & required attachments'}
               </p>
             </div>
@@ -203,20 +203,6 @@ export const CallFormModal: React.FC<CallFormModalProps> = ({
                     onChange={(e) => setTitle(e.target.value)}
                     placeholder="e.g. Institutional Research & Innovation Call 2027"
                     className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]/20 focus:border-[#C8102E]"
-                  />
-                </div>
-
-                <div className="sm:col-span-4">
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    Reference Code <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={code}
-                    onChange={(e) => setCode(e.target.value)}
-                    placeholder="CALL-2027-01"
-                    className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#C8102E]/20 focus:border-[#C8102E]"
                   />
                 </div>
 
