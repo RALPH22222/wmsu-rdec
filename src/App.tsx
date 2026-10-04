@@ -10,6 +10,8 @@ import { RpduLayout } from './layouts/RpduLayout';
 import Layout from './layouts/Layout';
 import { AdminDashboard } from './pages/admin/AdminDashboard';
 import { RpduDashboard } from './pages/rpdu/RpduDashboard';
+import ProponentDashboard from './pages/proponents/ProponentDashboard';
+import EvaluatorDashboard from './pages/evaluator/evaluatorDashboard';
 import Login from './pages/auth/Login';
 import Register from './pages/auth/Register';
 import { Toast } from './components/Toast';
@@ -36,14 +38,7 @@ function PublicLayout({ onSignInClick }: { onSignInClick: () => void }) {
   );
 }
 
-function Dashboard() {
-  return (
-    <div className="bg-white p-12 shadow-sm">
-      <h2 className="text-2xl font-semibold text-slate-900 mb-4">Proponent Dashboard</h2>
-      <p className="text-slate-600">Welcome to the Research Project Development System.</p>
-    </div>
-  );
-}
+
 
 export function App() {
   const [toast, setToast] = useState<string | null>(null);
@@ -73,7 +68,8 @@ export function App() {
 
             {/* Proponent Dashboard Layout (Requires Auth) */}
             <Route element={<Layout />}>
-              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/dashboard" element={<ProponentDashboard />} />
+              <Route path="/evaluator" element={<EvaluatorDashboard />} />
             </Route>
 
             {/* Dedicated Admin Layout */}

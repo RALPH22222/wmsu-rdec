@@ -15,16 +15,45 @@ export default function Login() {
     setLoading(true);
     setError(null);
 
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
 
-    if (error) {
-      setError(error.message);
+    if (authError) {
+      setError(authError.message);
       setLoading(false);
-    } else {
-      navigate('/');
+      return;
+    }
+
+    // Fetch user role
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('role')
+      .eq('id', authData.user.id)
+      .single();
+
+    if (userError) {
+      setError(userError.message);
+      setLoading(false);
+      return;
+    }
+
+    const role = userData?.role;
+    switch(role) {
+      case 'ADMIN': 
+        navigate('/admin'); 
+        break;
+      case 'EVALUATOR': 
+        navigate('/evaluator'); 
+        break;
+      case 'RPDU': 
+        navigate('/rpdu'); 
+        break;
+      case 'PROPONENT': 
+      default:
+        navigate('/dashboard'); 
+        break;
     }
   };
 
