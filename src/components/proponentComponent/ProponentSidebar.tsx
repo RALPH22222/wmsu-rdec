@@ -18,15 +18,46 @@ export const ProponentSidebar: React.FC<ProponentSidebarProps> = ({
   mobileOpen = false,
   onCloseMobile,
 }) => {
-  const { user, signOut } = useAuth();
+  const { user, profile, loadingProfile, signOut } = useAuth();
   const location = useLocation();
-  const displayEmail = user?.email || 'proponent.lead@wmsu.edu.ph';
 
   const isProposalActive =
     location.pathname === '/proponent' ||
     location.pathname === '/proponent/submit' ||
     location.pathname === '/dashboard';
   const isBudgetActive = location.pathname === '/proponent/budget';
+  const isProfileActive = location.pathname === '/proponent/profile';
+
+  // Capitalize first letter of each word
+  const capitalizeWords = (str: string) => {
+    if (!str) return '';
+    return str.replace(/\b([a-z])/g, (c) => c.toUpperCase());
+  };
+
+  // Compute Full Name from profile or auth user metadata or fallback, with capitalized first letters
+  const rawFullName = profile
+    ? [profile.first_name, profile.middle_name, profile.last_name, profile.suffix]
+        .filter(Boolean)
+        .join(' ')
+    : user?.user_metadata?.first_name
+    ? [
+        user.user_metadata.first_name,
+        user.user_metadata.middle_name,
+        user.user_metadata.last_name,
+        user.user_metadata.suffix,
+      ]
+        .filter(Boolean)
+        .join(' ')
+    : user?.email
+    ? user.email.split('@')[0].replace(/[._-]/g, ' ')
+    : 'Proponent User';
+
+  const fullName = capitalizeWords(rawFullName);
+
+  const departmentOrRole =
+    profile?.departments?.name ||
+    user?.user_metadata?.department ||
+    'Proponent / Researcher';
 
   return (
     <>
@@ -80,30 +111,30 @@ export const ProponentSidebar: React.FC<ProponentSidebarProps> = ({
               <div className="px-3 pb-2 text-[10px] font-black uppercase tracking-wider text-slate-400">
                 Proponent Management
               </div>
-              <nav className="space-y-1.5">
+              <nav className="space-y-2">
                 <Link
                   to="/proponent"
                   onClick={onCloseMobile}
-                  className={`w-full flex items-center gap-3 px-3.5 py-2.5 text-xs font-bold rounded-sm text-left transition-colors border ${
+                  className={`w-full flex items-center gap-3.5 px-4 py-3 text-sm font-semibold rounded-sm text-left transition-colors border ${
                     isProposalActive
                       ? 'bg-[#C8102E] text-white shadow-xs border-[#C8102E]'
                       : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50 border-transparent'
                   }`}
                 >
-                  <FileText className={`w-4 h-4 shrink-0 ${isProposalActive ? 'text-white' : 'text-slate-400'}`} />
+                  <FileText className={`w-5 h-5 shrink-0 ${isProposalActive ? 'text-white' : 'text-slate-400'}`} />
                   <span className="truncate">Concept Proposal</span>
                 </Link>
 
                 <Link
                   to="/proponent/budget"
                   onClick={onCloseMobile}
-                  className={`w-full flex items-center gap-3 px-3.5 py-2.5 text-xs font-bold rounded-sm text-left transition-colors border ${
+                  className={`w-full flex items-center gap-3.5 px-4 py-3 text-sm font-semibold rounded-sm text-left transition-colors border ${
                     isBudgetActive
                       ? 'bg-[#C8102E] text-white shadow-xs border-[#C8102E]'
                       : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50 border-transparent'
                   }`}
                 >
-                  <DollarSign className={`w-4 h-4 shrink-0 ${isBudgetActive ? 'text-white' : 'text-slate-400'}`} />
+                  <DollarSign className={`w-5 h-5 shrink-0 ${isBudgetActive ? 'text-white' : 'text-slate-400'}`} />
                   <span className="truncate">Budget Allocation</span>
                 </Link>
               </nav>
@@ -113,32 +144,67 @@ export const ProponentSidebar: React.FC<ProponentSidebarProps> = ({
 
         {/* Bottom User Profile Section */}
         <div className="p-4 border-t border-slate-100 bg-slate-50/70">
-          <div className="flex items-center justify-between gap-2 p-2.5 bg-white rounded-sm border border-slate-200 shadow-2xs">
+          <Link
+            to="/proponent/profile"
+            onClick={onCloseMobile}
+            className={`w-full flex items-center justify-between gap-2.5 p-3 rounded-sm transition-all cursor-pointer group text-left ${
+              isProfileActive
+                ? 'bg-red-50/80 border border-red-200 shadow-2xs'
+                : 'bg-white border border-slate-200 hover:border-red-200 hover:bg-slate-50/90 shadow-2xs'
+            }`}
+            title="Click to view and edit profile"
+          >
             <div className="flex items-center gap-2.5 min-w-0">
-              <div className="w-8 h-8 rounded-sm bg-red-50 text-[#C8102E] flex items-center justify-center font-bold text-xs shrink-0 border border-red-100">
-                <UserIcon className="w-4 h-4" />
+              <div
+                className={`w-8.5 h-8.5 rounded-sm flex items-center justify-center font-bold text-xs shrink-0 transition-colors ${
+                  isProfileActive
+                    ? 'bg-[#C8102E] text-white'
+                    : 'bg-red-50 text-[#C8102E] border border-red-100 group-hover:bg-[#C8102E] group-hover:text-white'
+                }`}
+              >
+                <UserIcon className="w-4.5 h-4.5" />
               </div>
               <div className="min-w-0">
-                <div className="text-xs font-bold text-slate-900 truncate" title={displayEmail}>
-                  {displayEmail.split('@')[0]}
-                </div>
-                <div className="text-[10px] text-slate-500 font-medium leading-none truncate mt-0.5">
-                  Proponent / Researcher
-                </div>
+                {loadingProfile && !profile ? (
+                  <div className="space-y-1.5 py-0.5">
+                    <div className="h-3 w-28 bg-slate-100 animate-pulse rounded-xs" />
+                    <div className="h-2 w-16 bg-slate-100 animate-pulse rounded-xs" />
+                  </div>
+                ) : (
+                  <>
+                    <div
+                      className="text-xs font-bold text-slate-900 truncate group-hover:text-[#C8102E] transition-colors"
+                      title={fullName}
+                    >
+                      {fullName}
+                    </div>
+                    <div
+                      className="text-[10px] text-slate-500 font-medium leading-none truncate mt-0.5"
+                      title={departmentOrRole}
+                    >
+                      {departmentOrRole}
+                    </div>
+                  </>
+                )}
               </div>
             </div>
 
             {user && (
               <button
                 type="button"
-                onClick={signOut}
-                className="p-1.5 text-slate-400 hover:text-[#C8102E] hover:bg-slate-100 rounded-sm transition-colors cursor-pointer border border-transparent hover:border-slate-200"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  signOut();
+                }}
+                className="p-1.5 text-slate-400 hover:text-[#C8102E] hover:bg-slate-100 rounded-sm transition-colors cursor-pointer border border-transparent hover:border-slate-200 shrink-0"
                 title="Sign Out"
+                aria-label="Sign Out"
               >
-                <LogOut className="w-3.5 h-3.5" />
+                <LogOut className="w-4 h-4" />
               </button>
             )}
-          </div>
+          </Link>
         </div>
       </aside>
     </>

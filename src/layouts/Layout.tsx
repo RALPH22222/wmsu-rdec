@@ -8,6 +8,7 @@ export default function Layout() {
   const location = useLocation();
 
   const getPageTitle = () => {
+    if (location.pathname === '/proponent/profile') return 'Institutional Profile & Affiliation';
     if (location.pathname === '/proponent/budget') return 'Line-Item Budget Allocation';
     if (location.pathname.startsWith('/evaluator')) return 'Technical Evaluator Panel';
     return 'Concept Proposal Submission';

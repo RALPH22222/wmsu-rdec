@@ -12,6 +12,7 @@ import { AdminDashboard } from './pages/admin/AdminDashboard';
 import { RpduDashboard } from './pages/rpdu/RpduDashboard';
 import ProponentDashboard from './pages/proponents/ProponentDashboard';
 import BudgetAllocationPage from './pages/proponents/BudgetAllocationPage';
+import ProfilePage from './pages/proponents/ProfilePage';
 import EvaluatorDashboard from './pages/evaluator/evaluatorDashboard';
 import { PreliminaryScreeningPage } from './pages/screening/PreliminaryScreeningPage';
 import Login from './pages/auth/Login';
@@ -73,6 +74,7 @@ export function App() {
               <Route path="/proponent" element={<ProponentDashboard />} />
               <Route path="/proponent/submit" element={<ProponentDashboard />} />
               <Route path="/proponent/budget" element={<BudgetAllocationPage />} />
+              <Route path="/proponent/profile" element={<ProfilePage />} />
               <Route path="/dashboard" element={<ProponentDashboard />} />
               <Route path="/evaluator" element={<EvaluatorDashboard />} />
             </Route>

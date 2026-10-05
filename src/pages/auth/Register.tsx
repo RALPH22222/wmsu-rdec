@@ -297,7 +297,8 @@ export default function Register() {
                           maxLength={50}
                           value={formData.firstName}
                           onChange={handleChange}
-                          className="w-full bg-transparent border-b border-slate-300 py-2 pl-8 focus:outline-none focus:border-[#C8102E] transition-colors text-slate-900 text-sm"
+                          placeholder="Enter your first name"
+                          className="w-full bg-transparent border-b border-slate-300 py-2 pl-8 focus:outline-none focus:border-[#C8102E] transition-colors text-slate-900 text-sm placeholder-slate-400"
                         />
                       </div>
                     </div>
@@ -314,7 +315,8 @@ export default function Register() {
                           maxLength={50}
                           value={formData.middleName}
                           onChange={handleChange}
-                          className="w-full bg-transparent border-b border-slate-300 py-2 pl-8 focus:outline-none focus:border-[#C8102E] transition-colors text-slate-900 text-sm"
+                          placeholder="Enter your middle name"
+                          className="w-full bg-transparent border-b border-slate-300 py-2 pl-8 focus:outline-none focus:border-[#C8102E] transition-colors text-slate-900 text-sm placeholder-slate-400"
                         />
                       </div>
                     </div>
@@ -332,7 +334,8 @@ export default function Register() {
                           maxLength={50}
                           value={formData.lastName}
                           onChange={handleChange}
-                          className="w-full bg-transparent border-b border-slate-300 py-2 pl-8 focus:outline-none focus:border-[#C8102E] transition-colors text-slate-900 text-sm"
+                          placeholder="Enter your last name"
+                          className="w-full bg-transparent border-b border-slate-300 py-2 pl-8 focus:outline-none focus:border-[#C8102E] transition-colors text-slate-900 text-sm placeholder-slate-400"
                         />
                       </div>
                     </div>
@@ -348,7 +351,8 @@ export default function Register() {
                           maxLength={20}
                           value={formData.suffix}
                           onChange={handleChange}
-                          className="w-full bg-transparent border-b border-slate-300 py-2 focus:outline-none focus:border-[#C8102E] transition-colors text-slate-900 text-sm"
+                          placeholder="Enter your suffix"
+                          className="w-full bg-transparent border-b border-slate-300 py-2 focus:outline-none focus:border-[#C8102E] transition-colors text-slate-900 text-sm placeholder-slate-400"
                         />
                       </div>
                     </div>
@@ -378,10 +382,10 @@ export default function Register() {
                           type="tel"
                           name="contactNumber"
                           maxLength={15}
-                          placeholder="+639..."
+                          placeholder="Enter your contact number"
                           value={formData.contactNumber}
                           onChange={handleChange}
-                          className="w-full bg-transparent border-b border-slate-300 py-2 pl-8 focus:outline-none focus:border-[#C8102E] transition-colors text-slate-900 text-sm"
+                          className="w-full bg-transparent border-b border-slate-300 py-2 pl-8 focus:outline-none focus:border-[#C8102E] transition-colors text-slate-900 text-sm placeholder-slate-400"
                         />
                       </div>
                     </div>
@@ -456,7 +460,8 @@ export default function Register() {
                             required
                             value={formData.email}
                             onChange={handleChange}
-                            className="w-full bg-transparent border-b border-slate-300 py-2 pl-8 focus:outline-none focus:border-[#C8102E] transition-colors text-slate-900 text-sm"
+                            placeholder="Enter your email"
+                            className="w-full bg-transparent border-b border-slate-300 py-2 pl-8 focus:outline-none focus:border-[#C8102E] transition-colors text-slate-900 text-sm placeholder-slate-400"
                           />
                         </div>
                       </div>
@@ -474,7 +479,8 @@ export default function Register() {
                             minLength={6}
                             value={formData.password}
                             onChange={handleChange}
-                            className="w-full bg-transparent border-b border-slate-300 py-2 pl-8 focus:outline-none focus:border-[#C8102E] transition-colors text-slate-900 text-sm"
+                            placeholder="Enter your password"
+                            className="w-full bg-transparent border-b border-slate-300 py-2 pl-8 focus:outline-none focus:border-[#C8102E] transition-colors text-slate-900 text-sm placeholder-slate-400"
                           />
                         </div>
                         <p className="text-xs text-slate-500 mt-2">Must be at least 6 characters long.</p>
