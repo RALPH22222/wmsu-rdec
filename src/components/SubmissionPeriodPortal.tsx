@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Calendar,
   ArrowRight,
@@ -26,6 +26,14 @@ interface PriorityArea {
 
 export const SubmissionPeriodPortal: React.FC<SubmissionPeriodPortalProps> = ({ onSignInClick }) => {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [activeStep, setActiveStep] = useState<number>(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setActiveStep((prev) => (prev + 1) % 3);
+    }, 3000);
+    return () => clearInterval(interval);
+  }, []);
 
   const priorityAreas: PriorityArea[] = [
     {
@@ -158,8 +166,42 @@ export const SubmissionPeriodPortal: React.FC<SubmissionPeriodPortalProps> = ({ 
                 <span className="text-[11px] text-[#C8102E]/70 block mt-0.5">5:00 PM PST · Strict Deadline</span>
               </div>
             </div>
-            
-            <div className="mt-5 pt-4 border-t border-slate-100">
+
+            {/* Official Call Memo */}
+            <div className="mt-4 pt-4 border-t border-slate-100">
+              <span className="text-xs uppercase tracking-wider font-semibold text-slate-500 block mb-2">
+                Official Memorandum
+              </span>
+              <a
+                href="#"
+                className="group relative flex items-center gap-3.5 w-full bg-slate-50/70 hover:bg-white border border-slate-200/90 rounded-md p-3 transition-all duration-200 hover:border-[#C8102E]/40 hover:shadow-xs"
+              >
+                {/* Red left accent - inset */}
+                <div className="absolute left-0 top-2.5 bottom-2.5 w-1 bg-[#C8102E] rounded-r-full" />
+                {/* PDF icon block */}
+                <div className="flex-shrink-0 w-9 h-11 bg-red-50 border border-red-100 rounded flex flex-col items-center justify-center gap-0.5 ml-1">
+                  <div className="w-4 h-0.5 bg-[#C8102E]/40 rounded-full" />
+                  <div className="w-4 h-0.5 bg-[#C8102E]/40 rounded-full" />
+                  <div className="w-2.5 h-0.5 bg-[#C8102E]/40 rounded-full" />
+                  <span className="text-[8px] font-black text-[#C8102E] mt-0.5 tracking-wider">PDF</span>
+                </div>
+                {/* File info */}
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-slate-800 truncate group-hover:text-[#C8102E] transition-colors">
+                    WMSU-RDEC-Call-For-Proposals-Memo-2026.pdf
+                  </p>
+                  <p className="text-xs text-slate-400 mt-0.5">Official Call Guidelines & Terms · Click to view</p>
+                </div>
+                {/* View button / icon */}
+                <div className="flex items-center gap-1.5 px-2.5 py-1 bg-white border border-slate-200 rounded text-xs font-medium text-slate-600 group-hover:text-[#C8102E] group-hover:border-[#C8102E]/30 transition-colors shrink-0">
+                  <span>View</span>
+                  <ExternalLink className="w-3.5 h-3.5 text-slate-400 group-hover:text-[#C8102E]" />
+                </div>
+              </a>
+            </div>
+
+            {/* Priority Focus Topics */}
+            <div className="mt-4 pt-4 border-t border-slate-100">
               <span className="text-xs uppercase tracking-wider font-semibold text-slate-500 block mb-2">
                 Priority Focus Topics
               </span>
@@ -169,20 +211,6 @@ export const SubmissionPeriodPortal: React.FC<SubmissionPeriodPortalProps> = ({ 
                 <span className="px-2.5 py-1 bg-slate-100 border border-slate-200 text-xs font-medium text-slate-700 rounded-sm">Agriculture - Food Security</span>
               </div>
             </div>
-          </div>
-
-          {/* Official Call Memo - Centered Display */}
-          <div className="flex flex-col items-center justify-center mb-10">
-            <span className="text-xs uppercase tracking-wider font-semibold text-slate-500 mb-2">
-              Official Call Memo
-            </span>
-            <a
-              href="#"
-              className="inline-flex items-center gap-2.5 px-4 py-2.5 bg-[#eff6ff] text-[#1d4ed8] border border-[#bfdbfe] rounded-md hover:bg-[#dbeafe] transition-colors text-[15px] font-medium shadow-sm"
-            >
-              <FileText className="w-5 h-5" />
-              <span>WMSU-RDEC-Memo-2026.pdf</span>
-            </a>
           </div>
 
           {/* Primary Action Buttons */}
@@ -202,7 +230,7 @@ export const SubmissionPeriodPortal: React.FC<SubmissionPeriodPortalProps> = ({ 
               className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-3 rounded-sm font-medium text-sm text-slate-700 bg-white hover:bg-slate-50 border border-slate-200/90 shadow-2xs hover:border-slate-300 transition-all duration-200"
             >
               <Download className="w-4 h-4 text-slate-500" />
-              <span>Download DOST Form 1B</span>
+              <span>Download Concept Proposal</span>
             </a>
 
             <a
@@ -234,11 +262,10 @@ export const SubmissionPeriodPortal: React.FC<SubmissionPeriodPortalProps> = ({ 
               <button
                 type="button"
                 onClick={() => setSelectedCategory('all')}
-                className={`px-3.5 py-1.5 rounded-sm text-xs font-medium transition-all ${
-                  selectedCategory === 'all'
+                className={`px-3.5 py-1.5 rounded-sm text-xs font-medium transition-all ${selectedCategory === 'all'
                     ? 'bg-slate-900 text-white shadow-xs'
                     : 'bg-white text-slate-600 border border-slate-200 hover:border-slate-300'
-                }`}
+                  }`}
               >
                 All Domains ({priorityAreas.length})
               </button>
@@ -247,11 +274,10 @@ export const SubmissionPeriodPortal: React.FC<SubmissionPeriodPortalProps> = ({ 
                   key={area.id}
                   type="button"
                   onClick={() => setSelectedCategory(area.id)}
-                  className={`px-3.5 py-1.5 rounded-sm text-xs font-medium transition-all ${
-                    selectedCategory === area.id
+                  className={`px-3.5 py-1.5 rounded-sm text-xs font-medium transition-all ${selectedCategory === area.id
                       ? 'bg-[#C8102E] text-white shadow-xs'
                       : 'bg-white text-slate-600 border border-slate-200 hover:border-slate-300'
-                  }`}
+                    }`}
                 >
                   {area.category.split(' ')[0]}
                 </button>
@@ -320,61 +346,69 @@ export const SubmissionPeriodPortal: React.FC<SubmissionPeriodPortalProps> = ({ 
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 relative">
-            {submissionSteps.map((stepItem, idx) => (
-              <div
-                key={idx}
-                className="bg-white rounded-sm p-6 border border-slate-200/90 shadow-2xs hover:border-slate-300 transition-all flex flex-col justify-between"
-              >
-                <div>
-                  <div className="flex items-center justify-between mb-4">
-                    <span className="text-2xl font-black text-slate-300 group-hover:text-[#C8102E] transition-colors">
-                      {stepItem.step}
-                    </span>
-                    <span className="w-8 h-8 rounded-sm bg-slate-50 border border-slate-200/80 flex items-center justify-center text-xs font-bold text-slate-600">
-                      {idx + 1}
-                    </span>
+            {submissionSteps.map((stepItem, idx) => {
+              const isActive = activeStep === idx;
+              return (
+                <div
+                  key={idx}
+                  className="bg-white rounded-sm p-6 border border-slate-200/90 shadow-2xs hover:border-slate-300 transition-all flex flex-col justify-between"
+                >
+                  <div>
+                    <div className="flex items-center justify-between mb-4">
+                      <span
+                        className="text-3xl font-black transition-all duration-700"
+                        style={{
+                          color: isActive ? '#C8102E' : '#e2e8f0',
+                        }}
+                      >
+                        {String(idx + 1).padStart(2, '0')}
+                      </span>
+                      <span className="w-8 h-8 rounded-sm bg-slate-50 border border-slate-200/80 flex items-center justify-center text-xs font-bold text-slate-600">
+                        {idx + 1}
+                      </span>
+                    </div>
+
+                    <h3 className="text-base font-bold text-slate-900 mb-2">
+                      {stepItem.title}
+                    </h3>
+
+                    <p className="text-xs text-slate-600 leading-relaxed mb-6">
+                      {stepItem.description}
+                    </p>
                   </div>
 
-                  <h3 className="text-base font-bold text-slate-900 mb-2">
-                    {stepItem.title}
-                  </h3>
-
-                  <p className="text-xs text-slate-600 leading-relaxed mb-6">
-                    {stepItem.description}
-                  </p>
+                  <div>
+                    {stepItem.isDownload ? (
+                      <a
+                        href={stepItem.actionUrl}
+                        download
+                        className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#C8102E] hover:text-[#A00D26] transition-colors"
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                        <span>{stepItem.actionLabel}</span>
+                      </a>
+                    ) : stepItem.onClick ? (
+                      <button
+                        type="button"
+                        onClick={stepItem.onClick}
+                        className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#C8102E] hover:text-[#A00D26] cursor-pointer"
+                      >
+                        <span>{stepItem.actionLabel}</span>
+                        <ArrowRight className="w-3.5 h-3.5" />
+                      </button>
+                    ) : (
+                      <a
+                        href={stepItem.actionUrl}
+                        className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-slate-900 transition-colors"
+                      >
+                        <span>{stepItem.actionLabel}</span>
+                        <ArrowRight className="w-3.5 h-3.5" />
+                      </a>
+                    )}
+                  </div>
                 </div>
-
-                <div>
-                  {stepItem.isDownload ? (
-                    <a
-                      href={stepItem.actionUrl}
-                      download
-                      className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#C8102E] hover:text-[#A00D26] transition-colors"
-                    >
-                      <Download className="w-3.5 h-3.5" />
-                      <span>{stepItem.actionLabel}</span>
-                    </a>
-                  ) : stepItem.onClick ? (
-                    <button
-                      type="button"
-                      onClick={stepItem.onClick}
-                      className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#C8102E] hover:text-[#A00D26] cursor-pointer"
-                    >
-                      <span>{stepItem.actionLabel}</span>
-                      <ArrowRight className="w-3.5 h-3.5" />
-                    </button>
-                  ) : (
-                    <a
-                      href={stepItem.actionUrl}
-                      className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-slate-900 transition-colors"
-                    >
-                      <span>{stepItem.actionLabel}</span>
-                      <ArrowRight className="w-3.5 h-3.5" />
-                    </a>
-                  )}
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </section>
