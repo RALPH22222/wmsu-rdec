@@ -158,6 +158,31 @@ export const SubmissionPeriodPortal: React.FC<SubmissionPeriodPortalProps> = ({ 
                 <span className="text-[11px] text-[#C8102E]/70 block mt-0.5">5:00 PM PST · Strict Deadline</span>
               </div>
             </div>
+            
+            <div className="mt-5 pt-4 border-t border-slate-100">
+              <span className="text-xs uppercase tracking-wider font-semibold text-slate-500 block mb-2">
+                Priority Focus Topics
+              </span>
+              <div className="flex flex-wrap gap-2">
+                <span className="px-2.5 py-1 bg-slate-100 border border-slate-200 text-xs font-medium text-slate-700 rounded-sm">Science & Technology - Biology</span>
+                <span className="px-2.5 py-1 bg-slate-100 border border-slate-200 text-xs font-medium text-slate-700 rounded-sm">Social Science - ICT in Education</span>
+                <span className="px-2.5 py-1 bg-slate-100 border border-slate-200 text-xs font-medium text-slate-700 rounded-sm">Agriculture - Food Security</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Official Call Memo - Centered Display */}
+          <div className="flex flex-col items-center justify-center mb-10">
+            <span className="text-xs uppercase tracking-wider font-semibold text-slate-500 mb-2">
+              Official Call Memo
+            </span>
+            <a
+              href="#"
+              className="inline-flex items-center gap-2.5 px-4 py-2.5 bg-[#eff6ff] text-[#1d4ed8] border border-[#bfdbfe] rounded-md hover:bg-[#dbeafe] transition-colors text-[15px] font-medium shadow-sm"
+            >
+              <FileText className="w-5 h-5" />
+              <span>WMSU-RDEC-Memo-2026.pdf</span>
+            </a>
           </div>
 
           {/* Primary Action Buttons */}

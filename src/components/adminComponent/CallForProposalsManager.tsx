@@ -153,10 +153,10 @@ export const CallForProposalsManager: React.FC = () => {
             onChange={(e) => setSelectedYear(e.target.value === 'all' ? 'all' : Number(e.target.value))}
             className="px-3 py-2 rounded-sm border border-slate-200 text-xs focus:outline-none focus:ring-2 focus:ring-[#C8102E] cursor-pointer"
           >
-            <option value="all">All Fiscal Years</option>
-            <option value={2026}>FY 2026</option>
-            <option value={2027}>FY 2027</option>
-            <option value={2028}>FY 2028</option>
+            <option value="all">All Years</option>
+            <option value={2026}>Year 2026</option>
+            <option value={2027}>Year 2027</option>
+            <option value={2028}>Year 2028</option>
           </select>
         </div>
       </div>
@@ -191,7 +191,7 @@ export const CallForProposalsManager: React.FC = () => {
                 <div className="flex flex-wrap items-center gap-2">
                   {getStatusBadge(call.status)}
                   <span className="text-xs font-semibold text-slate-400">
-                    FY {call.fiscalYear}
+                    Year {call.fiscalYear}
                   </span>
                 </div>
 
@@ -204,7 +204,7 @@ export const CallForProposalsManager: React.FC = () => {
                   </p>
                 </div>
 
-                {/* Timeline & Budget Stats */}
+                {/* Timeline & Submission Stats */}
                 <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-xs text-slate-600 pt-1">
                   <div className="flex items-center gap-1.5 text-slate-700 font-semibold">
                     <Calendar className="w-3.5 h-3.5 text-[#C8102E]" />
@@ -214,34 +214,10 @@ export const CallForProposalsManager: React.FC = () => {
                   </div>
 
                   <div className="flex items-center gap-1 text-slate-600">
-                    <span className="font-bold text-slate-800">₱{call.maxBudgetPerProject.toLocaleString()}</span>
-                    <span>max per proposal</span>
-                  </div>
-
-                  <div className="flex items-center gap-1 text-slate-600">
                     <span className="font-bold text-emerald-700">{call.submissionCount}</span>
                     <span>proposals submitted</span>
                   </div>
                 </div>
-
-                {/* Priority Areas Preview */}
-                {call.priorityAreas && call.priorityAreas.length > 0 && (
-                  <div className="flex flex-wrap items-center gap-1.5 pt-1">
-                    {call.priorityAreas.slice(0, 3).map((area, idx) => (
-                      <span
-                        key={idx}
-                        className="px-2 py-0.5 bg-slate-100 text-slate-600 rounded-sm text-[11px] font-medium"
-                      >
-                        {area}
-                      </span>
-                    ))}
-                    {call.priorityAreas.length > 3 && (
-                      <span className="text-[11px] font-semibold text-slate-400">
-                        +{call.priorityAreas.length - 3} more
-                      </span>
-                    )}
-                  </div>
-                )}
               </div>
 
               {/* Action Buttons Panel */}

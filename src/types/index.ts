@@ -28,6 +28,7 @@ export interface CallForProposals {
   priorityAreas: string[];
   eligibleRoles: string[];
   requiredForms: string[];
+  memoAttachment?: string;
   submissionCount: number;
   acceptedCount: number;
   underReviewCount: number;

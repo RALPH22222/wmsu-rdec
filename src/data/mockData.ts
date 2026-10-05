@@ -100,7 +100,7 @@ export const INITIAL_CALLS: CallForProposals[] = [
     endTime: '17:00',
     status: 'closed',
     description:
-      'Completed submission cycle for FY 2026 institutional research funding. All submitted proposals have completed technical evaluation and funding allocation.',
+      'Completed submission cycle for Year 2026 institutional research funding. All submitted proposals have completed technical evaluation and funding allocation.',
     maxBudgetPerProject: 400000,
     totalGrantBudget: 4000000,
     priorityAreas: [
