@@ -1,5 +1,5 @@
-import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import React, { useState } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   FileText,
   DollarSign,
@@ -8,6 +8,7 @@ import {
   LogOut
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { LogoutModal } from '../LogoutModal';
 
 export interface ProponentSidebarProps {
   mobileOpen?: boolean;
@@ -20,6 +21,10 @@ export const ProponentSidebar: React.FC<ProponentSidebarProps> = ({
 }) => {
   const { user, profile, loadingProfile, signOut } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
+
+  const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const isProposalActive =
     location.pathname === '/proponent' ||
@@ -58,6 +63,19 @@ export const ProponentSidebar: React.FC<ProponentSidebarProps> = ({
     profile?.departments?.name ||
     user?.user_metadata?.department ||
     'Proponent / Researcher';
+
+  const handleConfirmLogout = async () => {
+    setIsLoggingOut(true);
+    try {
+      await signOut();
+      setIsLogoutModalOpen(false);
+      navigate('/login', { replace: true });
+    } catch (err) {
+      console.error('Logout error:', err);
+    } finally {
+      setIsLoggingOut(false);
+    }
+  };
 
   return (
     <>
@@ -195,7 +213,7 @@ export const ProponentSidebar: React.FC<ProponentSidebarProps> = ({
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
-                  signOut();
+                  setIsLogoutModalOpen(true);
                 }}
                 className="p-1.5 text-slate-400 hover:text-[#C8102E] hover:bg-slate-100 rounded-sm transition-colors cursor-pointer border border-transparent hover:border-slate-200 shrink-0"
                 title="Sign Out"
@@ -207,6 +225,16 @@ export const ProponentSidebar: React.FC<ProponentSidebarProps> = ({
           </Link>
         </div>
       </aside>
+
+      {/* SweetAlert-Style Sign Out Confirmation Modal */}
+      <LogoutModal
+        isOpen={isLogoutModalOpen}
+        onClose={() => {
+          if (!isLoggingOut) setIsLogoutModalOpen(false);
+        }}
+        onConfirm={handleConfirmLogout}
+        loading={isLoggingOut}
+      />
     </>
   );
 };

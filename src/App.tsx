@@ -18,6 +18,7 @@ import { PreliminaryScreeningPage } from './pages/screening/PreliminaryScreening
 import Login from './pages/auth/Login';
 import Register from './pages/auth/Register';
 import { Toast } from './components/Toast';
+import { ProtectedRoute } from './components/ProtectedRoute';
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -69,26 +70,29 @@ export function App() {
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
 
-            {/* Proponent Dashboard Layout */}
-            <Route element={<Layout />}>
-              <Route path="/proponent" element={<ProponentDashboard />} />
-              <Route path="/proponent/submit" element={<ProponentDashboard />} />
-              <Route path="/proponent/budget" element={<BudgetAllocationPage />} />
-              <Route path="/proponent/profile" element={<ProfilePage />} />
-              <Route path="/dashboard" element={<ProponentDashboard />} />
-              <Route path="/evaluator" element={<EvaluatorDashboard />} />
-            </Route>
+            {/* Protected Portal Routes (Requires Active Authentication) */}
+            <Route element={<ProtectedRoute />}>
+              {/* Proponent Dashboard Layout */}
+              <Route element={<Layout />}>
+                <Route path="/proponent" element={<ProponentDashboard />} />
+                <Route path="/proponent/submit" element={<ProponentDashboard />} />
+                <Route path="/proponent/budget" element={<BudgetAllocationPage />} />
+                <Route path="/proponent/profile" element={<ProfilePage />} />
+                <Route path="/dashboard" element={<ProponentDashboard />} />
+                <Route path="/evaluator" element={<EvaluatorDashboard />} />
+              </Route>
 
-            {/* Dedicated Admin Layout */}
-            <Route element={<AdminLayout />}>
-              <Route path="/admin" element={<AdminDashboard />} />
-              <Route path="/admin/screening" element={<PreliminaryScreeningPage role="admin" />} />
-            </Route>
+              {/* Dedicated Admin Layout */}
+              <Route element={<AdminLayout />}>
+                <Route path="/admin" element={<AdminDashboard />} />
+                <Route path="/admin/screening" element={<PreliminaryScreeningPage role="admin" />} />
+              </Route>
 
-            {/* Dedicated RPDU Layout */}
-            <Route element={<RpduLayout />}>
-              <Route path="/rpdu" element={<RpduDashboard />} />
-              <Route path="/rpdu/screening" element={<PreliminaryScreeningPage role="rpdu" />} />
+              {/* Dedicated RPDU Layout */}
+              <Route element={<RpduLayout />}>
+                <Route path="/rpdu" element={<RpduDashboard />} />
+                <Route path="/rpdu/screening" element={<PreliminaryScreeningPage role="rpdu" />} />
+              </Route>
             </Route>
 
             {/* Catch-all redirect */}

@@ -1,5 +1,5 @@
-import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import React, { useState } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   Calendar,
   ClipboardCheck,
@@ -10,6 +10,8 @@ import {
   X
 } from 'lucide-react';
 import { useCallForProposals } from '../context/CallForProposalsContext';
+import { useAuth } from '../context/AuthContext';
+import { LogoutModal } from './LogoutModal';
 
 export interface SidebarProps {
   mobileOpen?: boolean;
@@ -23,7 +25,25 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onOpenCreateCall,
 }) => {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { signOut } = useAuth();
   const { currentUser } = useCallForProposals();
+
+  const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+  const handleConfirmLogout = async () => {
+    setIsLoggingOut(true);
+    try {
+      await signOut();
+      setIsLogoutModalOpen(false);
+      navigate('/login', { replace: true });
+    } catch (err) {
+      console.error('Logout error:', err);
+    } finally {
+      setIsLoggingOut(false);
+    }
+  };
 
   const isRpdu = location.pathname.startsWith('/rpdu');
   const basePath = isRpdu ? '/rpdu' : '/admin';
@@ -168,7 +188,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
             <button
               type="button"
-              onClick={() => alert(`Logged out from ${isRpdu ? 'RPDU' : 'Admin'} Portal`)}
+              onClick={() => setIsLogoutModalOpen(true)}
               title="Sign Out"
               className="group shrink-0 inline-flex items-center gap-1.5 py-1.5 px-2.5 rounded-sm text-xs font-semibold text-red-600 hover:text-white hover:bg-red-600 border border-red-200 hover:border-red-600 bg-white shadow-2xs transition-all duration-200 cursor-pointer"
             >
@@ -178,6 +198,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </div>
         </div>
       </aside>
+
+      {/* SweetAlert-Style Sign Out Confirmation Modal */}
+      <LogoutModal
+        isOpen={isLogoutModalOpen}
+        onClose={() => {
+          if (!isLoggingOut) setIsLogoutModalOpen(false);
+        }}
+        onConfirm={handleConfirmLogout}
+        loading={isLoggingOut}
+      />
     </>
   );
 };

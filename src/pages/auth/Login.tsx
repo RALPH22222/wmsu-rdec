@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
-import { ArrowRight, ArrowLeft, Lock, Mail } from 'lucide-react';
+import { ArrowRight, ArrowLeft, Lock, Mail, Eye, EyeOff } from 'lucide-react';
 
 export default function Login() {
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -162,13 +163,21 @@ export default function Login() {
               <div className="flex items-center">
                 <Lock className="w-5 h-5 text-slate-400 absolute left-0" strokeWidth={1.5} />
                 <input
-                  type="password"
+                  type={showPassword ? 'text' : 'password'}
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full bg-transparent border-b border-slate-300 py-2 pl-8 focus:outline-none focus:border-[#C8102E] transition-colors text-slate-900 placeholder-slate-400 text-sm"
+                  className="w-full bg-transparent border-b border-slate-300 py-2 pl-8 pr-8 focus:outline-none focus:border-[#C8102E] transition-colors text-slate-900 placeholder-slate-400 text-sm"
                   placeholder="Enter your password"
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-0 p-1 text-slate-400 hover:text-slate-700 transition-colors cursor-pointer"
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
               </div>
             </div>
 

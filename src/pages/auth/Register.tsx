@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
-import { ArrowRight, ArrowLeft, User, Mail, Lock, Phone, Building2, CheckCircle2, ChevronDown } from 'lucide-react';
+import { ArrowRight, ArrowLeft, User, Mail, Lock, Phone, Building2, CheckCircle2, ChevronDown, Eye, EyeOff } from 'lucide-react';
 
 type Department = {
   id: number;
@@ -10,6 +10,7 @@ type Department = {
 
 export default function Register() {
   const [currentStep, setCurrentStep] = useState(1);
+  const [showPassword, setShowPassword] = useState(false);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [loadingDepartments, setLoadingDepartments] = useState(true);
   const [deptDropdownOpen, setDeptDropdownOpen] = useState(false);
@@ -473,15 +474,23 @@ export default function Register() {
                         <div className="flex items-center">
                           <Lock className="w-5 h-5 text-slate-400 absolute left-0" strokeWidth={1.5} />
                           <input
-                            type="password"
+                            type={showPassword ? 'text' : 'password'}
                             name="password"
                             required
                             minLength={6}
                             value={formData.password}
                             onChange={handleChange}
                             placeholder="Enter your password"
-                            className="w-full bg-transparent border-b border-slate-300 py-2 pl-8 focus:outline-none focus:border-[#C8102E] transition-colors text-slate-900 text-sm placeholder-slate-400"
+                            className="w-full bg-transparent border-b border-slate-300 py-2 pl-8 pr-8 focus:outline-none focus:border-[#C8102E] transition-colors text-slate-900 text-sm placeholder-slate-400"
                           />
+                          <button
+                            type="button"
+                            onClick={() => setShowPassword(!showPassword)}
+                            className="absolute right-0 p-1 text-slate-400 hover:text-slate-700 transition-colors cursor-pointer"
+                            aria-label={showPassword ? 'Hide password' : 'Show password'}
+                          >
+                            {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                          </button>
                         </div>
                         <p className="text-xs text-slate-500 mt-2">Must be at least 6 characters long.</p>
                       </div>
