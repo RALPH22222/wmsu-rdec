@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { ArrowRight, ArrowLeft, User, Mail, Lock, Phone, Building2, CheckCircle2, ChevronDown, Eye, EyeOff } from 'lucide-react';
+import { LegalDocumentModal, type LegalDocumentType } from '../../components/LegalDocumentModal';
 
 type Department = {
   id: number;
@@ -32,6 +33,55 @@ export default function Register() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
+  // Legal document modal state & viewing tracking
+  const [legalModalOpen, setLegalModalOpen] = useState(false);
+  const [selectedDocType, setSelectedDocType] = useState<LegalDocumentType>('TERMS_OF_SERVICE');
+  const [hasViewedTerms, setHasViewedTerms] = useState(false);
+  const [hasViewedPrivacy, setHasViewedPrivacy] = useState(false);
+
+  const hasViewedAllLegalDocs = hasViewedTerms && hasViewedPrivacy;
+
+  const openLegalModal = (docType: LegalDocumentType) => {
+    setSelectedDocType(docType);
+    setLegalModalOpen(true);
+    // Mark viewed as soon as the user opens the modal
+    if (docType === 'TERMS_OF_SERVICE') {
+      setHasViewedTerms(true);
+    } else {
+      setHasViewedPrivacy(true);
+    }
+  };
+
+  const handleModalAccept = () => {
+    if (selectedDocType === 'TERMS_OF_SERVICE') {
+      setHasViewedTerms(true);
+      if (hasViewedPrivacy) {
+        setFormData((prev) => ({ ...prev, agreeToTerms: true }));
+        if (error) setError(null);
+      } else {
+        // Seamlessly prompt Privacy Policy modal next
+        setTimeout(() => {
+          setSelectedDocType('PRIVACY_POLICY');
+          setHasViewedPrivacy(true);
+          setLegalModalOpen(true);
+        }, 150);
+      }
+    } else if (selectedDocType === 'PRIVACY_POLICY') {
+      setHasViewedPrivacy(true);
+      if (hasViewedTerms) {
+        setFormData((prev) => ({ ...prev, agreeToTerms: true }));
+        if (error) setError(null);
+      } else {
+        // Seamlessly prompt Terms of Service modal next
+        setTimeout(() => {
+          setSelectedDocType('TERMS_OF_SERVICE');
+          setHasViewedTerms(true);
+          setLegalModalOpen(true);
+        }, 150);
+      }
+    }
+  };
+
   useEffect(() => {
     const fetchDepartments = async () => {
       const { data, error } = await supabase
@@ -55,6 +105,16 @@ export default function Register() {
     const name = target.name;
     
     if (target.type === 'checkbox') {
+      if (name === 'agreeToTerms' && !hasViewedAllLegalDocs) {
+        if (!hasViewedTerms) {
+          setError('Please read and review the Terms of Service before agreeing.');
+          openLegalModal('TERMS_OF_SERVICE');
+        } else if (!hasViewedPrivacy) {
+          setError('Please read and review the Privacy Policy before agreeing.');
+          openLegalModal('PRIVACY_POLICY');
+        }
+        return;
+      }
       setFormData({ ...formData, [name]: target.checked });
       if (error) setError(null);
       return;
@@ -123,8 +183,13 @@ export default function Register() {
     e.preventDefault();
     if (currentStep !== 3) return;
     
-    if (!formData.agreeToTerms) {
-      setError('You must agree to the Terms of Service and Privacy Policy to register.');
+    if (!formData.agreeToTerms || !hasViewedAllLegalDocs) {
+      setError('You must open, review, and agree to both the Terms of Service and Privacy Policy to register.');
+      if (!hasViewedTerms) {
+        openLegalModal('TERMS_OF_SERVICE');
+      } else if (!hasViewedPrivacy) {
+        openLegalModal('PRIVACY_POLICY');
+      }
       return;
     }
 
@@ -144,7 +209,8 @@ export default function Register() {
           contact_number: formData.contactNumber,
           department_id: parseInt(formData.departmentId),
           sex: formData.sex,
-          role: 'PROPONENT'
+          role: 'PROPONENT',
+          agree_to_terms: formData.agreeToTerms
         }
       }
     });
@@ -496,18 +562,95 @@ export default function Register() {
                       </div>
                     </div>
 
-                    <div className="pt-4 flex items-start gap-3">
-                      <input
-                        type="checkbox"
-                        name="agreeToTerms"
-                        id="agreeToTerms"
-                        checked={formData.agreeToTerms}
-                        onChange={handleChange}
-                        className="mt-1 w-4 h-4 text-[#C8102E] bg-slate-100 border-slate-300 rounded focus:ring-[#C8102E] cursor-pointer"
-                      />
-                      <label htmlFor="agreeToTerms" className="text-sm text-slate-600 leading-relaxed cursor-pointer">
-                        I agree to the <a href="#" className="text-[#C8102E] font-medium hover:underline">Terms of Service</a> and <a href="#" className="text-[#C8102E] font-medium hover:underline">Privacy Policy</a>. I understand that the information provided will be used in accordance with the Data Privacy Act of 2012.
-                      </label>
+                    <div className="pt-4 space-y-2">
+                      <div 
+                        onClick={(e) => {
+                          if (!hasViewedAllLegalDocs) {
+                            e.preventDefault();
+                            if (!hasViewedTerms) {
+                              setError('Please review the Terms of Service before agreeing.');
+                              openLegalModal('TERMS_OF_SERVICE');
+                            } else if (!hasViewedPrivacy) {
+                              setError('Please review the Privacy Policy before agreeing.');
+                              openLegalModal('PRIVACY_POLICY');
+                            }
+                          }
+                        }}
+                        className={`flex items-start gap-3 p-3 rounded-sm transition-colors ${
+                          !hasViewedAllLegalDocs ? 'bg-slate-50/80 cursor-pointer' : 'cursor-pointer'
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          name="agreeToTerms"
+                          id="agreeToTerms"
+                          checked={formData.agreeToTerms}
+                          disabled={!hasViewedAllLegalDocs}
+                          onChange={handleChange}
+                          className={`mt-1 w-4 h-4 rounded transition-colors ${
+                            hasViewedAllLegalDocs
+                              ? 'text-[#C8102E] bg-slate-100 border-slate-300 focus:ring-[#C8102E] cursor-pointer'
+                              : 'text-slate-300 bg-slate-200 border-slate-300 cursor-not-allowed opacity-60'
+                          }`}
+                        />
+                        <div className="text-sm text-slate-600 leading-relaxed select-none">
+                          <label 
+                            htmlFor={hasViewedAllLegalDocs ? 'agreeToTerms' : undefined}
+                            className={hasViewedAllLegalDocs ? 'cursor-pointer' : 'cursor-not-allowed'}
+                          >
+                            I agree to the{' '}
+                          </label>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              openLegalModal('TERMS_OF_SERVICE');
+                            }}
+                            className="text-[#C8102E] font-medium hover:underline focus:outline-none cursor-pointer inline p-0 bg-transparent border-none text-left"
+                          >
+                            Terms of Service
+                          </button>
+                          {hasViewedTerms ? (
+                            <span className="inline-flex items-center gap-1 text-[10px] text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded-sm font-semibold ml-1">
+                              Reviewed
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 text-[10px] text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded-sm font-medium ml-1">
+                              Review required
+                            </span>
+                          )}{' '}
+                          and{' '}
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              openLegalModal('PRIVACY_POLICY');
+                            }}
+                            className="text-[#C8102E] font-medium hover:underline focus:outline-none cursor-pointer inline p-0 bg-transparent border-none text-left"
+                          >
+                            Privacy Policy
+                          </button>
+                          {hasViewedPrivacy ? (
+                            <span className="inline-flex items-center gap-1 text-[10px] text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded-sm font-semibold ml-1">
+                              Reviewed
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 text-[10px] text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded-sm font-medium ml-1">
+                              Review required
+                            </span>
+                          )}
+                          . I understand that the information provided will be used in accordance with the Data Privacy Act of 2012.
+                        </div>
+                      </div>
+
+                      {!hasViewedAllLegalDocs && (
+                        <p className="text-[11px] text-amber-800 bg-amber-50/70 p-2.5 rounded-sm flex items-center gap-2">
+                          <span className="font-semibold uppercase tracking-wider text-[10px]">Notice:</span>
+                          <span>Please click and review both legal documents above to unlock agreement confirmation.</span>
+                        </p>
+                      )}
                     </div>
                   </div>
                 )}
@@ -566,6 +709,14 @@ export default function Register() {
           )}
         </div>
       </div>
+
+      {/* SweetAlert-Style Legal Document Modal */}
+      <LegalDocumentModal
+        isOpen={legalModalOpen}
+        onClose={() => setLegalModalOpen(false)}
+        documentType={selectedDocType}
+        onAccept={handleModalAccept}
+      />
     </div>
   );
 }
