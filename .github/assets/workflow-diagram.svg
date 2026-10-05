@@ -1,0 +1,268 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 1480" width="100%" height="100%">
+  <defs>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap');
+      text { font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+      .phase-title { font-size: 13px; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; }
+      .node-title { font-size: 14px; font-weight: 700; }
+      .node-desc { font-size: 11px; font-weight: 400; }
+      .badge-text { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+      .arrow-text { font-size: 10.5px; font-weight: 600; }
+      .phase-card { rx: 16; ry: 16; stroke-width: 1.5; }
+      .node-box { rx: 10; ry: 10; stroke-width: 1.5; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.04)); }
+    </style>
+
+    <!-- Markers -->
+    <marker id="arrow-crimson" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M1,1 L7,4 L1,7 Z" fill="#C8102E" />
+    </marker>
+    <marker id="arrow-blue" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M1,1 L7,4 L1,7 Z" fill="#0284C7" />
+    </marker>
+    <marker id="arrow-amber" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M1,1 L7,4 L1,7 Z" fill="#D97706" />
+    </marker>
+    <marker id="arrow-green" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M1,1 L7,4 L1,7 Z" fill="#16A34A" />
+    </marker>
+    <marker id="arrow-gray" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M1,1 L7,4 L1,7 Z" fill="#64748B" />
+    </marker>
+    <marker id="arrow-red" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M1,1 L7,4 L1,7 Z" fill="#DC2626" />
+    </marker>
+
+    <!-- Drop Shadows -->
+    <filter id="card-shadow" x="-5%" y="-5%" width="110%" height="110%">
+      <feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="#0F172A" flood-opacity="0.04" />
+    </filter>
+  </defs>
+
+  <!-- Background Canvas -->
+  <rect width="960" height="1480" fill="#F8FAFC" rx="20" />
+
+  <!-- Flow Connector Background Lines -->
+  <!-- Phase 1 to Phase 2 -->
+  <path d="M 480 345 L 480 380" stroke="#0284C7" stroke-width="2.5" stroke-dasharray="4,4" marker-end="url(#arrow-blue)" />
+  <!-- Phase 2 to Phase 3 -->
+  <path d="M 480 660 L 480 690" stroke="#D97706" stroke-width="2.5" stroke-dasharray="4,4" marker-end="url(#arrow-amber)" />
+  <!-- Phase 3 to Phase 4 -->
+  <path d="M 480 1055 L 480 1085" stroke="#16A34A" stroke-width="2.5" stroke-dasharray="4,4" marker-end="url(#arrow-green)" />
+
+  <!-- ========================================== -->
+  <!-- PHASE 1: INITIATION & CONCEPT SCREENING   -->
+  <!-- ========================================== -->
+  <g id="phase-1">
+    <!-- Outer Phase Card -->
+    <rect x="140" y="24" width="680" height="320" class="phase-card" fill="#FFFFFF" stroke="#FECDD3" filter="url(#card-shadow)" />
+    
+    <!-- Phase Header Badge -->
+    <rect x="160" y="40" width="340" height="26" rx="13" fill="#FFF1F2" stroke="#F43F5E" stroke-width="1" />
+    <circle cx="174" cy="53" r="5" fill="#C8102E" />
+    <text x="187" y="57" class="phase-title" fill="#9F1239">Phase 1 &#8226; Initiation &amp; Screening</text>
+
+    <!-- Node 1: Call for Proposals -->
+    <g transform="translate(290, 78)">
+      <rect width="380" height="58" class="node-box" fill="#FFFFFF" stroke="#E2E8F0" />
+      <rect width="5" height="58" rx="2.5" fill="#C8102E" />
+      <text x="20" y="24" class="node-title" fill="#0F172A">RPDU: Call for Research Proposals</text>
+      <text x="20" y="44" class="node-desc" fill="#64748B">Platform opens submission cycle, priority agendas &amp; caps</text>
+    </g>
+
+    <!-- Arrow 1 to 2 -->
+    <line x1="480" y1="136" x2="480" y2="158" stroke="#C8102E" stroke-width="2" marker-end="url(#arrow-crimson)" />
+
+    <!-- Node 2: Concept Submission -->
+    <g transform="translate(290, 160)">
+      <rect width="380" height="58" class="node-box" fill="#FFFFFF" stroke="#E2E8F0" />
+      <rect width="5" height="58" rx="2.5" fill="#C8102E" />
+      <text x="20" y="24" class="node-title" fill="#0F172A">Concept Paper &amp; Endorsement Submission</text>
+      <text x="20" y="44" class="node-desc" fill="#64748B">Mandatory College Dean &amp; Research Coordinator endorsements</text>
+    </g>
+
+    <!-- Arrow 2 to 3 -->
+    <line x1="480" y1="218" x2="480" y2="240" stroke="#C8102E" stroke-width="2" marker-end="url(#arrow-crimson)" />
+
+    <!-- Node 3: Preliminary Screening -->
+    <g transform="translate(290, 242)">
+      <rect width="380" height="58" class="node-box" fill="#FFFFFF" stroke="#E2E8F0" />
+      <rect width="5" height="58" rx="2.5" fill="#C8102E" />
+      <text x="20" y="24" class="node-title" fill="#0F172A">Preliminary Validation &amp; Screening</text>
+      <text x="20" y="44" class="node-desc" fill="#64748B">RPDU &amp; leadership verify eligibility, agenda, and budget cap</text>
+    </g>
+
+    <!-- Branch: Rejected / Disqualified -->
+    <path d="M 670 271 L 725 271" stroke="#DC2626" stroke-width="1.8" marker-end="url(#arrow-red)" />
+    <g transform="translate(730, 246)">
+      <rect width="78" height="50" rx="8" fill="#FEF2F2" stroke="#FCA5A5" stroke-width="1" />
+      <text x="39" y="22" text-anchor="middle" class="badge-text" fill="#991B1B">Failed</text>
+      <text x="39" y="38" text-anchor="middle" font-size="9" fill="#B91C1C">Archived</text>
+    </g>
+
+    <!-- Branch: Passed & Advance -->
+    <line x1="480" y1="300" x2="480" y2="340" stroke="#C8102E" stroke-width="2" />
+    <rect x="424" y="312" width="112" height="20" rx="10" fill="#ECFDF5" stroke="#10B981" stroke-width="1" />
+    <text x="480" y="326" text-anchor="middle" class="badge-text" fill="#065F46">Passed Screening</text>
+  </g>
+
+
+  <!-- ========================================== -->
+  <!-- PHASE 2: DETAILED DEVELOPMENT & AIHR       -->
+  <!-- ========================================== -->
+  <g id="phase-2">
+    <!-- Outer Phase Card -->
+    <rect x="140" y="380" width="680" height="280" class="phase-card" fill="#FFFFFF" stroke="#BAE6FD" filter="url(#card-shadow)" />
+
+    <!-- Phase Header Badge -->
+    <rect x="160" y="396" width="340" height="26" rx="13" fill="#F0F9FF" stroke="#38BDF8" stroke-width="1" />
+    <circle cx="174" cy="409" r="5" fill="#0284C7" />
+    <text x="187" y="413" class="phase-title" fill="#0369A1">Phase 2 &#8226; Detailed Dev &amp; AIHR</text>
+
+    <!-- Node 2A: Detailed Proposal -->
+    <g transform="translate(290, 434)">
+      <rect width="380" height="58" class="node-box" fill="#FFFFFF" stroke="#E2E8F0" />
+      <rect width="5" height="58" rx="2.5" fill="#0284C7" />
+      <text x="20" y="24" class="node-title" fill="#0F172A">Detailed Research Proposal Submission</text>
+      <text x="20" y="44" class="node-desc" fill="#64748B">Comprehensive research manuscript per DOST/WMSU criteria</text>
+    </g>
+
+    <!-- Arrow 2A to 2B -->
+    <line x1="480" y1="492" x2="480" y2="514" stroke="#0284C7" stroke-width="2" marker-end="url(#arrow-blue)" />
+
+    <!-- Node 2B: Evaluator Assignment -->
+    <g transform="translate(290, 516)">
+      <rect width="380" height="58" class="node-box" fill="#FFFFFF" stroke="#E2E8F0" />
+      <rect width="5" height="58" rx="2.5" fill="#0284C7" />
+      <text x="20" y="24" class="node-title" fill="#0F172A">RPDU: Evaluator Panel Assignment</text>
+      <text x="20" y="44" class="node-desc" fill="#64748B">Matching verified subject-matter experts &amp; panel members</text>
+    </g>
+
+    <!-- Arrow 2B to 2C -->
+    <line x1="480" y1="574" x2="480" y2="596" stroke="#0284C7" stroke-width="2" marker-end="url(#arrow-blue)" />
+
+    <!-- Node 2C: Agency In-House Review -->
+    <g transform="translate(290, 598)">
+      <rect width="380" height="52" class="node-box" fill="#FFFFFF" stroke="#E2E8F0" />
+      <rect width="5" height="52" rx="2.5" fill="#0284C7" />
+      <text x="20" y="22" class="node-title" fill="#0F172A">Agency In-House Review (AIHR)</text>
+      <text x="20" y="40" class="node-desc" fill="#64748B">Formal presentations evaluated under institutional standards</text>
+    </g>
+  </g>
+
+
+  <!-- ========================================== -->
+  <!-- PHASE 3: DOUBLE-BLIND REVIEW & REVISIONS   -->
+  <!-- ========================================== -->
+  <g id="phase-3">
+    <!-- Outer Phase Card -->
+    <rect x="140" y="690" width="680" height="365" class="phase-card" fill="#FFFFFF" stroke="#FED7AA" filter="url(#card-shadow)" />
+
+    <!-- Phase Header Badge -->
+    <rect x="160" y="706" width="470" height="26" rx="13" fill="#FFFBEB" stroke="#FBBF24" stroke-width="1" />
+    <circle cx="174" cy="719" r="5" fill="#D97706" />
+    <text x="187" y="723" class="phase-title" fill="#B45309">Phase 3 &#8226; Double-Blind Review &amp; Revisions</text>
+
+    <!-- Node 3A: Technical Assessment -->
+    <g id="node-3a" transform="translate(290, 744)">
+      <rect width="380" height="58" class="node-box" fill="#FFFFFF" stroke="#E2E8F0" />
+      <rect width="5" height="58" rx="2.5" fill="#D97706" />
+      <text x="20" y="24" class="node-title" fill="#0F172A">Double-Blind Technical Assessment</text>
+      <text x="20" y="44" class="node-desc" fill="#64748B">Isolated reviewers score manuscripts without author identities</text>
+    </g>
+
+    <!-- Arrow 3A to 3B -->
+    <line x1="480" y1="802" x2="480" y2="824" stroke="#D97706" stroke-width="2" marker-end="url(#arrow-amber)" />
+
+    <!-- Node 3B: Action Sheets -->
+    <g transform="translate(290, 826)">
+      <rect width="380" height="58" class="node-box" fill="#FFFFFF" stroke="#E2E8F0" />
+      <rect width="5" height="58" rx="2.5" fill="#D97706" />
+      <text x="20" y="24" class="node-title" fill="#0F172A">Action Sheets &amp; Feedback Routing</text>
+      <text x="20" y="44" class="node-desc" fill="#64748B">Itemized modifications transmitted securely back to proponents</text>
+    </g>
+
+    <!-- Arrow 3B to 3C -->
+    <line x1="480" y1="884" x2="480" y2="906" stroke="#D97706" stroke-width="2" marker-end="url(#arrow-amber)" />
+
+    <!-- Node 3C: Proponent Revisions -->
+    <g transform="translate(290, 908)">
+      <rect width="380" height="58" class="node-box" fill="#FFFFFF" stroke="#E2E8F0" />
+      <rect width="5" height="58" rx="2.5" fill="#D97706" />
+      <text x="20" y="24" class="node-title" fill="#0F172A">Proponent Revisions &amp; Revision Log</text>
+      <text x="20" y="44" class="node-desc" fill="#64748B">Revised manuscript upload paired with point-by-point audit trail</text>
+    </g>
+
+    <!-- Revision Feedback Loop (Looping back to 3A) -->
+    <path d="M 290 937 L 210 937 L 210 773 L 282 773" fill="none" stroke="#D97706" stroke-width="2" stroke-dasharray="5,4" marker-end="url(#arrow-amber)" />
+    <!-- Loop Badge -->
+    <rect x="156" y="842" width="108" height="24" rx="12" fill="#FEF3C7" stroke="#F59E0B" stroke-width="1" />
+    <text x="210" y="857" text-anchor="middle" class="badge-text" fill="#92400E">Needs Revision</text>
+
+    <!-- Arrow 3C to 3D -->
+    <line x1="480" y1="966" x2="480" y2="990" stroke="#16A34A" stroke-width="2" marker-end="url(#arrow-green)" />
+
+    <!-- Node 3D: Certificate of Clearance -->
+    <g transform="translate(290, 992)">
+      <rect width="380" height="50" class="node-box" fill="#F0FDF4" stroke="#86EFAC" />
+      <rect width="5" height="50" rx="2.5" fill="#16A34A" />
+      <text x="20" y="22" class="node-title" fill="#14532D">Certificate of Technical Review Issued</text>
+      <text x="20" y="38" class="node-desc" fill="#166534">Official clearance granted by RPDU; qualified for budget allocation</text>
+    </g>
+  </g>
+
+
+  <!-- ========================================== -->
+  <!-- PHASE 4: FINANCIAL & IMPLEMENTATION        -->
+  <!-- ========================================== -->
+  <g id="phase-4">
+    <!-- Outer Phase Card -->
+    <rect x="140" y="1085" width="680" height="365" class="phase-card" fill="#FFFFFF" stroke="#BBF7D0" filter="url(#card-shadow)" />
+
+    <!-- Phase Header Badge -->
+    <rect x="160" y="1101" width="430" height="26" rx="13" fill="#F0FDF4" stroke="#4ADE80" stroke-width="1" />
+    <circle cx="174" cy="1114" r="5" fill="#16A34A" />
+    <text x="187" y="1118" class="phase-title" fill="#15803D">Phase 4 &#8226; Financial Allocation &amp; Launch</text>
+
+    <!-- Node 4A: Line Item Budget -->
+    <g transform="translate(290, 1139)">
+      <rect width="380" height="58" class="node-box" fill="#FFFFFF" stroke="#E2E8F0" />
+      <rect width="5" height="58" rx="2.5" fill="#16A34A" />
+      <text x="20" y="24" class="node-title" fill="#0F172A">Project Line-Item Budget (LIB) Allocation</text>
+      <text x="20" y="44" class="node-desc" fill="#64748B">Personal Services (PS), MOOE &amp; Equipment Outlay (EO)</text>
+    </g>
+
+    <!-- Arrow 4A to 4B -->
+    <line x1="480" y1="1197" x2="480" y2="1219" stroke="#16A34A" stroke-width="2" marker-end="url(#arrow-green)" />
+
+    <!-- Node 4B: Annual Financial Plan -->
+    <g transform="translate(290, 1221)">
+      <rect width="380" height="58" class="node-box" fill="#FFFFFF" stroke="#E2E8F0" />
+      <rect width="5" height="58" rx="2.5" fill="#16A34A" />
+      <text x="20" y="24" class="node-title" fill="#0F172A">Inclusion in Annual Financial Plan (AFP)</text>
+      <text x="20" y="44" class="node-desc" fill="#64748B">RPDU consolidates budget for institutional funding release</text>
+    </g>
+
+    <!-- Arrow 4B to 4C -->
+    <line x1="480" y1="1279" x2="480" y2="1301" stroke="#16A34A" stroke-width="2" marker-end="url(#arrow-green)" />
+
+    <!-- Node 4C: PSC Contract -->
+    <g transform="translate(290, 1303)">
+      <rect width="380" height="58" class="node-box" fill="#FFFFFF" stroke="#E2E8F0" />
+      <rect width="5" height="58" rx="2.5" fill="#16A34A" />
+      <text x="20" y="24" class="node-title" fill="#0F172A">Professional Service Contracts (PSC)</text>
+      <text x="20" y="44" class="node-desc" fill="#64748B">President &amp; proponent signatures, contract routing &amp; notarization</text>
+    </g>
+
+    <!-- Arrow 4C to 4D -->
+    <line x1="480" y1="1361" x2="480" y2="1383" stroke="#16A34A" stroke-width="2" marker-end="url(#arrow-green)" />
+
+    <!-- Node 4D: Project Kickoff -->
+    <g transform="translate(290, 1385)">
+      <rect width="380" height="54" class="node-box" fill="#F0FDF4" stroke="#22C55E" stroke-width="2" />
+      <rect width="5" height="54" rx="2.5" fill="#15803D" />
+      <text x="20" y="22" class="node-title" fill="#14532D">Official Kickoff &amp; Special Order (SO)</text>
+      <text x="20" y="40" class="node-desc" fill="#166534">Inception meeting convened &amp; Special Order transmitted</text>
+    </g>
+  </g>
+
+</svg>
