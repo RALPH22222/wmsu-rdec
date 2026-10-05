@@ -1,5 +1,7 @@
 import React from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import {
+  FileText,
   DollarSign,
   X,
   User as UserIcon,
@@ -17,7 +19,14 @@ export const ProponentSidebar: React.FC<ProponentSidebarProps> = ({
   onCloseMobile,
 }) => {
   const { user, signOut } = useAuth();
+  const location = useLocation();
   const displayEmail = user?.email || 'proponent.lead@wmsu.edu.ph';
+
+  const isProposalActive =
+    location.pathname === '/proponent' ||
+    location.pathname === '/proponent/submit' ||
+    location.pathname === '/dashboard';
+  const isBudgetActive = location.pathname === '/proponent/budget';
 
   return (
     <>
@@ -72,13 +81,31 @@ export const ProponentSidebar: React.FC<ProponentSidebarProps> = ({
                 Proponent Management
               </div>
               <nav className="space-y-1.5">
-                <button
-                  type="button"
-                  className="w-full flex items-center gap-3 px-3.5 py-2.5 text-xs font-bold rounded-sm bg-[#C8102E] text-white shadow-xs text-left cursor-default border border-[#C8102E]"
+                <Link
+                  to="/proponent"
+                  onClick={onCloseMobile}
+                  className={`w-full flex items-center gap-3 px-3.5 py-2.5 text-xs font-bold rounded-sm text-left transition-colors border ${
+                    isProposalActive
+                      ? 'bg-[#C8102E] text-white shadow-xs border-[#C8102E]'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50 border-transparent'
+                  }`}
                 >
-                  <DollarSign className="w-4 h-4 shrink-0 text-white" />
+                  <FileText className={`w-4 h-4 shrink-0 ${isProposalActive ? 'text-white' : 'text-slate-400'}`} />
+                  <span className="truncate">Concept Proposal</span>
+                </Link>
+
+                <Link
+                  to="/proponent/budget"
+                  onClick={onCloseMobile}
+                  className={`w-full flex items-center gap-3 px-3.5 py-2.5 text-xs font-bold rounded-sm text-left transition-colors border ${
+                    isBudgetActive
+                      ? 'bg-[#C8102E] text-white shadow-xs border-[#C8102E]'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50 border-transparent'
+                  }`}
+                >
+                  <DollarSign className={`w-4 h-4 shrink-0 ${isBudgetActive ? 'text-white' : 'text-slate-400'}`} />
                   <span className="truncate">Budget Allocation</span>
-                </button>
+                </Link>
               </nav>
             </div>
           </div>

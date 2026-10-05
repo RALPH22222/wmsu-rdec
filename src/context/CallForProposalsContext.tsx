@@ -18,6 +18,7 @@ interface CallForProposalsContextType {
   failConceptProposal: (id: string, reasons: string[], remarks: string, criteria?: ConceptProposalCriteria, sectionComments?: ScreeningSectionComments) => void;
   resetScreeningStatus: (id: string) => void;
   bulkPassConceptProposals: (ids: string[]) => void;
+  submitConceptProposal: (proposal: Omit<ConceptProposal, 'id' | 'code' | 'submittedAt' | 'submittedTime' | 'screeningStatus'>) => ConceptProposal;
   toastMessage: string | null;
   showToast: (msg: string) => void;
 }
@@ -260,6 +261,53 @@ export const CallForProposalsProvider: React.FC<{ children: React.ReactNode }> =
     showToast(`${ids.length} Concept Proposals successfully approved with PASS.`);
   };
 
+  const submitConceptProposal = (
+    proposalData: Omit<ConceptProposal, 'id' | 'code' | 'submittedAt' | 'submittedTime' | 'screeningStatus'>
+  ): ConceptProposal => {
+    const now = new Date();
+    const dateStr = now.toISOString().split('T')[0];
+    const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const id = `cp-${Date.now()}`;
+
+    const collegeMap: Record<string, string> = {
+      'College of Science & Mathematics': 'CSM',
+      'College of Agriculture & Forestry': 'CAF',
+      'College of Engineering': 'COE',
+      'College of Computing Studies': 'CCS',
+      'College of Liberal Arts': 'CLA',
+      'College of Nursing': 'CN',
+      'College of Teacher Education': 'CTE',
+      'College of Architecture': 'CA',
+    };
+    const collegeAbbr = collegeMap[proposalData.college] || 'WMSU';
+    const count = conceptProposals.length + 1;
+    const code = `CP-2027-${collegeAbbr}-${String(count).padStart(2, '0')}`;
+
+    const newProposal: ConceptProposal = {
+      ...proposalData,
+      id,
+      code,
+      submittedAt: dateStr,
+      submittedTime: timeStr,
+      screeningStatus: 'pending',
+    };
+
+    setConceptProposals((prev) => [newProposal, ...prev]);
+
+    if (proposalData.callId) {
+      setCalls((prev) =>
+        prev.map((c) =>
+          c.id === proposalData.callId
+            ? { ...c, submissionCount: (c.submissionCount || 0) + 1 }
+            : c
+        )
+      );
+    }
+
+    showToast(`Concept Proposal "${code}" successfully submitted for Preliminary Screening.`);
+    return newProposal;
+  };
+
   return (
     <CallForProposalsContext.Provider
       value={{
@@ -278,6 +326,7 @@ export const CallForProposalsProvider: React.FC<{ children: React.ReactNode }> =
         failConceptProposal,
         resetScreeningStatus,
         bulkPassConceptProposals,
+        submitConceptProposal,
         toastMessage,
         showToast,
       }}

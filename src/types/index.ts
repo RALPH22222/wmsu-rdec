@@ -58,6 +58,8 @@ export interface ConceptProposalAttachment {
   name: string;
   size: string;
   type: string;
+  dataUrl?: string;
+  category?: 'concept_proposal' | 'endorsement_pdf' | 'budget_details' | 'other';
 }
 
 export interface ConceptProposalCriteria {
@@ -91,7 +93,7 @@ export interface ConceptProposal {
   callTitle: string;
   leadInvestigator: string;
   leadInvestigatorEmail: string;
-  coInvestigators: string[];
+  coInvestigators?: string[];
   college: string;
   department: string;
   submittedAt: string;

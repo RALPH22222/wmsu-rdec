@@ -1,10 +1,17 @@
 import { useState } from 'react';
-import { Outlet } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
 import { Menu, Bell, ChevronRight } from 'lucide-react';
 import { ProponentSidebar } from '../components/proponentComponent/ProponentSidebar';
 
 export default function Layout() {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const location = useLocation();
+
+  const getPageTitle = () => {
+    if (location.pathname === '/proponent/budget') return 'Line-Item Budget Allocation';
+    if (location.pathname.startsWith('/evaluator')) return 'Technical Evaluator Panel';
+    return 'Concept Proposal Submission';
+  };
 
   return (
     <div className="min-h-screen bg-slate-100 flex flex-col lg:flex-row text-slate-800 font-sans selection:bg-[#C8102E] selection:text-white">
@@ -48,7 +55,7 @@ export default function Layout() {
             <div className="flex items-center gap-2 sm:gap-3 min-w-0">
               <ChevronRight className="w-6 h-6 sm:w-6.5 sm:h-6.5 text-[#C8102E] animate-arrow-move shrink-0" strokeWidth={2.5} />
               <h1 className="text-sm sm:text-base lg:text-lg font-semibold text-slate-800 tracking-tight truncate">
-                Budget Allocation
+                {getPageTitle()}
               </h1>
             </div>
           </div>

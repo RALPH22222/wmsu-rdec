@@ -263,7 +263,7 @@ export const PreliminaryScreeningModal: React.FC<PreliminaryScreeningModalProps>
                 Western Mindanao State University &bull; RDEC
               </p>
               <h3 className="text-sm font-bold text-slate-900 uppercase">
-                DOST-Form 1B: Concept Proposal Submission
+                Concept Proposal Submission
               </h3>
             </div>
 
