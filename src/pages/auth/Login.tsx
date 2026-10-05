@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
-import { ArrowRight, Lock, Mail } from 'lucide-react';
+import { ArrowRight, ArrowLeft, Lock, Mail } from 'lucide-react';
 
 export default function Login() {
   const navigate = useNavigate();
@@ -58,17 +58,23 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-neutral-50 flex">
+    <div className="h-screen h-[100dvh] overflow-hidden bg-slate-50 flex font-sans" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
       {/* LEFT SIDE - BRANDING (40%) */}
       <div 
-        className="hidden lg:flex lg:w-2/5 flex-col justify-between p-12 text-white relative bg-cover bg-center"
+        className="hidden lg:flex lg:w-2/5 flex-col justify-between p-12 text-white relative bg-cover bg-center h-full overflow-hidden"
         style={{ backgroundImage: `url('/wmsu1_live.jpg')` }}
       >
         <div className="absolute inset-0 bg-red-900/85 mix-blend-multiply"></div>
         <div className="relative z-10">
-          <div className="flex items-center gap-4 mb-12">
-            <img src="/WMSU.png" alt="WMSU Logo" className="w-12 h-12 object-contain" />
-            <img src="/RDEC.jpg" alt="RDEC Logo" className="w-12 h-12 object-contain rounded-full bg-white p-0.5" />
+          <div className="flex items-center gap-3.5 mb-12">
+            <div className="flex items-center -space-x-2">
+              <div className="relative z-10 w-11 h-11 rounded-full overflow-hidden bg-white ring-2 ring-white border border-slate-200/50 p-0.5 flex items-center justify-center shadow-xs">
+                <img src="/WMSU.png" alt="WMSU Logo" className="w-full h-full object-contain rounded-full" />
+              </div>
+              <div className="relative z-0 w-11 h-11 rounded-full overflow-hidden bg-white ring-2 ring-white border border-slate-200/50 p-0.5 flex items-center justify-center shadow-xs">
+                <img src="/RDEC-WMSU.png" alt="RDEC-WMSU Logo" className="w-full h-full object-contain rounded-full" />
+              </div>
+            </div>
             <div>
               <h2 className="font-bold text-lg leading-tight">WMSU</h2>
               <p className="text-white/90 text-sm">Research Project Development System</p>
@@ -91,15 +97,42 @@ export default function Login() {
       </div>
 
       {/* RIGHT SIDE - FORM (60%) */}
-      <div className="w-full lg:w-3/5 flex items-center justify-center p-8 py-12">
-        <div className="bg-white p-10 max-w-md w-full shadow-sm rounded-sm">
+      <div className="w-full lg:w-3/5 h-full flex items-center justify-center p-4 sm:p-6 lg:p-8 overflow-hidden">
+        <div className="bg-white p-6 sm:p-10 max-w-md w-full shadow-sm rounded-sm border border-slate-200/80 max-h-[calc(100dvh-2rem)] sm:max-h-[calc(100dvh-3rem)] overflow-y-auto custom-scrollbar">
+          {/* Return to Portal */}
+          <div className="mb-6">
+            <Link
+              to="/"
+              className="group inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-[#C8102E] transition-colors cursor-pointer"
+            >
+              <ArrowLeft className="w-4 h-4 transition-transform duration-200 group-hover:-translate-x-1" />
+              <span>Back to Portal</span>
+            </Link>
+          </div>
+
+          {/* Mobile Institutional Branding */}
+          <div className="flex lg:hidden items-center gap-3 mb-8 pb-6 border-b border-slate-100">
+            <div className="flex items-center -space-x-2">
+              <div className="relative z-10 w-10 h-10 rounded-full overflow-hidden bg-white ring-2 ring-white border border-slate-200 p-0.5 flex items-center justify-center shadow-xs">
+                <img src="/WMSU.png" alt="WMSU Logo" className="w-full h-full object-contain rounded-full" />
+              </div>
+              <div className="relative z-0 w-10 h-10 rounded-full overflow-hidden bg-white ring-2 ring-white border border-slate-200 p-0.5 flex items-center justify-center shadow-xs">
+                <img src="/RDEC-WMSU.png" alt="RDEC-WMSU Logo" className="w-full h-full object-contain rounded-full" />
+              </div>
+            </div>
+            <div>
+              <p className="text-[10px] uppercase tracking-wider text-slate-500 font-semibold">Western Mindanao State University</p>
+              <h3 className="text-sm font-bold text-slate-900">Research Project Development System</h3>
+            </div>
+          </div>
+
           <div className="mb-10">
-            <h2 className="text-2xl font-semibold text-slate-900 tracking-tight">Sign In</h2>
-            <p className="text-slate-600 mt-2 text-sm">Access your WMSU RPDS account</p>
+            <h2 className="text-2xl font-bold text-slate-900 tracking-tight">Sign In</h2>
+            <p className="text-slate-600 mt-2 text-sm font-medium">Access your WMSU RPDS account</p>
           </div>
 
           {error && (
-            <div className="mb-6 p-4 bg-red-50 text-red-800 text-sm rounded-sm border-l-2 border-red-800">
+            <div className="mb-6 p-4 bg-red-50 text-[#C8102E] text-sm rounded-sm border-l-2 border-[#C8102E]">
               {error}
             </div>
           )}
@@ -116,7 +149,7 @@ export default function Login() {
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full bg-transparent border-b border-slate-300 py-2 pl-8 focus:outline-none focus:border-red-800 transition-colors text-slate-900 placeholder-slate-400"
+                  className="w-full bg-transparent border-b border-slate-300 py-2 pl-8 focus:outline-none focus:border-[#C8102E] transition-colors text-slate-900 placeholder-slate-400 text-sm"
                   placeholder="juan.delacruz@wmsu.edu.ph"
                 />
               </div>
@@ -133,7 +166,7 @@ export default function Login() {
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full bg-transparent border-b border-slate-300 py-2 pl-8 focus:outline-none focus:border-red-800 transition-colors text-slate-900 placeholder-slate-400"
+                  className="w-full bg-transparent border-b border-slate-300 py-2 pl-8 focus:outline-none focus:border-[#C8102E] transition-colors text-slate-900 placeholder-slate-400 text-sm"
                   placeholder="••••••••"
                 />
               </div>
@@ -143,13 +176,14 @@ export default function Login() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-red-800 text-white py-3 px-4 rounded-sm hover:bg-red-900 transition-colors flex items-center justify-center gap-2 text-sm font-medium disabled:opacity-50"
+                className="group w-full bg-[#C8102E] text-white py-3 px-4 rounded-sm hover:bg-[#A00D26] transition-all duration-200 shadow-xs hover:shadow flex items-center justify-center gap-2 text-sm font-semibold cursor-pointer disabled:opacity-50"
               >
                 {loading ? (
                   <span className="h-5 w-20 bg-white/20 animate-pulse rounded-sm"></span>
                 ) : (
                   <>
-                    Sign In <ArrowRight className="w-4 h-4" />
+                    <span>Sign In</span>
+                    <ArrowRight className="w-4 h-4 transition-transform duration-300 ease-out group-hover:translate-x-1.5" />
                   </>
                 )}
               </button>
@@ -159,7 +193,7 @@ export default function Login() {
           <div className="mt-8 text-center border-t border-slate-100 pt-8">
             <p className="text-sm text-slate-600">
               Don't have an account?{' '}
-              <Link to="/register" className="text-red-800 font-medium hover:underline">
+              <Link to="/register" className="text-[#C8102E] font-semibold hover:underline">
                 Register here
               </Link>
             </p>

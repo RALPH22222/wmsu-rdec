@@ -159,17 +159,23 @@ export default function Register() {
   };
 
   return (
-    <div className="min-h-screen bg-neutral-50 flex">
+    <div className="h-screen h-[100dvh] overflow-hidden bg-slate-50 flex font-sans" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
       {/* LEFT SIDE - BRANDING (40%) */}
       <div 
-        className="hidden lg:flex lg:w-2/5 flex-col justify-between p-12 text-white relative bg-cover bg-center"
+        className="hidden lg:flex lg:w-2/5 flex-col justify-between p-12 text-white relative bg-cover bg-center h-full overflow-hidden"
         style={{ backgroundImage: `url('/wmsu1_live.jpg')` }}
       >
         <div className="absolute inset-0 bg-red-900/85 mix-blend-multiply"></div>
         <div className="relative z-10">
-          <div className="flex items-center gap-4 mb-12">
-            <img src="/WMSU.png" alt="WMSU Logo" className="w-12 h-12 object-contain" />
-            <img src="/RDEC.jpg" alt="RDEC Logo" className="w-12 h-12 object-contain rounded-full bg-white p-0.5" />
+          <div className="flex items-center gap-3.5 mb-12">
+            <div className="flex items-center -space-x-2">
+              <div className="relative z-10 w-11 h-11 rounded-full overflow-hidden bg-white ring-2 ring-white border border-slate-200/50 p-0.5 flex items-center justify-center shadow-xs">
+                <img src="/WMSU.png" alt="WMSU Logo" className="w-full h-full object-contain rounded-full" />
+              </div>
+              <div className="relative z-0 w-11 h-11 rounded-full overflow-hidden bg-white ring-2 ring-white border border-slate-200/50 p-0.5 flex items-center justify-center shadow-xs">
+                <img src="/RDEC-WMSU.png" alt="RDEC-WMSU Logo" className="w-full h-full object-contain rounded-full" />
+              </div>
+            </div>
             <div>
               <h2 className="font-bold text-lg leading-tight">WMSU</h2>
               <p className="text-white/90 text-sm">Research Project Development System</p>
@@ -192,27 +198,54 @@ export default function Register() {
       </div>
 
       {/* RIGHT SIDE - FORM (60%) */}
-      <div className="w-full lg:w-3/5 flex items-center justify-center p-8 py-12">
-        <div className="bg-white p-10 max-w-2xl w-full shadow-sm rounded-sm">
+      <div className="w-full lg:w-3/5 h-full flex items-center justify-center p-4 sm:p-6 lg:p-8 overflow-hidden">
+        <div className="bg-white p-6 sm:p-10 max-w-2xl w-full shadow-sm rounded-sm border border-slate-200/80 max-h-[calc(100dvh-2rem)] sm:max-h-[calc(100dvh-3rem)] overflow-y-auto custom-scrollbar">
+          {/* Return to Portal */}
+          <div className="mb-6">
+            <Link
+              to="/"
+              className="group inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-[#C8102E] transition-colors cursor-pointer"
+            >
+              <ArrowLeft className="w-4 h-4 transition-transform duration-200 group-hover:-translate-x-1" />
+              <span>Back to Portal</span>
+            </Link>
+          </div>
+
+          {/* Mobile Institutional Branding */}
+          <div className="flex lg:hidden items-center gap-3 mb-8 pb-6 border-b border-slate-100">
+            <div className="flex items-center -space-x-2">
+              <div className="relative z-10 w-10 h-10 rounded-full overflow-hidden bg-white ring-2 ring-white border border-slate-200 p-0.5 flex items-center justify-center shadow-xs">
+                <img src="/WMSU.png" alt="WMSU Logo" className="w-full h-full object-contain rounded-full" />
+              </div>
+              <div className="relative z-0 w-10 h-10 rounded-full overflow-hidden bg-white ring-2 ring-white border border-slate-200 p-0.5 flex items-center justify-center shadow-xs">
+                <img src="/RDEC-WMSU.png" alt="RDEC-WMSU Logo" className="w-full h-full object-contain rounded-full" />
+              </div>
+            </div>
+            <div>
+              <p className="text-[10px] uppercase tracking-wider text-slate-500 font-semibold">Western Mindanao State University</p>
+              <h3 className="text-sm font-bold text-slate-900">Research Project Development System</h3>
+            </div>
+          </div>
+
           <div className="mb-10">
             <div className="flex items-center justify-between mb-8">
-              <h2 className="text-2xl font-semibold text-slate-900 tracking-tight">Create an Account</h2>
+              <h2 className="text-2xl font-bold text-slate-900 tracking-tight">Create an Account</h2>
               <div className="flex items-center gap-2">
                 {[1, 2, 3].map((step) => (
                   <React.Fragment key={step}>
                     <div 
-                      className={`w-8 h-8 rounded-sm flex items-center justify-center text-sm font-medium transition-colors
-                        ${currentStep === step ? 'bg-red-800 text-white' : 
-                          currentStep > step ? 'bg-red-100 text-red-800' : 'bg-slate-100 text-slate-400'}`}
+                      className={`w-8 h-8 rounded-sm flex items-center justify-center text-sm font-semibold transition-colors
+                        ${currentStep === step ? 'bg-[#C8102E] text-white shadow-2xs' : 
+                          currentStep > step ? 'bg-red-50 text-[#C8102E] border border-red-200' : 'bg-slate-100 text-slate-400'}`}
                     >
                       {currentStep > step ? <CheckCircle2 className="w-4 h-4" /> : step}
                     </div>
-                    {step < 3 && <div className={`w-8 h-px ${currentStep > step ? 'bg-red-200' : 'bg-slate-200'}`} />}
+                    {step < 3 && <div className={`w-8 h-px ${currentStep > step ? 'bg-[#C8102E]/40' : 'bg-slate-200'}`} />}
                   </React.Fragment>
                 ))}
               </div>
             </div>
-            <p className="text-slate-600 mt-2 text-sm">
+            <p className="text-slate-600 mt-2 text-sm font-medium">
               {currentStep === 1 && 'Step 1: Personal Information'}
               {currentStep === 2 && 'Step 2: Academic Information'}
               {currentStep === 3 && 'Step 3: Account Security'}
@@ -220,7 +253,7 @@ export default function Register() {
           </div>
 
           {error && (
-            <div className="mb-6 p-4 bg-red-50 text-red-800 text-sm rounded-sm border-l-2 border-red-800">
+            <div className="mb-6 p-4 bg-red-50 text-[#C8102E] text-sm rounded-sm border-l-2 border-[#C8102E]">
               {error}
             </div>
           )}
@@ -238,9 +271,10 @@ export default function Register() {
               <div className="pt-12">
                 <Link 
                   to="/login"
-                  className="inline-flex items-center justify-center bg-slate-900 text-white px-8 py-3 rounded-sm hover:bg-slate-800 transition-colors font-medium text-sm w-full max-w-xs"
+                  className="group inline-flex items-center justify-center gap-2 bg-[#C8102E] text-white px-8 py-3 rounded-sm hover:bg-[#A00D26] transition-all duration-200 shadow-xs hover:shadow font-semibold text-sm w-full max-w-xs cursor-pointer"
                 >
-                  Return to Sign In
+                  <span>Return to Sign In</span>
+                  <ArrowRight className="w-4 h-4 transition-transform duration-300 ease-out group-hover:translate-x-1.5" />
                 </Link>
               </div>
             </div>
@@ -263,7 +297,7 @@ export default function Register() {
                           maxLength={50}
                           value={formData.firstName}
                           onChange={handleChange}
-                          className="w-full bg-transparent border-b border-slate-300 py-2 pl-8 focus:outline-none focus:border-red-800 transition-colors text-slate-900"
+                          className="w-full bg-transparent border-b border-slate-300 py-2 pl-8 focus:outline-none focus:border-[#C8102E] transition-colors text-slate-900 text-sm"
                         />
                       </div>
                     </div>
@@ -280,7 +314,7 @@ export default function Register() {
                           maxLength={50}
                           value={formData.middleName}
                           onChange={handleChange}
-                          className="w-full bg-transparent border-b border-slate-300 py-2 pl-8 focus:outline-none focus:border-red-800 transition-colors text-slate-900"
+                          className="w-full bg-transparent border-b border-slate-300 py-2 pl-8 focus:outline-none focus:border-[#C8102E] transition-colors text-slate-900 text-sm"
                         />
                       </div>
                     </div>
@@ -298,7 +332,7 @@ export default function Register() {
                           maxLength={50}
                           value={formData.lastName}
                           onChange={handleChange}
-                          className="w-full bg-transparent border-b border-slate-300 py-2 pl-8 focus:outline-none focus:border-red-800 transition-colors text-slate-900"
+                          className="w-full bg-transparent border-b border-slate-300 py-2 pl-8 focus:outline-none focus:border-[#C8102E] transition-colors text-slate-900 text-sm"
                         />
                       </div>
                     </div>
@@ -314,7 +348,7 @@ export default function Register() {
                           maxLength={20}
                           value={formData.suffix}
                           onChange={handleChange}
-                          className="w-full bg-transparent border-b border-slate-300 py-2 focus:outline-none focus:border-red-800 transition-colors text-slate-900"
+                          className="w-full bg-transparent border-b border-slate-300 py-2 focus:outline-none focus:border-[#C8102E] transition-colors text-slate-900 text-sm"
                         />
                       </div>
                     </div>
@@ -327,7 +361,7 @@ export default function Register() {
                         name="sex"
                         value={formData.sex}
                         onChange={handleChange}
-                        className="w-full bg-transparent border-b border-slate-300 py-2 focus:outline-none focus:border-red-800 transition-colors text-slate-900 cursor-pointer"
+                        className="w-full bg-transparent border-b border-slate-300 py-2 focus:outline-none focus:border-[#C8102E] transition-colors text-slate-900 cursor-pointer text-sm"
                       >
                         <option value="MALE">Male</option>
                         <option value="FEMALE">Female</option>
@@ -347,7 +381,7 @@ export default function Register() {
                           placeholder="+639..."
                           value={formData.contactNumber}
                           onChange={handleChange}
-                          className="w-full bg-transparent border-b border-slate-300 py-2 pl-8 focus:outline-none focus:border-red-800 transition-colors text-slate-900"
+                          className="w-full bg-transparent border-b border-slate-300 py-2 pl-8 focus:outline-none focus:border-[#C8102E] transition-colors text-slate-900 text-sm"
                         />
                       </div>
                     </div>
@@ -369,11 +403,11 @@ export default function Register() {
                           <div className="relative w-full">
                             <div
                               onClick={() => setDeptDropdownOpen(!deptDropdownOpen)}
-                              className="w-full bg-transparent border-b border-slate-300 py-2 pl-8 pr-8 focus:outline-none focus:border-red-800 transition-colors cursor-pointer flex justify-between items-center"
+                              className="w-full bg-transparent border-b border-slate-300 py-2 pl-8 pr-8 focus:outline-none focus:border-[#C8102E] transition-colors cursor-pointer flex justify-between items-center text-sm"
                             >
                               <span className={formData.departmentId ? "text-slate-900" : "text-slate-500"}>
                                 {formData.departmentId 
-                                  ? departments.find(d => d.id.toString() === formData.departmentId)?.name 
+                                   ? departments.find(d => d.id.toString() === formData.departmentId)?.name 
                                   : "Select your department"}
                               </span>
                               <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${deptDropdownOpen ? 'rotate-180' : ''}`} strokeWidth={2} />
@@ -389,8 +423,8 @@ export default function Register() {
                                         setFormData({ ...formData, departmentId: dept.id.toString() });
                                         setDeptDropdownOpen(false);
                                       }}
-                                      className={`px-4 py-2 text-sm cursor-pointer hover:bg-red-50 hover:text-red-900 transition-colors ${
-                                        formData.departmentId === dept.id.toString() ? "bg-red-50 text-red-900 font-medium" : "text-slate-700"
+                                      className={`px-4 py-2 text-sm cursor-pointer hover:bg-red-50 hover:text-[#C8102E] transition-colors ${
+                                        formData.departmentId === dept.id.toString() ? "bg-red-50 text-[#C8102E] font-medium" : "text-slate-700"
                                       }`}
                                     >
                                       {dept.name}
@@ -422,7 +456,7 @@ export default function Register() {
                             required
                             value={formData.email}
                             onChange={handleChange}
-                            className="w-full bg-transparent border-b border-slate-300 py-2 pl-8 focus:outline-none focus:border-red-800 transition-colors text-slate-900"
+                            className="w-full bg-transparent border-b border-slate-300 py-2 pl-8 focus:outline-none focus:border-[#C8102E] transition-colors text-slate-900 text-sm"
                           />
                         </div>
                       </div>
@@ -440,7 +474,7 @@ export default function Register() {
                             minLength={6}
                             value={formData.password}
                             onChange={handleChange}
-                            className="w-full bg-transparent border-b border-slate-300 py-2 pl-8 focus:outline-none focus:border-red-800 transition-colors text-slate-900"
+                            className="w-full bg-transparent border-b border-slate-300 py-2 pl-8 focus:outline-none focus:border-[#C8102E] transition-colors text-slate-900 text-sm"
                           />
                         </div>
                         <p className="text-xs text-slate-500 mt-2">Must be at least 6 characters long.</p>
@@ -454,10 +488,10 @@ export default function Register() {
                         id="agreeToTerms"
                         checked={formData.agreeToTerms}
                         onChange={handleChange}
-                        className="mt-1 w-4 h-4 text-red-800 bg-slate-100 border-slate-300 rounded focus:ring-red-800 cursor-pointer"
+                        className="mt-1 w-4 h-4 text-[#C8102E] bg-slate-100 border-slate-300 rounded focus:ring-[#C8102E] cursor-pointer"
                       />
                       <label htmlFor="agreeToTerms" className="text-sm text-slate-600 leading-relaxed cursor-pointer">
-                        I agree to the <a href="#" className="text-red-800 font-medium hover:underline">Terms of Service</a> and <a href="#" className="text-red-800 font-medium hover:underline">Privacy Policy</a>. I understand that the information provided will be used in accordance with the Data Privacy Act of 2012.
+                        I agree to the <a href="#" className="text-[#C8102E] font-medium hover:underline">Terms of Service</a> and <a href="#" className="text-[#C8102E] font-medium hover:underline">Privacy Policy</a>. I understand that the information provided will be used in accordance with the Data Privacy Act of 2012.
                       </label>
                     </div>
                   </div>
@@ -470,9 +504,10 @@ export default function Register() {
                       type="button"
                       onClick={prevStep}
                       disabled={loading}
-                      className="px-6 py-3 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-sm transition-colors flex items-center gap-2 disabled:opacity-50"
+                      className="group px-6 py-3 text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-sm transition-colors flex items-center gap-2 disabled:opacity-50 cursor-pointer"
                     >
-                      <ArrowLeft className="w-4 h-4" /> Back
+                      <ArrowLeft className="w-4 h-4 transition-transform duration-300 ease-out group-hover:-translate-x-1.5" />
+                      <span>Back</span>
                     </button>
                   )}
 
@@ -480,21 +515,23 @@ export default function Register() {
                     <button
                       type="button"
                       onClick={nextStep}
-                      className="flex-1 bg-red-800 text-white px-8 py-3 rounded-sm hover:bg-red-900 transition-colors flex items-center justify-center gap-2 text-sm font-medium"
+                      className="group flex-1 bg-[#C8102E] text-white px-8 py-3 rounded-sm hover:bg-[#A00D26] transition-all duration-200 shadow-xs hover:shadow flex items-center justify-center gap-2 text-sm font-semibold cursor-pointer"
                     >
-                      Continue <ArrowRight className="w-4 h-4" />
+                      <span>Continue</span>
+                      <ArrowRight className="w-4 h-4 transition-transform duration-300 ease-out group-hover:translate-x-1.5" />
                     </button>
                   ) : (
                     <button
                       type="submit"
                       disabled={loading}
-                      className="flex-1 bg-red-800 text-white px-8 py-3 rounded-sm hover:bg-red-900 transition-colors flex items-center justify-center gap-2 text-sm font-medium disabled:opacity-50"
+                      className="group flex-1 bg-[#C8102E] text-white px-8 py-3 rounded-sm hover:bg-[#A00D26] transition-all duration-200 shadow-xs hover:shadow flex items-center justify-center gap-2 text-sm font-semibold cursor-pointer disabled:opacity-50"
                     >
                       {loading ? (
                         <span className="h-5 w-20 bg-white/20 animate-pulse rounded-sm"></span>
                       ) : (
                         <>
-                          Complete Registration <CheckCircle2 className="w-4 h-4" />
+                          <span>Complete Registration</span>
+                          <CheckCircle2 className="w-4 h-4 transition-transform duration-300 ease-out group-hover:scale-115" />
                         </>
                       )}
                     </button>
@@ -505,7 +542,7 @@ export default function Register() {
               <div className="mt-8 text-center border-t border-slate-100 pt-8">
                 <p className="text-sm text-slate-600">
                   Already have an account?{' '}
-                  <Link to="/login" className="text-red-800 font-medium hover:underline">
+                  <Link to="/login" className="text-[#C8102E] font-semibold hover:underline">
                     Sign in here
                   </Link>
                 </p>
