@@ -36,6 +36,14 @@ export const API_ENDPOINTS = {
     // SCREENING: `${API_BASE_URL}/rpdu/screening`,
   },
 
+  // Call for Proposals Endpoints
+  CALLS: {
+    BASE: `${API_BASE_URL}/calls`,
+    BY_ID: (id: string) => `${API_BASE_URL}/calls/${id}`,
+    CLOSE: (id: string) => `${API_BASE_URL}/calls/${id}/close`,
+    REOPEN: (id: string) => `${API_BASE_URL}/calls/${id}/reopen`,
+  },
+
   // Admin Role Endpoints (Ready for expansion)
   ADMIN: {
     // USERS: `${API_BASE_URL}/admin/users`,

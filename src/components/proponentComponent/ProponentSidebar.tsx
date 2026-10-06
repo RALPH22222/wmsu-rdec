@@ -8,6 +8,7 @@ import {
   LogOut
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { formatUserFullName } from '../../utils/userUtils';
 import { LogoutModal } from '../LogoutModal';
 
 export interface ProponentSidebarProps {
@@ -33,42 +34,7 @@ export const ProponentSidebar: React.FC<ProponentSidebarProps> = ({
   const isBudgetActive = location.pathname === '/proponent/budget';
   const isProfileActive = location.pathname === '/proponent/profile';
 
-  // Capitalize first letter of each word
-  const capitalizeWords = (str: string) => {
-    if (!str) return '';
-    return str.replace(/\b([a-z])/g, (c) => c.toUpperCase());
-  };
-
-  // Compute Full Name from profile or auth user metadata or fallback, with capitalized first letters
-  const rawFullName = profile?.first_name
-    ? [profile.first_name, profile.middle_name, profile.last_name, profile.suffix]
-        .filter(Boolean)
-        .join(' ')
-    : user?.user_metadata?.first_name
-    ? [
-        user.user_metadata.first_name,
-        user.user_metadata.middle_name,
-        user.user_metadata.last_name,
-        user.user_metadata.suffix,
-      ]
-        .filter(Boolean)
-        .join(' ')
-    : user?.user_metadata?.firstName
-    ? [
-        user.user_metadata.firstName,
-        user.user_metadata.middleName,
-        user.user_metadata.lastName,
-        user.user_metadata.suffix,
-      ]
-        .filter(Boolean)
-        .join(' ')
-    : user?.user_metadata?.full_name || user?.user_metadata?.name || '';
-
-  const fullName = rawFullName.trim()
-    ? capitalizeWords(rawFullName.trim())
-    : user?.email
-    ? capitalizeWords(user.email.split('@')[0].replace(/[._-]/g, ' '))
-    : 'Proponent User';
+  const fullName = formatUserFullName(profile, user, 'Proponent User');
 
   const departmentOrRole =
     profile?.departments?.name ||
