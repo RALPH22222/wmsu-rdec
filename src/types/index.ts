@@ -10,7 +10,12 @@ export interface UserProfile {
   avatarUrl?: string;
 }
 
-export type CallStatus = 'active' | 'upcoming' | 'closed' | 'draft';
+export type CallStatus = 'OPEN' | 'DRAFT' | 'CLOSED' | 'active' | 'upcoming' | 'closed' | 'draft';
+
+export interface PriorityTopic {
+  topic: string;
+  subtopics: string[];
+}
 
 export interface CallForProposals {
   id: string;
@@ -26,14 +31,18 @@ export interface CallForProposals {
   maxBudgetPerProject: number;
   totalGrantBudget: number;
   priorityAreas: string[];
+  priorityTopics?: PriorityTopic[];
   eligibleRoles: string[];
   requiredForms: string[];
+  memo?: string;
   memoAttachment?: string;
+  memoFileUrl?: string;
   submissionCount: number;
   acceptedCount: number;
   underReviewCount: number;
   rejectedCount: number;
   closureReason?: string;
+  publicNotice?: string;
   createdAt: string;
   updatedAt: string;
 }

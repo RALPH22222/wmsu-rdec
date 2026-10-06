@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { Calendar, FileCheck, Layers, Users, ClipboardCheck, Scale } from 'lucide-react';
 import { useCallForProposals } from '../../context/CallForProposalsContext';
 import { useProposalPipeline } from '../../context/ProposalPipelineContext';
+import { useAuth } from '../../context/AuthContext';
+import { formatUserFullName } from '../../utils/userUtils';
 import { CallForProposalsManager } from '../../components/adminComponent/CallForProposalsManager';
 import { PipelineSummaryPanel } from '../../components/rpduComponent/PipelineSummaryPanel';
 import { EvaluatorRosterTable } from '../../components/rpduComponent/EvaluatorRosterTable';
@@ -10,8 +12,11 @@ import { StatCard } from '../../components/ui/StatCard';
 
 export const RpduDashboard: React.FC = () => {
   const navigate = useNavigate();
-  const { activeCall, calls, currentUser, conceptProposals } = useCallForProposals();
+  const { activeCall, calls, conceptProposals } = useCallForProposals();
+  const { user, profile, loadingProfile } = useAuth();
   const [activeTab, setActiveTab] = useState<'calls' | 'proposals' | 'evaluators'>('calls');
+
+  const fullName = formatUserFullName(profile, user, 'RPDU Staff');
 
   const totalSubmissions = calls.reduce((acc, curr) => acc + curr.submissionCount, 0);
   const pendingScreeningCount = conceptProposals.filter((p) => p.screeningStatus === 'pending').length;
@@ -32,7 +37,11 @@ export const RpduDashboard: React.FC = () => {
           </span>
         </div>
         <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
-          Welcome back, {currentUser.name}
+          {loadingProfile && !profile ? (
+            <span className="inline-block w-64 h-8 bg-slate-200 animate-pulse rounded align-middle" />
+          ) : (
+            `Welcome back, ${fullName}`
+          )}
         </h1>
         <p className="text-xs sm:text-sm text-slate-500 font-medium">
           Research, Publication &amp; Development Unit (RPDU) — WMSU

@@ -1,19 +1,30 @@
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import type { CallForProposals, UserProfile, UserRole, ProposalItem, ConceptProposal, ConceptProposalCriteria, ScreeningSectionComments } from '../types';
-import { INITIAL_CALLS, MOCK_USERS, MOCK_PROPOSALS, INITIAL_CONCEPT_PROPOSALS } from '../data/mockData';
+import { MOCK_USERS, MOCK_PROPOSALS, INITIAL_CONCEPT_PROPOSALS } from '../data/mockData';
+import {
+  fetchCalls,
+  createCallApi,
+  updateCallApi,
+  closeCallApi,
+  reopenCallApi,
+  deleteCallApi,
+} from '../lib/callApi';
+import { supabase } from '../lib/supabase';
 
 interface CallForProposalsContextType {
   calls: CallForProposals[];
+  loadingCalls: boolean;
+  refreshCalls: () => Promise<void>;
   activeCall: CallForProposals | null;
   currentUser: UserProfile;
   proposals: ProposalItem[];
   conceptProposals: ConceptProposal[];
   setCurrentUserRole: (role: UserRole) => void;
-  createCall: (newCall: Omit<CallForProposals, 'id' | 'submissionCount' | 'acceptedCount' | 'underReviewCount' | 'rejectedCount' | 'createdAt' | 'updatedAt'>) => CallForProposals;
-  updateCall: (id: string, updatedFields: Partial<CallForProposals>) => void;
-  closeCall: (id: string, reason?: string) => void;
-  reopenCall: (id: string, newEndDate: string) => void;
-  deleteCall: (id: string) => void;
+  createCall: (newCall: Omit<CallForProposals, 'id' | 'submissionCount' | 'acceptedCount' | 'underReviewCount' | 'rejectedCount' | 'createdAt' | 'updatedAt'>) => Promise<CallForProposals>;
+  updateCall: (id: string, updatedFields: Partial<CallForProposals>) => Promise<void>;
+  closeCall: (id: string, reason?: string) => Promise<void>;
+  reopenCall: (id: string, newEndDate: string) => Promise<void>;
+  deleteCall: (id: string) => Promise<void>;
   passConceptProposal: (id: string, remarks?: string, criteria?: ConceptProposalCriteria) => void;
   failConceptProposal: (id: string, reasons: string[], remarks: string, criteria?: ConceptProposalCriteria, sectionComments?: ScreeningSectionComments) => void;
   resetScreeningStatus: (id: string) => void;
@@ -27,17 +38,33 @@ interface CallForProposalsContextType {
 const CallForProposalsContext = createContext<CallForProposalsContextType | undefined>(undefined);
 
 export const CallForProposalsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [calls, setCalls] = useState<CallForProposals[]>(() => {
-    const saved = localStorage.getItem('wmsu_calls_proposals');
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch {
-        return INITIAL_CALLS;
-      }
+  const [calls, setCalls] = useState<CallForProposals[]>([]);
+  const [loadingCalls, setLoadingCalls] = useState(true);
+
+  const loadCalls = useCallback(async () => {
+    try {
+      setLoadingCalls(true);
+      const session = (await supabase.auth.getSession()).data.session;
+      const data = await fetchCalls(session?.access_token);
+      setCalls(data);
+    } catch (err) {
+      console.error('Failed to load calls from backend:', err);
+    } finally {
+      setLoadingCalls(false);
     }
-    return INITIAL_CALLS;
-  });
+  }, []);
+
+  useEffect(() => {
+    loadCalls();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
+      loadCalls();
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [loadCalls]);
 
   const [conceptProposals, setConceptProposals] = useState<ConceptProposal[]>(() => {
     const saved = localStorage.getItem('wmsu_concept_proposals_screening');
@@ -54,10 +81,6 @@ export const CallForProposalsProvider: React.FC<{ children: React.ReactNode }> =
   const [currentUser, setCurrentUser] = useState<UserProfile>(MOCK_USERS[0]);
   const [proposals] = useState<ProposalItem[]>(MOCK_PROPOSALS);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
-
-  useEffect(() => {
-    localStorage.setItem('wmsu_calls_proposals', JSON.stringify(calls));
-  }, [calls]);
 
   useEffect(() => {
     localStorage.setItem('wmsu_concept_proposals_screening', JSON.stringify(conceptProposals));
@@ -90,96 +113,72 @@ export const CallForProposalsProvider: React.FC<{ children: React.ReactNode }> =
     showToast(`Switched active role to ${user.title} (${user.name})`);
   };
 
-  const activeCall = calls.find((c) => c.status === 'active') || calls[0] || null;
+  const activeCall = calls.find((c) => {
+    const s = String(c.status).toUpperCase();
+    return s === 'OPEN' || s === 'ACTIVE';
+  }) || null;
 
-  const createCall = (
+  const createCall = async (
     newCallData: Omit<CallForProposals, 'id' | 'submissionCount' | 'acceptedCount' | 'underReviewCount' | 'rejectedCount' | 'createdAt' | 'updatedAt'>
-  ): CallForProposals => {
-    const id = `call-${Date.now()}`;
-    const now = new Date().toISOString().split('T')[0];
-
-    const createdCall: CallForProposals = {
-      ...newCallData,
-      id,
-      submissionCount: 0,
-      acceptedCount: 0,
-      underReviewCount: 0,
-      rejectedCount: 0,
-      createdAt: now,
-      updatedAt: now,
-    };
-
-    setCalls((prev) => {
-      let updated = [...prev];
-      if (createdCall.status === 'active') {
-        updated = updated.map((c) => (c.status === 'active' ? { ...c, status: 'closed' as const } : c));
-      }
-      return [createdCall, ...updated];
-    });
-
-    showToast(`Successfully created "${createdCall.title}" (${createdCall.code})`);
-    return createdCall;
+  ): Promise<CallForProposals> => {
+    try {
+      const session = (await supabase.auth.getSession()).data.session;
+      const created = await createCallApi(newCallData, session?.access_token);
+      setCalls((prev) => [created, ...prev.filter((c) => c.id !== created.id)]);
+      showToast(`Successfully created "${created.title}" (${created.code})`);
+      return created;
+    } catch (err: any) {
+      showToast(`Failed to create call: ${err.message || 'Unknown error'}`);
+      throw err;
+    }
   };
 
-  const updateCall = (id: string, updatedFields: Partial<CallForProposals>) => {
-    const now = new Date().toISOString().split('T')[0];
-    setCalls((prev) =>
-      prev.map((c) => {
-        if (c.id === id) {
-          return {
-            ...c,
-            ...updatedFields,
-            updatedAt: now,
-          };
-        }
-        return updatedFields.status === 'active' && c.id !== id && c.status === 'active'
-          ? { ...c, status: 'closed' as const, updatedAt: now }
-          : c;
-      })
-    );
-    showToast('Call for Proposals updated successfully.');
+  const updateCall = async (id: string, updatedFields: Partial<CallForProposals>): Promise<void> => {
+    try {
+      const session = (await supabase.auth.getSession()).data.session;
+      const updated = await updateCallApi(id, updatedFields, session?.access_token);
+      setCalls((prev) => prev.map((c) => (c.id === id ? updated : c)));
+      showToast('Call for Proposals updated successfully.');
+    } catch (err: any) {
+      showToast(`Failed to update call: ${err.message || 'Unknown error'}`);
+      throw err;
+    }
   };
 
-  const closeCall = (id: string, reason?: string) => {
-    const now = new Date().toISOString().split('T')[0];
-    setCalls((prev) =>
-      prev.map((c) => {
-        if (c.id === id) {
-          return {
-            ...c,
-            status: 'closed',
-            closureReason: reason || 'Closed manually by RPDU Administrator',
-            updatedAt: now,
-          };
-        }
-        return c;
-      })
-    );
-    showToast('Call for Proposals has been CLOSED.');
+  const closeCall = async (id: string, reason?: string): Promise<void> => {
+    try {
+      const session = (await supabase.auth.getSession()).data.session;
+      const closed = await closeCallApi(id, reason, session?.access_token);
+      setCalls((prev) => prev.map((c) => (c.id === id ? closed : c)));
+      showToast('Call for Proposals has been CLOSED.');
+    } catch (err: any) {
+      showToast(`Failed to close call: ${err.message || 'Unknown error'}`);
+      throw err;
+    }
   };
 
-  const reopenCall = (id: string, newEndDate: string) => {
-    const now = new Date().toISOString().split('T')[0];
-    setCalls((prev) =>
-      prev.map((c) => {
-        if (c.id === id) {
-          return {
-            ...c,
-            status: 'active',
-            endDate: newEndDate,
-            closureReason: undefined,
-            updatedAt: now,
-          };
-        }
-        return c.status === 'active' ? { ...c, status: 'closed' as const, updatedAt: now } : c;
-      })
-    );
-    showToast(`Call reopened and active until ${newEndDate}.`);
+  const reopenCall = async (id: string, newEndDate: string): Promise<void> => {
+    try {
+      const session = (await supabase.auth.getSession()).data.session;
+      const reopened = await reopenCallApi(id, newEndDate, session?.access_token);
+      setCalls((prev) => prev.map((c) => (c.id === id ? reopened : c)));
+      showToast(`Call reopened and active until ${newEndDate}.`);
+    } catch (err: any) {
+      showToast(`Failed to reopen call: ${err.message || 'Unknown error'}`);
+      throw err;
+    }
   };
 
-  const deleteCall = (id: string) => {
-    setCalls((prev) => prev.filter((c) => c.id !== id));
-    showToast('Call for Proposals deleted.');
+  const deleteCall = async (id: string): Promise<void> => {
+    try {
+      const session = (await supabase.auth.getSession()).data.session;
+      await deleteCallApi(id, session?.access_token);
+      setCalls((prev) => prev.filter((c) => c.id !== id));
+      showToast('Call for Proposals deleted.');
+    } catch (err: any) {
+      showToast(`Failed to delete call: ${err.message || 'Unknown error'}`);
+      throw err;
+    }
   };
 
   const passConceptProposal = (id: string, remarks?: string, criteria?: ConceptProposalCriteria) => {
@@ -327,6 +326,8 @@ export const CallForProposalsProvider: React.FC<{ children: React.ReactNode }> =
     <CallForProposalsContext.Provider
       value={{
         calls,
+        loadingCalls,
+        refreshCalls: loadCalls,
         activeCall,
         currentUser,
         proposals,

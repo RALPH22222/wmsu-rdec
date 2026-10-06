@@ -1,14 +1,16 @@
 import React, { useState } from 'react';
-import { Plus, Search, Calendar, Lock, Edit3, Trash2, Clock, CheckCircle2, AlertCircle, FilePlus } from 'lucide-react';
+import { Plus, Search, Calendar, Lock, Edit3, Trash2, CheckCircle2, AlertCircle, FilePlus, FileText, ExternalLink } from 'lucide-react';
 import { useCallForProposals } from '../../context/CallForProposalsContext';
 import type { CallForProposals, CallStatus } from '../../types';
+import { parseMemoDetails, openMemoInNewTab } from '../../utils/memoUtils';
 import { CallFormModal } from './modals/CallFormModal';
 import { CloseCallDialog } from './modals/CloseCallDialog';
+import { DeleteCallModal } from './modals/DeleteCallModal';
 
 export const CallForProposalsManager: React.FC = () => {
-  const { calls, createCall, updateCall, closeCall, reopenCall, deleteCall } = useCallForProposals();
+  const { calls, loadingCalls, createCall, updateCall, closeCall, reopenCall, deleteCall, showToast } = useCallForProposals();
 
-  const [activeTab, setActiveTab] = useState<'all' | CallStatus>('all');
+  const [activeTab, setActiveTab] = useState<'all' | 'OPEN' | 'DRAFT' | 'CLOSED'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedYear, setSelectedYear] = useState<number | 'all'>('all');
 
@@ -19,6 +21,23 @@ export const CallForProposalsManager: React.FC = () => {
   // Close Dialog state
   const [isCloseDialogOpen, setIsCloseDialogOpen] = useState(false);
   const [targetCallToClose, setTargetCallToClose] = useState<CallForProposals | null>(null);
+
+  // Delete Modal state
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [targetCallToDelete, setTargetCallToDelete] = useState<CallForProposals | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleOpenCallAction = (call: CallForProposals) => {
+    const openCall = calls.find((c) => {
+      const s = String(c.status).toUpperCase();
+      return (s === 'OPEN' || s === 'ACTIVE') && c.id !== call.id;
+    });
+    if (openCall) {
+      showToast(`Cannot open call: "${openCall.title}" is already active. Only one call can be open at a time. Please close the active call first.`);
+      return;
+    }
+    reopenCall(call.id, call.endDate);
+  };
 
   const handleOpenCreateModal = () => {
     setEditingCall(null);
@@ -35,6 +54,22 @@ export const CallForProposalsManager: React.FC = () => {
     setIsCloseDialogOpen(true);
   };
 
+  const handleOpenDeleteModal = (call: CallForProposals) => {
+    setTargetCallToDelete(call);
+    setIsDeleteModalOpen(true);
+  };
+
+  const handleConfirmDelete = async (id: string) => {
+    try {
+      setIsDeleting(true);
+      await deleteCall(id);
+      setIsDeleteModalOpen(false);
+      setTargetCallToDelete(null);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   const handleSaveModal = (
     data: Omit<CallForProposals, 'id' | 'submissionCount' | 'acceptedCount' | 'underReviewCount' | 'rejectedCount' | 'createdAt' | 'updatedAt'>
   ) => {
@@ -46,7 +81,14 @@ export const CallForProposalsManager: React.FC = () => {
   };
 
   const filteredCalls = calls.filter((c) => {
-    const matchesTab = activeTab === 'all' || c.status === activeTab;
+    const s = String(c.status).toUpperCase();
+    const matchesTab =
+      activeTab === 'all' ||
+      s === activeTab ||
+      (activeTab === 'OPEN' && s === 'ACTIVE') ||
+      (activeTab === 'CLOSED' && s === 'CLOSED') ||
+      (activeTab === 'DRAFT' && s === 'DRAFT');
+
     const matchesSearch =
       c.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       c.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -57,33 +99,29 @@ export const CallForProposalsManager: React.FC = () => {
   });
 
   const getStatusBadge = (status: CallStatus) => {
-    switch (status) {
-      case 'active':
+    const s = String(status).toUpperCase();
+    switch (s) {
+      case 'OPEN':
+      case 'ACTIVE':
         return (
           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-            Active Window
+            OPEN
           </span>
         );
-      case 'upcoming':
-        return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-200">
-            <Clock className="w-3 h-3 text-amber-600" />
-            Upcoming
-          </span>
-        );
-      case 'closed':
-        return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-slate-200 text-slate-700 border border-slate-300">
-            <Lock className="w-3 h-3 text-slate-500" />
-            Closed
-          </span>
-        );
-      case 'draft':
+      case 'DRAFT':
         return (
           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-800 border border-blue-200">
             <FilePlus className="w-3 h-3 text-blue-600" />
-            Draft
+            DRAFT
+          </span>
+        );
+      case 'CLOSED':
+      default:
+        return (
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-slate-200 text-slate-700 border border-slate-300">
+            <Lock className="w-3 h-3 text-slate-500" />
+            CLOSED
           </span>
         );
     }
@@ -118,18 +156,23 @@ export const CallForProposalsManager: React.FC = () => {
       <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs flex flex-col md:flex-row items-center justify-between gap-4">
         {/* Status Tabs */}
         <div className="flex items-center gap-1 overflow-x-auto w-full md:w-auto pb-1 md:pb-0">
-          {(['all', 'active', 'upcoming', 'closed', 'draft'] as const).map((tab) => (
+          {(['all', 'OPEN', 'DRAFT', 'CLOSED'] as const).map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`px-3.5 py-2 rounded-sm text-xs font-bold capitalize transition-all cursor-pointer shrink-0 ${activeTab === tab
+              className={`px-3.5 py-2 rounded-sm text-xs font-bold transition-all cursor-pointer shrink-0 ${activeTab === tab
                 ? 'bg-slate-900 text-white shadow-xs'
                 : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
                 }`}
             >
               {tab === 'all' ? 'All Calls' : tab}
               <span className="ml-1.5 px-1.5 py-0.5 rounded-sm text-[10px] bg-slate-200 text-slate-700 font-extrabold group-hover:bg-slate-300">
-                {tab === 'all' ? calls.length : calls.filter((c) => c.status === tab).length}
+                {tab === 'all'
+                  ? calls.length
+                  : calls.filter((c) => {
+                    const s = String(c.status).toUpperCase();
+                    return s === tab || (tab === 'OPEN' && s === 'ACTIVE');
+                  }).length}
               </span>
             </button>
           ))}
@@ -163,7 +206,17 @@ export const CallForProposalsManager: React.FC = () => {
 
       {/* Cards List Grid (Full-width Horizontal Cards) */}
       <div className="grid grid-cols-1 gap-4">
-        {filteredCalls.length === 0 ? (
+        {loadingCalls ? (
+          <div className="space-y-4">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="bg-white rounded-sm border border-slate-200 p-6 animate-pulse space-y-3 shadow-xs">
+                <div className="h-4 bg-slate-100 rounded w-1/4" />
+                <div className="h-6 bg-slate-100 rounded w-2/3" />
+                <div className="h-4 bg-slate-100 rounded w-1/2" />
+              </div>
+            ))}
+          </div>
+        ) : filteredCalls.length === 0 ? (
           <div className="bg-white rounded-sm border border-slate-200 p-12 text-center space-y-3 shadow-xs">
             <AlertCircle className="w-10 h-10 text-slate-300 mx-auto" />
             <h4 className="text-base font-bold text-slate-800">No Call for Proposals Found</h4>
@@ -178,93 +231,143 @@ export const CallForProposalsManager: React.FC = () => {
             </button>
           </div>
         ) : (
-          filteredCalls.map((call) => (
-            <div
-              key={call.id}
-              className={`bg-white rounded-sm border transition-all p-5 sm:p-6 shadow-xs hover:shadow-md flex flex-col lg:flex-row lg:items-center justify-between gap-6 ${call.status === 'active'
-                ? 'border-emerald-300/80 bg-gradient-to-r from-emerald-50/20 via-white to-white'
-                : 'border-slate-200/90'
-                }`}
-            >
-              {/* Call Details */}
-              <div className="space-y-3 flex-grow">
-                <div className="flex flex-wrap items-center gap-2">
-                  {getStatusBadge(call.status)}
-                  <span className="text-xs font-semibold text-slate-400">
-                    Year {call.fiscalYear}
-                  </span>
-                </div>
-
-                <div>
-                  <h3 className="text-lg font-bold text-slate-900 group-hover:text-[#C8102E] transition-colors">
-                    {call.title}
-                  </h3>
-                  <p className="text-xs text-slate-600 mt-1 line-clamp-2 leading-relaxed max-w-3xl">
-                    {call.description}
-                  </p>
-                </div>
-
-                {/* Timeline & Submission Stats */}
-                <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-xs text-slate-600 pt-1">
-                  <div className="flex items-center gap-1.5 text-slate-700 font-semibold">
-                    <Calendar className="w-3.5 h-3.5 text-[#C8102E]" />
-                    <span>
-                      {call.startDate} to {call.endDate}
+          filteredCalls.map((call) => {
+            const isOpen = String(call.status).toUpperCase() === 'OPEN' || String(call.status).toUpperCase() === 'ACTIVE';
+            return (
+              <div
+                key={call.id}
+                className={`bg-white rounded-sm border transition-all p-5 sm:p-6 shadow-xs hover:shadow-md flex flex-col lg:flex-row lg:items-center justify-between gap-6 ${isOpen
+                  ? 'border-emerald-300/80 bg-gradient-to-r from-emerald-50/20 via-white to-white'
+                  : 'border-slate-200/90'
+                  }`}
+              >
+                {/* Call Details */}
+                <div className="space-y-3 flex-grow">
+                  <div className="flex flex-wrap items-center gap-2">
+                    {getStatusBadge(call.status)}
+                    <span className="text-xs font-semibold text-slate-400">
+                      Year {call.fiscalYear}
                     </span>
                   </div>
 
-                  <div className="flex items-center gap-1 text-slate-600">
-                    <span className="font-bold text-emerald-700">{call.submissionCount}</span>
-                    <span>proposals submitted</span>
+                  <div>
+                    <h3 className="text-lg font-bold text-slate-900 group-hover:text-[#C8102E] transition-colors">
+                      {call.title}
+                    </h3>
+                    <p className="text-xs text-slate-600 mt-1 line-clamp-2 leading-relaxed max-w-3xl">
+                      {call.description}
+                    </p>
+                  </div>
+
+                  {/* Memo Attachment Display */}
+                  {(() => {
+                    const parsedMemo = parseMemoDetails(call.memo || call.memoAttachment);
+                    if (!parsedMemo) return null;
+                    return (
+                      <button
+                        type="button"
+                        onClick={() => openMemoInNewTab(parsedMemo)}
+                        className="inline-flex items-center gap-1.5 text-xs bg-slate-50 hover:bg-red-50/70 border border-slate-200 hover:border-red-200 px-2.5 py-1 rounded-sm text-slate-700 transition-colors cursor-pointer group w-fit"
+                        title="Click to open attached memo in new tab"
+                      >
+                        <FileText className="w-3.5 h-3.5 text-[#C8102E] shrink-0" />
+                        <span className="text-slate-500 font-medium">Memo:</span>
+                        <span className="font-semibold text-slate-800 group-hover:text-[#C8102E] truncate max-w-xs sm:max-w-md">
+                          {parsedMemo.name}
+                        </span>
+                        <ExternalLink className="w-3 h-3 text-slate-400 group-hover:text-[#C8102E] shrink-0 ml-0.5" />
+                      </button>
+                    );
+                  })()}
+
+                  {/* Public Notice Banner if Closed */}
+                  {(call.status === 'CLOSED' || String(call.status).toUpperCase() === 'CLOSED') && (call.publicNotice || call.closureReason) && (
+                    <div className="flex items-start gap-2 p-2.5 bg-amber-50/70 border border-amber-200/80 rounded-sm text-xs text-amber-900 max-w-3xl">
+                      <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                      <div>
+                        <span className="font-bold text-amber-950">Public Notice: </span>
+                        <span className="leading-relaxed">{call.publicNotice || call.closureReason}</span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Priority Topics Badges */}
+                  {call.priorityTopics && call.priorityTopics.length > 0 && (
+                    <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                      <span className="text-[11px] font-semibold text-slate-500">Priority Topics:</span>
+                      {call.priorityTopics.map((pt) => (
+                        <span
+                          key={pt.topic}
+                          className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-700 bg-slate-100 border border-slate-200/80 px-2 py-0.5 rounded-sm"
+                          title={Array.isArray(pt.subtopics) ? pt.subtopics.join(', ') : ''}
+                        >
+                          <span className="font-semibold text-slate-900">{pt.topic}</span>
+                          {Array.isArray(pt.subtopics) && pt.subtopics.length > 0 && (
+                            <span className="text-[10px] text-slate-500">({pt.subtopics.length})</span>
+                          )}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Timeline & Submission Stats */}
+                  <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-xs text-slate-600 pt-1">
+                    <div className="flex items-center gap-1.5 text-slate-700 font-semibold">
+                      <Calendar className="w-3.5 h-3.5 text-[#C8102E]" />
+                      <span>
+                        {call.startDate} to {call.endDate}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-1 text-slate-600">
+                      <span className="font-bold text-emerald-700">{call.submissionCount}</span>
+                      <span>proposals submitted</span>
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              {/* Action Buttons Panel */}
-              <div className="flex items-center gap-2 shrink-0 border-t lg:border-t-0 pt-3 lg:pt-0 border-slate-100">
-                <button
-                  onClick={() => handleOpenEditModal(call)}
-                  className="px-3.5 py-2 rounded-sm text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 transition-colors flex items-center gap-1.5 cursor-pointer"
-                  title="Edit dates, details & requirements"
-                >
-                  <Edit3 className="w-3.5 h-3.5" />
-                  <span>Edit Dates</span>
-                </button>
-
-                {call.status === 'active' ? (
+                {/* Action Buttons Panel */}
+                <div className="flex items-center gap-2 shrink-0 border-t lg:border-t-0 pt-3 lg:pt-0 border-slate-100">
                   <button
-                    onClick={() => handleOpenCloseDialog(call)}
-                    className="px-3.5 py-2 rounded-sm text-xs font-bold text-red-700 bg-red-50 hover:bg-red-100 border border-red-200 transition-colors flex items-center gap-1.5 cursor-pointer"
-                    title="Close or extend submission window"
+                    onClick={() => handleOpenEditModal(call)}
+                    className="px-3.5 py-2 rounded-sm text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 transition-colors flex items-center gap-1.5 cursor-pointer"
+                    title="Edit call details, dates & status"
                   >
-                    <Lock className="w-3.5 h-3.5" />
-                    <span>Close / Extend</span>
+                    <Edit3 className="w-3.5 h-3.5" />
+                    <span>Edit Call</span>
                   </button>
-                ) : (
-                  <button
-                    onClick={() => reopenCall(call.id, call.endDate)}
-                    className="px-3.5 py-2 rounded-sm text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 transition-colors flex items-center gap-1.5 cursor-pointer"
-                    title="Re-open submission call window"
-                  >
-                    <CheckCircle2 className="w-3.5 h-3.5" />
-                    <span>Re-open Call</span>
-                  </button>
-                )}
 
-                <button
-                  onClick={() => {
-                    if (window.confirm(`Are you sure you want to delete "${call.title}"?`)) {
-                      deleteCall(call.id);
-                    }
-                  }}
-                  className="p-2 rounded-sm text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
-                  title="Delete call record"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
+                  {isOpen ? (
+                    <button
+                      onClick={() => handleOpenCloseDialog(call)}
+                      className="px-3.5 py-2 rounded-sm text-xs font-bold text-red-700 bg-red-50 hover:bg-red-100 border border-red-200 transition-colors flex items-center gap-1.5 cursor-pointer"
+                      title="Close submission window"
+                    >
+                      <Lock className="w-3.5 h-3.5" />
+                      <span>Close Window</span>
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => handleOpenCallAction(call)}
+                      className="px-3.5 py-2 rounded-sm text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 transition-colors flex items-center gap-1.5 cursor-pointer"
+                      title="Open submission call window"
+                    >
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      <span>Open Call</span>
+                    </button>
+                  )}
+
+                  <button
+                    onClick={() => handleOpenDeleteModal(call)}
+                    className="p-2 rounded-sm text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
+                    title="Delete call record"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
-            </div>
-          ))
+            );
+          })
         )}
       </div>
 
@@ -274,6 +377,7 @@ export const CallForProposalsManager: React.FC = () => {
         onClose={() => setIsModalOpen(false)}
         onSave={handleSaveModal}
         initialData={editingCall}
+        existingCalls={calls}
       />
 
       <CloseCallDialog
@@ -282,6 +386,19 @@ export const CallForProposalsManager: React.FC = () => {
         onClose={() => setIsCloseDialogOpen(false)}
         onConfirmClose={(id, reason) => closeCall(id, reason)}
         onExtendCall={(id, newEndDate) => reopenCall(id, newEndDate)}
+      />
+
+      <DeleteCallModal
+        isOpen={isDeleteModalOpen}
+        call={targetCallToDelete}
+        onClose={() => {
+          if (!isDeleting) {
+            setIsDeleteModalOpen(false);
+            setTargetCallToDelete(null);
+          }
+        }}
+        onConfirmDelete={handleConfirmDelete}
+        loading={isDeleting}
       />
     </div>
   );

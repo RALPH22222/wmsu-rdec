@@ -11,8 +11,8 @@ import {
   User,
   Users,
 } from 'lucide-react';
-import { useCallForProposals } from '../context/CallForProposalsContext';
 import { useAuth } from '../context/AuthContext';
+import { formatUserFullName } from '../utils/userUtils';
 import { LogoutModal } from './LogoutModal';
 
 export interface SidebarProps {
@@ -29,7 +29,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const location = useLocation();
   const navigate = useNavigate();
   const { user, profile, loadingProfile, signOut } = useAuth();
-  const { currentUser } = useCallForProposals();
 
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
@@ -51,42 +50,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const isRpdu = location.pathname.startsWith('/rpdu');
   const basePath = isRpdu ? '/rpdu' : '/admin';
 
-  // Capitalize first letter of each word
-  const capitalizeWords = (str: string) => {
-    if (!str) return '';
-    return str.replace(/\b([a-z])/g, (c) => c.toUpperCase());
-  };
-
-  // Compute Full Name with first name, middle name, last name, and suffix
-  const rawFullName = profile?.first_name
-    ? [profile.first_name, profile.middle_name, profile.last_name, profile.suffix]
-        .filter(Boolean)
-        .join(' ')
-    : user?.user_metadata?.first_name
-    ? [
-        user.user_metadata.first_name,
-        user.user_metadata.middle_name,
-        user.user_metadata.last_name,
-        user.user_metadata.suffix,
-      ]
-        .filter(Boolean)
-        .join(' ')
-    : user?.user_metadata?.firstName
-    ? [
-        user.user_metadata.firstName,
-        user.user_metadata.middleName,
-        user.user_metadata.lastName,
-        user.user_metadata.suffix,
-      ]
-        .filter(Boolean)
-        .join(' ')
-    : user?.user_metadata?.full_name || user?.user_metadata?.name || '';
-
-  const fullName = rawFullName.trim()
-    ? capitalizeWords(rawFullName.trim())
-    : user?.email
-    ? capitalizeWords(user.email.split('@')[0].replace(/[._-]/g, ' '))
-    : currentUser.name;
+  const fullName = formatUserFullName(profile, user, isRpdu ? 'RPDU Staff' : 'Administrator');
 
   const roleTitle = isRpdu
     ? 'RPDU Staff'
