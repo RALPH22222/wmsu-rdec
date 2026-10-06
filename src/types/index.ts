@@ -159,3 +159,158 @@ export interface HybridBudgetAllocation {
   updatedAt: string;
 }
 
+export interface TechnicalReviewCertificate {
+  id: string;
+  certificateNumber: string;
+  proposalId: string;
+  proposalCode: string;
+  proposalTitle: string;
+  proponentName: string;
+  proponentEmail?: string;
+  college: string;
+  department: string;
+  twgReviewers: string[];
+  issueDate: string;
+  signatoryName: string;
+  signatoryTitle: string;
+  status: 'pending_issuance' | 'issued' | 'revised_and_cleared';
+  certificatePdf?: {
+    name: string;
+    size: number;
+    uploadedAt: string;
+    dataUrl?: string;
+  } | null;
+  remarks?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type PscStatus =
+  | 'draft'
+  | 'forwarded_to_president'
+  | 'signed_by_president'
+  | 'forwarded_to_legal'
+  | 'notarized'
+  | 'active';
+
+export interface NotarizationDetails {
+  notaryPublicName: string;
+  docNo: string;
+  pageNo: string;
+  bookNo: string;
+  seriesYear: string;
+  notarizedDate: string;
+  notarizedBy: string;
+  notes?: string;
+  scannedNotarizedPdf?: {
+    name: string;
+    size: number;
+    uploadedAt: string;
+    dataUrl?: string;
+  } | null;
+}
+
+export interface CoResearcherMember {
+  id: string;
+  name: string;
+  college?: string;
+  department?: string;
+}
+
+export type CompensationArrangement = 'honorarium' | 'deloading';
+
+export interface ProfessionalServiceContract {
+  id: string;
+  contractNumber: string;
+  proposalId: string;
+  proposalCode: string;
+  projectTitle: string;
+  // Research Team (Second Party)
+  studyLeaderName?: string;
+  proponentName: string; // Keep as primary / alias for studyLeaderName
+  studyLeaderCollege?: string;
+  studyLeaderDepartment?: string;
+  proponentRole?: string;
+  proponentDepartment: string;
+  proponentCollege?: string;
+  coResearchers?: CoResearcherMember[];
+
+  // Project Budget & Honorarium
+  projectOperatingBudget?: number;
+  contractAmount: number; // Kept for backward compatibility
+  compensationArrangement?: CompensationArrangement;
+  studyLeaderHonorariumQuarterly?: number; // 4500
+  coResearcherHonorariumQuarterly?: number; // 2000
+
+  // Project Duration
+  durationMonths: number;
+  startDate: string;
+  endDate: string;
+
+  // First Party
+  firstPartyName: string;
+  firstPartyTitle: string;
+
+  // Lifecycle Status
+  status: PscStatus;
+
+  // Document Tracking
+  contractPdf?: {
+    name: string;
+    size: number;
+    uploadedAt: string;
+    dataUrl?: string;
+  } | null;
+  signedContractPdf?: {
+    name: string;
+    size: number;
+    uploadedAt: string;
+    dataUrl?: string;
+  } | null;
+  notarizedContractPdf?: {
+    name: string;
+    size: number;
+    uploadedAt: string;
+    dataUrl?: string;
+  } | null;
+
+  notarization?: NotarizationDetails | null;
+  forwardedToPresidentAt?: string;
+  signedByPresidentAt?: string;
+  forwardedToLegalAt?: string;
+  notarizedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type InceptionMeetingStatus = 'scheduled' | 'completed' | 'postponed' | 'cancelled';
+
+export interface InceptionMeeting {
+  id: string;
+  proposalId: string;
+  proposalCode: string;
+  projectTitle: string;
+  leadInvestigator: string;
+  meetingTitle: string;
+  meetingDate: string;
+  meetingTime: string;
+  venue: string;
+  meetingType: 'in_person' | 'virtual' | 'hybrid';
+  virtualLink?: string;
+  attendees: string[];
+  agenda: string;
+  specialOrderNumber?: string;
+  specialOrderStatus: 'pending_request' | 'forwarded_to_op' | 'so_issued';
+  specialOrderDate?: string;
+  status: InceptionMeetingStatus;
+  minutesPdf?: {
+    name: string;
+    size: number;
+    uploadedAt: string;
+    dataUrl?: string;
+  } | null;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+

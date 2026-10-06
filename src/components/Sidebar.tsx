@@ -9,6 +9,8 @@ import {
   Plus,
   X,
   User,
+  Award,
+  ShieldCheck,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { formatUserFullName } from '../utils/userUtils';
@@ -66,6 +68,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
       name: 'Preliminary Screening',
       path: `${basePath}/screening`,
       icon: ClipboardCheck,
+      disabled: false,
+    },
+    {
+      name: 'Clearance & Contracts',
+      path: `${basePath}/contracts`,
+      icon: Award,
+      disabled: false,
+    },
+    {
+      name: 'Notarization & Scheduling',
+      path: `${basePath}/notarization`,
+      icon: ShieldCheck,
       disabled: false,
     },
     {

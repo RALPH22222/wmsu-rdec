@@ -15,6 +15,8 @@ import BudgetAllocationPage from './pages/proponents/BudgetAllocationPage';
 import ProfilePage from './pages/proponents/ProfilePage';
 import EvaluatorDashboard from './pages/evaluator/evaluatorDashboard';
 import { PreliminaryScreeningPage } from './pages/screening/PreliminaryScreeningPage';
+import { ClearanceContractsPage } from './pages/rpdu/ClearanceContractsPage';
+import { NotarizationSchedulingPage } from './pages/rpdu/NotarizationSchedulingPage';
 import Login from './pages/auth/Login';
 import Register from './pages/auth/Register';
 import { Toast } from './components/Toast';
@@ -86,12 +88,16 @@ export function App() {
               <Route element={<AdminLayout />}>
                 <Route path="/admin" element={<AdminDashboard />} />
                 <Route path="/admin/screening" element={<PreliminaryScreeningPage role="admin" />} />
+                <Route path="/admin/contracts" element={<ClearanceContractsPage />} />
+                <Route path="/admin/notarization" element={<NotarizationSchedulingPage />} />
               </Route>
 
               {/* Dedicated RPDU Layout */}
               <Route element={<RpduLayout />}>
                 <Route path="/rpdu" element={<RpduDashboard />} />
                 <Route path="/rpdu/screening" element={<PreliminaryScreeningPage role="rpdu" />} />
+                <Route path="/rpdu/contracts" element={<ClearanceContractsPage />} />
+                <Route path="/rpdu/notarization" element={<NotarizationSchedulingPage />} />
               </Route>
             </Route>
 
