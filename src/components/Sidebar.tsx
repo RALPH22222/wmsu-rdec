@@ -10,7 +10,6 @@ import {
   X,
   User,
 } from 'lucide-react';
-import { useCallForProposals } from '../context/CallForProposalsContext';
 import { useAuth } from '../context/AuthContext';
 import { formatUserFullName } from '../utils/userUtils';
 import { LogoutModal } from './LogoutModal';
@@ -29,7 +28,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const location = useLocation();
   const navigate = useNavigate();
   const { user, profile, loadingProfile, signOut } = useAuth();
-  const { currentUser } = useCallForProposals();
 
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);

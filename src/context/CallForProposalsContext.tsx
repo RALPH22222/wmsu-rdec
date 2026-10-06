@@ -98,7 +98,10 @@ export const CallForProposalsProvider: React.FC<{ children: React.ReactNode }> =
     showToast(`Switched active role to ${user.title} (${user.name})`);
   };
 
-  const activeCall = calls.find((c) => c.status === 'active') || calls[0] || null;
+  const activeCall = calls.find((c) => {
+    const s = String(c.status).toUpperCase();
+    return s === 'OPEN' || s === 'ACTIVE';
+  }) || null;
 
   const createCall = async (
     newCallData: Omit<CallForProposals, 'id' | 'submissionCount' | 'acceptedCount' | 'underReviewCount' | 'rejectedCount' | 'createdAt' | 'updatedAt'>

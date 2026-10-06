@@ -1,14 +1,16 @@
 import React, { useState } from 'react';
-import { AlertTriangle, Lock, Calendar, X, Check } from 'lucide-react';
+import { AlertTriangle, Lock, Calendar, X, Check, Loader2 } from 'lucide-react';
 import type { CallForProposals } from '../../../types';
 
 interface CloseCallDialogProps {
   isOpen: boolean;
   call: CallForProposals | null;
   onClose: () => void;
-  onConfirmClose: (id: string, reason: string) => void;
-  onExtendCall: (id: string, newEndDate: string) => void;
+  onConfirmClose: (id: string, reason: string) => Promise<void> | void;
+  onExtendCall: (id: string, newEndDate: string) => Promise<void> | void;
 }
+
+const PUBLIC_NOTICE_MAX = 500;
 
 export const CloseCallDialog: React.FC<CloseCallDialogProps> = ({
   isOpen,
@@ -21,11 +23,25 @@ export const CloseCallDialog: React.FC<CloseCallDialogProps> = ({
   const [closureReason, setClosureReason] = useState(
     'Submission window officially closed by RPDU Administration.'
   );
-  const [newEndDate, setNewEndDate] = useState(() => {
-    const d = new Date();
-    d.setDate(d.getDate() + 14);
-    return d.toISOString().split('T')[0];
-  });
+  const [newEndDate, setNewEndDate] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  React.useEffect(() => {
+    if (call) {
+      setClosureReason(
+        (call.publicNotice ||
+        call.closureReason ||
+        'Submission window officially closed by RPDU Administration.').slice(0, PUBLIC_NOTICE_MAX)
+      );
+      if (call.endDate) {
+        setNewEndDate(call.endDate);
+      } else {
+        const d = new Date();
+        d.setDate(d.getDate() + 14);
+        setNewEndDate(d.toISOString().split('T')[0]);
+      }
+    }
+  }, [call, isOpen]);
 
   React.useEffect(() => {
     if (isOpen) {
@@ -39,14 +55,23 @@ export const CloseCallDialog: React.FC<CloseCallDialogProps> = ({
 
   if (!isOpen || !call) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (mode === 'close') {
-      onConfirmClose(call.id, closureReason);
-    } else {
-      onExtendCall(call.id, newEndDate);
+    if (isSubmitting) return;
+    try {
+      setIsSubmitting(true);
+      if (mode === 'close') {
+        const cleanReason = closureReason.trim().slice(0, PUBLIC_NOTICE_MAX);
+        await onConfirmClose(call.id, cleanReason);
+      } else {
+        await onExtendCall(call.id, newEndDate);
+      }
+      onClose();
+    } catch {
+      // Error is caught and toasted by context
+    } finally {
+      setIsSubmitting(false);
     }
-    onClose();
   };
 
   return (
@@ -107,13 +132,26 @@ export const CloseCallDialog: React.FC<CloseCallDialogProps> = ({
               </p>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Closure Reason / Public Notice
-                </label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs font-semibold text-slate-700">
+                    Public Notice / Closure Reason
+                  </label>
+                  <span
+                    className={`text-[11px] font-medium ${
+                      closureReason.length >= PUBLIC_NOTICE_MAX
+                        ? 'text-red-600 font-bold'
+                        : 'text-slate-400'
+                    }`}
+                  >
+                    {closureReason.length}/{PUBLIC_NOTICE_MAX}
+                  </span>
+                </div>
                 <textarea
                   rows={3}
+                  maxLength={PUBLIC_NOTICE_MAX}
                   value={closureReason}
                   onChange={(e) => setClosureReason(e.target.value)}
+                  placeholder="Enter official reason or public notice for closing this call..."
                   className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 text-xs focus:outline-none focus:ring-2 focus:ring-[#C8102E]/20 focus:border-[#C8102E]"
                 />
               </div>
@@ -143,17 +181,29 @@ export const CloseCallDialog: React.FC<CloseCallDialogProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 rounded-lg text-xs font-semibold text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 transition-colors cursor-pointer"
+              disabled={isSubmitting}
+              className="px-4 py-2 rounded-lg text-xs font-semibold text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 transition-colors cursor-pointer disabled:opacity-50"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className={`px-4.5 py-2 rounded-lg text-xs font-bold text-white transition-all flex items-center gap-1.5 shadow-xs cursor-pointer ${mode === 'close' ? 'bg-[#C8102E] hover:bg-[#a00c24]' : 'bg-emerald-600 hover:bg-emerald-700'
-                }`}
+              disabled={isSubmitting}
+              className={`px-4.5 py-2 rounded-lg text-xs font-bold text-white transition-all flex items-center gap-1.5 shadow-xs cursor-pointer disabled:opacity-60 ${
+                mode === 'close' ? 'bg-[#C8102E] hover:bg-[#a00c24]' : 'bg-emerald-600 hover:bg-emerald-700'
+              }`}
             >
-              <Check className="w-4 h-4" />
-              <span>{mode === 'close' ? 'Confirm Close Call' : 'Apply Extended Deadline'}</span>
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>Saving...</span>
+                </>
+              ) : (
+                <>
+                  <Check className="w-4 h-4" />
+                  <span>{mode === 'close' ? 'Confirm Close Call' : 'Apply Extended Deadline'}</span>
+                </>
+              )}
             </button>
           </div>
         </form>

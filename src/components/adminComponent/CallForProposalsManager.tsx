@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Search, Calendar, Lock, Edit3, Trash2, Clock, CheckCircle2, AlertCircle, FilePlus, FileText, ExternalLink } from 'lucide-react';
+import { Plus, Search, Calendar, Lock, Edit3, Trash2, CheckCircle2, AlertCircle, FilePlus, FileText, ExternalLink } from 'lucide-react';
 import { useCallForProposals } from '../../context/CallForProposalsContext';
 import type { CallForProposals, CallStatus } from '../../types';
 import { parseMemoDetails, openMemoInNewTab } from '../../utils/memoUtils';
@@ -8,7 +8,7 @@ import { CloseCallDialog } from './modals/CloseCallDialog';
 import { DeleteCallModal } from './modals/DeleteCallModal';
 
 export const CallForProposalsManager: React.FC = () => {
-  const { calls, loadingCalls, createCall, updateCall, closeCall, reopenCall, deleteCall } = useCallForProposals();
+  const { calls, loadingCalls, createCall, updateCall, closeCall, reopenCall, deleteCall, showToast } = useCallForProposals();
 
   const [activeTab, setActiveTab] = useState<'all' | 'OPEN' | 'DRAFT' | 'CLOSED'>('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -26,6 +26,18 @@ export const CallForProposalsManager: React.FC = () => {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [targetCallToDelete, setTargetCallToDelete] = useState<CallForProposals | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleOpenCallAction = (call: CallForProposals) => {
+    const openCall = calls.find((c) => {
+      const s = String(c.status).toUpperCase();
+      return (s === 'OPEN' || s === 'ACTIVE') && c.id !== call.id;
+    });
+    if (openCall) {
+      showToast(`Cannot open call: "${openCall.title}" is already active. Only one call can be open at a time. Please close the active call first.`);
+      return;
+    }
+    reopenCall(call.id, call.endDate);
+  };
 
   const handleOpenCreateModal = () => {
     setEditingCall(null);
@@ -268,6 +280,17 @@ export const CallForProposalsManager: React.FC = () => {
                     );
                   })()}
 
+                  {/* Public Notice Banner if Closed */}
+                  {(call.status === 'CLOSED' || String(call.status).toUpperCase() === 'CLOSED') && (call.publicNotice || call.closureReason) && (
+                    <div className="flex items-start gap-2 p-2.5 bg-amber-50/70 border border-amber-200/80 rounded-sm text-xs text-amber-900 max-w-3xl">
+                      <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                      <div>
+                        <span className="font-bold text-amber-950">Public Notice: </span>
+                        <span className="leading-relaxed">{call.publicNotice || call.closureReason}</span>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Priority Topics Badges */}
                   {call.priorityTopics && call.priorityTopics.length > 0 && (
                     <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
@@ -325,7 +348,7 @@ export const CallForProposalsManager: React.FC = () => {
                     </button>
                   ) : (
                     <button
-                      onClick={() => reopenCall(call.id, call.endDate)}
+                      onClick={() => handleOpenCallAction(call)}
                       className="px-3.5 py-2 rounded-sm text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 transition-colors flex items-center gap-1.5 cursor-pointer"
                       title="Open submission call window"
                     >
@@ -354,6 +377,7 @@ export const CallForProposalsManager: React.FC = () => {
         onClose={() => setIsModalOpen(false)}
         onSave={handleSaveModal}
         initialData={editingCall}
+        existingCalls={calls}
       />
 
       <CloseCallDialog

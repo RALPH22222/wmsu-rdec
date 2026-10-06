@@ -42,6 +42,7 @@ export interface CallForProposals {
   underReviewCount: number;
   rejectedCount: number;
   closureReason?: string;
+  publicNotice?: string;
   createdAt: string;
   updatedAt: string;
 }

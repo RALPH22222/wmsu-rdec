@@ -7,7 +7,6 @@ import type { CallForProposals, CallStatus } from '../types';
  */
 export const mapDbRowToCall = (row: any): CallForProposals => {
   const start = new Date(row.start_date);
-  const end = new Date(row.end_date);
 
   const rawStatus = String(row.status || 'OPEN').toUpperCase();
   const uiStatus: CallStatus =
@@ -61,6 +60,8 @@ export const mapDbRowToCall = (row: any): CallForProposals => {
     acceptedCount,
     underReviewCount,
     rejectedCount,
+    closureReason: row.public_notice || row.closure_reason || row.closureReason || undefined,
+    publicNotice: row.public_notice || row.closure_reason || row.publicNotice || undefined,
     createdAt: row.created_at,
     updatedAt: row.created_at,
   };
@@ -156,6 +157,30 @@ export async function createCallApi(
   }
 
   // Direct Supabase fallback
+  if (dbStatus === 'OPEN') {
+    const { data: openCalls } = await supabase
+      .from('call_for_proposals')
+      .select('id, title')
+      .in('status', ['OPEN', 'ACTIVE', 'open', 'active'])
+      .limit(1);
+    if (openCalls && openCalls.length > 0) {
+      throw new Error(`Only one Call for Proposals can be active at a time. "${openCalls[0].title}" is currently open. Please close it first or save as DRAFT.`);
+    }
+  }
+
+  if (dbStatus === 'DRAFT') {
+    const { data: draftCalls, count: draftCount } = await supabase
+      .from('call_for_proposals')
+      .select('id', { count: 'exact' })
+      .in('status', ['DRAFT', 'draft']);
+    const totalDrafts = typeof draftCount === 'number'
+      ? draftCount
+      : ((draftCalls as Array<{ id: string }> | null)?.length ?? 0);
+    if (totalDrafts >= 4) {
+      throw new Error('Maximum limit of 4 draft calls reached. Please publish, delete, or edit an existing draft.');
+    }
+  }
+
   const startIso = new Date(`${callData.startDate}T${callData.startTime || '08:00'}:00`).toISOString();
   const endIso = new Date(`${callData.endDate}T${callData.endTime || '17:00'}:00`).toISOString();
 
@@ -292,6 +317,33 @@ export async function updateCallApi(
     updates.status = String(updatedFields.status).toUpperCase();
   }
 
+  // Direct Supabase fallback validations
+  if (updates.status === 'OPEN') {
+    const { data: openCalls } = await supabase
+      .from('call_for_proposals')
+      .select('id, title')
+      .in('status', ['OPEN', 'ACTIVE', 'open', 'active'])
+      .neq('id', id)
+      .limit(1);
+    if (openCalls && openCalls.length > 0) {
+      throw new Error(`Only one Call for Proposals can be active at a time. "${openCalls[0].title}" is currently open. Please close it first.`);
+    }
+  }
+
+  if (updates.status === 'DRAFT') {
+    const { data: draftCalls, count: draftCount } = await supabase
+      .from('call_for_proposals')
+      .select('id', { count: 'exact' })
+      .in('status', ['DRAFT', 'draft'])
+      .neq('id', id);
+    const totalDrafts = typeof draftCount === 'number'
+      ? draftCount
+      : ((draftCalls as Array<{ id: string }> | null)?.length ?? 0);
+    if (totalDrafts >= 4) {
+      throw new Error('Maximum limit of 4 draft calls reached. Please publish, delete, or edit an existing draft.');
+    }
+  }
+
   let { data, error } = await supabase
     .from('call_for_proposals')
     .update(updates)
@@ -343,17 +395,29 @@ export async function updateCallApi(
  */
 export async function closeCallApi(
   id: string,
-  _reason?: string,
+  reason?: string,
   token?: string
 ): Promise<CallForProposals> {
+  const noticeVal = reason?.trim() || 'Submission window officially closed by RPDU Administration.';
+
+  if (noticeVal.length > 500) {
+    throw new Error('Public notice cannot exceed 500 characters.');
+  }
+
   if (token) {
     try {
       const res = await fetch(API_ENDPOINTS.CALLS.CLOSE(id), {
-        method: 'PATCH',
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
+        body: JSON.stringify({
+          reason: noticeVal,
+          closureReason: noticeVal,
+          publicNotice: noticeVal,
+          public_notice: noticeVal,
+        }),
       });
 
       if (res.ok) {
@@ -361,18 +425,61 @@ export async function closeCallApi(
         if (json.success && json.data) {
           return json.data;
         }
+      } else {
+        const errJson = await res.json().catch(() => null);
+        console.warn('Backend POST close returned error:', res.status, errJson);
+        if (res.status === 400 && errJson?.message) {
+          throw new Error(errJson.message);
+        }
       }
-    } catch (err) {
-      console.warn('Backend PATCH close failed, trying direct Supabase:', err);
+    } catch (err: any) {
+      if (err.message && !err.message.includes('fetch')) {
+        throw err;
+      }
+      console.warn('Backend POST close failed, trying direct Supabase:', err);
     }
   }
 
-  const { data, error } = await supabase
+  // Direct Supabase fallback with graceful column handling
+  const updates: Record<string, any> = {
+    status: 'CLOSED',
+    public_notice: noticeVal,
+  };
+
+  let { data, error } = await supabase
     .from('call_for_proposals')
-    .update({ status: 'CLOSED' })
+    .update(updates)
     .eq('id', id)
     .select('*, concept_proposals(id, status)')
     .single();
+
+  if (error && error.message && (error.message.includes('public_notice') || error.message.includes('closure_reason'))) {
+    if (error.message.includes('public_notice')) {
+      delete updates.public_notice;
+      updates.closure_reason = noticeVal;
+    }
+    const retry = await supabase
+      .from('call_for_proposals')
+      .update(updates)
+      .eq('id', id)
+      .select('*, concept_proposals(id, status)')
+      .single();
+
+    if (retry.error && retry.error.message && retry.error.message.includes('closure_reason')) {
+      delete updates.closure_reason;
+      const retryFinal = await supabase
+        .from('call_for_proposals')
+        .update(updates)
+        .eq('id', id)
+        .select('*, concept_proposals(id, status)')
+        .single();
+      data = retryFinal.data;
+      error = retryFinal.error;
+    } else {
+      data = retry.data;
+      error = retry.error;
+    }
+  }
 
   if (error || !data) {
     throw new Error(error?.message || 'Failed to close call in database');
@@ -392,7 +499,7 @@ export async function reopenCallApi(
   if (token) {
     try {
       const res = await fetch(API_ENDPOINTS.CALLS.REOPEN(id), {
-        method: 'PATCH',
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
@@ -405,10 +512,31 @@ export async function reopenCallApi(
         if (json.success && json.data) {
           return json.data;
         }
+      } else {
+        const errJson = await res.json().catch(() => null);
+        console.warn('Backend POST reopen returned error:', res.status, errJson);
+        if (res.status === 400 && errJson?.message) {
+          throw new Error(errJson.message);
+        }
       }
-    } catch (err) {
-      console.warn('Backend PATCH reopen failed, trying direct Supabase:', err);
+    } catch (err: any) {
+      if (err.message && !err.message.includes('fetch')) {
+        throw err;
+      }
+      console.warn('Backend POST reopen failed, trying direct Supabase:', err);
     }
+  }
+
+  // Direct Supabase fallback: Check if another call is already OPEN
+  const { data: openCalls } = await supabase
+    .from('call_for_proposals')
+    .select('id, title')
+    .in('status', ['OPEN', 'ACTIVE', 'open', 'active'])
+    .neq('id', id)
+    .limit(1);
+
+  if (openCalls && openCalls.length > 0) {
+    throw new Error(`Only one Call for Proposals can be active at a time. "${openCalls[0].title}" is currently open. Please close it first.`);
   }
 
   const updates: Record<string, any> = { status: 'OPEN' };

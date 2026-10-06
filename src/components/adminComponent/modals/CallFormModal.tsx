@@ -33,35 +33,50 @@ interface CallFormModalProps {
   onClose: () => void;
   onSave: (callData: Omit<CallForProposals, 'id' | 'submissionCount' | 'acceptedCount' | 'underReviewCount' | 'rejectedCount' | 'createdAt' | 'updatedAt'>) => void;
   initialData?: CallForProposals | null;
+  existingCalls?: CallForProposals[];
 }
 
 const TITLE_MAX = 150;
 const DESCRIPTION_MAX = 2000;
+const MAX_DRAFTS = 4;
 
 export const CallFormModal: React.FC<CallFormModalProps> = ({
   isOpen,
   onClose,
   onSave,
   initialData,
+  existingCalls = [],
 }) => {
   const isEditing = !!initialData;
   const currentYear = new Date().getFullYear();
   const upcomingYear = currentYear + 1;
   const todayStr = new Date().toISOString().split('T')[0];
 
+  const otherOpenCall = existingCalls.find((c) => {
+    const s = String(c.status).toUpperCase();
+    return (s === 'OPEN' || s === 'ACTIVE') && c.id !== initialData?.id;
+  });
+
+  const isOpenDisabled = Boolean(otherOpenCall);
+
+  const otherDraftsCount = existingCalls.filter((c) => {
+    const s = String(c.status).toUpperCase();
+    return s === 'DRAFT' && c.id !== initialData?.id;
+  }).length;
+
   const [title, setTitle] = useState('');
   const [fiscalYear, setFiscalYear] = useState<number>(currentYear);
   const [description, setDescription] = useState('');
-  const [status, setStatus] = useState<CallStatus>('OPEN');
+  const [status, setStatus] = useState<CallStatus>(() => (otherOpenCall ? 'DRAFT' : 'OPEN'));
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [priorityAreas, setPriorityAreas] = useState<string[]>(ALL_TOPICS);
   const [memoDetails, setMemoDetails] = useState<MemoDetails | null>(null);
   const [memoFile, setMemoFile] = useState<File | null>(null);
-  const [dateError, setDateError] = useState<string | null>(null);
+  const [formError, setFormError] = useState<string | null>(null);
 
   useEffect(() => {
-    setDateError(null);
+    setFormError(null);
     if (initialData) {
       setTitle(initialData.title);
       setFiscalYear(
@@ -82,7 +97,8 @@ export const CallFormModal: React.FC<CallFormModalProps> = ({
       // Clean empty initial fields (no pre-filled dummy text)
       setTitle('');
       setFiscalYear(currentYear);
-      setStatus('OPEN');
+      // Default to DRAFT if an active call already exists; otherwise OPEN
+      setStatus(otherOpenCall ? 'DRAFT' : 'OPEN');
       setDescription('');
       setStartDate('');
       setEndDate('');
@@ -90,7 +106,14 @@ export const CallFormModal: React.FC<CallFormModalProps> = ({
       setMemoDetails(null);
       setMemoFile(null);
     }
-  }, [initialData, isOpen, currentYear, upcomingYear]);
+  }, [initialData, isOpen, otherOpenCall]);
+
+  // Ensure status switches to DRAFT when creating a new call while an active call exists
+  useEffect(() => {
+    if (!initialData && otherOpenCall && status === 'OPEN') {
+      setStatus('DRAFT');
+    }
+  }, [initialData, otherOpenCall, status]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
@@ -129,32 +152,48 @@ export const CallFormModal: React.FC<CallFormModalProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setDateError(null);
+    setFormError(null);
 
     const cleanTitle = title.trim();
     if (!cleanTitle) {
-      setDateError('Please enter a call title.');
+      setFormError('Please enter a call title.');
       return;
     }
     if (cleanTitle.length > TITLE_MAX) {
-      setDateError(`Call title cannot exceed ${TITLE_MAX} characters.`);
+      setFormError(`Call title cannot exceed ${TITLE_MAX} characters.`);
       return;
     }
     if (description.length > DESCRIPTION_MAX) {
-      setDateError(`Call description cannot exceed ${DESCRIPTION_MAX} characters.`);
+      setFormError(`Call description cannot exceed ${DESCRIPTION_MAX} characters.`);
       return;
     }
     if (!startDate || !endDate) {
-      setDateError('Both start date and end date are required.');
+      setFormError('Both start date and end date are required.');
       return;
     }
     // Can only edit today and onwards
     if ((!isEditing || startDate !== initialData?.startDate) && startDate < todayStr) {
-      setDateError('Submission start date must be today or a future date.');
+      setFormError('Submission start date must be today or a future date.');
       return;
     }
     if (endDate < startDate) {
-      setDateError('Submission end date cannot be earlier than start date.');
+      setFormError('Submission end date cannot be earlier than start date.');
+      return;
+    }
+
+    // Only 1 Call can be OPEN at a time
+    if (status === 'OPEN' && otherOpenCall) {
+      setFormError(
+        `Only one Call for Proposals can be active at a time. "${otherOpenCall.title}" is currently open. Please close it first or save this call as DRAFT.`
+      );
+      return;
+    }
+
+    // Maximum 4 drafts allowed
+    if (status === 'DRAFT' && otherDraftsCount >= MAX_DRAFTS) {
+      setFormError(
+        `Maximum limit of ${MAX_DRAFTS} draft calls reached (${otherDraftsCount}/${MAX_DRAFTS}). Please publish, edit, or delete an existing draft.`
+      );
       return;
     }
 
@@ -275,28 +314,95 @@ export const CallFormModal: React.FC<CallFormModalProps> = ({
 
                 {/* Status */}
                 <div className="sm:col-span-12">
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    Status
-                  </label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-xs font-semibold text-slate-700">
+                      Status
+                    </label>
+                    <span className="text-[11px] text-slate-400 font-medium">
+                      1 Active Call Max • Up to {MAX_DRAFTS} Drafts
+                    </span>
+                  </div>
 
                   {/* Status Options: OPEN and DRAFT only */}
                   <div className="grid grid-cols-2 gap-2.5">
-                    {(['OPEN', 'DRAFT'] as CallStatus[]).map((st) => (
-                      <button
-                        key={st}
-                        type="button"
-                        onClick={() => setStatus(st)}
-                        className={`py-2 px-3 text-center text-xs font-bold rounded-lg transition-all border cursor-pointer ${status === st
-                            ? st === 'OPEN'
-                              ? 'bg-emerald-600 text-white border-emerald-600 shadow-2xs'
-                              : 'bg-blue-600 text-white border-blue-600 shadow-2xs'
-                            : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                    <button
+                      type="button"
+                      disabled={isOpenDisabled}
+                      onClick={() => {
+                        if (isOpenDisabled) return;
+                        setStatus('OPEN');
+                        setFormError(null);
+                      }}
+                      title={
+                        isOpenDisabled && otherOpenCall
+                          ? `Cannot select OPEN: "${otherOpenCall.title}" is currently active. Close it first or save this call as DRAFT.`
+                          : undefined
+                      }
+                      className={`py-2 px-3 text-center text-xs font-bold rounded-lg transition-all border ${
+                        isOpenDisabled
+                          ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed opacity-75 select-none'
+                          : status === 'OPEN'
+                          ? 'bg-emerald-600 text-white border-emerald-600 shadow-2xs cursor-pointer'
+                          : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50 cursor-pointer'
+                      }`}
+                    >
+                      <div className="flex items-center justify-center gap-1.5">
+                        {isOpenDisabled && <Lock className="w-3.5 h-3.5 text-slate-400 shrink-0" />}
+                        <span>OPEN</span>
+                        {isOpenDisabled && (
+                          <span className="text-[10px] bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded font-medium">
+                            Locked
+                          </span>
+                        )}
+                      </div>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setStatus('DRAFT');
+                        setFormError(null);
+                      }}
+                      className={`py-2 px-3 text-center text-xs font-bold rounded-lg transition-all border cursor-pointer ${
+                        status === 'DRAFT'
+                          ? 'bg-blue-600 text-white border-blue-600 shadow-2xs'
+                          : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                      }`}
+                    >
+                      <div className="flex items-center justify-center gap-1.5">
+                        <span>DRAFT</span>
+                        <span
+                          className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${
+                            status === 'DRAFT'
+                              ? 'bg-white/25 text-white'
+                              : 'bg-slate-100 text-slate-600'
                           }`}
-                      >
-                        {st}
-                      </button>
-                    ))}
+                        >
+                          {otherDraftsCount}/{MAX_DRAFTS}
+                        </span>
+                      </div>
+                    </button>
                   </div>
+
+                  {/* Context Notice for Active Call */}
+                  {isOpenDisabled && otherOpenCall && (
+                    <div className="mt-2.5 px-3 py-2 rounded-lg bg-slate-50 border border-slate-200 text-xs text-slate-600 flex items-center gap-2">
+                      <Lock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                      <span className="leading-tight">
+                        <strong className="text-slate-800 font-semibold">&ldquo;{otherOpenCall.title}&rdquo;</strong> is currently active. Only one call can be open at a time.
+                      </span>
+                    </div>
+                  )}
+
+                  {status === 'DRAFT' && otherDraftsCount >= MAX_DRAFTS && (
+                    <div className="mt-2.5 p-3 rounded-lg bg-red-50 border border-red-200 text-red-900 text-xs flex items-start gap-2 animate-in fade-in">
+                      <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
+                      <div>
+                        <span className="font-bold text-red-950">Draft Limit Reached: </span>
+                        You currently have {otherDraftsCount} drafts saved ({otherDraftsCount}/{MAX_DRAFTS}). Please publish, delete, or edit an existing draft before saving an additional draft.
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Description */}
@@ -466,10 +572,10 @@ export const CallFormModal: React.FC<CallFormModalProps> = ({
                 </span>
               </div>
 
-              {dateError && (
+              {formError && (
                 <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg text-xs text-red-700 animate-in fade-in duration-150">
                   <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
-                  <span>{dateError}</span>
+                  <span>{formError}</span>
                 </div>
               )}
 
@@ -490,7 +596,7 @@ export const CallFormModal: React.FC<CallFormModalProps> = ({
                     value={startDate}
                     onChange={(e) => {
                       setStartDate(e.target.value);
-                      if (dateError) setDateError(null);
+                      if (formError) setFormError(null);
                     }}
                     className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 bg-white text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]/20 focus:border-[#C8102E] transition-colors cursor-pointer"
                   />
@@ -515,7 +621,7 @@ export const CallFormModal: React.FC<CallFormModalProps> = ({
                     value={endDate}
                     onChange={(e) => {
                       setEndDate(e.target.value);
-                      if (dateError) setDateError(null);
+                      if (formError) setFormError(null);
                     }}
                     className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 bg-white text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]/20 focus:border-[#C8102E] transition-colors cursor-pointer"
                   />
@@ -528,6 +634,12 @@ export const CallFormModal: React.FC<CallFormModalProps> = ({
           </div>
 
           {/* Actions */}
+          {formError && (
+            <div className="px-6 py-2.5 bg-red-50 border-t border-red-200 text-xs text-red-700 flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
+              <span className="font-semibold">{formError}</span>
+            </div>
+          )}
           <div className="px-6 py-3.5 border-t border-slate-200 bg-slate-50/70 flex items-center justify-end gap-2.5 shrink-0">
             <button
               type="button"
@@ -540,8 +652,20 @@ export const CallFormModal: React.FC<CallFormModalProps> = ({
               type="submit"
               className="px-5 py-2 rounded-lg text-xs font-bold text-white bg-[#C8102E] hover:bg-[#a00c24] shadow-xs hover:shadow-sm transition-all flex items-center gap-1.5 cursor-pointer"
             >
-              {isEditing ? <Edit3 className="w-4 h-4" /> : <CheckCircle className="w-4 h-4" />}
-              <span>{isEditing ? 'Save Call Changes' : 'Create & Publish Call'}</span>
+              {isEditing ? (
+                <Edit3 className="w-4 h-4" />
+              ) : status === 'DRAFT' ? (
+                <FilePlus className="w-4 h-4" />
+              ) : (
+                <CheckCircle className="w-4 h-4" />
+              )}
+              <span>
+                {isEditing
+                  ? 'Save Call Changes'
+                  : status === 'DRAFT'
+                  ? 'Save Draft Call'
+                  : 'Create & Publish Call'}
+              </span>
             </button>
           </div>
         </form>
