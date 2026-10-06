@@ -30,21 +30,49 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [loading, setLoading] = useState(true);
   const [loadingProfile, setLoadingProfile] = useState(false);
 
-  const fetchUserProfile = useCallback(async (token: string) => {
+  const fetchUserProfile = useCallback(async (token: string, currentUserId?: string) => {
     setLoadingProfile(true);
+    let resolvedProfile: UserProfileData | null = null;
+
+    // 1. Try Express backend API
     try {
       const data = await getProfile(token);
-      setProfile(data);
-    } catch (err) {
-      console.warn('Could not load profile from backend:', err);
-    } finally {
-      setLoadingProfile(false);
+      if (data && (data.first_name || data.last_name)) {
+        resolvedProfile = data;
+      }
+    } catch {
+      // Backend may be offline or unroutable, fallback to direct Supabase
     }
+
+    // 2. If not found or backend was down, fetch directly from Supabase 'users' table
+    if (!resolvedProfile) {
+      try {
+        const uid = currentUserId || (await supabase.auth.getUser()).data.user?.id;
+        if (uid) {
+          const { data: dbUser, error } = await supabase
+            .from('users')
+            .select('id, first_name, middle_name, last_name, suffix, email, contact_number, department_id, sex, role, created_at, is_eligible_to_submit, departments:department_id(id, name)')
+            .eq('id', uid)
+            .maybeSingle();
+
+          if (!error && dbUser) {
+            resolvedProfile = dbUser as unknown as UserProfileData;
+          }
+        }
+      } catch (err) {
+        console.warn('Direct Supabase profile fetch error:', err);
+      }
+    }
+
+    if (resolvedProfile) {
+      setProfile(resolvedProfile);
+    }
+    setLoadingProfile(false);
   }, []);
 
   const refreshProfile = useCallback(async () => {
     if (session?.access_token) {
-      await fetchUserProfile(session.access_token);
+      await fetchUserProfile(session.access_token, session.user?.id);
     }
   }, [session, fetchUserProfile]);
 
@@ -53,7 +81,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.access_token) {
-        fetchUserProfile(session.access_token);
+        fetchUserProfile(session.access_token, session.user.id);
       }
       setLoading(false);
     });
@@ -63,7 +91,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setSession(newSession);
         setUser(newSession?.user ?? null);
         if (newSession?.access_token) {
-          fetchUserProfile(newSession.access_token);
+          fetchUserProfile(newSession.access_token, newSession.user.id);
         } else {
           setProfile(null);
         }

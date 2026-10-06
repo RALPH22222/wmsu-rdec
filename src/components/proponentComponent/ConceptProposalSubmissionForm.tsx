@@ -974,7 +974,7 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
 
       {/* SUBMISSION SUCCESS MODAL (Styled like CallFormModal) */}
       {successModalOpen && submittedProposal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/70 backdrop-blur-xs overflow-hidden">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/75 backdrop-blur-sm overflow-hidden">
           <div className="bg-white rounded-sm border border-slate-200 shadow-2xl max-w-lg w-full flex flex-col overflow-hidden my-auto animate-in fade-in zoom-in-95 duration-150">
             {/* Header */}
             <div className="bg-white px-6 py-4.5 border-b border-slate-200/80 flex items-center justify-between shrink-0">
@@ -1098,7 +1098,7 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
         );
 
         return (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-3 sm:p-4 overflow-hidden backdrop-blur-xs">
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-3 sm:p-4 overflow-hidden">
             <div className="bg-white rounded-sm shadow-2xl border border-slate-200 w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden my-auto animate-in fade-in zoom-in-95 duration-150">
               {/* Clean White Header (Without ID/Code) */}
               <div className="bg-white px-6 py-4.5 border-b border-slate-200/80 flex items-center justify-between shrink-0">

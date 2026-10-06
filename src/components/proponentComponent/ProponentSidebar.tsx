@@ -40,7 +40,7 @@ export const ProponentSidebar: React.FC<ProponentSidebarProps> = ({
   };
 
   // Compute Full Name from profile or auth user metadata or fallback, with capitalized first letters
-  const rawFullName = profile
+  const rawFullName = profile?.first_name
     ? [profile.first_name, profile.middle_name, profile.last_name, profile.suffix]
         .filter(Boolean)
         .join(' ')
@@ -53,11 +53,22 @@ export const ProponentSidebar: React.FC<ProponentSidebarProps> = ({
       ]
         .filter(Boolean)
         .join(' ')
-    : user?.email
-    ? user.email.split('@')[0].replace(/[._-]/g, ' ')
-    : 'Proponent User';
+    : user?.user_metadata?.firstName
+    ? [
+        user.user_metadata.firstName,
+        user.user_metadata.middleName,
+        user.user_metadata.lastName,
+        user.user_metadata.suffix,
+      ]
+        .filter(Boolean)
+        .join(' ')
+    : user?.user_metadata?.full_name || user?.user_metadata?.name || '';
 
-  const fullName = capitalizeWords(rawFullName);
+  const fullName = rawFullName.trim()
+    ? capitalizeWords(rawFullName.trim())
+    : user?.email
+    ? capitalizeWords(user.email.split('@')[0].replace(/[._-]/g, ' '))
+    : 'Proponent User';
 
   const departmentOrRole =
     profile?.departments?.name ||
@@ -68,6 +79,7 @@ export const ProponentSidebar: React.FC<ProponentSidebarProps> = ({
     setIsLoggingOut(true);
     try {
       await signOut();
+      await new Promise((resolve) => setTimeout(resolve, 600));
       setIsLogoutModalOpen(false);
       navigate('/login', { replace: true });
     } catch (err) {
@@ -161,43 +173,43 @@ export const ProponentSidebar: React.FC<ProponentSidebarProps> = ({
         </div>
 
         {/* Bottom User Profile Section */}
-        <div className="p-4 border-t border-slate-100 bg-slate-50/70">
+        <div className="p-3.5 border-t border-slate-100 bg-slate-50/60">
           <Link
             to="/proponent/profile"
             onClick={onCloseMobile}
-            className={`w-full flex items-center justify-between gap-2.5 p-3 rounded-sm transition-all cursor-pointer group text-left ${
+            className={`w-full flex items-center justify-between gap-3 p-3 rounded-xl transition-all cursor-pointer group text-left ${
               isProfileActive
                 ? 'bg-red-50/80 border border-red-200 shadow-2xs'
-                : 'bg-white border border-slate-200 hover:border-red-200 hover:bg-slate-50/90 shadow-2xs'
+                : 'bg-white border border-slate-200/90 hover:border-red-200 hover:bg-slate-50/90 shadow-2xs'
             }`}
             title="Click to view and edit profile"
           >
-            <div className="flex items-center gap-2.5 min-w-0">
+            <div className="flex items-center gap-3 min-w-0">
               <div
-                className={`w-8.5 h-8.5 rounded-sm flex items-center justify-center font-bold text-xs shrink-0 transition-colors ${
+                className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-xs shrink-0 transition-colors ${
                   isProfileActive
                     ? 'bg-[#C8102E] text-white'
-                    : 'bg-red-50 text-[#C8102E] border border-red-100 group-hover:bg-[#C8102E] group-hover:text-white'
+                    : 'bg-red-50/80 text-[#C8102E] border border-red-100 group-hover:bg-[#C8102E] group-hover:text-white'
                 }`}
               >
-                <UserIcon className="w-4.5 h-4.5" />
+                <UserIcon className="w-5 h-5" strokeWidth={1.75} />
               </div>
               <div className="min-w-0">
                 {loadingProfile && !profile ? (
                   <div className="space-y-1.5 py-0.5">
-                    <div className="h-3 w-28 bg-slate-100 animate-pulse rounded-xs" />
-                    <div className="h-2 w-16 bg-slate-100 animate-pulse rounded-xs" />
+                    <div className="h-3.5 w-28 bg-slate-100 animate-pulse rounded-xs" />
+                    <div className="h-2.5 w-20 bg-slate-100 animate-pulse rounded-xs" />
                   </div>
                 ) : (
                   <>
                     <div
-                      className="text-xs font-bold text-slate-900 truncate group-hover:text-[#C8102E] transition-colors"
+                      className="text-sm font-bold text-slate-900 truncate group-hover:text-[#C8102E] transition-colors leading-snug"
                       title={fullName}
                     >
                       {fullName}
                     </div>
                     <div
-                      className="text-[10px] text-slate-500 font-medium leading-none truncate mt-0.5"
+                      className="text-xs text-slate-500 font-normal leading-normal truncate mt-0.5"
                       title={departmentOrRole}
                     >
                       {departmentOrRole}
@@ -215,11 +227,11 @@ export const ProponentSidebar: React.FC<ProponentSidebarProps> = ({
                   e.stopPropagation();
                   setIsLogoutModalOpen(true);
                 }}
-                className="p-1.5 text-slate-400 hover:text-[#C8102E] hover:bg-slate-100 rounded-sm transition-colors cursor-pointer border border-transparent hover:border-slate-200 shrink-0"
+                className="p-1.5 text-slate-400 hover:text-[#C8102E] hover:bg-slate-100 rounded-lg transition-colors cursor-pointer shrink-0"
                 title="Sign Out"
                 aria-label="Sign Out"
               >
-                <LogOut className="w-4 h-4" />
+                <LogOut className="w-5 h-5" />
               </button>
             )}
           </Link>

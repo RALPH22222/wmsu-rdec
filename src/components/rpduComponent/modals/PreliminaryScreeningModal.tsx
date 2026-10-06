@@ -673,7 +673,7 @@ export const PreliminaryScreeningModal: React.FC<PreliminaryScreeningModalProps>
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/70 backdrop-blur-xs overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/75 backdrop-blur-sm overflow-y-auto">
       <div
         className={`bg-white rounded-lg shadow-2xl w-full ${
           actionType

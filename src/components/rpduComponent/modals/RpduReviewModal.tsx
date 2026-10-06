@@ -42,7 +42,7 @@ export const RpduReviewModal: React.FC<RpduReviewModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/75 backdrop-blur-sm overflow-y-auto">
       <div className="bg-white rounded-sm shadow-2xl w-full max-w-2xl max-h-[92vh] flex flex-col border border-slate-200 overflow-hidden my-auto">
         {/* Modal Header without colored background */}
         <div className="p-4 sm:p-5 flex items-start justify-between border-b border-slate-100 bg-white">

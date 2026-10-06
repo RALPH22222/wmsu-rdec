@@ -200,7 +200,7 @@ export const LegalDocumentModal: React.FC<LegalDocumentModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/45 backdrop-blur-xs animate-in fade-in duration-200"
+      className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-in fade-in duration-200"
       onClick={onClose}
     >
       {/* Modal Dialog Card - SweetAlert Style, Clean Academic Aesthetic */}

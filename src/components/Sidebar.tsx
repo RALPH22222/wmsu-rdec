@@ -7,7 +7,8 @@ import {
   Settings,
   LogOut,
   Plus,
-  X
+  X,
+  User,
 } from 'lucide-react';
 import { useCallForProposals } from '../context/CallForProposalsContext';
 import { useAuth } from '../context/AuthContext';
@@ -26,7 +27,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 }) => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { signOut } = useAuth();
+  const { user, profile, loadingProfile, signOut } = useAuth();
   const { currentUser } = useCallForProposals();
 
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
@@ -36,6 +37,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     setIsLoggingOut(true);
     try {
       await signOut();
+      await new Promise((resolve) => setTimeout(resolve, 600));
       setIsLogoutModalOpen(false);
       navigate('/login', { replace: true });
     } catch (err) {
@@ -47,6 +49,47 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   const isRpdu = location.pathname.startsWith('/rpdu');
   const basePath = isRpdu ? '/rpdu' : '/admin';
+
+  // Capitalize first letter of each word
+  const capitalizeWords = (str: string) => {
+    if (!str) return '';
+    return str.replace(/\b([a-z])/g, (c) => c.toUpperCase());
+  };
+
+  // Compute Full Name with first name, middle name, last name, and suffix
+  const rawFullName = profile?.first_name
+    ? [profile.first_name, profile.middle_name, profile.last_name, profile.suffix]
+        .filter(Boolean)
+        .join(' ')
+    : user?.user_metadata?.first_name
+    ? [
+        user.user_metadata.first_name,
+        user.user_metadata.middle_name,
+        user.user_metadata.last_name,
+        user.user_metadata.suffix,
+      ]
+        .filter(Boolean)
+        .join(' ')
+    : user?.user_metadata?.firstName
+    ? [
+        user.user_metadata.firstName,
+        user.user_metadata.middleName,
+        user.user_metadata.lastName,
+        user.user_metadata.suffix,
+      ]
+        .filter(Boolean)
+        .join(' ')
+    : user?.user_metadata?.full_name || user?.user_metadata?.name || '';
+
+  const fullName = rawFullName.trim()
+    ? capitalizeWords(rawFullName.trim())
+    : user?.email
+    ? capitalizeWords(user.email.split('@')[0].replace(/[._-]/g, ' '))
+    : currentUser.name;
+
+  const roleTitle = isRpdu
+    ? 'RPDU Staff'
+    : 'System Administrator';
 
   const navItems = [
     {
@@ -179,21 +222,43 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </div>
 
         {/* Footer: User Profile & Sign Out */}
-        <div className="p-3 border-t border-slate-100">
-          <div className="flex items-center justify-between gap-2.5 p-2.5 rounded-sm bg-slate-50 border border-slate-200/80">
-            <div className="min-w-0 flex-1">
-              <p className="text-xs font-bold text-slate-900 truncate">{currentUser.name}</p>
-              <p className="text-[11px] text-slate-500 truncate">{currentUser.title}</p>
+        <div className="p-3.5 border-t border-slate-100 bg-slate-50/60">
+          <div className="flex items-center justify-between gap-3 p-3 rounded-xl bg-white border border-slate-200/90 shadow-2xs">
+            <div className="flex items-center gap-3 min-w-0">
+              {/* Avatar Icon Badge */}
+              <div className="w-10 h-10 rounded-xl bg-red-50/80 border border-red-100 flex items-center justify-center text-[#C8102E] shrink-0">
+                <User className="w-5 h-5" strokeWidth={1.75} />
+              </div>
+
+              {/* User Details */}
+              <div className="min-w-0">
+                {loadingProfile && !profile ? (
+                  <div className="space-y-1.5 py-0.5">
+                    <div className="h-3.5 w-28 bg-slate-100 animate-pulse rounded-xs" />
+                    <div className="h-2.5 w-20 bg-slate-100 animate-pulse rounded-xs" />
+                  </div>
+                ) : (
+                  <>
+                    <p className="text-sm font-bold text-slate-900 truncate leading-snug" title={fullName}>
+                      {fullName}
+                    </p>
+                    <p className="text-xs text-slate-500 truncate mt-0.5 font-normal" title={roleTitle}>
+                      {roleTitle}
+                    </p>
+                  </>
+                )}
+              </div>
             </div>
 
+            {/* Sign Out Button */}
             <button
               type="button"
               onClick={() => setIsLogoutModalOpen(true)}
               title="Sign Out"
-              className="group shrink-0 inline-flex items-center gap-1.5 py-1.5 px-2.5 rounded-sm text-xs font-semibold text-red-600 hover:text-white hover:bg-red-600 border border-red-200 hover:border-red-600 bg-white shadow-2xs transition-all duration-200 cursor-pointer"
+              aria-label="Sign Out"
+              className="p-1.5 text-slate-400 hover:text-[#C8102E] hover:bg-slate-100 rounded-lg transition-colors cursor-pointer shrink-0"
             >
-              <LogOut className="w-3.5 h-3.5 transition-transform duration-200 ease-out group-hover:translate-x-0.5" />
-              <span>Sign Out</span>
+              <LogOut className="w-5 h-5" />
             </button>
           </div>
         </div>
