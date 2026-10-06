@@ -2,6 +2,9 @@ import React from 'react';
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
+// Development only: VITE_AUTH_BYPASS=true opens portal routes without a Supabase session.
+const devBypass = import.meta.env.DEV && import.meta.env.VITE_AUTH_BYPASS === 'true';
+
 /**
  * Route Guard Component:
  * Prevents unauthenticated users from accessing protected portal routes.
@@ -24,7 +27,7 @@ export const ProtectedRoute: React.FC = () => {
   }
 
   // Not authenticated -> Immediately redirect to /login and replace history
-  if (!session || !user) {
+  if (!devBypass && (!session || !user)) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 

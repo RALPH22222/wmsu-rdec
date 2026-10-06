@@ -1,10 +1,14 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Calendar, FileCheck, Layers, Users, ClipboardCheck } from 'lucide-react';
+import { Calendar, FileCheck, Layers, Users, ClipboardCheck, Scale } from 'lucide-react';
 import { useCallForProposals } from '../../context/CallForProposalsContext';
+import { useProposalPipeline } from '../../context/ProposalPipelineContext';
 import { useAuth } from '../../context/AuthContext';
 import { formatUserFullName } from '../../utils/userUtils';
 import { CallForProposalsManager } from '../../components/adminComponent/CallForProposalsManager';
+import { PipelineSummaryPanel } from '../../components/rpduComponent/PipelineSummaryPanel';
+import { EvaluatorRosterTable } from '../../components/rpduComponent/EvaluatorRosterTable';
+import { StatCard } from '../../components/ui/StatCard';
 
 export const RpduDashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -17,6 +21,11 @@ export const RpduDashboard: React.FC = () => {
   const totalSubmissions = calls.reduce((acc, curr) => acc + curr.submissionCount, 0);
   const pendingScreeningCount = conceptProposals.filter((p) => p.screeningStatus === 'pending').length;
   const passedScreeningCount = conceptProposals.filter((p) => p.screeningStatus === 'passed').length;
+
+  // Detailed-proposal pipeline: read live from context so changes made on any page show up here.
+  const { proposals, evaluators } = useProposalPipeline();
+  const awaitingEvaluatorsCount = proposals.filter((p) => p.status === 'pending_assignment').length;
+  const underReviewCount = proposals.filter((p) => p.status === 'under_review').length;
 
   return (
     <div className="space-y-8 max-w-7xl mx-auto">
@@ -41,7 +50,7 @@ export const RpduDashboard: React.FC = () => {
 
       {/* Metrics Grid */}
       {/* Metrics Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-3.5 sm:gap-5">
         {/* Card 1: Total Proposals */}
         <div className="bg-white p-5 rounded-sm border border-slate-200 shadow-xs flex flex-col justify-between space-y-4">
           <div className="flex items-center justify-between">
@@ -135,6 +144,16 @@ export const RpduDashboard: React.FC = () => {
             </p>
           </div>
         </div>
+
+        {/* Card 5: Technical Review Queue */}
+        <StatCard
+          label="Technical Review Queue"
+          value={awaitingEvaluatorsCount + underReviewCount}
+          hint={`${awaitingEvaluatorsCount} awaiting evaluators · ${underReviewCount} under review`}
+          icon={Scale}
+          tone="blue"
+          onClick={() => navigate('/rpdu/evaluations')}
+        />
       </div>
 
       {/* Main Tab Navigation */}
@@ -166,7 +185,7 @@ export const RpduDashboard: React.FC = () => {
             <FileCheck className="w-4 h-4" />
             <span>Proposals Review</span>
             <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 ml-1">
-              {totalSubmissions}
+              {proposals.length}
             </span>
           </button>
 
@@ -180,6 +199,9 @@ export const RpduDashboard: React.FC = () => {
           >
             <Users className="w-4 h-4" />
             <span>Evaluators Roster</span>
+            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 ml-1">
+              {evaluators.length}
+            </span>
           </button>
         </nav>
       </div>
@@ -187,25 +209,9 @@ export const RpduDashboard: React.FC = () => {
       {/* Tab Panels */}
       {activeTab === 'calls' && <CallForProposalsManager />}
 
-      {activeTab === 'proposals' && (
-        <div className="bg-white p-12 text-center rounded-sm border border-slate-200 shadow-xs">
-          <FileCheck className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-          <h3 className="text-lg font-bold text-slate-800">Proposals Management Pipeline</h3>
-          <p className="text-xs sm:text-sm text-slate-500 max-w-md mx-auto mt-1">
-            Faculty submissions under active calls will populate here for eligibility checks, peer evaluation assignment, and grant approvals.
-          </p>
-        </div>
-      )}
+      {activeTab === 'proposals' && <PipelineSummaryPanel />}
 
-      {activeTab === 'evaluators' && (
-        <div className="bg-white p-12 text-center rounded-sm border border-slate-200 shadow-xs">
-          <Users className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-          <h3 className="text-lg font-bold text-slate-800">Technical Evaluators Panel</h3>
-          <p className="text-xs sm:text-sm text-slate-500 max-w-md mx-auto mt-1">
-            Maintain the roster of internal and external peer reviewers, track evaluation turnaround times, and assign proposals.
-          </p>
-        </div>
-      )}
+      {activeTab === 'evaluators' && <EvaluatorRosterTable />}
     </div>
   );
 };

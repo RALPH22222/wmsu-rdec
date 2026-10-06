@@ -9,6 +9,7 @@ export const AdminLayout: React.FC = () => {
 
   const getPageTitle = () => {
     if (location.pathname.startsWith('/admin/screening')) return 'Preliminary Screening — Concept Proposals';
+    if (location.pathname.startsWith('/admin/evaluations')) return 'Technical Evaluations Pipeline';
     if (location.pathname.startsWith('/admin/proposals')) return 'Proposals Queue';
     if (location.pathname.startsWith('/admin/evaluators')) return 'Evaluators Panel';
     return 'Call for Proposals & Grants Management';
@@ -77,7 +78,7 @@ export const AdminLayout: React.FC = () => {
         </header>
 
         {/* Dashboard Main Workspace */}
-        <main className="flex-1 p-3.5 sm:p-6 lg:p-8 w-full max-w-full overflow-x-hidden">
+        <main className="flex-1 p-3.5 sm:p-6 lg:p-8 w-full max-w-full overflow-x-clip">
           <Outlet />
         </main>
       </div>

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import type { CallForProposals, UserProfile, UserRole, ProposalItem, ConceptProposal, ConceptProposalCriteria, ScreeningSectionComments } from '../types';
 import { MOCK_USERS, MOCK_PROPOSALS, INITIAL_CONCEPT_PROPOSALS } from '../data/mockData';
 import {
@@ -32,6 +32,7 @@ interface CallForProposalsContextType {
   submitConceptProposal: (proposal: Omit<ConceptProposal, 'id' | 'code' | 'submittedAt' | 'submittedTime' | 'screeningStatus'>) => ConceptProposal;
   toastMessage: string | null;
   showToast: (msg: string) => void;
+  hideToast: () => void;
 }
 
 const CallForProposalsContext = createContext<CallForProposalsContextType | undefined>(undefined);
@@ -85,12 +86,26 @@ export const CallForProposalsProvider: React.FC<{ children: React.ReactNode }> =
     localStorage.setItem('wmsu_concept_proposals_screening', JSON.stringify(conceptProposals));
   }, [conceptProposals]);
 
-  const showToast = (msg: string) => {
+  // Stable callbacks (other contexts list them as hook deps). The previous hide timer is
+  // cleared first so a quick second toast gets its full 4 seconds.
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const hideToast = useCallback(() => {
+    if (toastTimerRef.current !== null) {
+      clearTimeout(toastTimerRef.current);
+      toastTimerRef.current = null;
+    }
+    setToastMessage(null);
+  }, []);
+
+  const showToast = useCallback((msg: string) => {
+    if (toastTimerRef.current !== null) clearTimeout(toastTimerRef.current);
     setToastMessage(msg);
-    setTimeout(() => {
+    toastTimerRef.current = setTimeout(() => {
+      toastTimerRef.current = null;
       setToastMessage(null);
     }, 4000);
-  };
+  }, []);
 
   const setCurrentUserRole = (role: UserRole) => {
     const user = MOCK_USERS.find((u) => u.role === role) || MOCK_USERS[0];
@@ -330,6 +345,7 @@ export const CallForProposalsProvider: React.FC<{ children: React.ReactNode }> =
         submitConceptProposal,
         toastMessage,
         showToast,
+        hideToast,
       }}
     >
       {children}
