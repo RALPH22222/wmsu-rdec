@@ -1,26 +1,21 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { Menu, Bell, ChevronRight } from 'lucide-react';
-import { ProponentSidebar } from '../components/proponentComponent/ProponentSidebar';
+import { EvaluatorSidebar } from '../components/evaluatorComponent/EvaluatorSidebar';
 
-export default function Layout() {
+export const EvaluatorLayout: React.FC = () => {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const location = useLocation();
 
   const getPageTitle = () => {
-    if (location.pathname === '/proponent/profile') return 'Institutional Profile & Affiliation';
-    if (location.pathname === '/proponent/budget') return 'Line-Item Budget Allocation';
-    if (location.pathname === '/proponent/revisions') return 'Technical Review Feedback & Revision History';
-    return 'Concept Proposal Submission';
+    if (location.pathname.startsWith('/evaluator/review/')) return 'Double-Blind Technical Evaluation';
+    return 'Technical Evaluator Panel';
   };
 
   return (
     <div className="min-h-screen bg-slate-100 flex flex-col lg:flex-row text-slate-800 font-sans selection:bg-[#C8102E] selection:text-white">
-      {/* Shared Proponent Sidebar (w-72 matching RPDU) */}
-      <ProponentSidebar
-        mobileOpen={mobileSidebarOpen}
-        onCloseMobile={() => setMobileSidebarOpen(false)}
-      />
+      {/* Evaluator Sidebar */}
+      <EvaluatorSidebar mobileOpen={mobileSidebarOpen} onCloseMobile={() => setMobileSidebarOpen(false)} />
 
       {/* Main Content Column */}
       <div className="flex-1 flex flex-col min-w-0 lg:pl-72">
@@ -39,7 +34,7 @@ export default function Layout() {
           }
         `}</style>
 
-        {/* Proponent Header / Navbar matching RPDU */}
+        {/* Evaluator Header / Navbar */}
         <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200/80 px-3.5 sm:px-6 lg:px-8 py-3 sm:py-3.5 flex items-center justify-between shadow-xs">
           <div className="flex items-center gap-2.5 sm:gap-3.5 min-w-0 flex-1 mr-2">
             {/* Mobile Hamburger Button */}
@@ -61,7 +56,7 @@ export default function Layout() {
             </div>
           </div>
 
-          {/* Right Header: Notifications matching RPDU */}
+          {/* Right Header: Notifications Only */}
           <div className="flex items-center gap-2 sm:gap-3 shrink-0">
             <button
               type="button"
@@ -75,11 +70,13 @@ export default function Layout() {
           </div>
         </header>
 
-        {/* Proponent Main Workspace */}
+        {/* Evaluator Main Workspace */}
         <main className="flex-1 p-3.5 sm:p-6 lg:p-8 w-full max-w-full overflow-x-clip">
           <Outlet />
         </main>
       </div>
     </div>
   );
-}
+};
+
+export default EvaluatorLayout;

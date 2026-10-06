@@ -150,3 +150,162 @@ export interface HybridBudgetAllocation {
   updatedAt: string;
 }
 
+// ============================================================================
+// Detailed Proposal Evaluation Pipeline (Phase 2–3)
+// ============================================================================
+
+export type DetailedProposalStatus =
+  | 'pending_assignment'
+  | 'under_review'
+  | 'revision_requested'
+  | 'approved'
+  | 'rejected';
+
+export type EvaluatorRecommendation = 'approve' | 'revise' | 'reject';
+
+export type ProposalSection =
+  | 'title'
+  | 'abstract'
+  | 'rationale'
+  | 'objectives'
+  | 'methodology'
+  | 'timeline'
+  | 'budget'
+  | 'outputs'
+  | 'general';
+
+export type ActionItemSeverity = 'required' | 'suggested';
+
+export interface ProposalFile {
+  name: string;
+  /** Display size, e.g. "48.2 KB". */
+  size: string;
+  /** Exact byte count when known (uploads); used for the storage cap and size display. */
+  sizeBytes?: number;
+  type: string;
+  dataUrl?: string;
+  uploadedAt: string;
+}
+
+export interface ProposalTimelineItem {
+  phase: string;
+  months: string;
+  deliverable: string;
+}
+
+export interface StatusHistoryEntry {
+  status: DetailedProposalStatus;
+  at: string;
+  by: string;
+  note?: string;
+  round: number;
+}
+
+export interface DetailedProposal {
+  id: string;
+  code: string;
+  conceptProposalId?: string;
+  callId: string;
+  callTitle: string;
+  title: string;
+  // Identity — stripped by anonymizeProposal()
+  proponentId: string;
+  leadInvestigator: string;
+  leadInvestigatorEmail: string;
+  coInvestigators: string[];
+  college: string;
+  department: string;
+  // Content
+  thematicArea: string;
+  durationMonths: number;
+  budgetRequested: number;
+  abstract: string;
+  rationale: string;
+  objectives: string[];
+  methodology: string;
+  expectedOutputs: ConceptProposalOutputs;
+  timeline: ProposalTimelineItem[];
+  manuscript: ProposalFile;
+  submittedAt: string;
+  // Pipeline
+  status: DetailedProposalStatus;
+  currentRound: number;
+  statusHistory: StatusHistoryEntry[];
+}
+
+export type ProponentIdentityField =
+  | 'proponentId'
+  | 'leadInvestigator'
+  | 'leadInvestigatorEmail'
+  | 'coInvestigators'
+  | 'college'
+  | 'department';
+
+// conceptProposalId is also withheld: it joins to the concept proposal, which names the proponent.
+export type BlindProposal = Omit<DetailedProposal, ProponentIdentityField | 'conceptProposalId'> & { blind: true };
+
+export interface Evaluator {
+  id: string;
+  name: string;
+  email: string;
+  title: string;
+  college: string;
+  department: string;
+  expertise: string[];
+  isExternal: boolean;
+}
+
+export interface EvaluatorAssignment {
+  id: string;
+  proposalId: string;
+  evaluatorId: string;
+  blindLabel: string;
+  assignedAt: string;
+  assignedBy: string;
+  dueDate: string;
+}
+
+export interface EvaluationCriterionScore {
+  criterionId: string;
+  score: number;
+}
+
+export interface ActionSheetItem {
+  id: string;
+  section: ProposalSection;
+  severity: ActionItemSeverity;
+  comment: string;
+}
+
+export interface Evaluation {
+  id: string;
+  proposalId: string;
+  assignmentId: string;
+  evaluatorId: string;
+  round: number;
+  scores: EvaluationCriterionScore[];
+  totalScore: number;
+  remarks: string;
+  actionSheet: ActionSheetItem[];
+  recommendation: EvaluatorRecommendation;
+  submittedAt: string;
+}
+
+export interface RevisionResponse {
+  actionItemId: string;
+  response: string;
+}
+
+export interface ProposalRevision {
+  id: string;
+  proposalId: string;
+  revisionNumber: number;
+  respondsToRound: number;
+  file: ProposalFile;
+  changeSummary: string;
+  responses: RevisionResponse[];
+  uploadedAt: string;
+  uploadedBy: string;
+}
+
+export type BlindRevision = Omit<ProposalRevision, 'uploadedBy'> & { blind: true };

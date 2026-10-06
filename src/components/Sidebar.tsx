@@ -9,6 +9,7 @@ import {
   Plus,
   X,
   User,
+  Users,
 } from 'lucide-react';
 import { useCallForProposals } from '../context/CallForProposalsContext';
 import { useAuth } from '../context/AuthContext';
@@ -102,6 +103,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
       name: 'Preliminary Screening',
       path: `${basePath}/screening`,
       icon: ClipboardCheck,
+      disabled: false,
+    },
+    {
+      name: 'Evaluator Assignment',
+      path: `${basePath}/evaluations`,
+      icon: Users,
       disabled: false,
     },
     {

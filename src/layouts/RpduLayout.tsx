@@ -79,7 +79,7 @@ export const RpduLayout: React.FC = () => {
         </header>
 
         {/* RPDU Main Workspace */}
-        <main className="flex-1 p-3.5 sm:p-6 lg:p-8 w-full max-w-full overflow-x-hidden">
+        <main className="flex-1 p-3.5 sm:p-6 lg:p-8 w-full max-w-full overflow-x-clip">
           <Outlet />
         </main>
       </div>
