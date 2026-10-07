@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Calendar,
   ArrowRight,
@@ -10,7 +10,10 @@ import {
   FileText,
   Mail,
   ExternalLink,
+  AlertCircle,
 } from 'lucide-react';
+import { useCallForProposals } from '../context/CallForProposalsContext';
+import { parseMemoDetails, openMemoInNewTab } from '../utils/memoUtils';
 
 interface SubmissionPeriodPortalProps {
   onSignInClick?: () => void;
@@ -25,8 +28,113 @@ interface PriorityArea {
 }
 
 export const SubmissionPeriodPortal: React.FC<SubmissionPeriodPortalProps> = ({ onSignInClick }) => {
+  const { activeCall, calls } = useCallForProposals();
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [activeStep, setActiveStep] = useState<number>(0);
+  const [showAllTopics, setShowAllTopics] = useState<boolean>(false);
+
+  // Pick the target call: prefer activeCall, then any OPEN call, then the first available call
+  const targetCall = activeCall || calls.find((c) => String(c.status).toUpperCase() === 'OPEN') || calls[0] || null;
+
+  // Title: "Advancing Research & Innovation" placeholder matched to call title
+  const callTitle = targetCall?.title?.trim() || 'Advancing Research & Innovation';
+
+  // Year: "2027" placeholder dynamically matches user-defined fiscalYear / call year
+  const callYear = targetCall?.fiscalYear || (targetCall?.startDate ? new Date(targetCall.startDate).getFullYear() : 2027);
+
+  // Subtitle / Description
+  const callDescription =
+    targetCall?.description?.trim() ||
+    'Western Mindanao State University invites faculty, researchers, and project proponents to submit research proposals for institutional funding support and peer review.';
+
+  // Format date helper for human-readable dates (e.g. "October 7, 2026")
+  const formatDisplayDate = (dateStr?: string, defaultStr: string = '') => {
+    if (!dateStr) return defaultStr;
+    const cleanStr = dateStr.split('T')[0];
+    const parts = cleanStr.split('-');
+    if (parts.length === 3) {
+      const year = parseInt(parts[0], 10);
+      const month = parseInt(parts[1], 10) - 1;
+      const day = parseInt(parts[2], 10);
+      const d = new Date(year, month, day);
+      if (!isNaN(d.getTime())) {
+        return d.toLocaleDateString('en-US', {
+          month: 'long',
+          day: 'numeric',
+          year: 'numeric',
+        });
+      }
+    }
+    return dateStr;
+  };
+
+  const formatDisplayTime = (timeStr?: string, defaultStr: string = '8:00 AM PST') => {
+    if (!timeStr) return defaultStr;
+    if (timeStr.includes(':')) {
+      const [hStr, mStr] = timeStr.split(':');
+      let hour = parseInt(hStr, 10);
+      const minute = mStr ? mStr.slice(0, 2) : '00';
+      if (!isNaN(hour)) {
+        const ampm = hour >= 12 ? 'PM' : 'AM';
+        hour = hour % 12 || 12;
+        return `${hour}:${minute} ${ampm} PST`;
+      }
+    }
+    return `${timeStr} PST`;
+  };
+
+  const formattedStartDate = formatDisplayDate(targetCall?.startDate, 'September 15, 2026');
+  const formattedStartTime = formatDisplayTime(targetCall?.startTime, '8:00 AM PST');
+  const formattedEndDate = formatDisplayDate(targetCall?.endDate, 'November 15, 2026');
+  const formattedEndTime = formatDisplayTime(targetCall?.endTime, '5:00 PM PST');
+
+  // Official Memo Details
+  const memoDetails = useMemo(() => {
+    if (!targetCall) return null;
+    return parseMemoDetails(targetCall.memo || targetCall.memoAttachment || targetCall.memoFileUrl);
+  }, [targetCall]);
+
+  const memoFileName = memoDetails?.name || 'WMSU-RDEC-Call-For-Proposals-Memo-2026.pdf';
+  const memoExtension = useMemo(() => {
+    const ext = memoFileName.split('.').pop()?.toUpperCase();
+    return ext && ext.length <= 4 ? ext : 'PDF';
+  }, [memoFileName]);
+
+  const handleOpenMemo = (e: React.MouseEvent) => {
+    if (memoDetails) {
+      e.preventDefault();
+      openMemoInNewTab(memoDetails);
+    }
+  };
+
+  // Priority Focus Topics: replace placeholder pills with dynamic call focus topics
+  const focusTopicPills: string[] = useMemo(() => {
+    if (targetCall?.priorityTopics && targetCall.priorityTopics.length > 0) {
+      const pills: string[] = [];
+      targetCall.priorityTopics.forEach((pt) => {
+        if (Array.isArray(pt.subtopics) && pt.subtopics.length > 0) {
+          pt.subtopics.forEach((sub) => {
+            pills.push(`${pt.topic} - ${sub}`);
+          });
+        } else if (pt.topic) {
+          pills.push(pt.topic);
+        }
+      });
+      if (pills.length > 0) return pills;
+    }
+
+    if (targetCall?.priorityAreas && targetCall.priorityAreas.length > 0) {
+      return targetCall.priorityAreas;
+    }
+
+    return [
+      'Science & Technology - Biology',
+      'Social Science - ICT in Education',
+      'Agriculture - Food Security',
+    ];
+  }, [targetCall]);
+
+  const isClosed = targetCall && String(targetCall.status).toUpperCase() === 'CLOSED';
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -35,7 +143,7 @@ export const SubmissionPeriodPortal: React.FC<SubmissionPeriodPortalProps> = ({ 
     return () => clearInterval(interval);
   }, []);
 
-  const priorityAreas: PriorityArea[] = [
+  const basePriorityAreas: PriorityArea[] = [
     {
       id: 'science-tech',
       category: 'Science & Technology',
@@ -74,10 +182,44 @@ export const SubmissionPeriodPortal: React.FC<SubmissionPeriodPortalProps> = ({ 
     },
   ];
 
+  // Dynamically tailor priority domains and subtopics based on current call
+  const dynamicPriorityAreas: PriorityArea[] = useMemo(() => {
+    if (!targetCall?.priorityTopics || targetCall.priorityTopics.length === 0) {
+      return basePriorityAreas;
+    }
+
+    const matched = basePriorityAreas
+      .map((baseArea) => {
+        const found = targetCall.priorityTopics?.find((pt) => {
+          const ptLower = pt.topic.toLowerCase();
+          const baseLower = baseArea.category.toLowerCase();
+          return ptLower.includes('science') && baseLower.includes('science & tech')
+            ? true
+            : ptLower.includes('social') && baseLower.includes('social')
+            ? true
+            : ptLower.includes('agriculture') && baseLower.includes('agriculture')
+            ? true
+            : ptLower.includes('engineering') && baseLower.includes('engineering')
+            ? true
+            : ptLower.includes(baseLower.split(' ')[0]) || baseLower.includes(ptLower.split(' ')[0]);
+        });
+
+        if (!found) return null;
+
+        return {
+          ...baseArea,
+          topics: Array.isArray(found.subtopics) && found.subtopics.length > 0 ? found.subtopics : baseArea.topics,
+        };
+      })
+      .filter(Boolean) as PriorityArea[];
+
+    return matched.length > 0 ? matched : basePriorityAreas;
+  }, [targetCall, basePriorityAreas]);
+
   const filteredAreas =
     selectedCategory === 'all'
-      ? priorityAreas
-      : priorityAreas.filter((area) => area.id === selectedCategory);
+      ? dynamicPriorityAreas
+      : dynamicPriorityAreas.filter((area) => area.id === selectedCategory);
 
   const submissionSteps = [
     {
@@ -117,9 +259,20 @@ export const SubmissionPeriodPortal: React.FC<SubmissionPeriodPortalProps> = ({ 
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-96 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-red-100/30 via-transparent to-transparent pointer-events-none" />
 
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
-          {/* Clean Modern Headline with Call.svg resting near 'e' and 'a' of Research */}
+          {/* Public Notice Banner if call is closed */}
+          {isClosed && (targetCall.publicNotice || targetCall.closureReason) && (
+            <div className="max-w-2xl mx-auto mb-6 p-3.5 bg-amber-50 border border-amber-200/80 rounded-sm text-xs text-amber-900 flex items-start gap-2.5 text-left shadow-xs">
+              <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+              <div>
+                <span className="font-bold text-amber-950">Public Notice: </span>
+                <span className="leading-relaxed">{targetCall.publicNotice || targetCall.closureReason}</span>
+              </div>
+            </div>
+          )}
+
+          {/* Clean Modern Headline with Call.svg resting near Call for Proposals */}
           <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight text-slate-900 leading-tight mb-5">
-            Advancing Research &amp; Innovation
+            {callTitle}
             <span className="flex items-center justify-center gap-2 sm:gap-3 text-[#C8102E] font-extrabold mt-1">
               <img
                 src="/Call.svg"
@@ -127,22 +280,35 @@ export const SubmissionPeriodPortal: React.FC<SubmissionPeriodPortalProps> = ({ 
                 aria-hidden="true"
                 className="w-8 sm:w-10 md:w-12 h-auto select-none pointer-events-none shrink-0"
               />
-              <span>Call for Proposals 2027</span>
+              <span>Call for Proposals {callYear}</span>
             </span>
           </h1>
 
-          {/* Subtitle */}
+          {/* Subtitle / Description */}
           <p className="text-base sm:text-lg font-semibold text-slate-700 max-w-2xl mx-auto leading-relaxed mb-10">
-            Western Mindanao State University invites faculty, researchers, and project proponents to submit research proposals for institutional funding support and peer review.
+            {callDescription}
           </p>
 
           {/* Submission Window Card (Minimalist & Crisp) */}
           <div className="max-w-2xl mx-auto bg-white rounded-sm border border-slate-200/90 shadow-sm p-5 sm:p-6 mb-8 text-left">
-            <div className="flex items-center gap-2 pb-4 border-b border-slate-100">
-              <Calendar className="w-4 h-4 text-[#C8102E]" />
-              <span className="text-xs uppercase tracking-wider font-semibold text-slate-500">
-                Submission Schedule
-              </span>
+            <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <Calendar className="w-4 h-4 text-[#C8102E]" />
+                <span className="text-xs uppercase tracking-wider font-semibold text-slate-500">
+                  Submission Schedule
+                </span>
+              </div>
+              {targetCall && (
+                <span
+                  className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${
+                    isClosed
+                      ? 'bg-amber-100 text-amber-800 border border-amber-200'
+                      : 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                  }`}
+                >
+                  {isClosed ? 'CLOSED' : 'OPEN'}
+                </span>
+              )}
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4">
@@ -151,9 +317,9 @@ export const SubmissionPeriodPortal: React.FC<SubmissionPeriodPortalProps> = ({ 
                   Submission Opens
                 </span>
                 <span className="text-base sm:text-lg font-bold text-slate-900">
-                  September 15, 2026
+                  {formattedStartDate}
                 </span>
-                <span className="text-[11px] text-slate-400 block mt-0.5">8:00 AM PST</span>
+                <span className="text-[11px] text-slate-400 block mt-0.5">{formattedStartTime}</span>
               </div>
 
               <div className="bg-red-50/40 rounded-sm p-3.5 border border-red-100/80">
@@ -161,9 +327,11 @@ export const SubmissionPeriodPortal: React.FC<SubmissionPeriodPortalProps> = ({ 
                   Submission Deadline
                 </span>
                 <span className="text-base sm:text-lg font-bold text-[#C8102E]">
-                  November 15, 2026
+                  {formattedEndDate}
                 </span>
-                <span className="text-[11px] text-[#C8102E]/70 block mt-0.5">5:00 PM PST · Strict Deadline</span>
+                <span className="text-[11px] text-[#C8102E]/70 block mt-0.5">
+                  {formattedEndTime} · {isClosed ? 'Closed' : 'Strict Deadline'}
+                </span>
               </div>
             </div>
 
@@ -173,24 +341,29 @@ export const SubmissionPeriodPortal: React.FC<SubmissionPeriodPortalProps> = ({ 
                 Official Memorandum
               </span>
               <a
-                href="#"
-                className="group relative flex items-center gap-3.5 w-full bg-slate-50/70 hover:bg-white border border-slate-200/90 rounded-md p-3 transition-all duration-200 hover:border-[#C8102E]/40 hover:shadow-xs"
+                href={memoDetails?.dataUrl || '#'}
+                onClick={handleOpenMemo}
+                className="group relative flex items-center gap-3.5 w-full bg-slate-50/70 hover:bg-white border border-slate-200/90 rounded-md p-3 transition-all duration-200 hover:border-[#C8102E]/40 hover:shadow-xs cursor-pointer"
               >
                 {/* Red left accent - inset */}
                 <div className="absolute left-0 top-2.5 bottom-2.5 w-1 bg-[#C8102E] rounded-r-full" />
-                {/* PDF icon block */}
+                {/* File icon block */}
                 <div className="flex-shrink-0 w-9 h-11 bg-red-50 border border-red-100 rounded flex flex-col items-center justify-center gap-0.5 ml-1">
                   <div className="w-4 h-0.5 bg-[#C8102E]/40 rounded-full" />
                   <div className="w-4 h-0.5 bg-[#C8102E]/40 rounded-full" />
                   <div className="w-2.5 h-0.5 bg-[#C8102E]/40 rounded-full" />
-                  <span className="text-[8px] font-black text-[#C8102E] mt-0.5 tracking-wider">PDF</span>
+                  <span className="text-[8px] font-black text-[#C8102E] mt-0.5 tracking-wider">
+                    {memoExtension}
+                  </span>
                 </div>
                 {/* File info */}
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold text-slate-800 truncate group-hover:text-[#C8102E] transition-colors">
-                    WMSU-RDEC-Call-For-Proposals-Memo-2026.pdf
+                    {memoFileName}
                   </p>
-                  <p className="text-xs text-slate-400 mt-0.5">Official Call Guidelines & Terms · Click to view</p>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    Official Call Guidelines &amp; Terms · Click to view
+                  </p>
                 </div>
                 {/* View button / icon */}
                 <div className="flex items-center gap-1.5 px-2.5 py-1 bg-white border border-slate-200 rounded text-xs font-medium text-slate-600 group-hover:text-[#C8102E] group-hover:border-[#C8102E]/30 transition-colors shrink-0">
@@ -201,16 +374,34 @@ export const SubmissionPeriodPortal: React.FC<SubmissionPeriodPortalProps> = ({ 
             </div>
 
             {/* Priority Focus Topics */}
-            <div className="mt-4 pt-4 border-t border-slate-100">
-              <span className="text-xs uppercase tracking-wider font-semibold text-slate-500 block mb-2">
-                Priority Focus Topics
-              </span>
-              <div className="flex flex-wrap gap-2">
-                <span className="px-2.5 py-1 bg-slate-100 border border-slate-200 text-xs font-medium text-slate-700 rounded-sm">Science & Technology - Biology</span>
-                <span className="px-2.5 py-1 bg-slate-100 border border-slate-200 text-xs font-medium text-slate-700 rounded-sm">Social Science - ICT in Education</span>
-                <span className="px-2.5 py-1 bg-slate-100 border border-slate-200 text-xs font-medium text-slate-700 rounded-sm">Agriculture - Food Security</span>
+            {focusTopicPills.length > 0 && (
+              <div className="mt-4 pt-4 border-t border-slate-100">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs uppercase tracking-wider font-semibold text-slate-500">
+                    Priority Focus Topics ({focusTopicPills.length})
+                  </span>
+                  {focusTopicPills.length > 6 && (
+                    <button
+                      type="button"
+                      onClick={() => setShowAllTopics((prev) => !prev)}
+                      className="text-xs font-semibold text-[#C8102E] hover:underline cursor-pointer"
+                    >
+                      {showAllTopics ? 'Show less' : `+${focusTopicPills.length - 6} more`}
+                    </button>
+                  )}
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {(showAllTopics ? focusTopicPills : focusTopicPills.slice(0, 6)).map((pill, idx) => (
+                    <span
+                      key={idx}
+                      className="px-2.5 py-1 bg-slate-100 border border-slate-200 text-xs font-medium text-slate-700 rounded-sm"
+                    >
+                      {pill}
+                    </span>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
           </div>
 
           {/* Primary Action Buttons */}
@@ -254,7 +445,7 @@ export const SubmissionPeriodPortal: React.FC<SubmissionPeriodPortalProps> = ({ 
             </h2>
             <div className="w-12 h-1 bg-[#C8102E] rounded-sm mx-auto mt-1.5 mb-3" />
             <p className="text-sm sm:text-base font-semibold text-slate-700 mt-2 leading-relaxed">
-              Proposals directly aligned with these key thematic domains are given priority evaluation for 2027 grant allocation.
+              Proposals directly aligned with these key thematic domains are given priority evaluation for {callYear} grant allocation.
             </p>
 
             {/* Filter Pills */}
@@ -262,22 +453,24 @@ export const SubmissionPeriodPortal: React.FC<SubmissionPeriodPortalProps> = ({ 
               <button
                 type="button"
                 onClick={() => setSelectedCategory('all')}
-                className={`px-3.5 py-1.5 rounded-sm text-xs font-medium transition-all ${selectedCategory === 'all'
+                className={`px-3.5 py-1.5 rounded-sm text-xs font-medium transition-all cursor-pointer ${
+                  selectedCategory === 'all'
                     ? 'bg-slate-900 text-white shadow-xs'
                     : 'bg-white text-slate-600 border border-slate-200 hover:border-slate-300'
-                  }`}
+                }`}
               >
-                All Domains ({priorityAreas.length})
+                All Domains ({dynamicPriorityAreas.length})
               </button>
-              {priorityAreas.map((area) => (
+              {dynamicPriorityAreas.map((area) => (
                 <button
                   key={area.id}
                   type="button"
                   onClick={() => setSelectedCategory(area.id)}
-                  className={`px-3.5 py-1.5 rounded-sm text-xs font-medium transition-all ${selectedCategory === area.id
+                  className={`px-3.5 py-1.5 rounded-sm text-xs font-medium transition-all cursor-pointer ${
+                    selectedCategory === area.id
                       ? 'bg-[#C8102E] text-white shadow-xs'
                       : 'bg-white text-slate-600 border border-slate-200 hover:border-slate-300'
-                    }`}
+                  }`}
                 >
                   {area.category.split(' ')[0]}
                 </button>

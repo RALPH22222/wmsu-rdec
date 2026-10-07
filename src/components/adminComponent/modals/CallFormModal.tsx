@@ -79,9 +79,7 @@ export const CallFormModal: React.FC<CallFormModalProps> = ({
     setFormError(null);
     if (initialData) {
       setTitle(initialData.title);
-      setFiscalYear(
-        initialData.fiscalYear === upcomingYear ? upcomingYear : currentYear
-      );
+      setFiscalYear(initialData.fiscalYear || currentYear);
       const rawStatus = String(initialData.status).toUpperCase();
       setStatus(rawStatus === 'DRAFT' ? 'DRAFT' : 'OPEN');
       setDescription(initialData.description || '');
@@ -297,7 +295,7 @@ export const CallFormModal: React.FC<CallFormModalProps> = ({
                   />
                 </div>
 
-                {/* Year (Current Year and Upcoming Year only) */}
+                {/* Year */}
                 <div className="sm:col-span-4">
                   <label className="block text-xs font-semibold text-slate-700 mb-1">
                     Year <span className="text-red-500">*</span>
@@ -307,8 +305,14 @@ export const CallFormModal: React.FC<CallFormModalProps> = ({
                     onChange={(e) => setFiscalYear(Number(e.target.value))}
                     className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]/20 focus:border-[#C8102E]"
                   >
-                    <option value={currentYear}>Year {currentYear}</option>
-                    <option value={upcomingYear}>Year {upcomingYear}</option>
+                    {Array.from(new Set([currentYear - 1, currentYear, upcomingYear, currentYear + 2, fiscalYear]))
+                      .filter(Boolean)
+                      .sort()
+                      .map((yr) => (
+                        <option key={yr} value={yr}>
+                          Year {yr}
+                        </option>
+                      ))}
                   </select>
                 </div>
 

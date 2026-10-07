@@ -1032,18 +1032,13 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
           <div className="bg-white rounded-sm border border-slate-200 shadow-2xl max-w-lg w-full flex flex-col overflow-hidden my-auto animate-in fade-in zoom-in-95 duration-150">
             {/* Header */}
             <div className="bg-white px-6 py-4.5 border-b border-slate-200/80 flex items-center justify-between shrink-0">
-              <div className="flex items-center gap-2.5">
-                <div className="p-1.5 rounded-full bg-red-50 text-[#C8102E] border border-red-100 shrink-0">
-                  <Send className="w-4 h-4" />
-                </div>
-                <div>
-                  <h3 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
-                    Confirm Proposal Submission
-                  </h3>
-                  <p className="text-xs text-slate-500 font-medium">
-                    Review your proposal details before final confirmation
-                  </p>
-                </div>
+              <div>
+                <h3 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
+                  Confirm Proposal Submission
+                </h3>
+                <p className="text-xs text-slate-500 font-medium">
+                  Review your proposal details before final confirmation
+                </p>
               </div>
               <button
                 type="button"
@@ -1059,57 +1054,62 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
             {/* Modal Body */}
             <div className="p-6 space-y-4 text-xs overflow-y-auto max-h-[70vh]">
               {/* Notice */}
-              <div className="p-3.5 rounded-sm bg-amber-50 border border-amber-200 text-amber-950 flex items-start gap-3">
-                <div className="p-1 rounded-full bg-amber-100 text-amber-700 shrink-0 mt-0.5">
-                  <AlertCircle className="w-4 h-4" />
-                </div>
-                <div className="text-[11px] leading-relaxed">
-                  <span className="font-bold text-amber-900">Important Notice: </span>
-                  Are you sure you want to submit this concept proposal? Once submitted, your proposal will be locked and directly routed to the RPDU Committee for preliminary screening.
+              <div className="p-3.5 rounded-sm bg-amber-50/80 border border-amber-200 text-amber-950 flex items-start gap-2.5 leading-relaxed">
+                <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                <div className="text-[11px] text-amber-900">
+                  <strong className="font-semibold text-amber-950">Important Notice: </strong>
+                  Once submitted, your proposal details and uploaded files cannot be modified directly and will be forwarded to the RPDU Committee for preliminary screening.
                 </div>
               </div>
 
-              {/* Proposal Summary Card */}
-              <div className="bg-slate-50 p-4 rounded-sm border border-slate-200 space-y-3">
-                <div>
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-0.5">
+              {/* Proposal Summary Details */}
+              <div className="bg-slate-50/80 rounded-sm border border-slate-200/90 divide-y divide-slate-200/70 text-xs">
+                <div className="px-4 py-2.5 flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-3">
+                  <span className="w-36 shrink-0 text-[11px] font-medium text-slate-500">
                     Call for Proposals
                   </span>
-                  <p className="font-semibold text-slate-800 text-xs">
+                  <span className="font-semibold text-slate-900 flex-1 leading-snug">
                     {activeCall?.title || 'Institutional Research & Innovation Call 2027'}
-                  </p>
+                  </span>
                 </div>
 
-                <div className="border-t border-slate-200/70 pt-2.5">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-0.5">
+                <div className="px-4 py-2.5 flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-3">
+                  <span className="w-36 shrink-0 text-[11px] font-medium text-slate-500">
                     Proposal Title
                   </span>
-                  <p className="font-bold text-slate-900 text-xs leading-snug">
+                  <span className="font-semibold text-slate-900 flex-1 leading-snug">
                     {proposalTitle.trim()}
-                  </p>
+                  </span>
                 </div>
 
-                <div className="border-t border-slate-200/70 pt-2.5 flex items-center justify-between">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                <div className="px-4 py-2.5 flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-3">
+                  <span className="w-36 shrink-0 text-[11px] font-medium text-slate-500">
                     Research Agenda
                   </span>
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-red-100 text-[#C8102E] truncate max-w-[240px]">
+                  <span className="font-semibold text-slate-900 flex-1 leading-snug">
                     {selectedAgenda}
                   </span>
                 </div>
 
-                <div className="border-t border-slate-200/70 pt-2.5 flex items-center justify-between">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                <div className="px-4 py-2.5 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3">
+                  <span className="w-36 shrink-0 text-[11px] font-medium text-slate-500">
                     Lead Proponent
                   </span>
-                  <span className="font-semibold text-slate-800 text-xs text-right">
-                    {leadInvestigator} ({college})
-                  </span>
+                  <div className="flex flex-wrap items-center gap-2 flex-1">
+                    <span className="font-semibold text-slate-900">
+                      {leadInvestigator}
+                    </span>
+                    {college && (
+                      <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-slate-100 text-slate-700 border border-slate-200">
+                        {college}
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
 
               {/* Attached Documents */}
-              <div className="space-y-2">
+              <div className="space-y-2 pt-1">
                 <span className="text-[11px] font-bold text-slate-700 flex items-center gap-1.5">
                   <FileCheck className="w-3.5 h-3.5 text-slate-500" />
                   Attached Documents for Screening:

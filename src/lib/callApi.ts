@@ -29,12 +29,12 @@ export const mapDbRowToCall = (row: any): CallForProposals => {
   const priorityAreas = priorityTopics && priorityTopics.length > 0
     ? priorityTopics.flatMap((t: any) => Array.isArray(t.subtopics) ? t.subtopics : (t.subtopic ? [t.subtopic] : []))
     : (Array.isArray(row.priority_areas) ? row.priority_areas : [
-        'Agriculture, Food Security & Sustainable Farming',
-        'Artificial Intelligence & Digital Transformation',
-        'Community Empowerment & Social Innovation',
-        'Health, Wellness & Bio-prospecting',
-        'Environmental Conservation & Biodiversity',
-      ]);
+      'Agriculture, Food Security & Sustainable Farming',
+      'Artificial Intelligence & Digital Transformation',
+      'Community Empowerment & Social Innovation',
+      'Health, Wellness & Bio-prospecting',
+      'Environmental Conservation & Biodiversity',
+    ]);
 
   return {
     id: row.id,

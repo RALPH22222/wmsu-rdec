@@ -109,9 +109,13 @@ export const CallForProposalsProvider: React.FC<{ children: React.ReactNode }> =
     try {
       const session = (await supabase.auth.getSession()).data.session;
       const created = await createCallApi(newCallData, session?.access_token);
-      setCalls((prev) => [created, ...prev.filter((c) => c.id !== created.id)]);
+      const callWithFields: CallForProposals = {
+        ...created,
+        fiscalYear: newCallData.fiscalYear || created.fiscalYear,
+      };
+      setCalls((prev) => [callWithFields, ...prev.filter((c) => c.id !== callWithFields.id)]);
       showToast(`Successfully created "${created.title}" (${created.code})`);
-      return created;
+      return callWithFields;
     } catch (err: any) {
       showToast(`Failed to create call: ${err.message || 'Unknown error'}`);
       throw err;
@@ -122,7 +126,11 @@ export const CallForProposalsProvider: React.FC<{ children: React.ReactNode }> =
     try {
       const session = (await supabase.auth.getSession()).data.session;
       const updated = await updateCallApi(id, updatedFields, session?.access_token);
-      setCalls((prev) => prev.map((c) => (c.id === id ? updated : c)));
+      const callWithFields: CallForProposals = {
+        ...updated,
+        fiscalYear: updatedFields.fiscalYear || updated.fiscalYear,
+      };
+      setCalls((prev) => prev.map((c) => (c.id === id ? callWithFields : c)));
       showToast('Call for Proposals updated successfully.');
     } catch (err: any) {
       showToast(`Failed to update call: ${err.message || 'Unknown error'}`);
