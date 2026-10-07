@@ -306,7 +306,7 @@ export const ClearanceContractsManager: React.FC = () => {
 
         {/* Metric Counters */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-          <div className="p-3.5 bg-slate-50/70 hover:bg-slate-50 rounded-sm border border-slate-200/80 transition-colors flex flex-col justify-between">
+          <div className="p-3.5 bg-white hover:bg-slate-50/50 rounded-sm border border-slate-200/90 shadow-2xs transition-colors flex flex-col justify-between">
             <div className="flex items-center justify-between">
               <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
                 Issued Certificates
@@ -319,7 +319,7 @@ export const ClearanceContractsManager: React.FC = () => {
             </div>
           </div>
 
-          <div className="p-3.5 bg-slate-50/70 hover:bg-slate-50 rounded-sm border border-slate-200/80 transition-colors flex flex-col justify-between">
+          <div className="p-3.5 bg-white hover:bg-slate-50/50 rounded-sm border border-slate-200/90 shadow-2xs transition-colors flex flex-col justify-between">
             <div className="flex items-center justify-between">
               <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
                 Active Contracts
@@ -332,7 +332,7 @@ export const ClearanceContractsManager: React.FC = () => {
             </div>
           </div>
 
-          <div className="p-3.5 bg-slate-50/70 hover:bg-slate-50 rounded-sm border border-slate-200/80 transition-colors flex flex-col justify-between">
+          <div className="p-3.5 bg-white hover:bg-slate-50/50 rounded-sm border border-slate-200/90 shadow-2xs transition-colors flex flex-col justify-between">
             <div className="flex items-center justify-between">
               <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
                 Signed by President
@@ -347,7 +347,7 @@ export const ClearanceContractsManager: React.FC = () => {
             </div>
           </div>
 
-          <div className="p-3.5 bg-slate-50/70 hover:bg-slate-50 rounded-sm border border-slate-200/80 transition-colors flex flex-col justify-between">
+          <div className="p-3.5 bg-white hover:bg-slate-50/50 rounded-sm border border-slate-200/90 shadow-2xs transition-colors flex flex-col justify-between">
             <div className="flex items-center justify-between">
               <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
                 Legal Office Queue

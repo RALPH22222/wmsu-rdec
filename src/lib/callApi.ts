@@ -62,8 +62,21 @@ export const mapDbRowToCall = (row: any): CallForProposals => {
     rejectedCount,
     closureReason: row.public_notice || row.closure_reason || row.closureReason || undefined,
     publicNotice: row.public_notice || row.closure_reason || row.publicNotice || undefined,
-    createdAt: row.created_at,
-    updatedAt: row.created_at,
+    createdBy: row.created_by || row.createdBy || undefined,
+    creatorName: (() => {
+      if (row.creator_name || row.creatorName) return row.creator_name || row.creatorName;
+      if (row.creator) {
+        const c = Array.isArray(row.creator) ? row.creator[0] : row.creator;
+        if (c) {
+          const fullName = [c.first_name, c.last_name].filter(Boolean).join(' ').trim();
+          return fullName || c.email || c.name || undefined;
+        }
+      }
+      return undefined;
+    })(),
+    creator: row.creator || undefined,
+    createdAt: row.created_at || row.createdAt || new Date().toISOString(),
+    updatedAt: row.created_at || row.updatedAt || new Date().toISOString(),
   };
 };
 
@@ -89,7 +102,7 @@ export async function fetchCalls(token?: string): Promise<CallForProposals[]> {
   // Fallback: Direct Supabase query
   const { data, error } = await supabase
     .from('call_for_proposals')
-    .select('*, concept_proposals(id, status)')
+    .select('*, concept_proposals(id, status), creator:users(id, first_name, last_name, email, role)')
     .order('created_at', { ascending: false });
 
   if (error) {
@@ -206,7 +219,7 @@ export async function createCallApi(
   let { data, error } = await supabase
     .from('call_for_proposals')
     .insert(insertPayload)
-    .select('*, concept_proposals(id, status)')
+    .select('*, concept_proposals(id, status), creator:users(id, first_name, last_name, email, role)')
     .single();
 
   if (error && error.message && (error.message.includes('memo') || error.message.includes('priority_topics'))) {
@@ -215,7 +228,7 @@ export async function createCallApi(
     const retry = await supabase
       .from('call_for_proposals')
       .insert(insertPayload)
-      .select('*, concept_proposals(id, status)')
+      .select('*, concept_proposals(id, status), creator:users(id, first_name, last_name, email, role)')
       .single();
     data = retry.data;
     error = retry.error;
@@ -348,7 +361,7 @@ export async function updateCallApi(
     .from('call_for_proposals')
     .update(updates)
     .eq('id', id)
-    .select('*, concept_proposals(id, status)')
+    .select('*, concept_proposals(id, status), creator:users(id, first_name, last_name, email, role)')
     .single();
 
   if (error && error.message && (error.message.includes('memo') || error.message.includes('priority_topics'))) {
@@ -358,7 +371,7 @@ export async function updateCallApi(
       .from('call_for_proposals')
       .update(updates)
       .eq('id', id)
-      .select('*, concept_proposals(id, status)')
+      .select('*, concept_proposals(id, status), creator:users(id, first_name, last_name, email, role)')
       .single();
     data = retry.data;
     error = retry.error;

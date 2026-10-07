@@ -122,66 +122,76 @@ export const PreliminaryScreeningManager: React.FC<PreliminaryScreeningManagerPr
   return (
     <div className="space-y-6">
 
-      {/* Metrics Row */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+      {/* Metric Counters */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
         {/* Total Submissions */}
-        <div className="bg-white p-4 sm:p-5 rounded-md border border-slate-200 shadow-2xs">
+        <div
+          onClick={() => setStatusFilter('all')}
+          className="p-3.5 bg-white hover:bg-slate-50/50 rounded-sm border border-slate-200/90 shadow-2xs transition-colors flex flex-col justify-between cursor-pointer"
+        >
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Total Concept Submissions</span>
-            <div className="w-8 h-8 rounded bg-slate-100 text-slate-600 flex items-center justify-center">
-              <FileText className="w-4 h-4" />
-            </div>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+              Total Submissions
+            </span>
+            <FileText className="w-3.5 h-3.5 text-slate-400" />
           </div>
-          <div className="text-2xl sm:text-3xl font-extrabold text-slate-900 mt-2">{stats.total}</div>
-          <p className="text-[11px] text-slate-500 mt-0.5 font-medium">Faculty submissions registered</p>
+          <div className="mt-2">
+            <span className="text-2xl font-black text-slate-900 tracking-tight block">{stats.total}</span>
+            <span className="text-[11px] text-slate-500 font-medium mt-0.5 block">Faculty Concept Proposals</span>
+          </div>
         </div>
 
         {/* Pending Preliminary Screening */}
-        <div className="bg-white p-4 sm:p-5 rounded-md border border-amber-200/90 shadow-2xs bg-amber-50/20">
+        <div
+          onClick={() => setStatusFilter('pending')}
+          className="p-3.5 bg-white hover:bg-slate-50/50 rounded-sm border border-slate-200/90 shadow-2xs transition-colors flex flex-col justify-between cursor-pointer"
+        >
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-amber-700">Awaiting Screening</span>
-            <div className="w-8 h-8 rounded bg-amber-100 text-amber-700 flex items-center justify-center">
-              <Clock className="w-4 h-4" />
-            </div>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+              Awaiting Screening
+            </span>
+            <Clock className="w-3.5 h-3.5 text-slate-400" />
           </div>
-          <div className="flex items-baseline gap-2 mt-2">
-            <span className="text-2xl sm:text-3xl font-extrabold text-amber-900">{stats.pending}</span>
-            {stats.pending > 0 && (
-              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-200 text-amber-900 animate-pulse">
-                Action Req.
-              </span>
-            )}
+          <div className="mt-2">
+            <span className="text-2xl font-black text-slate-900 tracking-tight block">{stats.pending}</span>
+            <span className="text-[11px] text-slate-500 font-medium mt-0.5 block">Requires RPDU Action</span>
           </div>
-          <p className="text-[11px] text-amber-700/90 mt-0.5 font-medium">Requires RPDU Head decision</p>
         </div>
 
         {/* Passed (Qualified) */}
-        <div className="bg-white p-4 sm:p-5 rounded-md border border-emerald-200/90 shadow-2xs bg-emerald-50/20">
+        <div
+          onClick={() => setStatusFilter('passed')}
+          className="p-3.5 bg-white hover:bg-slate-50/50 rounded-sm border border-slate-200/90 shadow-2xs transition-colors flex flex-col justify-between cursor-pointer"
+        >
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-700">Passed Screening</span>
-            <div className="w-8 h-8 rounded bg-emerald-100 text-emerald-700 flex items-center justify-center">
-              <CheckCircle2 className="w-4 h-4" />
-            </div>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+              Passed Screening
+            </span>
+            <CheckCircle2 className="w-3.5 h-3.5 text-slate-400" />
           </div>
-          <div className="flex items-baseline gap-2 mt-2">
-            <span className="text-2xl sm:text-3xl font-extrabold text-emerald-900">{stats.passed}</span>
-            <span className="text-xs font-semibold text-emerald-700">
-              ({stats.passRate}% pass rate)
+          <div className="mt-2">
+            <span className="text-2xl font-black text-slate-900 tracking-tight block">{stats.passed}</span>
+            <span className="text-[11px] text-slate-500 font-medium mt-0.5 block">
+              Endorsed ({stats.passRate}% pass rate)
             </span>
           </div>
-          <p className="text-[11px] text-emerald-700/90 mt-0.5 font-medium">Endorsed for Full Proposal</p>
         </div>
 
         {/* Failed (Disqualified) */}
-        <div className="bg-white p-4 sm:p-5 rounded-md border border-red-200/90 shadow-2xs bg-red-50/20">
+        <div
+          onClick={() => setStatusFilter('failed')}
+          className="p-3.5 bg-white hover:bg-slate-50/50 rounded-sm border border-slate-200/90 shadow-2xs transition-colors flex flex-col justify-between cursor-pointer"
+        >
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-red-700">Failed / Disqualified</span>
-            <div className="w-8 h-8 rounded bg-red-100 text-red-700 flex items-center justify-center">
-              <XCircle className="w-4 h-4" />
-            </div>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+              Returned / Ineligible
+            </span>
+            <XCircle className="w-3.5 h-3.5 text-slate-400" />
           </div>
-          <div className="text-2xl sm:text-3xl font-extrabold text-red-900 mt-2">{stats.failed}</div>
-          <p className="text-[11px] text-red-700/90 mt-0.5 font-medium">Returned with grounds &amp; notes</p>
+          <div className="mt-2">
+            <span className="text-2xl font-black text-slate-900 tracking-tight block">{stats.failed}</span>
+            <span className="text-[11px] text-slate-500 font-medium mt-0.5 block">With Evaluation Notes</span>
+          </div>
         </div>
       </div>
 
@@ -194,45 +204,57 @@ export const PreliminaryScreeningManager: React.FC<PreliminaryScreeningManagerPr
             <button
               type="button"
               onClick={() => setStatusFilter('all')}
-              className={`px-3 py-1.5 rounded text-xs font-bold transition-all cursor-pointer shrink-0 ${statusFilter === 'all'
-                ? 'bg-slate-900 text-white shadow-2xs'
+              className={`px-3 py-1.5 rounded-sm text-xs font-bold transition-all cursor-pointer shrink-0 ${statusFilter === 'all'
+                ? 'bg-slate-900 text-white shadow-xs'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
                 }`}
             >
-              All Proposals ({stats.total})
+              All Proposals
+              <span className={`ml-1.5 px-1.5 py-0.5 rounded-sm text-[10px] font-extrabold ${statusFilter === 'all' ? 'bg-slate-800 text-slate-200' : 'bg-slate-200 text-slate-700'}`}>
+                {stats.total}
+              </span>
             </button>
             <button
               type="button"
               onClick={() => setStatusFilter('pending')}
-              className={`px-3 py-1.5 rounded text-xs font-bold transition-all cursor-pointer shrink-0 flex items-center gap-1.5 ${statusFilter === 'pending'
-                ? 'bg-amber-600 text-white shadow-2xs'
-                : 'text-amber-800 hover:bg-amber-50'
+              className={`px-3 py-1.5 rounded-sm text-xs font-bold transition-all cursor-pointer shrink-0 flex items-center gap-1.5 ${statusFilter === 'pending'
+                ? 'bg-slate-900 text-white shadow-xs'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
                 }`}
             >
-              <Clock className="w-3.5 h-3.5" />
-              <span>Pending Review ({stats.pending})</span>
+              <Clock className="w-3.5 h-3.5 text-slate-400" />
+              <span>Pending Review</span>
+              <span className={`ml-1 px-1.5 py-0.5 rounded-sm text-[10px] font-extrabold ${statusFilter === 'pending' ? 'bg-slate-800 text-slate-200' : 'bg-slate-200 text-slate-700'}`}>
+                {stats.pending}
+              </span>
             </button>
             <button
               type="button"
               onClick={() => setStatusFilter('passed')}
-              className={`px-3 py-1.5 rounded text-xs font-bold transition-all cursor-pointer shrink-0 flex items-center gap-1.5 ${statusFilter === 'passed'
-                ? 'bg-emerald-600 text-white shadow-2xs'
-                : 'text-emerald-800 hover:bg-emerald-50'
+              className={`px-3 py-1.5 rounded-sm text-xs font-bold transition-all cursor-pointer shrink-0 flex items-center gap-1.5 ${statusFilter === 'passed'
+                ? 'bg-slate-900 text-white shadow-xs'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
                 }`}
             >
-              <CheckCircle2 className="w-3.5 h-3.5" />
-              <span>Passed ({stats.passed})</span>
+              <CheckCircle2 className="w-3.5 h-3.5 text-slate-400" />
+              <span>Passed</span>
+              <span className={`ml-1 px-1.5 py-0.5 rounded-sm text-[10px] font-extrabold ${statusFilter === 'passed' ? 'bg-slate-800 text-slate-200' : 'bg-slate-200 text-slate-700'}`}>
+                {stats.passed}
+              </span>
             </button>
             <button
               type="button"
               onClick={() => setStatusFilter('failed')}
-              className={`px-3 py-1.5 rounded text-xs font-bold transition-all cursor-pointer shrink-0 flex items-center gap-1.5 ${statusFilter === 'failed'
-                ? 'bg-red-600 text-white shadow-2xs'
-                : 'text-red-800 hover:bg-red-50'
+              className={`px-3 py-1.5 rounded-sm text-xs font-bold transition-all cursor-pointer shrink-0 flex items-center gap-1.5 ${statusFilter === 'failed'
+                ? 'bg-slate-900 text-white shadow-xs'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
                 }`}
             >
-              <XCircle className="w-3.5 h-3.5" />
-              <span>Failed ({stats.failed})</span>
+              <XCircle className="w-3.5 h-3.5 text-slate-400" />
+              <span>Failed</span>
+              <span className={`ml-1 px-1.5 py-0.5 rounded-sm text-[10px] font-extrabold ${statusFilter === 'failed' ? 'bg-slate-800 text-slate-200' : 'bg-slate-200 text-slate-700'}`}>
+                {stats.failed}
+              </span>
             </button>
           </div>
 
@@ -325,22 +347,22 @@ export const PreliminaryScreeningManager: React.FC<PreliminaryScreeningManagerPr
 
       {/* Batch Actions Bar (when pending items are selectable) */}
       {statusFilter === 'pending' && filteredProposals.length > 0 && (
-        <div className="bg-amber-50 border border-amber-200 p-3 rounded-md flex flex-wrap items-center justify-between gap-3 text-xs">
+        <div className="bg-slate-50 border border-slate-200 p-3 rounded-sm flex flex-wrap items-center justify-between gap-3 text-xs">
           <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={handleSelectAllPending}
-              className="flex items-center gap-1.5 font-bold text-amber-900 cursor-pointer"
+              className="flex items-center gap-1.5 font-bold text-slate-800 cursor-pointer hover:text-slate-900"
             >
               {selectedIds.length === filteredProposals.length && filteredProposals.length > 0 ? (
-                <CheckSquare className="w-4 h-4 text-amber-700" />
+                <CheckSquare className="w-4 h-4 text-slate-700" />
               ) : (
-                <Square className="w-4 h-4 text-amber-700" />
+                <Square className="w-4 h-4 text-slate-400" />
               )}
               <span>Select All Pending ({filteredProposals.length})</span>
             </button>
             {selectedIds.length > 0 && (
-              <span className="text-amber-800 font-medium">
+              <span className="text-slate-600 font-medium">
                 &bull; {selectedIds.length} proposal{selectedIds.length > 1 ? 's' : ''} selected
               </span>
             )}

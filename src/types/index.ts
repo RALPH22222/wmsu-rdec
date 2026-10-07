@@ -17,6 +17,15 @@ export interface PriorityTopic {
   subtopics: string[];
 }
 
+export interface CallCreator {
+  id?: string;
+  name?: string;
+  first_name?: string;
+  last_name?: string;
+  email?: string;
+  role?: string;
+}
+
 export interface CallForProposals {
   id: string;
   code: string;
@@ -43,6 +52,9 @@ export interface CallForProposals {
   rejectedCount: number;
   closureReason?: string;
   publicNotice?: string;
+  createdBy?: string;
+  creatorName?: string;
+  creator?: CallCreator;
   createdAt: string;
   updatedAt: string;
 }

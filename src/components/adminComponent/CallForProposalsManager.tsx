@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Search, Calendar, Lock, Edit3, Trash2, CheckCircle2, AlertCircle, FilePlus, FileText, ExternalLink } from 'lucide-react';
+import { Plus, Search, Calendar, Lock, Edit3, Trash2, CheckCircle2, AlertCircle, FilePlus, FileText, ExternalLink, Clock } from 'lucide-react';
 import { useCallForProposals } from '../../context/CallForProposalsContext';
 import type { CallForProposals, CallStatus } from '../../types';
 import { parseMemoDetails, openMemoInNewTab } from '../../utils/memoUtils';
@@ -26,6 +26,23 @@ export const CallForProposalsManager: React.FC = () => {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [targetCallToDelete, setTargetCallToDelete] = useState<CallForProposals | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  const formatCreationDateTime = (dateStr?: string) => {
+    if (!dateStr) return '';
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return dateStr;
+    const dateFormatted = d.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    });
+    const timeFormatted = d.toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+    });
+    return `${dateFormatted}, ${timeFormatted}`;
+  };
 
   const handleOpenCallAction = (call: CallForProposals) => {
     const openCall = calls.find((c) => {
@@ -233,6 +250,7 @@ export const CallForProposalsManager: React.FC = () => {
         ) : (
           filteredCalls.map((call) => {
             const isOpen = String(call.status).toUpperCase() === 'OPEN' || String(call.status).toUpperCase() === 'ACTIVE';
+
             return (
               <div
                 key={call.id}
@@ -323,6 +341,15 @@ export const CallForProposalsManager: React.FC = () => {
                       <span className="font-bold text-emerald-700">{call.submissionCount}</span>
                       <span>proposals submitted</span>
                     </div>
+
+                    {call.createdAt && (
+                      <div className="flex items-center gap-1.5 text-slate-500">
+                        <Clock className="w-3.5 h-3.5 text-slate-400" />
+                        <span>
+                          Created: <span className="font-medium text-slate-700">{formatCreationDateTime(call.createdAt)}</span>
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </div>
 

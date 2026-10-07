@@ -207,7 +207,7 @@ export const NotarizationSchedulingManager: React.FC = () => {
 
         {/* Counter Badges */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-          <div className="p-3.5 bg-slate-50/70 hover:bg-slate-50 rounded-sm border border-slate-200/80 transition-colors flex flex-col justify-between">
+          <div className="p-3.5 bg-white hover:bg-slate-50/50 rounded-sm border border-slate-200/90 shadow-2xs transition-colors flex flex-col justify-between">
             <div className="flex items-center justify-between">
               <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
                 Pending Legal Action
@@ -220,7 +220,7 @@ export const NotarizationSchedulingManager: React.FC = () => {
             </div>
           </div>
 
-          <div className="p-3.5 bg-slate-50/70 hover:bg-slate-50 rounded-sm border border-slate-200/80 transition-colors flex flex-col justify-between">
+          <div className="p-3.5 bg-white hover:bg-slate-50/50 rounded-sm border border-slate-200/90 shadow-2xs transition-colors flex flex-col justify-between">
             <div className="flex items-center justify-between">
               <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
                 Notarized Contracts
@@ -233,7 +233,7 @@ export const NotarizationSchedulingManager: React.FC = () => {
             </div>
           </div>
 
-          <div className="p-3.5 bg-slate-50/70 hover:bg-slate-50 rounded-sm border border-slate-200/80 transition-colors flex flex-col justify-between">
+          <div className="p-3.5 bg-white hover:bg-slate-50/50 rounded-sm border border-slate-200/90 shadow-2xs transition-colors flex flex-col justify-between">
             <div className="flex items-center justify-between">
               <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
                 Scheduled Inceptions
@@ -248,7 +248,7 @@ export const NotarizationSchedulingManager: React.FC = () => {
             </div>
           </div>
 
-          <div className="p-3.5 bg-slate-50/70 hover:bg-slate-50 rounded-sm border border-slate-200/80 transition-colors flex flex-col justify-between">
+          <div className="p-3.5 bg-white hover:bg-slate-50/50 rounded-sm border border-slate-200/90 shadow-2xs transition-colors flex flex-col justify-between">
             <div className="flex items-center justify-between">
               <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
                 Special Orders Issued

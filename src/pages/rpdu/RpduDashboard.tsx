@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Calendar, FileCheck, Layers, Users, ClipboardCheck } from 'lucide-react';
+import { Calendar, FileCheck, FileText, Layers, Users, ClipboardCheck } from 'lucide-react';
 import { useCallForProposals } from '../../context/CallForProposalsContext';
 import { useAuth } from '../../context/AuthContext';
 import { formatUserFullName } from '../../utils/userUtils';
@@ -39,100 +39,70 @@ export const RpduDashboard: React.FC = () => {
         </p>
       </div>
 
-      {/* Metrics Grid */}
-      {/* Metrics Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-5">
+      {/* Metric Counters */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
         {/* Card 1: Total Proposals */}
-        <div className="bg-white p-5 rounded-sm border border-slate-200 shadow-xs flex flex-col justify-between space-y-4">
+        <div className="p-3.5 bg-white hover:bg-slate-50/50 rounded-sm border border-slate-200/90 shadow-2xs transition-colors flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
-              Total Proposals Received
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+              Total Proposals
             </span>
-            <div className="w-9 h-9 rounded-sm bg-blue-50 text-blue-600 flex items-center justify-center">
-              <FileCheck className="w-5 h-5" />
-            </div>
+            <FileText className="w-3.5 h-3.5 text-slate-400" />
           </div>
-          <div>
-            <div className="text-3xl font-extrabold text-slate-900">{totalSubmissions}</div>
-            <p className="text-xs text-slate-500 mt-1 font-medium">Across all call cycles</p>
+          <div className="mt-2">
+            <span className="text-2xl font-black text-slate-900 tracking-tight block">{totalSubmissions}</span>
+            <span className="text-[11px] text-slate-500 font-medium mt-0.5 block">Across all call cycles</span>
           </div>
         </div>
 
         {/* Card 2: Active Call Window */}
-        <div className="bg-white p-5 rounded-sm border border-slate-200 shadow-xs flex flex-col justify-between space-y-4">
+        <div className="p-3.5 bg-white hover:bg-slate-50/50 rounded-sm border border-slate-200/90 shadow-2xs transition-colors flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
               Active Call Status
             </span>
-            <div
-              className={`w-9 h-9 rounded-sm flex items-center justify-center ${activeCall ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-400'
-                }`}
-            >
-              <Calendar className="w-5 h-5" />
-            </div>
+            <Calendar className="w-3.5 h-3.5 text-slate-400" />
           </div>
-          <div>
-            {activeCall ? (
-              <>
-                <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
-                  <span className="text-base font-bold text-slate-900 truncate">
-                    {activeCall.title}
-                  </span>
-                </div>
-                <p className="text-xs text-slate-500 mt-1 font-medium">
-                  Closes on {activeCall.endDate}
-                </p>
-              </>
-            ) : (
-              <>
-                <div className="text-lg font-bold text-slate-700">No Active Call</div>
-                <p className="text-xs text-slate-500 mt-1">Open a window to accept submissions</p>
-              </>
-            )}
+          <div className="mt-2">
+            <span className="text-2xl font-black text-slate-900 tracking-tight block">
+              {activeCall ? '1' : '0'}
+            </span>
+            <span className="text-[11px] text-slate-500 font-medium mt-0.5 block truncate">
+              {activeCall ? (activeCall.title || 'Window Open') : 'No Open Call Window'}
+            </span>
           </div>
         </div>
 
         {/* Card 3: Calls In System */}
-        <div className="bg-white p-5 rounded-sm border border-slate-200 shadow-xs flex flex-col justify-between space-y-4">
+        <div className="p-3.5 bg-white hover:bg-slate-50/50 rounded-sm border border-slate-200/90 shadow-2xs transition-colors flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
               Total Call Cycles
             </span>
-            <div className="w-9 h-9 rounded-sm bg-purple-50 text-purple-600 flex items-center justify-center">
-              <Layers className="w-5 h-5" />
-            </div>
+            <Layers className="w-3.5 h-3.5 text-slate-400" />
           </div>
-          <div>
-            <div className="text-3xl font-extrabold text-slate-900">{calls.length}</div>
-            <p className="text-xs text-slate-500 mt-1 font-medium">Active, draft, and closed calls</p>
+          <div className="mt-2">
+            <span className="text-2xl font-black text-slate-900 tracking-tight block">{calls.length}</span>
+            <span className="text-[11px] text-slate-500 font-medium mt-0.5 block">Active, Draft &amp; Closed</span>
           </div>
         </div>
 
         {/* Card 4: Preliminary Screening Queue */}
         <div
           onClick={() => navigate('/rpdu/screening')}
-          className="bg-white p-5 rounded-sm border border-amber-200 hover:border-amber-300 shadow-xs flex flex-col justify-between space-y-4 cursor-pointer transition-all hover:shadow-md bg-amber-50/20 group"
+          className="p-3.5 bg-white hover:bg-slate-50/50 rounded-sm border border-slate-200/90 shadow-2xs transition-colors flex flex-col justify-between cursor-pointer group"
         >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-amber-700">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 group-hover:text-slate-800 transition-colors">
               Screening Queue
             </span>
-            <div className="w-9 h-9 rounded-sm bg-amber-100 text-amber-700 flex items-center justify-center group-hover:scale-105 transition-transform">
-              <ClipboardCheck className="w-5 h-5" />
-            </div>
+            <ClipboardCheck className="w-3.5 h-3.5 text-slate-400 group-hover:text-slate-600 transition-colors" />
           </div>
-          <div>
-            <div className="flex items-baseline gap-2">
-              <span className="text-3xl font-extrabold text-amber-900">{pendingScreeningCount}</span>
-              <span className="text-xs font-bold text-amber-700">Pending Review</span>
-            </div>
-            <p className="text-xs text-slate-500 mt-1 flex items-center justify-between font-medium">
-              <span>{passedScreeningCount} passed</span>
-              <span className="text-[#C8102E] font-bold inline-flex items-center gap-0.5 group-hover:translate-x-0.5 transition-transform">
-                Screen Now &rarr;
-              </span>
-            </p>
+          <div className="mt-2">
+            <span className="text-2xl font-black text-slate-900 tracking-tight block">{pendingScreeningCount}</span>
+            <span className="text-[11px] text-slate-500 font-medium mt-0.5 block">
+              {pendingScreeningCount > 0 ? 'Pending RPDU Review' : `${passedScreeningCount} Passed Screening`}
+            </span>
           </div>
         </div>
       </div>
