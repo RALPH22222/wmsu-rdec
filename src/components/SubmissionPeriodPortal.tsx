@@ -68,25 +68,8 @@ export const SubmissionPeriodPortal: React.FC<SubmissionPeriodPortalProps> = ({ 
     return dateStr;
   };
 
-  const formatDisplayTime = (timeStr?: string, defaultStr: string = '8:00 AM PST') => {
-    if (!timeStr) return defaultStr;
-    if (timeStr.includes(':')) {
-      const [hStr, mStr] = timeStr.split(':');
-      let hour = parseInt(hStr, 10);
-      const minute = mStr ? mStr.slice(0, 2) : '00';
-      if (!isNaN(hour)) {
-        const ampm = hour >= 12 ? 'PM' : 'AM';
-        hour = hour % 12 || 12;
-        return `${hour}:${minute} ${ampm} PST`;
-      }
-    }
-    return `${timeStr} PST`;
-  };
-
   const formattedStartDate = formatDisplayDate(targetCall?.startDate, 'September 15, 2026');
-  const formattedStartTime = formatDisplayTime(targetCall?.startTime, '8:00 AM PST');
   const formattedEndDate = formatDisplayDate(targetCall?.endDate, 'November 15, 2026');
-  const formattedEndTime = formatDisplayTime(targetCall?.endTime, '5:00 PM PST');
 
   // Official Memo Details
   const memoDetails = useMemo(() => {
@@ -312,25 +295,21 @@ export const SubmissionPeriodPortal: React.FC<SubmissionPeriodPortalProps> = ({ 
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4">
-              <div className="bg-slate-50/70 rounded-sm p-3.5 border border-slate-100">
+              <div className="bg-slate-50/70 rounded-sm p-3.5 border border-slate-100 flex flex-col justify-center">
                 <span className="text-xs font-medium text-slate-500 block mb-1">
                   Submission Opens
                 </span>
                 <span className="text-base sm:text-lg font-bold text-slate-900">
                   {formattedStartDate}
                 </span>
-                <span className="text-[11px] text-slate-400 block mt-0.5">{formattedStartTime}</span>
               </div>
 
-              <div className="bg-red-50/40 rounded-sm p-3.5 border border-red-100/80">
+              <div className="bg-red-50/40 rounded-sm p-3.5 border border-red-100/80 flex flex-col justify-center">
                 <span className="text-xs font-medium text-[#C8102E] block mb-1">
                   Submission Deadline
                 </span>
                 <span className="text-base sm:text-lg font-bold text-[#C8102E]">
                   {formattedEndDate}
-                </span>
-                <span className="text-[11px] text-[#C8102E]/70 block mt-0.5">
-                  {formattedEndTime} · {isClosed ? 'Closed' : 'Strict Deadline'}
                 </span>
               </div>
             </div>
