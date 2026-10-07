@@ -15,6 +15,7 @@ import { AdminClearanceContractsPage } from './pages/admin/AdminClearanceContrac
 import { AdminNotarizationSchedulingPage } from './pages/admin/AdminNotarizationSchedulingPage';
 import { AdminLetterDeskPage } from './pages/admin/AdminLetterDeskPage';
 import { RpduDashboard } from './pages/rpdu/RpduDashboard';
+import { CallFormPage } from './pages/CallFormPage';
 import { PassedProposalsPage } from './pages/rpdu/PassedProposalsPage';
 import ProponentDashboard from './pages/proponents/ProponentDashboard';
 import BudgetAllocationPage from './pages/proponents/BudgetAllocationPage';
@@ -105,6 +106,8 @@ export function App() {
               {/* Dedicated Admin Layout */}
               <Route element={<AdminLayout />}>
                 <Route path="/admin" element={<AdminDashboard />} />
+                <Route path="/admin/calls/new" element={<CallFormPage role="admin" mode="create" />} />
+                <Route path="/admin/calls/:callId/edit" element={<CallFormPage role="admin" />} />
                 <Route path="/admin/screening" element={<AdminPreliminaryScreeningPage />} />
                 <Route path="/admin/letters" element={<AdminLetterDeskPage />} />
                 <Route path="/admin/contracts" element={<AdminClearanceContractsPage />} />
@@ -114,6 +117,8 @@ export function App() {
               {/* Dedicated RPDU Layout */}
               <Route element={<RpduLayout />}>
                 <Route path="/rpdu" element={<RpduDashboard />} />
+                <Route path="/rpdu/calls/new" element={<CallFormPage role="rpdu" mode="create" />} />
+                <Route path="/rpdu/calls/:callId/edit" element={<CallFormPage role="rpdu" />} />
                 <Route path="/rpdu/screening" element={<PreliminaryScreeningPage role="rpdu" />} />
                 <Route path="/rpdu/passed-proposals" element={<PassedProposalsPage />} />
                 <Route path="/rpdu/letters" element={<LetterDeskPage />} />

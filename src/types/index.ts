@@ -21,7 +21,9 @@ export interface CallCreator {
   id?: string;
   name?: string;
   first_name?: string;
+  middle_name?: string;
   last_name?: string;
+  suffix?: string;
   email?: string;
   role?: string;
 }

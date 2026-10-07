@@ -21,9 +21,10 @@ import {
 } from 'lucide-react';
 import { useCallForProposals } from '../../context/CallForProposalsContext';
 import { useAuth } from '../../context/AuthContext';
-import type { ConceptProposal, ConceptProposalAttachment } from '../../types';
+import type { ConceptProposal } from '../../types';
 
 interface UploadedFile {
+  file: File;
   name: string;
   size: string;
   type: string;
@@ -114,9 +115,7 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
   // 2. Concept Proposal Details - Interchangeable with logged-in user
   const [proposalTitle, setProposalTitle] = useState('');
   const [leadInvestigator, setLeadInvestigator] = useState(loggedInName);
-  const [leadEmail, setLeadEmail] = useState(user?.email || 'juan.delacruz@wmsu.edu.ph');
   const [college, setCollege] = useState(loggedInCollege);
-  const [department, setDepartment] = useState('Department of Computer Science');
   const [conceptProposalFile, setConceptProposalFile] = useState<UploadedFile | null>(null);
 
   // Sync if logged-in user changes
@@ -124,8 +123,6 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
     if (user) {
       if (loggedInName) setLeadInvestigator(loggedInName);
       if (loggedInCollege) setCollege(loggedInCollege);
-      if (user.email) setLeadEmail(user.email);
-      if (user.user_metadata?.department) setDepartment(user.user_metadata.department);
     }
   }, [user]);
 
@@ -200,6 +197,7 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
     const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
     const fileInfo: UploadedFile = {
+      file,
       name: file.name,
       size: fileSizeFormatted,
       type: file.name.split('.').pop()?.toUpperCase() || 'PDF',
@@ -257,6 +255,11 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
   const handleOpenConfirm = (e: React.FormEvent) => {
     e.preventDefault();
 
+    if (!activeCall) {
+      showToast('There is no open Call for Proposals accepting submissions.');
+      return;
+    }
+
     if (!validateForm()) {
       showToast('Please upload required files and select your research agenda.');
       return;
@@ -266,7 +269,13 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
   };
 
   // Final Submit Handler executed after user confirms in the modal
-  const handleConfirmSubmit = () => {
+  const handleConfirmSubmit = async () => {
+    if (submitting) return;
+    if (!activeCall) {
+      showToast('There is no open Call for Proposals accepting submissions.');
+      setConfirmModalOpen(false);
+      return;
+    }
     if (!validateForm()) {
       setConfirmModalOpen(false);
       return;
@@ -274,72 +283,32 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
 
     setSubmitting(true);
 
-    const attachments: ConceptProposalAttachment[] = [];
-
-    if (conceptProposalFile) {
-      attachments.push({
-        name: conceptProposalFile.name,
-        size: conceptProposalFile.size,
-        type: conceptProposalFile.type,
-        category: 'concept_proposal',
+    try {
+      const newProposal = await submitConceptProposal({
+        title: proposalTitle.trim(),
+        callId: activeCall.id,
+        researchAgenda: selectedAgenda,
+        conceptPaperFile: conceptProposalFile?.file,
+        endorsementFile: endorsementPdf?.file,
       });
+      setConfirmModalOpen(false);
+      setSubmittedProposal(newProposal);
+      setSuccessModalOpen(true);
+      setProposalTitle('');
+      setConceptProposalFile(null);
+      setEndorsementPdf(null);
+    } catch (error) {
+      setConfirmModalOpen(false);
+      showToast(error instanceof Error ? error.message : 'Failed to submit concept proposal. Please try again.');
+    } finally {
+      setSubmitting(false);
     }
-
-    if (endorsementPdf) {
-      attachments.push({
-        name: endorsementPdf.name,
-        size: endorsementPdf.size,
-        type: 'PDF',
-        category: 'endorsement_pdf',
-      });
-    }
-
-    const newProposal = submitConceptProposal({
-      title: proposalTitle.trim(),
-      callId: activeCall?.id || 'call-2027-01',
-      callTitle: activeCall?.title || 'Institutional Research & Innovation Call 2027',
-      leadInvestigator: leadInvestigator.trim(),
-      leadInvestigatorEmail: leadEmail.trim(),
-      coInvestigators: [],
-      college,
-      department,
-      thematicArea: selectedAgenda,
-      budgetRequested: activeCall?.maxBudgetPerProject || 500000,
-      durationMonths: 12,
-      executiveSummary: `Concept Proposal submitted under ${selectedAgenda}. File: ${conceptProposalFile?.name || 'Attached'}`,
-      objectives: ['Implement research milestones as detailed in attached concept proposal.'],
-      expectedOutputs: {},
-      methodologySummary: `Refer to uploaded concept proposal document: ${conceptProposalFile?.name || 'Document attached.'}`,
-      criteriaChecklist: {
-        eligibleProponent: true,
-        withinBudgetCap: true,
-        alignedPriority: true,
-        requiredFormsAttached: Boolean(endorsementPdf),
-      },
-      attachments,
-    });
-
-    setSubmitting(false);
-    setConfirmModalOpen(false);
-    setSubmittedProposal(newProposal);
-    setSuccessModalOpen(true);
-
-    // Clear form inputs
-    setProposalTitle('');
-    setConceptProposalFile(null);
-    setEndorsementPdf(null);
   };
 
   // Proponent's submissions list
-  const mySubmissions = conceptProposals.filter((p) => {
-    return (
-      p.leadInvestigatorEmail?.toLowerCase() === leadEmail.toLowerCase() ||
-      p.leadInvestigator?.toLowerCase() === leadInvestigator.toLowerCase() ||
-      p.leadInvestigator.includes('Juan') ||
-      p.leadInvestigator.includes('Alvarez') ||
-      p.leadInvestigator.includes('Tan')
-    );
-  });
+  const mySubmissions = conceptProposals.filter((p) =>
+    p.leadInvestigatorEmail.toLowerCase() === user?.email?.toLowerCase()
+  );
 
   const filteredSubmissions = mySubmissions.filter((item) => {
     const matchesStatus =
