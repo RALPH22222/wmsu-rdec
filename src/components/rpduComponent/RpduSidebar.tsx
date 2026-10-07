@@ -10,7 +10,7 @@ export type RpduSidebarProps = { mobileOpen?: boolean; onCloseMobile?: () => voi
 const navItems = [
   { name: 'Call for Proposals', path: '/rpdu', icon: Calendar },
   { name: 'Preliminary Screening', path: '/rpdu/screening', icon: ClipboardCheck },
-  { name: 'Passed Proposals', path: '/rpdu/passed-proposals', icon: FileCheck2 },
+  { name: 'Screening Results', path: '/rpdu/passed-proposals', icon: FileCheck2 },
   { name: 'Official Letters', path: '/rpdu/letters', icon: Mail },
   { name: 'Clearance & Contracts', path: '/rpdu/contracts', icon: Award },
   { name: 'Notarization & Scheduling', path: '/rpdu/notarization', icon: ShieldCheck },
