@@ -15,6 +15,7 @@ import { AdminClearanceContractsPage } from './pages/admin/AdminClearanceContrac
 import { AdminNotarizationSchedulingPage } from './pages/admin/AdminNotarizationSchedulingPage';
 import { AdminLetterDeskPage } from './pages/admin/AdminLetterDeskPage';
 import { RpduDashboard } from './pages/rpdu/RpduDashboard';
+import { PassedProposalsPage } from './pages/rpdu/PassedProposalsPage';
 import ProponentDashboard from './pages/proponents/ProponentDashboard';
 import BudgetAllocationPage from './pages/proponents/BudgetAllocationPage';
 import ProfilePage from './pages/proponents/ProfilePage';
@@ -114,6 +115,7 @@ export function App() {
               <Route element={<RpduLayout />}>
                 <Route path="/rpdu" element={<RpduDashboard />} />
                 <Route path="/rpdu/screening" element={<PreliminaryScreeningPage role="rpdu" />} />
+                <Route path="/rpdu/passed-proposals" element={<PassedProposalsPage />} />
                 <Route path="/rpdu/letters" element={<LetterDeskPage />} />
                 <Route path="/rpdu/contracts" element={<ClearanceContractsPage />} />
                 <Route path="/rpdu/notarization" element={<NotarizationSchedulingPage />} />

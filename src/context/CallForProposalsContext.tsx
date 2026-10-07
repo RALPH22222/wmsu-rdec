@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import type { CallForProposals, UserProfile, UserRole, ProposalItem, ConceptProposal, ConceptProposalCriteria, ScreeningSectionComments } from '../types';
-import { MOCK_USERS, MOCK_PROPOSALS, INITIAL_CONCEPT_PROPOSALS } from '../data/mockData';
+import { MOCK_USERS, MOCK_PROPOSALS } from '../data/mockData';
+import { API_ENDPOINTS } from '../config/apiConfig';
 import {
   fetchCalls,
   createCallApi,
@@ -36,9 +37,24 @@ interface CallForProposalsContextType {
 
 const CallForProposalsContext = createContext<CallForProposalsContextType | undefined>(undefined);
 
+const screeningRequest = async (path = '', init: RequestInit = {}) => {
+  const session = (await supabase.auth.getSession()).data.session;
+  const headers = new Headers(init.headers);
+  headers.set('Content-Type', 'application/json');
+  headers.set('Authorization', `Bearer ${session?.access_token || ''}`);
+  const response = await fetch(`${API_ENDPOINTS.RPDU.SCREENING}${path}`, {
+    ...init,
+    headers,
+  });
+  const result = await response.json();
+  if (!response.ok || !result.success) throw new Error(result.message || 'Screening request failed.');
+  return result.data;
+};
+
 export const CallForProposalsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [calls, setCalls] = useState<CallForProposals[]>([]);
   const [loadingCalls, setLoadingCalls] = useState(true);
+  const [conceptProposals, setConceptProposals] = useState<ConceptProposal[]>([]);
 
   const loadCalls = useCallback(async () => {
     try {
@@ -53,37 +69,33 @@ export const CallForProposalsProvider: React.FC<{ children: React.ReactNode }> =
     }
   }, []);
 
+  const loadConceptProposals = useCallback(async () => {
+    try {
+      setConceptProposals(await screeningRequest());
+      localStorage.removeItem('wmsu_concept_proposals_screening');
+    } catch (err) {
+      console.error('Failed to load screening proposals from backend:', err);
+      setConceptProposals([]);
+    }
+  }, []);
+
   useEffect(() => {
     loadCalls();
+    loadConceptProposals();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
       loadCalls();
+      loadConceptProposals();
     });
 
     return () => {
       subscription.unsubscribe();
     };
-  }, [loadCalls]);
-
-  const [conceptProposals, setConceptProposals] = useState<ConceptProposal[]>(() => {
-    const saved = localStorage.getItem('wmsu_concept_proposals_screening');
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch {
-        return INITIAL_CONCEPT_PROPOSALS;
-      }
-    }
-    return INITIAL_CONCEPT_PROPOSALS;
-  });
+  }, [loadCalls, loadConceptProposals]);
 
   const [currentUser, setCurrentUser] = useState<UserProfile>(MOCK_USERS[0]);
   const [proposals] = useState<ProposalItem[]>(MOCK_PROPOSALS);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
-
-  useEffect(() => {
-    localStorage.setItem('wmsu_concept_proposals_screening', JSON.stringify(conceptProposals));
-  }, [conceptProposals]);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -174,98 +186,44 @@ export const CallForProposalsProvider: React.FC<{ children: React.ReactNode }> =
     }
   };
 
-  const passConceptProposal = (id: string, remarks?: string, criteria?: ConceptProposalCriteria) => {
-    const today = new Date().toISOString().split('T')[0];
-    const reviewerName = `${currentUser.name} (${currentUser.title || 'RPDU Head'})`;
+  const saveScreeningDecision = async (id: string, decision: 'PASS' | 'FAIL', remarks?: string) => {
+    await screeningRequest(`/${id}`, { method: 'PUT', body: JSON.stringify({ decision, remarks }) });
+    await loadConceptProposals();
+  };
 
-    setConceptProposals((prev) =>
-      prev.map((item) => {
-        if (item.id === id) {
-          return {
-            ...item,
-            screeningStatus: 'passed' as const,
-            screeningRemarks: remarks || 'PASSED: Concept proposal satisfies all institutional eligibility criteria, thematic priority alignment, and budget guidelines. Endorsed for full proposal development.',
-            failureReasons: undefined,
-            criteriaChecklist: criteria || item.criteriaChecklist,
-            screenedBy: reviewerName,
-            screenedAt: today,
-          };
-        }
-        return item;
-      })
-    );
-    showToast(`Concept Proposal "${id}" PASSED Preliminary Screening.`);
+  const passConceptProposal = (id: string, remarks?: string, _criteria?: ConceptProposalCriteria) => {
+    void saveScreeningDecision(id, 'PASS', remarks)
+      .then(() => showToast(`Concept Proposal "${id}" PASSED Preliminary Screening.`))
+      .catch((error) => showToast(`Failed to save screening decision: ${error.message}`));
   };
 
   const failConceptProposal = (
     id: string,
     reasons: string[],
     remarks: string,
-    criteria?: ConceptProposalCriteria,
-    sectionComments?: ScreeningSectionComments
+    _criteria?: ConceptProposalCriteria,
+    _sectionComments?: ScreeningSectionComments
   ) => {
-    const today = new Date().toISOString().split('T')[0];
-    const reviewerName = `${currentUser.name} (${currentUser.title || 'RPDU Head'})`;
-
-    setConceptProposals((prev) =>
-      prev.map((item) => {
-        if (item.id === id) {
-          return {
-            ...item,
-            screeningStatus: 'failed' as const,
-            failureReasons: reasons.length > 0 ? reasons : ['Failed preliminary eligibility & compliance check.'],
-            screeningRemarks: remarks || 'FAILED: Concept proposal does not satisfy preliminary institutional criteria.',
-            criteriaChecklist: criteria || item.criteriaChecklist,
-            sectionComments: sectionComments || item.sectionComments,
-            screenedBy: reviewerName,
-            screenedAt: today,
-          };
-        }
-        return item;
-      })
-    );
-    showToast(`Concept Proposal "${id}" marked as FAILED in Preliminary Screening.`);
+    const detail = [remarks, ...reasons].filter(Boolean).join(' — ');
+    void saveScreeningDecision(id, 'FAIL', detail)
+      .then(() => showToast(`Concept Proposal "${id}" marked as FAILED in Preliminary Screening.`))
+      .catch((error) => showToast(`Failed to save screening decision: ${error.message}`));
   };
 
   const resetScreeningStatus = (id: string) => {
-    setConceptProposals((prev) =>
-      prev.map((item) => {
-        if (item.id === id) {
-          return {
-            ...item,
-            screeningStatus: 'pending' as const,
-            screeningRemarks: undefined,
-            failureReasons: undefined,
-            sectionComments: undefined,
-            screenedBy: undefined,
-            screenedAt: undefined,
-          };
-        }
-        return item;
-      })
-    );
-    showToast(`Reset screening status for "${id}" to Pending.`);
+    void screeningRequest(`/${id}`, { method: 'DELETE' })
+      .then(loadConceptProposals)
+      .then(() => showToast(`Reset screening status for "${id}" to Pending.`))
+      .catch((error) => showToast(`Failed to reset screening decision: ${error.message}`));
   };
 
   const bulkPassConceptProposals = (ids: string[]) => {
-    const today = new Date().toISOString().split('T')[0];
-    const reviewerName = `${currentUser.name} (${currentUser.title || 'RPDU Head'})`;
-
-    setConceptProposals((prev) =>
-      prev.map((item) => {
-        if (ids.includes(item.id)) {
-          return {
-            ...item,
-            screeningStatus: 'passed' as const,
-            screeningRemarks: item.screeningRemarks || 'PASSED via batch preliminary clearance.',
-            screenedBy: reviewerName,
-            screenedAt: today,
-          };
-        }
-        return item;
-      })
-    );
-    showToast(`${ids.length} Concept Proposals successfully approved with PASS.`);
+    void Promise.all(ids.map((id) => screeningRequest(`/${id}`, {
+      method: 'PUT', body: JSON.stringify({ decision: 'PASS', remarks: 'PASSED via batch preliminary clearance.' }),
+    })))
+      .then(loadConceptProposals)
+      .then(() => showToast(`${ids.length} Concept Proposals successfully approved with PASS.`))
+      .catch((error) => showToast(`Failed to save screening decisions: ${error.message}`));
   };
 
   const submitConceptProposal = (

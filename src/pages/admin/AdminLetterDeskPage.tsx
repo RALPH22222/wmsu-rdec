@@ -5,7 +5,7 @@ import { API_BASE_URL } from '../../config/apiConfig';
 import { SignatureField } from '../../components/adminComponent/SignatureField';
 
 type Template = 'WMSU-RPDU-LET-001.01' | 'WMSU-RPDU-LET-003.00';
-type Source = { id: string; title: string; proponentName: string; revisionReady: boolean; reviewers: { reviewId: string; name: string }[] };
+type Source = { id: string; title: string; proponentName: string; revisionReady: boolean; revisionIssued: boolean; reviewers: { reviewId: string; name: string; issued: boolean }[] };
 type Attachment = { label: string; url: string };
 type Signatories = { coordinator: string; director: string; vicePresident: string };
 type Signatures = { coordinator: string; director: string; vicePresident: string };
@@ -36,7 +36,7 @@ export function AdminLetterDeskPage() {
 
   const roleAllowed = profile?.role === 'RPDU' || profile?.role === 'ADMIN';
   const source = sources.find((item) => item.id === conceptId);
-  const choices = sources.filter((item) => template === REVISION ? item.revisionReady : item.reviewers.length > 0);
+  const choices = sources.filter((item) => template === REVISION ? item.revisionReady && !item.revisionIssued : item.reviewers.some((reviewer) => !reviewer.issued));
   const displayedHtml = archivedHtml || preview?.html || '';
   const archivedAttachments = archivedHtml ? issued.find((item) => item.id === newlyIssuedId)?.template_variables.attachments || [] : [];
   const signatoriesReady = Boolean(signatories.coordinator.trim() && signatories.director.trim()
@@ -125,7 +125,7 @@ export function AdminLetterDeskPage() {
         <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600" htmlFor="letter-proposal">Detailed proposal</label>
         <select id="letter-proposal" className="w-full bg-neutral-50 p-3 text-sm text-slate-900 focus:outline-2 focus:outline-red-800" value={conceptId} onChange={(event) => { setConceptId(event.target.value); setReviewId(''); clearDraft(); }}><option value="">Choose a proposal</option>{choices.map((item) => <option key={item.id} value={item.id}>{item.title}</option>)}</select>
         {conceptId && template === REVISION && <p className="text-sm text-slate-600">Recipient: {source?.proponentName}</p>}
-        {conceptId && template === INVITATION && <><label className="block text-xs font-semibold uppercase tracking-wider text-slate-600" htmlFor="letter-reviewer">Assigned reviewer</label><select id="letter-reviewer" className="w-full bg-neutral-50 p-3 text-sm text-slate-900 focus:outline-2 focus:outline-red-800" value={reviewId} onChange={(event) => { setReviewId(event.target.value); clearDraft(); }}><option value="">Choose a reviewer</option>{source?.reviewers.map((item) => <option key={item.reviewId} value={item.reviewId}>{item.name}</option>)}</select></>}
+        {conceptId && template === INVITATION && <><label className="block text-xs font-semibold uppercase tracking-wider text-slate-600" htmlFor="letter-reviewer">Assigned reviewer</label><select id="letter-reviewer" className="w-full bg-neutral-50 p-3 text-sm text-slate-900 focus:outline-2 focus:outline-red-800" value={reviewId} onChange={(event) => { setReviewId(event.target.value); clearDraft(); }}><option value="">Choose a reviewer</option>{source?.reviewers.filter((item) => !item.issued).map((item) => <option key={item.reviewId} value={item.reviewId}>{item.name}</option>)}</select></>}
         <fieldset className="space-y-4"><legend className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-600">Signatories</legend>
           <div><label className="block text-xs font-medium text-slate-700" htmlFor="coordinator-name">RPDU Coordinator<input id="coordinator-name" maxLength={120} autoComplete="name" value={signatories.coordinator} onChange={(event) => updateSignatory('coordinator', event.target.value)} placeholder="Full name" className="mt-2 w-full bg-neutral-50 p-3 text-sm text-slate-900 placeholder:text-slate-500 focus:outline-2 focus:outline-red-800" /></label><SignatureField label="Coordinator signature" value={signatures.coordinator} onChange={(value) => updateSignature('coordinator', value)} /></div>
           <div><label className="block text-xs font-medium text-slate-700" htmlFor="director-name">RDEC Director<input id="director-name" maxLength={120} autoComplete="name" value={signatories.director} onChange={(event) => updateSignatory('director', event.target.value)} placeholder="Full name" className="mt-2 w-full bg-neutral-50 p-3 text-sm text-slate-900 placeholder:text-slate-500 focus:outline-2 focus:outline-red-800" /></label><SignatureField label="Director signature" value={signatures.director} onChange={(value) => updateSignature('director', value)} /></div>

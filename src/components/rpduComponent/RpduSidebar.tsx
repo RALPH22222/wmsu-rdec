@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Award, Calendar, ClipboardCheck, LogOut, Mail, ShieldCheck, User, X } from 'lucide-react';
+import { Award, Calendar, ClipboardCheck, FileCheck2, LogOut, Mail, ShieldCheck, User, X } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { formatUserFullName } from '../../utils/userUtils';
@@ -10,6 +10,7 @@ export type RpduSidebarProps = { mobileOpen?: boolean; onCloseMobile?: () => voi
 const navItems = [
   { name: 'Call for Proposals', path: '/rpdu', icon: Calendar },
   { name: 'Preliminary Screening', path: '/rpdu/screening', icon: ClipboardCheck },
+  { name: 'Passed Proposals', path: '/rpdu/passed-proposals', icon: FileCheck2 },
   { name: 'Official Letters', path: '/rpdu/letters', icon: Mail },
   { name: 'Clearance & Contracts', path: '/rpdu/contracts', icon: Award },
   { name: 'Notarization & Scheduling', path: '/rpdu/notarization', icon: ShieldCheck },
