@@ -8,6 +8,7 @@ export const AdminLayout: React.FC = () => {
   const location = useLocation();
 
   const getPageTitle = () => {
+    if (location.pathname.startsWith('/admin/letters')) return 'Official Letters';
     if (location.pathname.startsWith('/admin/screening')) return 'Preliminary Screening — Concept Proposals';
     if (location.pathname.startsWith('/admin/contracts')) return 'Clearance & Professional Service Contracts';
     if (location.pathname.startsWith('/admin/notarization')) return 'Contract Notarization & Inception Scheduling';
@@ -18,7 +19,7 @@ export const AdminLayout: React.FC = () => {
 
 
   return (
-    <div className="min-h-screen bg-slate-100 flex flex-col lg:flex-row text-slate-800 font-sans selection:bg-[#C8102E] selection:text-white">
+    <div className="min-h-screen bg-slate-100 flex flex-col lg:flex-row text-slate-800 font-sans selection:bg-brand selection:text-white">
       {/* Shared Sidebar */}
       <Sidebar
         mobileOpen={mobileSidebarOpen}
@@ -57,7 +58,7 @@ export const AdminLayout: React.FC = () => {
 
             {/* Current Page Indicator with Animated Moving Arrow ">" */}
             <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-              <ChevronRight className="w-6 h-6 sm:w-6.5 sm:h-6.5 text-[#C8102E] animate-arrow-move shrink-0" strokeWidth={2.5} />
+              <ChevronRight className="w-6 h-6 sm:w-6.5 sm:h-6.5 text-brand animate-arrow-move shrink-0" strokeWidth={2.5} />
               <h1 className="text-sm sm:text-base lg:text-lg font-semibold text-slate-800 tracking-tight truncate">
                 {getPageTitle()}
               </h1>
@@ -73,7 +74,7 @@ export const AdminLayout: React.FC = () => {
               aria-label="Notifications"
             >
               <Bell className="w-5 h-5" />
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-[#C8102E]" />
+              <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-brand" />
             </button>
           </div>
         </header>

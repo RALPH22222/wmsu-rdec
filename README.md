@@ -286,7 +286,6 @@ This system was designed, built, and tested by **5 Computer Science students** f
 - **University:** [Western Mindanao State University](https://wmsu.edu.ph/) (WMSU), Normal Road, Baliwasan, Zamboanga City, Philippines
 - **Administrative Center:** Research Development and Extension Center (RDEC)
 - **Supervisory Unit:** Research Project Development Unit (RPDU)
-- **Program:** College of Science and Mathematics &bull; Department of Computer Science
 - **Course Subject:** Software Engineering
 
 ---

@@ -11,6 +11,7 @@ import {
   User,
   Award,
   ShieldCheck,
+  Mail,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { formatUserFullName } from '../utils/userUtils';
@@ -71,6 +72,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
       disabled: false,
     },
     {
+      name: 'Official Letters',
+      path: `${basePath}/letters`,
+      icon: Mail,
+      disabled: false,
+    },
+    {
       name: 'Clearance & Contracts',
       path: `${basePath}/contracts`,
       icon: Award,
@@ -126,7 +133,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               </div>
               <div className="leading-none">
                 <span className="font-extrabold text-lg sm:text-xl tracking-tight text-slate-900 uppercase">
-                  WMSU <span className="text-[#C8102E]">RDEC</span>
+                  WMSU <span className="text-brand">RDEC</span>
                 </span>
               </div>
             </Link>
@@ -171,7 +178,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 to={item.path}
                 onClick={onCloseMobile}
                 className={`flex items-center gap-3 px-3.5 py-2.5 rounded-sm text-xs font-semibold transition-all group ${isActive
-                  ? 'bg-[#C8102E] text-white shadow-sm shadow-red-900/20'
+                  ? 'bg-brand text-white shadow-sm shadow-red-900/20'
                   : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
                   }`}
               >
@@ -190,7 +197,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   if (onCloseMobile) onCloseMobile();
                   onOpenCreateCall();
                 }}
-                className="w-full py-2.5 px-3.5 rounded-sm bg-gradient-to-r from-red-600 to-[#C8102E] hover:from-red-700 hover:to-[#990B21] text-white text-xs font-bold shadow-sm shadow-red-600/20 flex items-center justify-center gap-2 transition-all cursor-pointer"
+                className="w-full py-2.5 px-3.5 rounded-sm bg-linear-to-r from-red-600 to-brand hover:from-red-700 hover:to-[#990B21] text-white text-xs font-bold shadow-sm shadow-red-600/20 flex items-center justify-center gap-2 transition-all cursor-pointer"
               >
                 <Plus className="w-4 h-4" />
                 <span>Create New Call</span>
@@ -204,7 +211,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <div className="flex items-center justify-between gap-3 p-3 rounded-xl bg-white border border-slate-200/90 shadow-2xs">
             <div className="flex items-center gap-3 min-w-0">
               {/* Avatar Icon Badge */}
-              <div className="w-10 h-10 rounded-xl bg-red-50/80 border border-red-100 flex items-center justify-center text-[#C8102E] shrink-0">
+              <div className="w-10 h-10 rounded-xl bg-red-50/80 border border-red-100 flex items-center justify-center text-brand shrink-0">
                 <User className="w-5 h-5" strokeWidth={1.75} />
               </div>
 
@@ -234,7 +241,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               onClick={() => setIsLogoutModalOpen(true)}
               title="Sign Out"
               aria-label="Sign Out"
-              className="p-1.5 text-slate-400 hover:text-[#C8102E] hover:bg-slate-100 rounded-lg transition-colors cursor-pointer shrink-0"
+              className="p-1.5 text-slate-400 hover:text-brand hover:bg-slate-100 rounded-lg transition-colors cursor-pointer shrink-0"
             >
               <LogOut className="w-5 h-5" />
             </button>
