@@ -291,22 +291,13 @@ export const TechnicalClearanceManager: React.FC = () => {
                     </td>
 
                     {/* Actions */}
-                    <td className="py-3 px-4 align-top text-center">
-                      <div className="inline-flex items-center justify-center gap-1.5">
-                        <button
-                          type="button"
-                          onClick={() => setViewingCertificate(cert)}
-                          className="px-2.5 py-1.5 text-xs font-semibold text-slate-700 bg-white hover:bg-slate-50 rounded-sm border border-slate-200 transition-colors cursor-pointer inline-flex items-center gap-1 shadow-2xs"
-                          title="View official certificate"
-                        >
-                          <Eye className="w-3.5 h-3.5 text-[#C8102E]" /> View COTR
-                        </button>
-
+                    <td className="py-3 px-4 align-top text-right whitespace-nowrap">
+                      <div className="flex items-center justify-end gap-1.5 whitespace-nowrap">
                         {/* Dedicated Upload Signed PDF */}
                         <button
                           type="button"
                           onClick={() => setUploadingPdfCert(cert)}
-                          className={`px-2.5 py-1.5 text-xs font-semibold rounded-sm border transition-colors cursor-pointer inline-flex items-center gap-1.5 shadow-2xs ${
+                          className={`px-2.5 py-1.5 text-xs font-semibold rounded-sm border transition-colors cursor-pointer inline-flex items-center gap-1.5 shadow-2xs shrink-0 ${
                             cert.certificatePdf
                               ? 'text-slate-700 bg-white hover:bg-slate-50 border-slate-200'
                               : 'text-[#C8102E] bg-red-50/50 hover:bg-red-50 border-red-200'
@@ -318,14 +309,14 @@ export const TechnicalClearanceManager: React.FC = () => {
                           ) : (
                             <Upload className="w-3.5 h-3.5 text-[#C8102E]" />
                           )}
-                          {cert.certificatePdf ? 'Signed PDF' : 'Upload Signed PDF'}
+                          {cert.certificatePdf ? 'Signed PDF' : 'Upload PDF'}
                         </button>
 
                         {cert.certificatePdf?.dataUrl && (
                           <a
                             href={cert.certificatePdf.dataUrl}
                             download={cert.certificatePdf.name}
-                            className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-sm transition-colors border border-transparent hover:border-slate-200"
+                            className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-sm transition-colors border border-transparent hover:border-slate-200 shrink-0"
                             title="Download Signed Scanned PDF"
                           >
                             <Download className="w-3.5 h-3.5" />
@@ -338,18 +329,30 @@ export const TechnicalClearanceManager: React.FC = () => {
                             setEditingCert(cert);
                             setIsIssueCotrOpen(true);
                           }}
-                          className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-sm transition-colors cursor-pointer"
+                          className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-sm transition-colors cursor-pointer shrink-0"
                           title="Edit certificate details"
                         >
                           <Edit2 className="w-3.5 h-3.5" />
                         </button>
+
                         <button
                           type="button"
                           onClick={() => handleDeleteCertificate(cert.id)}
-                          className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-sm transition-colors cursor-pointer"
+                          className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-sm transition-colors cursor-pointer shrink-0"
                           title="Delete certificate"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+
+                        {/* View Certificate (Always far right) */}
+                        <button
+                          type="button"
+                          onClick={() => setViewingCertificate(cert)}
+                          className="p-1.5 text-slate-400 hover:text-[#C8102E] hover:bg-red-50/60 rounded-sm transition-colors cursor-pointer shrink-0"
+                          title="View Certificate"
+                          aria-label="View Certificate"
+                        >
+                          <Eye className="w-3.5 h-3.5" />
                         </button>
                       </div>
                     </td>

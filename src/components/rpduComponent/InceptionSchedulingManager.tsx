@@ -391,114 +391,111 @@ export const InceptionSchedulingManager: React.FC = () => {
                     </td>
 
                     {/* Special Order Status */}
-                    <td className="py-3 px-4 align-top">
+                    <td className="py-3 px-4 align-top whitespace-nowrap">
                       {meeting.specialOrderStatus === 'forwarded_to_op' ? (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-50 text-blue-800 border border-blue-200 rounded-sm text-[10px] font-bold">
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-50 text-blue-800 border border-blue-200 rounded-sm text-[10px] font-bold">
                           <FileCheck className="w-3 h-3 text-blue-600" /> Forwarded to President
                         </span>
                       ) : (
-                        <div className="space-y-1.5">
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-amber-50 text-amber-800 border border-amber-200 rounded-sm text-[10px] font-bold">
-                            <AlertCircle className="w-3 h-3 text-amber-600" /> Request Prepared
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => handleForwardSoRequest(meeting.id)}
-                            className="text-[10px] bg-white hover:bg-slate-50 text-blue-700 border border-blue-200 px-2 py-0.5 rounded-xs font-semibold cursor-pointer flex items-center gap-1 shadow-2xs"
-                            title="Forward SO request to Office of the President"
-                          >
-                            <Send className="w-2.5 h-2.5" /> Forward to President
-                          </button>
-                        </div>
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-amber-50 text-amber-800 border border-amber-200 rounded-sm text-[10px] font-bold">
+                          <AlertCircle className="w-3 h-3 text-amber-600" /> Request Prepared
+                        </span>
                       )}
                     </td>
 
                     {/* Meeting Lifecycle Status */}
                     <td className="py-3 px-4 align-top text-center whitespace-nowrap">
                       {meeting.status === 'scheduled' && (
-                        <div>
-                          <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-amber-50 text-amber-800 border border-amber-200 rounded-sm text-[10px] font-bold">
-                            <Clock className="w-3 h-3 text-amber-600" /> Scheduled
-                          </span>
-                        </div>
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-amber-50 text-amber-800 border border-amber-200 rounded-sm text-[10px] font-bold">
+                          <Clock className="w-3 h-3 text-amber-600" /> Scheduled
+                        </span>
                       )}
                       {meeting.status === 'completed' && (
-                        <div>
-                          <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-sm text-[10px] font-bold">
-                            <CheckCircle2 className="w-3 h-3 text-emerald-600" /> Completed
-                          </span>
-                          {meeting.completedDate && (
-                            <span className="block text-[10px] text-slate-500 mt-0.5">
-                              {meeting.completedDate}
-                            </span>
-                          )}
-                        </div>
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-sm text-[10px] font-bold">
+                          <CheckCircle2 className="w-3 h-3 text-emerald-600" /> Completed
+                        </span>
                       )}
                       {meeting.status === 'rescheduled' && (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-purple-50 text-purple-700 border border-purple-200 rounded-sm text-[10px] font-bold">
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-purple-50 text-purple-700 border border-purple-200 rounded-sm text-[10px] font-bold">
                           <RotateCcw className="w-3 h-3 text-purple-600" /> Rescheduled
                         </span>
                       )}
                       {meeting.status === 'cancelled' && (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-rose-50 text-rose-700 border border-rose-200 rounded-sm text-[10px] font-bold">
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-rose-50 text-rose-700 border border-rose-200 rounded-sm text-[10px] font-bold">
                           <XCircle className="w-3 h-3 text-rose-600" /> Cancelled
                         </span>
                       )}
                     </td>
 
                     {/* Actions */}
-                    <td className="py-3 px-4 align-top text-center">
-                      <div className="inline-flex items-center justify-center gap-1.5 flex-wrap">
+                    <td className="py-3 px-4 align-top text-right whitespace-nowrap">
+                      <div className="flex items-center justify-end gap-1.5 whitespace-nowrap">
+                        {/* 1. Forward SO Request (Contextual: only when Request Prepared) */}
+                        {meeting.specialOrderStatus !== 'forwarded_to_op' && (
+                          <button
+                            type="button"
+                            onClick={() => handleForwardSoRequest(meeting.id)}
+                            className="px-2.5 py-1.5 text-xs font-semibold text-blue-700 bg-white hover:bg-blue-50 border border-blue-200 rounded-sm shadow-2xs transition-colors cursor-pointer inline-flex items-center gap-1 shrink-0"
+                            title="Forward SO Request to Office of the President"
+                          >
+                            <Send className="w-3 h-3 text-blue-600" /> Forward SO
+                          </button>
+                        )}
+
+                        {/* 2. Mark Meeting Completed (Contextual: only when Scheduled) */}
                         {meeting.status === 'scheduled' && (
                           <button
                             type="button"
                             onClick={() => handleMarkMeetingCompleted(meeting.id)}
-                            className="px-2 py-1.5 bg-white hover:bg-slate-50 text-emerald-700 border border-emerald-200 rounded-sm text-xs font-semibold transition-colors cursor-pointer inline-flex items-center gap-1 shadow-2xs"
+                            className="px-2.5 py-1.5 text-xs font-semibold text-emerald-700 bg-white hover:bg-emerald-50 border border-emerald-200 rounded-sm shadow-2xs transition-colors cursor-pointer inline-flex items-center gap-1 shrink-0"
                             title="Mark Meeting as Completed"
                           >
-                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> Done
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> Complete
                           </button>
                         )}
 
-                        {/* View Meeting Details */}
-                        <button
-                          type="button"
-                          onClick={() => setViewingMeeting(meeting)}
-                          className="px-2.5 py-1.5 text-xs font-semibold text-slate-700 bg-white hover:bg-slate-50 rounded-sm border border-slate-200 transition-colors cursor-pointer inline-flex items-center gap-1 shadow-2xs"
-                          title="View Inception Meeting Details"
-                        >
-                          <Eye className="w-3.5 h-3.5 text-[#C8102E]" /> View
-                        </button>
-
-                        {/* View Official Special Order Request Memo */}
+                        {/* 3. SO Request Memo */}
                         <button
                           type="button"
                           onClick={() => setViewingMeetingMemo(meeting)}
-                          className="p-1.5 text-slate-400 hover:text-amber-700 hover:bg-amber-50 rounded-sm transition-colors cursor-pointer"
+                          className="p-1.5 text-slate-400 hover:text-amber-700 hover:bg-amber-50 rounded-sm transition-colors cursor-pointer shrink-0"
                           title="View Request for Special Order Memo"
                         >
                           <FileText className="w-3.5 h-3.5" />
                         </button>
 
+                        {/* 4. Edit */}
                         <button
                           type="button"
                           onClick={() => {
                             setEditingMeeting(meeting);
                             setIsScheduleModalOpen(true);
                           }}
-                          className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-sm transition-colors cursor-pointer"
+                          className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-sm transition-colors cursor-pointer shrink-0"
                           title="Edit Meeting"
                         >
                           <Edit2 className="w-3.5 h-3.5" />
                         </button>
 
+                        {/* 5. Delete */}
                         <button
                           type="button"
                           onClick={() => handleDeleteMeeting(meeting.id)}
-                          className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-sm transition-colors cursor-pointer"
+                          className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-sm transition-colors cursor-pointer shrink-0"
                           title="Delete Meeting"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+
+                        {/* 6. View Meeting (Always far right) */}
+                        <button
+                          type="button"
+                          onClick={() => setViewingMeeting(meeting)}
+                          className="p-1.5 text-slate-400 hover:text-[#C8102E] hover:bg-red-50/60 rounded-sm transition-colors cursor-pointer shrink-0"
+                          title="View Meeting"
+                          aria-label="View Meeting"
+                        >
+                          <Eye className="w-3.5 h-3.5" />
                         </button>
                       </div>
                     </td>

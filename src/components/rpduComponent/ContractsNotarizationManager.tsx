@@ -580,14 +580,14 @@ export const ContractsNotarizationManager: React.FC = () => {
                       </td>
 
                       {/* Unified Actions */}
-                      <td className="py-3 px-4 align-top text-center">
-                        <div className="inline-flex items-center justify-center gap-1.5 flex-wrap">
+                      <td className="py-3 px-4 align-top text-right whitespace-nowrap">
+                        <div className="flex items-center justify-end gap-1.5 whitespace-nowrap">
                           {/* Workflow button */}
                           {psc.status === 'draft' && (
                             <button
                               type="button"
                               onClick={() => handleAdvanceStatus(psc.id, 'forwarded_to_president')}
-                              className="px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:text-slate-900 bg-white hover:bg-slate-50 border border-slate-200 rounded-sm shadow-2xs transition-colors cursor-pointer inline-flex items-center gap-1.5"
+                              className="px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:text-slate-900 bg-white hover:bg-slate-50 border border-slate-200 rounded-sm shadow-2xs transition-colors cursor-pointer inline-flex items-center gap-1.5 shrink-0"
                               title="Forward to President for signature"
                             >
                               <Send className="w-3 h-3 text-blue-600" /> Forward to OP
@@ -598,7 +598,7 @@ export const ContractsNotarizationManager: React.FC = () => {
                             <button
                               type="button"
                               onClick={() => handleAdvanceStatus(psc.id, 'signed_by_president')}
-                              className="px-2.5 py-1.5 text-xs font-semibold text-indigo-700 hover:text-indigo-900 bg-indigo-50/70 hover:bg-indigo-100/70 border border-indigo-200 rounded-sm shadow-2xs transition-colors cursor-pointer inline-flex items-center gap-1.5"
+                              className="px-2.5 py-1.5 text-xs font-semibold text-indigo-700 hover:text-indigo-900 bg-indigo-50/70 hover:bg-indigo-100/70 border border-indigo-200 rounded-sm shadow-2xs transition-colors cursor-pointer inline-flex items-center gap-1.5 shrink-0"
                               title="Record President signature date & document"
                             >
                               <CheckCircle2 className="w-3 h-3 text-indigo-600" /> Mark Signed
@@ -609,7 +609,7 @@ export const ContractsNotarizationManager: React.FC = () => {
                             <button
                               type="button"
                               onClick={() => handleAdvanceStatus(psc.id, 'forwarded_to_legal')}
-                              className="px-2.5 py-1.5 text-xs font-semibold text-purple-700 hover:text-purple-900 bg-purple-50/70 hover:bg-purple-100/70 border border-purple-200 rounded-sm shadow-2xs transition-colors cursor-pointer inline-flex items-center gap-1.5"
+                              className="px-2.5 py-1.5 text-xs font-semibold text-purple-700 hover:text-purple-900 bg-purple-50/70 hover:bg-purple-100/70 border border-purple-200 rounded-sm shadow-2xs transition-colors cursor-pointer inline-flex items-center gap-1.5 shrink-0"
                               title="Forward to Legal Office for notarization"
                             >
                               <Send className="w-3 h-3 text-purple-600" /> Send to Legal
@@ -620,28 +620,18 @@ export const ContractsNotarizationManager: React.FC = () => {
                             <button
                               type="button"
                               onClick={() => setNotarizingContract(psc)}
-                              className="px-2.5 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white font-semibold text-xs rounded-sm shadow-xs transition-colors cursor-pointer inline-flex items-center gap-1.5"
+                              className="px-2.5 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white font-semibold text-xs rounded-sm shadow-xs transition-colors cursor-pointer inline-flex items-center gap-1.5 shrink-0"
                               title="Legal Office Notarization Check-off"
                             >
                               <ShieldCheck className="w-3.5 h-3.5" /> Check Off Notary
                             </button>
                           )}
 
-                          {/* View Contract Document */}
-                          <button
-                            type="button"
-                            onClick={() => setViewingPsc(psc)}
-                            className="px-2.5 py-1.5 text-xs font-semibold text-slate-700 bg-white hover:bg-slate-50 rounded-sm border border-slate-200 transition-colors cursor-pointer inline-flex items-center gap-1 shadow-2xs"
-                            title="View Official Contract"
-                          >
-                            <Eye className="w-3.5 h-3.5 text-[#C8102E]" /> View
-                          </button>
-
                           {/* View Presidential Transmittal Memo */}
                           <button
                             type="button"
                             onClick={() => setTransmittalPsc(psc)}
-                            className="p-1.5 text-slate-400 hover:text-amber-700 hover:bg-amber-50 rounded-sm transition-colors cursor-pointer"
+                            className="p-1.5 text-slate-400 hover:text-amber-700 hover:bg-amber-50 rounded-sm transition-colors cursor-pointer shrink-0"
                             title="Presidential Transmittal Memo"
                           >
                             <FileText className="w-3.5 h-3.5" />
@@ -653,7 +643,7 @@ export const ContractsNotarizationManager: React.FC = () => {
                               setEditingContract(psc);
                               setIsUploadPscOpen(true);
                             }}
-                            className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-sm transition-colors cursor-pointer"
+                            className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-sm transition-colors cursor-pointer shrink-0"
                             title="Edit contract details"
                           >
                             <Edit2 className="w-3.5 h-3.5" />
@@ -661,10 +651,21 @@ export const ContractsNotarizationManager: React.FC = () => {
                           <button
                             type="button"
                             onClick={() => handleDeleteContract(psc.id)}
-                            className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-sm transition-colors cursor-pointer"
+                            className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-sm transition-colors cursor-pointer shrink-0"
                             title="Delete contract"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+
+                          {/* View Contract (Always far right) */}
+                          <button
+                            type="button"
+                            onClick={() => setViewingPsc(psc)}
+                            className="p-1.5 text-slate-400 hover:text-[#C8102E] hover:bg-red-50/60 rounded-sm transition-colors cursor-pointer shrink-0"
+                            title="View Contract"
+                            aria-label="View Contract"
+                          >
+                            <Eye className="w-3.5 h-3.5" />
                           </button>
                         </div>
                       </td>
