@@ -43,7 +43,7 @@ export const ViewSpecialOrderMemoModal: React.FC<ViewSpecialOrderMemoModalProps>
               Special Order Request Memo
             </span>
             <span className="px-2 py-0.5 text-[10px] font-black uppercase tracking-wider rounded-xs bg-red-50 text-[#C8102E] border border-red-200">
-              {meeting.specialOrderStatus.replace(/_/g, ' ')}
+              {meeting.specialOrderStatus === 'forwarded_to_op' ? 'Forwarded to OP' : 'Request Prepared'}
             </span>
           </div>
           <div className="flex items-center gap-2">
@@ -131,7 +131,7 @@ export const ViewSpecialOrderMemoModal: React.FC<ViewSpecialOrderMemoModalProps>
               <span className="text-[10px] font-bold text-slate-500 uppercase">Research Project:</span>
               <p className="font-black text-slate-900 text-sm">&ldquo;{meeting.projectTitle}&rdquo;</p>
               <div className="flex flex-wrap gap-4 text-xs text-slate-700 pt-1">
-                <span>Principal Investigator: <strong className="text-slate-900">{meeting.leadInvestigator}</strong></span>
+                <span>Study Leader: <strong className="text-slate-900">{meeting.leadInvestigator}</strong></span>
                 <span>Reference Code: <strong className="font-mono text-slate-800">{meeting.proposalCode}</strong></span>
               </div>
             </div>
@@ -146,12 +146,12 @@ export const ViewSpecialOrderMemoModal: React.FC<ViewSpecialOrderMemoModalProps>
                   <strong className="text-slate-900">{meeting.meetingDate} at {meeting.meetingTime}</strong>
                 </div>
                 <div>
-                  <span className="text-slate-500 block text-[10px] uppercase font-semibold">Venue / Platform:</span>
+                  <span className="text-slate-500 block text-[10px] uppercase font-semibold">Venue / Room:</span>
                   <strong className="text-slate-900">{meeting.venue}</strong>
                 </div>
                 <div className="col-span-1 sm:col-span-2">
                   <span className="text-slate-500 block text-[10px] uppercase font-semibold">Meeting Agenda:</span>
-                  <span className="text-slate-800">{meeting.agenda}</span>
+                  <span className="text-slate-800">{meeting.agenda || 'Orientation on procurement timeline, deliverables milestones, and university financial liquidation protocols.'}</span>
                 </div>
               </div>
             </div>
@@ -168,7 +168,7 @@ export const ViewSpecialOrderMemoModal: React.FC<ViewSpecialOrderMemoModalProps>
             </div>
 
             <p>
-              This request is submitted pursuant to Section 10.0 of the RPDU Procedures Manual for research grant execution and disbursement clearance.
+              This request is submitted pursuant to the RPDU Procedures Manual for research grant execution and disbursement clearance.
             </p>
           </div>
 
@@ -201,3 +201,5 @@ export const ViewSpecialOrderMemoModal: React.FC<ViewSpecialOrderMemoModalProps>
     </div>
   );
 };
+
+export default ViewSpecialOrderMemoModal;

@@ -142,9 +142,9 @@ export const ViewPscTransmittalMemoModal: React.FC<ViewPscTransmittalMemoModalPr
               </div>
               <div className="grid grid-cols-2 gap-3 text-xs pt-1 border-t border-slate-200">
                 <div>
-                  <span className="text-slate-500 block text-[10px] uppercase font-semibold">Lead Proponent:</span>
-                  <strong className="text-slate-900">{contract.proponentName}</strong>
-                  <span className="block text-[11px] text-slate-500">{contract.proponentDepartment}, {contract.proponentCollege}</span>
+                  <span className="text-slate-500 block text-[10px] uppercase font-semibold">Study Leader (Second Party):</span>
+                  <strong className="text-slate-900">{contract.studyLeaderName || contract.proponentName}</strong>
+                  <span className="block text-[11px] text-slate-500">{contract.studyLeaderDepartment || contract.proponentDepartment}, {contract.studyLeaderCollege || contract.proponentCollege}</span>
                 </div>
                 <div>
                   <span className="text-slate-500 block text-[10px] uppercase font-semibold">Approved Amount:</span>

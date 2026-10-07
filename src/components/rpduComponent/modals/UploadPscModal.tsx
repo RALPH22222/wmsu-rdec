@@ -1,17 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   X,
   FileText,
   Upload,
   Check,
   AlertTriangle,
-  Plus,
-  Trash2,
   Users,
   Calendar,
-  DollarSign,
   Building,
-  Clock
+  Clock,
+  CheckCircle2,
+  Lock
 } from 'lucide-react';
 import type {
   ProfessionalServiceContract,
@@ -29,6 +28,20 @@ interface UploadPscModalProps {
   initialData?: ProfessionalServiceContract | null;
 }
 
+const mapCoInvestigatorsToMembers = (
+  coInvestigators?: string[],
+  college?: string,
+  department?: string
+): CoResearcherMember[] => {
+  if (!coInvestigators || coInvestigators.length === 0) return [];
+  return coInvestigators.map((name, idx) => ({
+    id: `cr-${idx}-${name.replace(/\s+/g, '-').toLowerCase()}`,
+    name,
+    college: college || 'College of Science and Mathematics',
+    department: department || 'Department of Research',
+  }));
+};
+
 export const UploadPscModal: React.FC<UploadPscModalProps> = ({
   isOpen,
   onClose,
@@ -36,18 +49,28 @@ export const UploadPscModal: React.FC<UploadPscModalProps> = ({
   proposals,
   initialData,
 }) => {
+  // Filter proposals to those ready for PSC processing (Technically cleared & Budget allocated)
+  const eligibleProposals = useMemo(() => {
+    const cleared = proposals.filter(
+      (p) =>
+        p.screeningStatus === 'passed' ||
+        (p as unknown as { technicalClearance?: boolean }).technicalClearance
+    );
+    return cleared.length > 0 ? cleared : proposals;
+  }, [proposals]);
+
   const [selectedProposalId, setSelectedProposalId] = useState<string>('');
   const [contractNumber, setContractNumber] = useState('');
   const [projectTitle, setProjectTitle] = useState('');
   const [proposalCode, setProposalCode] = useState('');
 
-  // Research Team (Second Party)
+  // Research Team (Second Party) - Inherited strictly from proposal
   const [studyLeaderName, setStudyLeaderName] = useState('');
   const [studyLeaderCollege, setStudyLeaderCollege] = useState('');
   const [studyLeaderDepartment, setStudyLeaderDepartment] = useState('');
   const [coResearchers, setCoResearchers] = useState<CoResearcherMember[]>([]);
 
-  // Project Details & Operating Budget
+  // Project Details & Operating Budget (Read-only allocation from Step 8.0)
   const [projectOperatingBudget, setProjectOperatingBudget] = useState<number>(485000);
   const [startDate, setStartDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [endDate, setEndDate] = useState(() => {
@@ -57,15 +80,15 @@ export const UploadPscModal: React.FC<UploadPscModalProps> = ({
   });
   const [durationMonths, setDurationMonths] = useState<number>(12);
 
-  // Compensation
+  // Compensation Arrangement
   const [compensationArrangement, setCompensationArrangement] = useState<CompensationArrangement>('honorarium');
 
-  // First Party
-  const [firstPartyName, setFirstPartyName] = useState('Dr. Ma. Carla A. Ochotorena');
-  const [firstPartyTitle, setFirstPartyTitle] = useState('University President, Western Mindanao State University');
+  // First Party (Read-only University Leadership)
+  const firstPartyName = 'Dr. Ma. Carla A. Ochotorena';
+  const firstPartyTitle = 'University President, Western Mindanao State University';
 
   // Status & Documents
-  const [status, setStatus] = useState<PscStatus>('draft');
+  const [status] = useState<PscStatus>('draft');
   const [uploadedPdf, setUploadedPdf] = useState<{
     name: string;
     size: number;
@@ -93,7 +116,8 @@ export const UploadPscModal: React.FC<UploadPscModalProps> = ({
       setContractNumber(initialData.contractNumber);
       setProjectTitle(initialData.projectTitle);
       setProposalCode(initialData.proposalCode);
-      setStudyLeaderName(initialData.studyLeaderName || initialData.proponentName || '');
+      const leader = initialData.studyLeaderName || initialData.proponentName || '';
+      setStudyLeaderName(leader);
       setStudyLeaderDepartment(initialData.studyLeaderDepartment || initialData.proponentDepartment || '');
       setStudyLeaderCollege(initialData.studyLeaderCollege || initialData.proponentCollege || '');
       setCoResearchers(initialData.coResearchers || []);
@@ -102,20 +126,23 @@ export const UploadPscModal: React.FC<UploadPscModalProps> = ({
       setStartDate(initialData.startDate);
       setEndDate(initialData.endDate);
       setDurationMonths(initialData.durationMonths || 12);
-      setFirstPartyName(initialData.firstPartyName || 'Dr. Ma. Carla A. Ochotorena');
-      setFirstPartyTitle(initialData.firstPartyTitle || 'University President, Western Mindanao State University');
-      setStatus(initialData.status);
       setUploadedPdf(initialData.contractPdf || null);
-    } else if (proposals.length > 0) {
-      const first = proposals[0];
+    } else if (eligibleProposals.length > 0) {
+      const first = eligibleProposals[0];
       setSelectedProposalId(first.id);
+      // Auto-generate system reference format: PSC-YYYY-XXX
       setContractNumber(`PSC-${new Date().getFullYear()}-${String(Math.floor(100 + Math.random() * 900))}`);
       setProjectTitle(first.title);
       setProposalCode(first.code);
+
+      // Inherit Research Team strictly from proposal record
       setStudyLeaderName(first.leadInvestigator);
       setStudyLeaderDepartment(first.department || 'Department of Computer Science');
       setStudyLeaderCollege(first.college || 'College of Science and Mathematics');
-      setCoResearchers([]);
+      setCoResearchers(
+        mapCoInvestigatorsToMembers(first.coInvestigators, first.college, first.department)
+      );
+
       setProjectOperatingBudget(first.budgetRequested || 485000);
       setCompensationArrangement('honorarium');
       const start = new Date().toISOString().split('T')[0];
@@ -125,12 +152,9 @@ export const UploadPscModal: React.FC<UploadPscModalProps> = ({
       setStartDate(start);
       setEndDate(end);
       setDurationMonths(first.durationMonths || 12);
-      setFirstPartyName('Dr. Ma. Carla A. Ochotorena');
-      setFirstPartyTitle('University President, Western Mindanao State University');
-      setStatus('draft');
       setUploadedPdf(null);
     }
-  }, [initialData, proposals, isOpen]);
+  }, [initialData, eligibleProposals, isOpen]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -142,45 +166,21 @@ export const UploadPscModal: React.FC<UploadPscModalProps> = ({
 
   const handleProposalChange = (pId: string) => {
     setSelectedProposalId(pId);
-    if (pId === 'custom') {
-      setProjectTitle('');
-      setProposalCode(`WMSU-RES-${new Date().getFullYear()}-${Math.floor(100 + Math.random() * 900)}`);
-      setStudyLeaderName('');
-      setStudyLeaderDepartment('');
-      setStudyLeaderCollege('');
-      setCoResearchers([]);
-      return;
-    }
-    const matched = proposals.find((p) => p.id === pId);
+    const matched = eligibleProposals.find((p) => p.id === pId);
     if (matched) {
       setProjectTitle(matched.title);
       setProposalCode(matched.code);
+      setProjectOperatingBudget(matched.budgetRequested || 485000);
+      setDurationMonths(matched.durationMonths || 12);
+
+      // Inherit Study Leader and Co-Researchers strictly from matched proposal
       setStudyLeaderName(matched.leadInvestigator);
       setStudyLeaderDepartment(matched.department || 'Department of Research');
       setStudyLeaderCollege(matched.college || 'College of Science and Mathematics');
-      setProjectOperatingBudget(matched.budgetRequested || 485000);
-      setDurationMonths(matched.durationMonths || 12);
+      setCoResearchers(
+        mapCoInvestigatorsToMembers(matched.coInvestigators, matched.college, matched.department)
+      );
     }
-  };
-
-  const handleAddCoResearcher = () => {
-    const newMember: CoResearcherMember = {
-      id: `cr-${Date.now()}-${Math.random().toString(36).substring(2, 5)}`,
-      name: '',
-      college: studyLeaderCollege || 'College of Science and Mathematics',
-      department: studyLeaderDepartment || '',
-    };
-    setCoResearchers((prev) => [...prev, newMember]);
-  };
-
-  const handleUpdateCoResearcher = (id: string, field: keyof CoResearcherMember, value: string) => {
-    setCoResearchers((prev) =>
-      prev.map((cr) => (cr.id === id ? { ...cr, [field]: value } : cr))
-    );
-  };
-
-  const handleRemoveCoResearcher = (id: string) => {
-    setCoResearchers((prev) => prev.filter((cr) => cr.id !== id));
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -210,7 +210,7 @@ export const UploadPscModal: React.FC<UploadPscModalProps> = ({
       return;
     }
     if (!studyLeaderName.trim()) {
-      setError('Study Leader name is required.');
+      setError('A valid research proposal with a designated Study Leader must be selected.');
       return;
     }
 
@@ -223,9 +223,9 @@ export const UploadPscModal: React.FC<UploadPscModalProps> = ({
       proposalCode,
       projectTitle: projectTitle.trim(),
 
-      // Research Team (Second Party)
+      // Research Team (Second Party: inherited from proposal)
       studyLeaderName: studyLeaderName.trim(),
-      proponentName: studyLeaderName.trim(), // Keep alias for backward compatibility
+      proponentName: studyLeaderName.trim(),
       studyLeaderCollege: studyLeaderCollege.trim() || 'College of Science and Mathematics',
       studyLeaderDepartment: studyLeaderDepartment.trim() || 'Department of Research',
       proponentRole: 'Study Leader',
@@ -235,22 +235,22 @@ export const UploadPscModal: React.FC<UploadPscModalProps> = ({
 
       // Project Operating Budget & Compensation
       projectOperatingBudget: Number(projectOperatingBudget),
-      contractAmount: Number(projectOperatingBudget), // Kept for backward compatibility
+      contractAmount: Number(projectOperatingBudget),
       compensationArrangement,
       studyLeaderHonorariumQuarterly: compensationArrangement === 'honorarium' ? 4500 : 0,
       coResearcherHonorariumQuarterly: compensationArrangement === 'honorarium' ? 2000 : 0,
 
-      // Duration
+      // Duration & Dates
       durationMonths: Number(durationMonths),
       startDate,
       endDate,
 
       // First Party
-      firstPartyName: firstPartyName.trim(),
-      firstPartyTitle: firstPartyTitle.trim(),
+      firstPartyName,
+      firstPartyTitle,
 
-      // Status
-      status,
+      // Workflow Status: Saved as draft
+      status: initialData?.status || status,
 
       // Documents
       contractPdf: uploadedPdf,
@@ -258,18 +258,9 @@ export const UploadPscModal: React.FC<UploadPscModalProps> = ({
       notarizedContractPdf: initialData?.notarizedContractPdf || null,
 
       notarization: initialData?.notarization || null,
-      forwardedToPresidentAt:
-        status === 'forwarded_to_president'
-          ? new Date().toISOString()
-          : initialData?.forwardedToPresidentAt,
-      signedByPresidentAt:
-        status === 'signed_by_president'
-          ? new Date().toISOString()
-          : initialData?.signedByPresidentAt,
-      forwardedToLegalAt:
-        status === 'forwarded_to_legal'
-          ? new Date().toISOString()
-          : initialData?.forwardedToLegalAt,
+      forwardedToPresidentAt: initialData?.forwardedToPresidentAt,
+      signedByPresidentAt: initialData?.signedByPresidentAt,
+      forwardedToLegalAt: initialData?.forwardedToLegalAt,
       notarizedAt: initialData?.notarizedAt,
       createdAt: initialData?.createdAt || new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -300,7 +291,7 @@ export const UploadPscModal: React.FC<UploadPscModalProps> = ({
             </div>
             <div>
               <h3 className="text-sm font-bold text-slate-900">
-                {initialData ? 'Edit Professional Service Contract' : 'Prepare / Upload Professional Service Contract (PSC)'}
+                {initialData ? 'Edit Professional Service Contract' : 'Prepare Professional Service Contract (PSC)'}
               </h3>
               <p className="text-[11px] text-slate-500 font-medium">
                 Standard Form WMSU-RPDU-CA-001.01 &bull; Institutional Research Agreement
@@ -317,7 +308,7 @@ export const UploadPscModal: React.FC<UploadPscModalProps> = ({
           </button>
         </div>
 
-        {/* Body */}
+        {/* Form Body */}
         <form onSubmit={handleSubmit} className="p-6 overflow-y-auto space-y-6 text-xs">
           {error && (
             <div className="p-2.5 bg-rose-50 border border-rose-200 text-rose-700 rounded-sm flex items-center gap-2">
@@ -329,25 +320,20 @@ export const UploadPscModal: React.FC<UploadPscModalProps> = ({
           {/* Section 1: Identification & Associated Research Proposal */}
           <div className="space-y-3">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {/* 1. Contract Reference No. (System-generated & Read-only) */}
               <div>
                 <label className="font-bold text-slate-700 block mb-1">
-                  Contract Reference No. *
+                  Contract Reference No.
                 </label>
-                <div className="relative">
-                  <input
-                    type="text"
-                    required
-                    value={contractNumber}
-                    onChange={(e) => setContractNumber(e.target.value)}
-                    placeholder="e.g. PSC-2026-786"
-                    className="w-full px-3 py-2 border border-slate-200 rounded-sm font-mono font-bold text-slate-900 bg-slate-50/50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#C8102E]"
-                  />
-                  <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 font-medium">
-                    Auto-generated
+                <div className="px-3 py-2 bg-slate-100/80 border border-slate-200 rounded-sm font-mono font-bold text-slate-900 flex items-center justify-between">
+                  <span>{contractNumber}</span>
+                  <span className="text-[10px] text-slate-400 font-sans font-medium uppercase tracking-wider flex items-center gap-1">
+                    <Lock className="w-3 h-3 text-slate-400" /> Auto-generated
                   </span>
                 </div>
               </div>
 
+              {/* 2. Associated Research Proposal (Filtered to ready proposals) */}
               <div>
                 <label className="font-bold text-slate-700 block mb-1">
                   Associated Research Proposal *
@@ -355,161 +341,125 @@ export const UploadPscModal: React.FC<UploadPscModalProps> = ({
                 <select
                   value={selectedProposalId}
                   onChange={(e) => handleProposalChange(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-sm font-medium focus:outline-none focus:ring-1 focus:ring-[#C8102E]"
+                  className="w-full px-3 py-2 bg-white border border-slate-200 rounded-sm font-medium focus:outline-none focus:ring-1 focus:ring-[#C8102E]"
                 >
-                  {proposals.map((p) => (
+                  {eligibleProposals.map((p) => (
                     <option key={p.id} value={p.id}>
                       {p.code} &mdash; {p.title}
                     </option>
                   ))}
-                  <option value="custom">-- Custom Proposal / External Entry --</option>
                 </select>
+                <span className="text-[10px] text-emerald-700 font-semibold block mt-1 flex items-center gap-1">
+                  <CheckCircle2 className="w-3 h-3 text-emerald-600 shrink-0" />
+                  Technically Cleared &bull; Budget Allocated &bull; Ready for PSC
+                </span>
               </div>
             </div>
 
+            {/* 3. Project Title (Read-only and auto-filled from proposal) */}
             <div>
-              <label className="font-bold text-slate-700 block mb-1">Project Title *</label>
-              <input
-                type="text"
-                required
-                value={projectTitle}
-                onChange={(e) => setProjectTitle(e.target.value)}
-                placeholder="Title of approved research project"
-                className="w-full px-3 py-2 border border-slate-200 rounded-sm font-medium focus:outline-none focus:ring-1 focus:ring-[#C8102E]"
-              />
+              <label className="font-bold text-slate-700 block mb-1">Project Title</label>
+              <div className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-sm font-semibold text-slate-900 leading-snug">
+                {projectTitle || 'Select a proposal above to auto-populate project title'}
+              </div>
+              <span className="text-[10px] text-slate-400 font-mono mt-0.5 block">
+                Ref Code: {proposalCode}
+              </span>
             </div>
           </div>
 
-          {/* Section 2: RESEARCH TEAM (Second Party) */}
-          <div className="pt-4 border-t border-slate-200 space-y-4">
+          {/* Section 2: RESEARCH TEAM (SECOND PARTY - READ-ONLY FROM PROPOSAL) */}
+          <div className="pt-4 border-t border-slate-200 space-y-3">
             <div className="flex items-center justify-between">
               <div>
                 <h4 className="font-bold text-slate-900 uppercase tracking-wider text-[11px] flex items-center gap-1.5">
                   <Users className="w-3.5 h-3.5 text-[#C8102E]" /> Research Team (Second Party)
                 </h4>
                 <p className="text-[11px] text-slate-500">
-                  Principal Study Leader and optional Co-Researchers entered as the Second Party of the PSC.
+                  Automatically loaded from the selected research proposal record.
                 </p>
               </div>
+              <span className="text-[10px] text-slate-500 font-medium bg-slate-100/90 border border-slate-200 px-2 py-0.5 rounded-xs flex items-center gap-1">
+                <Lock className="w-3 h-3 text-slate-400" /> Read-only from Proposal
+              </span>
             </div>
 
-            {/* Study Leader Card */}
+            {/* Study Leader Details */}
             <div className="p-3.5 bg-slate-50/70 border border-slate-200 rounded-sm space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-[10px] font-bold uppercase tracking-wider text-[#C8102E] bg-red-50 px-2 py-0.5 rounded-xs border border-red-100">
-                  Study Leader (Lead PI) *
+                  Study Leader (Second Party)
                 </span>
                 <span className="text-[10px] text-slate-400 font-medium">Principal Signatory</span>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {/* Study Leader Name */}
                 <div>
-                  <label className="text-[11px] font-semibold text-slate-700 block mb-1">
-                    Study Leader Name *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={studyLeaderName}
-                    onChange={(e) => setStudyLeaderName(e.target.value)}
-                    placeholder="e.g. Dr. Arnel Alvarez"
-                    className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-sm font-semibold focus:outline-none focus:ring-1 focus:ring-[#C8102E]"
-                  />
+                  <span className="text-[10px] font-bold uppercase text-slate-500 block mb-0.5">
+                    Study Leader
+                  </span>
+                  <div className="px-3 py-2 bg-white border border-slate-200 rounded-sm font-bold text-slate-900 text-xs">
+                    {studyLeaderName || '—'}
+                  </div>
                 </div>
 
+                {/* College */}
                 <div>
-                  <label className="text-[11px] font-semibold text-slate-700 block mb-1">
-                    College *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={studyLeaderCollege}
-                    onChange={(e) => setStudyLeaderCollege(e.target.value)}
-                    placeholder="e.g. College of Science and Mathematics"
-                    className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-sm focus:outline-none focus:ring-1 focus:ring-[#C8102E]"
-                  />
+                  <span className="text-[10px] font-bold uppercase text-slate-500 block mb-0.5">
+                    College
+                  </span>
+                  <div className="px-3 py-2 bg-white border border-slate-200 rounded-sm font-medium text-slate-800 text-xs truncate" title={studyLeaderCollege}>
+                    {studyLeaderCollege || '—'}
+                  </div>
                 </div>
 
+                {/* Department */}
                 <div>
-                  <label className="text-[11px] font-semibold text-slate-700 block mb-1">
-                    Department *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={studyLeaderDepartment}
-                    onChange={(e) => setStudyLeaderDepartment(e.target.value)}
-                    placeholder="e.g. Department of Computer Science"
-                    className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-sm focus:outline-none focus:ring-1 focus:ring-[#C8102E]"
-                  />
+                  <span className="text-[10px] font-bold uppercase text-slate-500 block mb-0.5">
+                    Department
+                  </span>
+                  <div className="px-3 py-2 bg-white border border-slate-200 rounded-sm font-medium text-slate-800 text-xs truncate" title={studyLeaderDepartment}>
+                    {studyLeaderDepartment || '—'}
+                  </div>
                 </div>
               </div>
             </div>
 
-            {/* Dynamic Co-Researchers */}
-            <div className="space-y-2.5">
+            {/* Co-Researchers Block (Read-only list from proposal) */}
+            <div className="p-3.5 bg-slate-50/70 border border-slate-200 rounded-sm space-y-2">
               <div className="flex items-center justify-between">
-                <span className="text-[11px] font-bold text-slate-700">
+                <span className="text-[11px] font-bold text-slate-800">
                   Co-Researchers ({coResearchers.length})
                 </span>
-                <button
-                  type="button"
-                  onClick={handleAddCoResearcher}
-                  className="px-2.5 py-1 text-[11px] font-semibold text-slate-700 bg-white hover:bg-slate-50 border border-slate-300 rounded-sm shadow-2xs transition-colors cursor-pointer inline-flex items-center gap-1"
-                >
-                  <Plus className="w-3 h-3 text-[#C8102E]" /> Add Co-Researcher
-                </button>
+                <span className="text-[10px] text-slate-400 font-medium">
+                  Associated Project Team
+                </span>
               </div>
 
               {coResearchers.length === 0 ? (
-                <div className="p-3 bg-slate-50/50 border border-dashed border-slate-200 rounded-sm text-center text-[11px] text-slate-400">
-                  No co-researchers added. Click &ldquo;+ Add Co-Researcher&rdquo; if the study has associate project faculty.
+                <div className="p-2.5 bg-white border border-dashed border-slate-200 rounded-sm text-center text-[11px] text-slate-400">
+                  No co-researchers specified in the approved proposal record.
                 </div>
               ) : (
-                <div className="space-y-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
                   {coResearchers.map((cr, idx) => (
                     <div
-                      key={cr.id}
-                      className="p-3 bg-slate-50/70 border border-slate-200 rounded-sm flex flex-col sm:flex-row items-start sm:items-center gap-2.5"
+                      key={cr.id || idx}
+                      className="p-2.5 bg-white border border-slate-200 rounded-sm flex items-center justify-between gap-2"
                     >
-                      <span className="text-[10px] font-mono font-bold text-slate-400 shrink-0 w-5">
-                        {idx + 1}.
-                      </span>
-
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 flex-1 w-full">
-                        <input
-                          type="text"
-                          required
-                          value={cr.name}
-                          onChange={(e) => handleUpdateCoResearcher(cr.id, 'name', e.target.value)}
-                          placeholder="Co-Researcher Name"
-                          className="px-2.5 py-1 bg-white border border-slate-200 rounded-sm text-xs focus:outline-none focus:ring-1 focus:ring-[#C8102E]"
-                        />
-                        <input
-                          type="text"
-                          value={cr.college || ''}
-                          onChange={(e) => handleUpdateCoResearcher(cr.id, 'college', e.target.value)}
-                          placeholder="College Unit"
-                          className="px-2.5 py-1 bg-white border border-slate-200 rounded-sm text-xs focus:outline-none focus:ring-1 focus:ring-[#C8102E]"
-                        />
-                        <input
-                          type="text"
-                          value={cr.department || ''}
-                          onChange={(e) => handleUpdateCoResearcher(cr.id, 'department', e.target.value)}
-                          placeholder="Academic Department"
-                          className="px-2.5 py-1 bg-white border border-slate-200 rounded-sm text-xs focus:outline-none focus:ring-1 focus:ring-[#C8102E]"
-                        />
+                      <div>
+                        <div className="font-bold text-slate-900 text-xs flex items-center gap-1.5">
+                          <span className="text-slate-400 font-mono text-[10px]">{idx + 1}.</span>
+                          <span>{cr.name}</span>
+                        </div>
+                        <div className="text-[10px] text-slate-500 mt-0.5">
+                          Co-Researcher &bull; {cr.department || studyLeaderDepartment || 'WMSU'}
+                        </div>
                       </div>
-
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveCoResearcher(cr.id)}
-                        className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-sm transition-colors cursor-pointer shrink-0"
-                        title="Remove co-researcher"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
+                      <span className="text-[9px] uppercase font-bold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded-2xs border border-slate-200 shrink-0">
+                        Co-Researcher
+                      </span>
                     </div>
                   ))}
                 </div>
@@ -517,18 +467,18 @@ export const UploadPscModal: React.FC<UploadPscModalProps> = ({
             </div>
           </div>
 
-          {/* Section 3: PROJECT DETAILS & OPERATING BUDGET */}
+          {/* Section 3: PROJECT DETAILS & APPROVED OPERATING BUDGET */}
           <div className="pt-4 border-t border-slate-200 space-y-3">
             <div>
               <h4 className="font-bold text-slate-900 uppercase tracking-wider text-[11px] flex items-center gap-1.5">
-                <Calendar className="w-3.5 h-3.5 text-[#C8102E]" /> Project Details &amp; Timeline
+                <Calendar className="w-3.5 h-3.5 text-[#C8102E]" /> Project Details &amp; Approved Budget
               </h4>
               <p className="text-[11px] text-slate-500">
-                Official calendar schedule and university operating budget cleared for the research contract.
+                Official calendar duration and approved institutional research operating budget.
               </p>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div>
                 <label className="font-bold text-slate-700 block mb-1">Start Date *</label>
                 <input
@@ -551,12 +501,30 @@ export const UploadPscModal: React.FC<UploadPscModalProps> = ({
                 />
               </div>
 
+              {/* Duration: Auto-calculated & Read-only */}
               <div>
                 <label className="font-bold text-slate-700 block mb-1">Duration</label>
-                <div className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-sm font-semibold text-slate-800 flex items-center gap-1.5">
-                  <Clock className="w-3.5 h-3.5 text-slate-400" />
-                  <span>{durationMonths} months</span>
-                  <span className="text-[10px] text-slate-400 ml-auto font-normal">Auto-calc</span>
+                <div className="px-3 py-2 bg-slate-100/70 border border-slate-200 rounded-sm font-semibold text-slate-800 flex items-center justify-between">
+                  <span className="flex items-center gap-1.5">
+                    <Clock className="w-3.5 h-3.5 text-slate-400" />
+                    {durationMonths} months
+                  </span>
+                  <span className="text-[10px] text-slate-400 font-normal">Auto-calculated</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Read-Only Budget Allocation Section (Step 8.0) */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+              <div>
+                <label className="font-bold text-slate-700 block mb-1">
+                  Budget Allocation Status
+                </label>
+                <div className="px-3 py-2 bg-emerald-50/70 border border-emerald-200 rounded-sm font-bold text-emerald-800 flex items-center justify-between">
+                  <span className="flex items-center gap-1.5">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> Approved ✓
+                  </span>
+                  <span className="text-[10px] text-emerald-700 font-normal">Approved Allocation</span>
                 </div>
               </div>
 
@@ -564,18 +532,10 @@ export const UploadPscModal: React.FC<UploadPscModalProps> = ({
                 <label className="font-bold text-slate-700 block mb-1">
                   Project Operating Budget (₱) *
                 </label>
-                <div className="relative">
-                  <input
-                    type="number"
-                    min="0"
-                    step="1000"
-                    required
-                    value={projectOperatingBudget}
-                    onChange={(e) => setProjectOperatingBudget(parseFloat(e.target.value) || 0)}
-                    className="w-full pl-6 pr-3 py-2 border border-slate-200 rounded-sm font-bold text-slate-900 focus:outline-none focus:ring-1 focus:ring-[#C8102E]"
-                  />
-                  <span className="absolute left-2.5 top-1/2 -translate-y-1/2 font-bold text-slate-400">
-                    ₱
+                <div className="px-3 py-2 bg-slate-100/80 border border-slate-200 rounded-sm font-black text-slate-900 text-sm flex items-center justify-between">
+                  <span>₱{Number(projectOperatingBudget).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                  <span className="text-[10px] text-slate-400 font-sans font-medium uppercase tracking-wider flex items-center gap-1">
+                    <Lock className="w-3 h-3 text-slate-400" /> Read-only
                   </span>
                 </div>
               </div>
@@ -586,16 +546,17 @@ export const UploadPscModal: React.FC<UploadPscModalProps> = ({
           <div className="pt-4 border-t border-slate-200 space-y-3">
             <div>
               <h4 className="font-bold text-slate-900 uppercase tracking-wider text-[11px] flex items-center gap-1.5">
-                <DollarSign className="w-3.5 h-3.5 text-[#C8102E]" /> Compensation Arrangement
+                <Building className="w-3.5 h-3.5 text-[#C8102E]" /> Compensation Arrangement
               </h4>
               <p className="text-[11px] text-slate-500">
-                Specify whether research faculty will receive quarterly honorarium or academic teaching de-loading.
+                Choose between institutional financial honorarium or academic teaching de-loading.
               </p>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {/* Option A: Honorarium */}
               <label
-                className={`p-3 rounded-sm border cursor-pointer transition-all flex items-start gap-2.5 ${
+                className={`p-3.5 rounded-sm border cursor-pointer transition-all flex items-start gap-2.5 ${
                   compensationArrangement === 'honorarium'
                     ? 'bg-red-50/30 border-[#C8102E] ring-1 ring-[#C8102E]'
                     : 'bg-white border-slate-200 hover:bg-slate-50'
@@ -610,15 +571,16 @@ export const UploadPscModal: React.FC<UploadPscModalProps> = ({
                   className="mt-0.5 text-[#C8102E] focus:ring-[#C8102E]"
                 />
                 <div>
-                  <span className="font-bold text-slate-900 block text-xs">Financial Honorarium</span>
-                  <span className="text-[11px] text-slate-500 block mt-0.5">
+                  <span className="font-bold text-slate-900 block text-xs">Honorarium</span>
+                  <span className="text-[11px] text-slate-600 block mt-0.5">
                     Study Leader: <strong>₱4,500 / quarter</strong> &bull; Co-Researcher: <strong>₱2,000 / quarter</strong>
                   </span>
                 </div>
               </label>
 
+              {/* Option B: Teaching De-loading */}
               <label
-                className={`p-3 rounded-sm border cursor-pointer transition-all flex items-start gap-2.5 ${
+                className={`p-3.5 rounded-sm border cursor-pointer transition-all flex items-start gap-2.5 ${
                   compensationArrangement === 'deloading'
                     ? 'bg-red-50/30 border-[#C8102E] ring-1 ring-[#C8102E]'
                     : 'bg-white border-slate-200 hover:bg-slate-50'
@@ -634,8 +596,8 @@ export const UploadPscModal: React.FC<UploadPscModalProps> = ({
                 />
                 <div>
                   <span className="font-bold text-slate-900 block text-xs">Teaching De-loading</span>
-                  <span className="text-[11px] text-slate-500 block mt-0.5">
-                    Faculty teaching unit credit allocation in lieu of monetary honorarium pursuant to PSC terms.
+                  <span className="text-[11px] text-slate-600 block mt-0.5">
+                    <strong>3 units Teaching De-loading</strong> &bull; First Semester + Second Semester
                   </span>
                 </div>
               </label>
@@ -644,92 +606,65 @@ export const UploadPscModal: React.FC<UploadPscModalProps> = ({
             {compensationArrangement === 'honorarium' ? (
               <div className="p-3 bg-slate-50 rounded-sm border border-slate-200 text-[11px] text-slate-600 leading-relaxed">
                 <span className="font-bold text-slate-800 block mb-0.5">Quarterly Honorarium Policy (Clause 4):</span>
-                Honorarium is released quarterly upon submission of required progress reports verified by RPDU. Faculty members receiving honorarium cannot simultaneously claim teaching de-loading for this project.
+                Study Leader receives ₱4,500.00/quarter and each Co-Researcher receives ₱2,000.00/quarter disbursed upon milestone verification. Faculty members receiving honorarium cannot simultaneously claim teaching de-loading for this project.
               </div>
             ) : (
               <div className="p-3 bg-amber-50/60 rounded-sm border border-amber-200 text-[11px] text-amber-800 leading-relaxed">
-                <span className="font-bold block mb-0.5">Teaching De-loading Selected:</span>
-                The Study Leader and Co-Researchers have opted for academic teaching load reduction. No quarterly monetary honorarium will be disbursed from the project operating budget.
+                <span className="font-bold block mb-0.5">Teaching De-loading Terms (Clause 4):</span>
+                Three (3) units teaching de-loading for the First and Second Semester allocated in lieu of monetary honorarium, subject to faculty release time conditions. No monetary honorarium will be disbursed.
               </div>
             )}
           </div>
 
-          {/* Section 5: FIRST PARTY (University Representation) */}
+          {/* Section 5: FIRST PARTY (University Leadership - Read-only) */}
           <div className="pt-4 border-t border-slate-200 space-y-3">
             <div>
               <h4 className="font-bold text-slate-900 uppercase tracking-wider text-[11px] flex items-center gap-1.5">
                 <Building className="w-3.5 h-3.5 text-[#C8102E]" /> First Party (University Leadership)
               </h4>
               <p className="text-[11px] text-slate-500">
-                Official institution representative executing the institutional research grant.
+                Official University representation executing the institutional agreement.
               </p>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="text-[11px] font-semibold text-slate-700 block mb-1">
-                  Institution
+                  Institution (Read-only)
                 </label>
-                <div className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-sm font-semibold text-slate-700">
+                <div className="px-3 py-2 bg-slate-100/70 border border-slate-200 rounded-sm font-semibold text-slate-800">
                   Western Mindanao State University
                 </div>
               </div>
 
               <div>
                 <label className="text-[11px] font-semibold text-slate-700 block mb-1">
-                  University President *
+                  University President (Read-only)
                 </label>
-                <input
-                  type="text"
-                  required
-                  value={firstPartyName}
-                  onChange={(e) => setFirstPartyName(e.target.value)}
-                  placeholder="University President Name"
-                  className="w-full px-3 py-2 border border-slate-200 rounded-sm font-semibold focus:outline-none focus:ring-1 focus:ring-[#C8102E]"
-                />
+                <div className="px-3 py-2 bg-slate-100/70 border border-slate-200 rounded-sm font-semibold text-slate-800">
+                  {firstPartyName}
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Section 6: WORKFLOW STATUS & PSC DOCUMENT ATTACHMENT */}
+          {/* Section 6: PSC DOCUMENT ATTACHMENT */}
           <div className="pt-4 border-t border-slate-200 space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 bg-slate-50/70 border border-slate-200 rounded-sm">
-              <div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block">
-                  Contract Workflow Status
-                </span>
-                <div className="mt-1 flex items-center gap-2">
-                  <span className="px-2.5 py-1 bg-white text-slate-900 border border-slate-300 font-bold text-xs rounded-xs shadow-2xs inline-flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                    {status === 'draft'
-                      ? 'Draft Contract'
-                      : status === 'forwarded_to_president'
-                      ? 'At Office of President'
-                      : status === 'signed_by_president'
-                      ? 'Signed by President'
-                      : status === 'forwarded_to_legal'
-                      ? 'At Legal Office (For Notary)'
-                      : 'Notarized & Cleared'}
-                  </span>
-                  <span className="text-[11px] text-slate-500">
-                    {initialData
-                      ? 'Status transitions are action-driven via dashboard controls'
-                      : 'Initial contract will be saved as Draft'}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Document Upload */}
             <div>
-              <label className="font-bold text-slate-700 block mb-1">
-                Contract Agreement PDF Attachment &mdash; Optional
-              </label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="font-bold text-slate-700 block">
+                  Prepared PSC PDF
+                </label>
+                <span className="text-[10px] text-slate-400">
+                  Optional while saving Draft &bull; Required before forwarding to President
+                </span>
+              </div>
+
               {!uploadedPdf ? (
                 <label className="border border-dashed border-slate-300 hover:border-[#C8102E] p-4 rounded-sm flex flex-col items-center justify-center cursor-pointer transition-colors bg-slate-50/60 hover:bg-red-50/20">
                   <Upload className="w-5 h-5 text-slate-400 mb-1" />
-                  <span className="font-bold text-slate-700 text-xs">Upload Contract Document (.pdf)</span>
-                  <span className="text-[10px] text-slate-400">Click to browse signed or draft PDF</span>
+                  <span className="font-bold text-slate-700 text-xs">Upload Prepared PSC PDF</span>
+                  <span className="text-[10px] text-slate-400">Click to attach official document copy</span>
                   <input
                     type="file"
                     accept=".pdf,application/pdf"
@@ -756,6 +691,22 @@ export const UploadPscModal: React.FC<UploadPscModalProps> = ({
                 </div>
               )}
             </div>
+
+            {/* Workflow Status Display */}
+            <div className="p-3 bg-slate-50/70 border border-slate-200 rounded-sm flex items-center justify-between">
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block">
+                  Workflow State
+                </span>
+                <span className="font-bold text-slate-900 text-xs mt-0.5 inline-flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-slate-400" />
+                  Draft Contract
+                </span>
+              </div>
+              <span className="text-[11px] text-slate-500">
+                Advances to President &rarr; Legal Office via dashboard action buttons
+              </span>
+            </div>
           </div>
 
           {/* Modal Footer Actions */}
@@ -771,7 +722,7 @@ export const UploadPscModal: React.FC<UploadPscModalProps> = ({
               type="submit"
               className="px-5 py-2 bg-[#C8102E] hover:bg-[#A00D26] text-white font-semibold rounded-sm shadow-xs transition-colors cursor-pointer inline-flex items-center gap-1.5"
             >
-              <Check className="w-4 h-4" /> {initialData ? 'Save Changes' : 'Save Contract'}
+              <Check className="w-4 h-4" /> Save Draft
             </button>
           </div>
         </form>
@@ -779,3 +730,5 @@ export const UploadPscModal: React.FC<UploadPscModalProps> = ({
     </div>
   );
 };
+
+export default UploadPscModal;

@@ -297,26 +297,31 @@ export interface ProfessionalServiceContract {
   updatedAt: string;
 }
 
-export type InceptionMeetingStatus = 'scheduled' | 'completed' | 'postponed' | 'cancelled';
+export type InceptionMeetingStatus = 'scheduled' | 'completed' | 'rescheduled' | 'cancelled';
 
 export interface InceptionMeeting {
   id: string;
+  contractId?: string;
+  contractNumber?: string;
   proposalId: string;
   proposalCode: string;
   projectTitle: string;
-  leadInvestigator: string;
+  leadInvestigator: string; // Study Leader Name
+  studyLeaderDepartment?: string;
+  studyLeaderCollege?: string;
+  coResearchers?: Array<{ id: string; name: string; college?: string; department?: string }>;
   meetingTitle: string;
   meetingDate: string;
   meetingTime: string;
-  venue: string;
-  meetingType: 'in_person' | 'virtual' | 'hybrid';
-  virtualLink?: string;
+  venue: string; // Physical Room/Venue (Face-to-Face only)
+  meetingType: 'in_person'; // Inception meetings are strictly Face-to-Face (F2F)
   attendees: string[];
-  agenda: string;
+  agenda?: string;
   specialOrderNumber?: string;
   specialOrderStatus: 'pending_request' | 'forwarded_to_op' | 'so_issued';
   specialOrderDate?: string;
   status: InceptionMeetingStatus;
+  completedDate?: string;
   minutesPdf?: {
     name: string;
     size: number;

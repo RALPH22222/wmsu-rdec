@@ -11,8 +11,9 @@ import { EvaluatorLayout } from './layouts/EvaluatorLayout';
 import Layout from './layouts/Layout';
 import { AdminDashboard } from './pages/admin/AdminDashboard';
 import { AdminPreliminaryScreeningPage } from './pages/admin/AdminPreliminaryScreeningPage';
-import { AdminClearanceContractsPage } from './pages/admin/AdminClearanceContractsPage';
-import { AdminNotarizationSchedulingPage } from './pages/admin/AdminNotarizationSchedulingPage';
+import { AdminTechnicalClearancePage } from './pages/admin/AdminTechnicalClearancePage';
+import { AdminContractsNotarizationPage } from './pages/admin/AdminContractsNotarizationPage';
+import { AdminInceptionSchedulingPage } from './pages/admin/AdminInceptionSchedulingPage';
 import { AdminLetterDeskPage } from './pages/admin/AdminLetterDeskPage';
 import { RpduDashboard } from './pages/rpdu/RpduDashboard';
 import { CallFormPage } from './pages/CallFormPage';
@@ -25,8 +26,9 @@ import EvaluatorDashboard from './pages/evaluator/evaluatorDashboard';
 import { EvaluatorReviewsPage } from './pages/evaluator/EvaluatorReviewsPage';
 import { EvaluatorLettersPage } from './pages/evaluator/EvaluatorLettersPage';
 import { PreliminaryScreeningPage } from './pages/screening/PreliminaryScreeningPage';
-import { ClearanceContractsPage } from './pages/rpdu/ClearanceContractsPage';
-import { NotarizationSchedulingPage } from './pages/rpdu/NotarizationSchedulingPage';
+import { TechnicalClearancePage } from './pages/rpdu/TechnicalClearancePage';
+import { ContractsNotarizationPage } from './pages/rpdu/ContractsNotarizationPage';
+import { InceptionSchedulingPage } from './pages/rpdu/InceptionSchedulingPage';
 import { LetterDeskPage } from './pages/rpdu/LetterDeskPage';
 import Login from './pages/auth/Login';
 import Register from './pages/auth/Register';
@@ -110,8 +112,10 @@ export function App() {
                 <Route path="/admin/calls/:callId/edit" element={<CallFormPage role="admin" />} />
                 <Route path="/admin/screening" element={<AdminPreliminaryScreeningPage />} />
                 <Route path="/admin/letters" element={<AdminLetterDeskPage />} />
-                <Route path="/admin/contracts" element={<AdminClearanceContractsPage />} />
-                <Route path="/admin/notarization" element={<AdminNotarizationSchedulingPage />} />
+                <Route path="/admin/clearance" element={<AdminTechnicalClearancePage />} />
+                <Route path="/admin/contracts" element={<AdminContractsNotarizationPage />} />
+                <Route path="/admin/scheduling" element={<AdminInceptionSchedulingPage />} />
+                <Route path="/admin/notarization" element={<AdminInceptionSchedulingPage />} />
               </Route>
 
               {/* Dedicated RPDU Layout */}
@@ -122,8 +126,10 @@ export function App() {
                 <Route path="/rpdu/screening" element={<PreliminaryScreeningPage role="rpdu" />} />
                 <Route path="/rpdu/passed-proposals" element={<PassedProposalsPage />} />
                 <Route path="/rpdu/letters" element={<LetterDeskPage />} />
-                <Route path="/rpdu/contracts" element={<ClearanceContractsPage />} />
-                <Route path="/rpdu/notarization" element={<NotarizationSchedulingPage />} />
+                <Route path="/rpdu/clearance" element={<TechnicalClearancePage />} />
+                <Route path="/rpdu/contracts" element={<ContractsNotarizationPage />} />
+                <Route path="/rpdu/scheduling" element={<InceptionSchedulingPage />} />
+                <Route path="/rpdu/notarization" element={<InceptionSchedulingPage />} />
               </Route>
             </Route>
 
