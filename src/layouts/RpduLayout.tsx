@@ -8,6 +8,7 @@ export const RpduLayout: React.FC = () => {
   const location = useLocation();
 
   const getPageTitle = () => {
+    if (location.pathname.startsWith('/rpdu/letters')) return 'Official Letters';
     if (location.pathname.startsWith('/rpdu/screening')) return 'Preliminary Screening — Concept Proposals';
     if (location.pathname.startsWith('/rpdu/contracts')) return 'Clearance & Professional Service Contracts';
     if (location.pathname.startsWith('/rpdu/notarization')) return 'Contract Notarization & Inception Scheduling';

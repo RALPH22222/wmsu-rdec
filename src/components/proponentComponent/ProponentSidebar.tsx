@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   FileText,
+  MailCheck,
   DollarSign,
   X,
   User as UserIcon,
@@ -32,6 +33,7 @@ export const ProponentSidebar: React.FC<ProponentSidebarProps> = ({
     location.pathname === '/proponent/submit' ||
     location.pathname === '/dashboard';
   const isBudgetActive = location.pathname === '/proponent/budget';
+  const isLettersActive = location.pathname === '/proponent/letters';
   const isProfileActive = location.pathname === '/proponent/profile';
 
   const fullName = formatUserFullName(profile, user, 'Proponent User');
@@ -132,6 +134,19 @@ export const ProponentSidebar: React.FC<ProponentSidebarProps> = ({
                 >
                   <DollarSign className={`w-5 h-5 shrink-0 ${isBudgetActive ? 'text-white' : 'text-slate-400'}`} />
                   <span className="truncate">Budget Allocation</span>
+                </Link>
+
+                <Link
+                  to="/proponent/letters"
+                  onClick={onCloseMobile}
+                  className={`w-full flex items-center gap-3.5 px-4 py-3 text-sm font-semibold rounded-sm text-left transition-colors border ${
+                    isLettersActive
+                      ? 'bg-[#C8102E] text-white shadow-xs border-[#C8102E]'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50 border-transparent'
+                  }`}
+                >
+                  <MailCheck className={`w-5 h-5 shrink-0 ${isLettersActive ? 'text-white' : 'text-slate-400'}`} />
+                  <span className="truncate">Screening Letters</span>
                 </Link>
               </nav>
             </div>
