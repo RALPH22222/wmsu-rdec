@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { ArrowUpRight, FileText, Printer } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { API_BASE_URL } from '../../config/apiConfig';
-import { SignatureField } from '../../components/rpduComponent/SignatureField';
+import { SignatureField } from '../../components/adminComponent/SignatureField';
 
 type Template = 'WMSU-RPDU-LET-001.01' | 'WMSU-RPDU-LET-003.00';
 type Source = { id: string; title: string; proponentName: string; revisionReady: boolean; reviewers: { reviewId: string; name: string }[] };
@@ -17,7 +17,7 @@ const INVITATION: Template = 'WMSU-RPDU-LET-003.00';
 const safeUrl = (raw: string) => {
   try { return new URL(raw).protocol === 'https:' ? raw : null; } catch { return null; }
 };
-export function LetterDeskPage() {
+export function AdminLetterDeskPage() {
   const previewFrame = useRef<HTMLIFrameElement>(null);
   const { session, profile, loadingProfile } = useAuth();
   const [sources, setSources] = useState<Source[]>([]);
@@ -143,3 +143,4 @@ export function LetterDeskPage() {
     <section aria-labelledby="issued-title" className="space-y-4 pb-12"><h2 id="issued-title" className="text-lg font-semibold">Issued letters</h2>{issued.length ? <div className="space-y-2">{issued.map((item) => <button key={item.id} type="button" onClick={() => openIssued(item.id)} className="flex w-full flex-col gap-1 bg-white p-4 text-left hover:bg-neutral-50 focus-visible:outline-2 focus-visible:outline-red-800 sm:flex-row sm:items-center sm:justify-between"><span><span className="block text-sm font-semibold">{item.template_variables.title}</span><span className="block text-xs text-slate-600">{item.template_code} · {item.template_variables.recipientName}</span></span><span className="text-xs text-slate-600">Issued {new Date(item.issued_at).toLocaleDateString('en-PH', { timeZone: 'Asia/Manila', year: 'numeric', month: 'short', day: 'numeric' })}</span></button>)}</div> : <p className="bg-white p-5 text-sm text-slate-600">No letters have been issued yet.</p>}</section>
   </div>;
 }
+

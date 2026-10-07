@@ -10,6 +10,10 @@ import { RpduLayout } from './layouts/RpduLayout';
 import { EvaluatorLayout } from './layouts/EvaluatorLayout';
 import Layout from './layouts/Layout';
 import { AdminDashboard } from './pages/admin/AdminDashboard';
+import { AdminPreliminaryScreeningPage } from './pages/admin/AdminPreliminaryScreeningPage';
+import { AdminClearanceContractsPage } from './pages/admin/AdminClearanceContractsPage';
+import { AdminNotarizationSchedulingPage } from './pages/admin/AdminNotarizationSchedulingPage';
+import { AdminLetterDeskPage } from './pages/admin/AdminLetterDeskPage';
 import { RpduDashboard } from './pages/rpdu/RpduDashboard';
 import ProponentDashboard from './pages/proponents/ProponentDashboard';
 import BudgetAllocationPage from './pages/proponents/BudgetAllocationPage';
@@ -100,10 +104,10 @@ export function App() {
               {/* Dedicated Admin Layout */}
               <Route element={<AdminLayout />}>
                 <Route path="/admin" element={<AdminDashboard />} />
-                <Route path="/admin/screening" element={<PreliminaryScreeningPage role="admin" />} />
-                <Route path="/admin/letters" element={<LetterDeskPage />} />
-                <Route path="/admin/contracts" element={<ClearanceContractsPage />} />
-                <Route path="/admin/notarization" element={<NotarizationSchedulingPage />} />
+                <Route path="/admin/screening" element={<AdminPreliminaryScreeningPage />} />
+                <Route path="/admin/letters" element={<AdminLetterDeskPage />} />
+                <Route path="/admin/contracts" element={<AdminClearanceContractsPage />} />
+                <Route path="/admin/notarization" element={<AdminNotarizationSchedulingPage />} />
               </Route>
 
               {/* Dedicated RPDU Layout */}

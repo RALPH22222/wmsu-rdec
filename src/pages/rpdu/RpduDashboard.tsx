@@ -4,7 +4,7 @@ import { Calendar, FileCheck, FileText, Layers, Users, ClipboardCheck } from 'lu
 import { useCallForProposals } from '../../context/CallForProposalsContext';
 import { useAuth } from '../../context/AuthContext';
 import { formatUserFullName } from '../../utils/userUtils';
-import { CallForProposalsManager } from '../../components/adminComponent/CallForProposalsManager';
+import { CallForProposalsManager } from '../../components/rpduComponent/CallForProposalsManager';
 
 export const RpduDashboard: React.FC = () => {
   const navigate = useNavigate();

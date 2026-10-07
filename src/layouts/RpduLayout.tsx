@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { Menu, Bell, ChevronRight } from 'lucide-react';
-import { Sidebar } from '../components/Sidebar';
+import { RpduSidebar } from '../components/rpduComponent/RpduSidebar';
 
 export const RpduLayout: React.FC = () => {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
@@ -23,7 +23,7 @@ export const RpduLayout: React.FC = () => {
   return (
     <div className="min-h-screen bg-slate-100 flex flex-col lg:flex-row text-slate-800 font-sans selection:bg-[#C8102E] selection:text-white">
       {/* Shared Sidebar */}
-      <Sidebar
+      <RpduSidebar
         mobileOpen={mobileSidebarOpen}
         onCloseMobile={() => setMobileSidebarOpen(false)}
       />

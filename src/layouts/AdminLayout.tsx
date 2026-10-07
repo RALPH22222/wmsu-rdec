@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { Menu, Bell, ChevronRight } from 'lucide-react';
-import { Sidebar } from '../components/Sidebar';
+import { AdminSidebar } from '../components/adminComponent/AdminSidebar';
 
 export const AdminLayout: React.FC = () => {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
@@ -21,7 +21,7 @@ export const AdminLayout: React.FC = () => {
   return (
     <div className="min-h-screen bg-slate-100 flex flex-col lg:flex-row text-slate-800 font-sans selection:bg-brand selection:text-white">
       {/* Shared Sidebar */}
-      <Sidebar
+      <AdminSidebar
         mobileOpen={mobileSidebarOpen}
         onCloseMobile={() => setMobileSidebarOpen(false)}
       />
