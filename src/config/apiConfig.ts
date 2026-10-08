@@ -31,6 +31,7 @@ export const API_ENDPOINTS = {
 
   // RPDU Role Endpoints (Ready for expansion)
   RPDU: {
+    TRACKING: `${API_BASE_URL}/proposal-tracking`,
     SCREENING: `${API_BASE_URL}/screening/proposals`,
   },
 

@@ -4,6 +4,7 @@ import { Calendar, FileCheck, FileText, Layers, Users, ClipboardCheck } from 'lu
 import { useCallForProposals } from '../../context/CallForProposalsContext';
 import { useAuth } from '../../context/AuthContext';
 import { formatUserFullName } from '../../utils/userUtils';
+import { ProposalTracking } from '../../components/ProposalTracking';
 import { CallForProposalsManager } from '../../components/adminComponent/CallForProposalsManager';
 
 export const AdminDashboard: React.FC = () => {
@@ -134,9 +135,9 @@ export const AdminDashboard: React.FC = () => {
               }`}
           >
             <FileCheck className="w-4 h-4" />
-            <span>Proposals Review</span>
+            <span>Proposal Tracking</span>
             <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 ml-1">
-              {totalSubmissions}
+              {passedScreeningCount}
             </span>
           </button>
 
@@ -157,15 +158,7 @@ export const AdminDashboard: React.FC = () => {
       {/* Tab Panels */}
       {activeTab === 'calls' && <CallForProposalsManager />}
 
-      {activeTab === 'proposals' && (
-        <div className="bg-white p-12 text-center rounded-sm border border-slate-200 shadow-xs">
-          <FileCheck className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-          <h3 className="text-lg font-bold text-slate-800">Proposals Management Pipeline</h3>
-          <p className="text-xs sm:text-sm text-slate-500 max-w-md mx-auto mt-1">
-            Faculty submissions under active calls will populate here for eligibility checks, peer evaluation assignment, and grant approvals.
-          </p>
-        </div>
-      )}
+      {activeTab === 'proposals' && <ProposalTracking role="admin" />}
 
       {activeTab === 'evaluators' && (
         <div className="bg-white p-12 text-center rounded-sm border border-slate-200 shadow-xs">

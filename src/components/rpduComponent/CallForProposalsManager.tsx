@@ -337,7 +337,7 @@ export const CallForProposalsManager: React.FC = () => {
 
                     <div className="flex items-center gap-1 text-slate-600">
                       <span className="font-bold text-emerald-700">{call.submissionCount}</span>
-                      <span>proposals submitted</span>
+                      <span>submitted proposals</span>
                     </div>
 
                     {call.createdAt && (
