@@ -302,6 +302,17 @@ export interface ProfessionalServiceContract {
   updatedAt: string;
 }
 
+export interface InceptionProjectItem {
+  contractId?: string;
+  contractNumber?: string;
+  proposalId: string;
+  proposalCode: string;
+  projectTitle: string;
+  leadInvestigator: string;
+  studyLeaderCollege?: string;
+  studyLeaderDepartment?: string;
+}
+
 export type InceptionMeetingStatus = 'scheduled' | 'completed' | 'rescheduled' | 'cancelled';
 
 export interface InceptionMeeting {
@@ -314,6 +325,7 @@ export interface InceptionMeeting {
   leadInvestigator: string; // Study Leader Name
   studyLeaderDepartment?: string;
   studyLeaderCollege?: string;
+  projects?: InceptionProjectItem[];
   coResearchers?: Array<{ id: string; name: string; college?: string; department?: string }>;
   meetingTitle: string;
   meetingDate: string;

@@ -34,9 +34,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [authError, setAuthError] = useState<string | null>(null);
   const profileRequest = useRef(0);
 
-  const fetchUserProfile = useCallback(async (token: string) => {
+  const fetchUserProfile = useCallback(async (token: string, isSilent = false) => {
     const request = ++profileRequest.current;
-    setLoadingProfile(true);
+    if (!isSilent) setLoadingProfile(true);
     try {
       const data = await getProfile(token);
       if (!data?.portal_access?.allowed) throw new Error('Unable to verify access to your Call for Proposals window.');
@@ -46,28 +46,20 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     } catch (error) {
       if (request !== profileRequest.current) return;
       setAuthError(error instanceof Error ? error.message : 'Unable to verify portal access.');
-      setProfile(null);
-      await supabase.auth.signOut();
-      setSession(null);
-      setUser(null);
-      setProfile(null);
+      // Never forcefully destroy session or sign out on background revalidation errors
+      if (!isSilent) {
+        setProfile(null);
+      }
     } finally {
-      if (request === profileRequest.current) setLoadingProfile(false);
+      if (request === profileRequest.current && !isSilent) setLoadingProfile(false);
     }
   }, []);
 
-  const refreshProfile = useCallback(async () => {
+  const refreshProfile = useCallback(async (isSilent = true) => {
     if (session?.access_token) {
-      await fetchUserProfile(session.access_token);
+      await fetchUserProfile(session.access_token, isSilent);
     }
   }, [session, fetchUserProfile]);
-
-  useEffect(() => {
-    if (!session?.access_token) return;
-    const checkAccess = () => { void refreshProfile(); };
-    window.addEventListener('focus', checkAccess);
-    return () => window.removeEventListener('focus', checkAccess);
-  }, [session?.access_token, refreshProfile]);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Award, Calendar, CalendarCheck, ClipboardCheck, FileText, LogOut, Mail, User, X } from 'lucide-react';
+import { Calendar, CalendarCheck, ClipboardCheck, LogOut, Mail, User, X } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { formatUserFullName } from '../../utils/userUtils';
@@ -10,9 +10,7 @@ export type AdminSidebarProps = { mobileOpen?: boolean; onCloseMobile?: () => vo
 const navItems = [
   { name: 'Call for Proposals', path: '/admin', icon: Calendar },
   { name: 'Preliminary Screening', path: '/admin/screening', icon: ClipboardCheck },
-  { name: 'Official Letters', path: '/admin/letters', icon: Mail },
-  { name: 'Technical Clearance', path: '/admin/clearance', icon: Award },
-  { name: 'Contracts & Notarization', path: '/admin/contracts', icon: FileText },
+  { name: 'Official Letters & Contracts', path: '/admin/letters', icon: Mail },
   { name: 'Inception Scheduling', path: '/admin/scheduling', icon: CalendarCheck },
 ];
 
