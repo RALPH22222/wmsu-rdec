@@ -22,7 +22,7 @@ export const NotarizePscModal: React.FC<NotarizePscModalProps> = ({
   const [seriesYear, setSeriesYear] = useState(() => `Series of ${new Date().getFullYear()}`);
   const [notarizedDate, setNotarizedDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [notarizedBy, setNotarizedBy] = useState('Legal Office Staff - Notarial Registry');
-  const [notes, setNotes] = useState('Verified signed by WMSU President and Principal Investigator. Duly recorded in Notarial Register.');
+  const [notes, setNotes] = useState('Verified signed by WMSU President and Study Leader. Duly recorded in Notarial Register.');
   const [scannedPdf, setScannedPdf] = useState<{ name: string; size: number; uploadedAt: string; dataUrl?: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
 

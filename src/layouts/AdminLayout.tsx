@@ -10,8 +10,9 @@ export const AdminLayout: React.FC = () => {
   const getPageTitle = () => {
     if (location.pathname.startsWith('/admin/letters')) return 'Official Letters';
     if (location.pathname.startsWith('/admin/screening')) return 'Preliminary Screening — Concept Proposals';
-    if (location.pathname.startsWith('/admin/contracts')) return 'Clearance & Professional Service Contracts';
-    if (location.pathname.startsWith('/admin/notarization')) return 'Contract Notarization & Inception Scheduling';
+    if (location.pathname.startsWith('/admin/clearance')) return 'Technical Review Clearance (COTR)';
+    if (location.pathname.startsWith('/admin/contracts')) return 'Contracts & Notarization (PSC)';
+    if (location.pathname.startsWith('/admin/scheduling') || location.pathname.startsWith('/admin/notarization')) return 'Inception Meetings & Special Order Scheduling';
     if (location.pathname.startsWith('/admin/proposals')) return 'Proposals Queue';
     if (location.pathname.startsWith('/admin/evaluators')) return 'Evaluators Panel';
     return 'Call for Proposals & Grants Management';

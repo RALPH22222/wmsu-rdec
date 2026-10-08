@@ -11,8 +11,9 @@ export const RpduLayout: React.FC = () => {
     if (location.pathname.startsWith('/rpdu/letters')) return 'Official Letters';
     if (location.pathname.startsWith('/rpdu/passed-proposals')) return 'Passed Proposals';
     if (location.pathname.startsWith('/rpdu/screening')) return 'Preliminary Screening — Concept Proposals';
-    if (location.pathname.startsWith('/rpdu/contracts')) return 'Clearance & Professional Service Contracts';
-    if (location.pathname.startsWith('/rpdu/notarization')) return 'Contract Notarization & Inception Scheduling';
+    if (location.pathname.startsWith('/rpdu/clearance')) return 'Technical Review Clearance (COTR)';
+    if (location.pathname.startsWith('/rpdu/contracts')) return 'Contracts & Notarization (PSC)';
+    if (location.pathname.startsWith('/rpdu/scheduling') || location.pathname.startsWith('/rpdu/notarization')) return 'Inception Meetings & Special Order Scheduling';
     if (location.pathname.startsWith('/rpdu/proposals')) return 'Proposals Queue';
     if (location.pathname.startsWith('/rpdu/evaluators')) return 'Evaluators Panel';
     if (location.pathname.startsWith('/rpdu/evaluations')) return 'Technical Evaluations Pipeline';

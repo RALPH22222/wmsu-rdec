@@ -211,7 +211,7 @@ export const ViewPscModal: React.FC<ViewPscModalProps> = ({
               </p>
               {contract.compensationArrangement === 'deloading' ? (
                 <p className="mt-1 text-slate-700 italic">
-                  <strong>Compensation:</strong> In accordance with university research policy, the Second Party has opted for academic teaching unit de-loading in lieu of monetary honorarium disbursements.
+                  <strong>Compensation:</strong> In accordance with university research policy (Clause 4), the Second Party has opted for <strong>three (3) units Teaching de-loading for the First and Second Semester</strong> in lieu of monetary honorarium disbursements, subject to faculty release time conditions.
                 </p>
               ) : (
                 <p className="mt-1 text-slate-700">
@@ -246,7 +246,7 @@ export const ViewPscModal: React.FC<ViewPscModalProps> = ({
 
               <div className="space-y-1">
                 <div className="h-10 flex items-center justify-center italic text-xs text-slate-400">
-                  [Principal Investigator Signature]
+                  [Study Leader Signature]
                 </div>
                 <div className="w-56 border-b border-slate-900 mx-auto" />
                 <p className="font-black text-xs uppercase text-slate-900">{contract.studyLeaderName || contract.proponentName}</p>

@@ -11,6 +11,7 @@ import {
   deleteCallApi,
 } from '../lib/callApi';
 import { useAuth } from './AuthContext';
+import { getMyConceptProposalsApi, submitConceptProposalApi, type ConceptProposalPayload } from '../lib/conceptProposalApi';
 
 interface CallForProposalsContextType {
   calls: CallForProposals[];
@@ -30,7 +31,7 @@ interface CallForProposalsContextType {
   failConceptProposal: (id: string, reasons: string[], remarks: string, criteria?: ConceptProposalCriteria, sectionComments?: ScreeningSectionComments) => void;
   resetScreeningStatus: (id: string) => void;
   bulkPassConceptProposals: (ids: string[]) => void;
-  submitConceptProposal: (proposal: Omit<ConceptProposal, 'id' | 'code' | 'submittedAt' | 'submittedTime' | 'screeningStatus'>) => ConceptProposal;
+  submitConceptProposal: (proposal: ConceptProposalPayload) => Promise<ConceptProposal>;
   toastMessage: string | null;
   showToast: (msg: string) => void;
 }
@@ -52,12 +53,12 @@ const screeningRequest = async (token: string | undefined, path = '', init: Requ
 };
 
 export const CallForProposalsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { session, loading: authLoading } = useAuth();
+  const { session, profile, loading: authLoading } = useAuth();
   const [calls, setCalls] = useState<CallForProposals[]>([]);
   const [loadingCalls, setLoadingCalls] = useState(true);
   const [conceptProposals, setConceptProposals] = useState<ConceptProposal[]>([]);
 
-  const loadCalls = useCallback(async (token?: string) => {
+  const loadCalls = useCallback(async (token = session?.access_token) => {
     try {
       setLoadingCalls(true);
       const data = await fetchCalls(token);
@@ -67,17 +68,24 @@ export const CallForProposalsProvider: React.FC<{ children: React.ReactNode }> =
     } finally {
       setLoadingCalls(false);
     }
-  }, []);
+  }, [session?.access_token]);
 
-  const loadConceptProposals = useCallback(async (token?: string) => {
+  const loadConceptProposals = useCallback(async (token = session?.access_token) => {
+    if (!token || !profile) {
+      setConceptProposals([]);
+      return;
+    }
     try {
-      setConceptProposals(await screeningRequest(token));
+      const data = ['RPDU', 'ADMIN'].includes(profile.role)
+        ? await screeningRequest(token)
+        : await getMyConceptProposalsApi(token);
+      setConceptProposals(data);
       localStorage.removeItem('wmsu_concept_proposals_screening');
     } catch (err) {
-      console.error('Failed to load screening proposals from backend:', err);
+      console.error('Failed to load concept proposals from backend:', err);
       setConceptProposals([]);
     }
-  }, []);
+  }, [session?.access_token, profile]);
 
   // Only fetch once auth has resolved so we always have a valid token.
   useEffect(() => {
@@ -219,50 +227,12 @@ export const CallForProposalsProvider: React.FC<{ children: React.ReactNode }> =
       .catch((error) => showToast(`Failed to save screening decisions: ${error.message}`));
   };
 
-  const submitConceptProposal = (
-    proposalData: Omit<ConceptProposal, 'id' | 'code' | 'submittedAt' | 'submittedTime' | 'screeningStatus'>
-  ): ConceptProposal => {
-    const now = new Date();
-    const dateStr = now.toISOString().split('T')[0];
-    const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    const id = `cp-${Date.now()}`;
-
-    const collegeMap: Record<string, string> = {
-      'College of Science & Mathematics': 'CSM',
-      'College of Agriculture & Forestry': 'CAF',
-      'College of Engineering': 'COE',
-      'College of Computing Studies': 'CCS',
-      'College of Liberal Arts': 'CLA',
-      'College of Nursing': 'CN',
-      'College of Teacher Education': 'CTE',
-      'College of Architecture': 'CA',
-    };
-    const collegeAbbr = collegeMap[proposalData.college] || 'WMSU';
-    const count = conceptProposals.length + 1;
-    const code = `CP-2027-${collegeAbbr}-${String(count).padStart(2, '0')}`;
-
-    const newProposal: ConceptProposal = {
-      ...proposalData,
-      id,
-      code,
-      submittedAt: dateStr,
-      submittedTime: timeStr,
-      screeningStatus: 'pending',
-    };
-
+  const submitConceptProposal = async (proposalData: ConceptProposalPayload): Promise<ConceptProposal> => {
+    if (!session?.access_token) throw new Error('Please sign in before submitting a proposal.');
+    const newProposal = await submitConceptProposalApi(proposalData, session.access_token);
     setConceptProposals((prev) => [newProposal, ...prev]);
-
-    if (proposalData.callId) {
-      setCalls((prev) =>
-        prev.map((c) =>
-          c.id === proposalData.callId
-            ? { ...c, submissionCount: (c.submissionCount || 0) + 1 }
-            : c
-        )
-      );
-    }
-
-    showToast(`Concept Proposal "${code}" successfully submitted for Preliminary Screening.`);
+    await loadCalls();
+    showToast(`Concept Proposal "${newProposal.code}" successfully submitted for Preliminary Screening.`);
     return newProposal;
   };
 

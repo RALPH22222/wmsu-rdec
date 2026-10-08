@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { X, Calendar, FileText, CheckCircle, Edit3, FilePlus, AlertCircle, Lock, Upload, Trash2, ExternalLink } from 'lucide-react';
-import type { CallForProposals, CallStatus } from '../../../types';
-import { parseMemoDetails, formatFileSize, openMemoInNewTab, type MemoDetails } from '../../../utils/memoUtils';
+import { Calendar, FileText, CheckCircle, Edit3, FilePlus, AlertCircle, Lock, Upload, Trash2, ExternalLink } from 'lucide-react';
+import type { CallForProposals, CallStatus } from '../../types';
+import { parseMemoDetails, formatFileSize, openMemoInNewTab, type MemoDetails } from '../../utils/memoUtils';
 
 const TOPIC_CATEGORIES = {
   'Science and Technology': [
@@ -28,10 +28,9 @@ const TOPIC_CATEGORIES = {
 
 const ALL_TOPICS = Object.values(TOPIC_CATEGORIES).flat();
 
-interface CallFormModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  onSave: (callData: Omit<CallForProposals, 'id' | 'submissionCount' | 'acceptedCount' | 'underReviewCount' | 'rejectedCount' | 'createdAt' | 'updatedAt'>) => void;
+interface CallFormProps {
+  onBack: () => void;
+  onSave: (callData: Omit<CallForProposals, 'id' | 'submissionCount' | 'acceptedCount' | 'underReviewCount' | 'rejectedCount' | 'createdAt' | 'updatedAt'>) => void | Promise<void>;
   initialData?: CallForProposals | null;
   existingCalls?: CallForProposals[];
 }
@@ -40,16 +39,15 @@ const TITLE_MAX = 150;
 const DESCRIPTION_MAX = 2000;
 const MAX_DRAFTS = 4;
 
-export const CallFormModal: React.FC<CallFormModalProps> = ({
-  isOpen,
-  onClose,
+export const CallForm: React.FC<CallFormProps> = ({
+  onBack,
   onSave,
   initialData,
   existingCalls = [],
 }) => {
   const isEditing = !!initialData;
   const currentYear = new Date().getFullYear();
-  const upcomingYear = currentYear + 1;
+  const availableYears = Array.from({ length: 5 }, (_, index) => currentYear + index);
   const todayStr = new Date().toISOString().split('T')[0];
 
   const otherOpenCall = existingCalls.find((c) => {
@@ -74,12 +72,13 @@ export const CallFormModal: React.FC<CallFormModalProps> = ({
   const [memoDetails, setMemoDetails] = useState<MemoDetails | null>(null);
   const [memoFile, setMemoFile] = useState<File | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     setFormError(null);
     if (initialData) {
       setTitle(initialData.title);
-      setFiscalYear(initialData.fiscalYear || currentYear);
+      setFiscalYear(availableYears.includes(initialData.fiscalYear) ? initialData.fiscalYear : currentYear);
       const rawStatus = String(initialData.status).toUpperCase();
       setStatus(rawStatus === 'DRAFT' ? 'DRAFT' : 'OPEN');
       setDescription(initialData.description || '');
@@ -104,7 +103,7 @@ export const CallFormModal: React.FC<CallFormModalProps> = ({
       setMemoDetails(null);
       setMemoFile(null);
     }
-  }, [initialData, isOpen, otherOpenCall]);
+  }, [initialData, otherOpenCall]);
 
   // Ensure status switches to DRAFT when creating a new call while an active call exists
   useEffect(() => {
@@ -136,23 +135,16 @@ export const CallFormModal: React.FC<CallFormModalProps> = ({
     setMemoDetails(null);
   };
 
-  useEffect(() => {
-    if (isOpen) {
-      const originalOverflow = document.body.style.overflow;
-      document.body.style.overflow = 'hidden';
-      return () => {
-        document.body.style.overflow = originalOverflow;
-      };
-    }
-  }, [isOpen]);
-
-  if (!isOpen) return null;
-
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSaving) return;
     setFormError(null);
 
     const cleanTitle = title.trim();
+    if (!availableYears.includes(fiscalYear)) {
+      setFormError(`Please select a year from ${currentYear} to ${currentYear + 4}.`);
+      return;
+    }
     if (!cleanTitle) {
       setFormError('Please enter a call title.');
       return;
@@ -207,33 +199,40 @@ export const CallFormModal: React.FC<CallFormModalProps> = ({
       }))
       .filter((group) => group.subtopics.length > 0);
 
-    onSave({
-      title: cleanTitle,
-      code: initialData?.code || `CALL-${fiscalYear}-${Math.floor(Math.random() * 90 + 10)}`,
-      fiscalYear,
-      startDate,
-      endDate,
-      startTime: initialData?.startTime || '08:00',
-      endTime: initialData?.endTime || '17:00',
-      status,
-      description: description.trim(),
-      memo: memoVal,
-      memoAttachment: memoVal,
-      memoFileUrl: memoVal,
-      maxBudgetPerProject: initialData?.maxBudgetPerProject ?? 500000,
-      totalGrantBudget: initialData?.totalGrantBudget ?? 5000000,
-      priorityAreas: priorityAreas,
-      priorityTopics: structuredTopics,
-      eligibleRoles: initialData?.eligibleRoles ?? ['Regular Faculty'],
-      requiredForms: initialData?.requiredForms ?? [],
-    });
-    onClose();
+    setIsSaving(true);
+    try {
+      await onSave({
+        title: cleanTitle,
+        code: initialData?.code || `CALL-${fiscalYear}-${Math.floor(Math.random() * 90 + 10)}`,
+        fiscalYear,
+        startDate,
+        endDate,
+        startTime: initialData?.startTime || '08:00',
+        endTime: initialData?.endTime || '17:00',
+        status,
+        description: description.trim(),
+        memo: memoVal,
+        memoAttachment: memoVal,
+        memoFileUrl: memoVal,
+        maxBudgetPerProject: initialData?.maxBudgetPerProject ?? 500000,
+        totalGrantBudget: initialData?.totalGrantBudget ?? 5000000,
+        priorityAreas: priorityAreas,
+        priorityTopics: structuredTopics,
+        eligibleRoles: initialData?.eligibleRoles ?? ['Regular Faculty'],
+        requiredForms: initialData?.requiredForms ?? [],
+      });
+      onBack();
+    } catch (error) {
+      setFormError(error instanceof Error ? error.message : 'Failed to save call. Please try again.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-3 sm:p-4 overflow-hidden">
-      <div className="bg-white rounded-sm shadow-2xl border border-slate-200 w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden my-auto">
+    <div className="w-full">
+      <div className="bg-white rounded-sm shadow-sm border border-slate-200 w-full overflow-hidden">
         {/* Header */}
         <div className="bg-white px-6 py-4.5 border-b border-slate-200/80 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2.5">
@@ -253,19 +252,11 @@ export const CallFormModal: React.FC<CallFormModalProps> = ({
               </p>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
-            aria-label="Close Modal"
-          >
-            <X className="w-5 h-5" />
-          </button>
         </div>
 
         {/* Form Body */}
-        <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden min-h-0">
-          <div className="p-6 space-y-6 overflow-y-auto flex-1">
+        <form onSubmit={handleSubmit} aria-busy={isSaving} className="flex flex-col">
+          <fieldset disabled={isSaving} className="min-w-0 p-4 sm:p-6 space-y-6">
             {/* Basic Info */}
             <div className="space-y-4">
               <h4 className="text-xs uppercase font-bold text-slate-400 tracking-wider flex items-center gap-2 border-b border-slate-100 pb-2">
@@ -305,14 +296,9 @@ export const CallFormModal: React.FC<CallFormModalProps> = ({
                     onChange={(e) => setFiscalYear(Number(e.target.value))}
                     className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]/20 focus:border-[#C8102E]"
                   >
-                    {Array.from(new Set([currentYear - 1, currentYear, upcomingYear, currentYear + 2, fiscalYear]))
-                      .filter(Boolean)
-                      .sort()
-                      .map((yr) => (
-                        <option key={yr} value={yr}>
-                          Year {yr}
-                        </option>
-                      ))}
+                    {availableYears.map((year) => (
+                      <option key={year} value={year}>Year {year}</option>
+                    ))}
                   </select>
                 </div>
 
@@ -596,7 +582,7 @@ export const CallFormModal: React.FC<CallFormModalProps> = ({
                   <input
                     type="date"
                     required
-                    min={todayStr}
+                    min={isEditing && initialData && initialData.startDate < todayStr ? initialData.startDate : todayStr}
                     value={startDate}
                     onChange={(e) => {
                       setStartDate(e.target.value);
@@ -621,7 +607,7 @@ export const CallFormModal: React.FC<CallFormModalProps> = ({
                   <input
                     type="date"
                     required
-                    min={startDate && startDate >= todayStr ? startDate : todayStr}
+                    min={isEditing ? startDate : (startDate && startDate >= todayStr ? startDate : todayStr)}
                     value={endDate}
                     onChange={(e) => {
                       setEndDate(e.target.value);
@@ -635,11 +621,11 @@ export const CallFormModal: React.FC<CallFormModalProps> = ({
                 </div>
               </div>
             </div>
-          </div>
+          </fieldset>
 
           {/* Actions */}
           {formError && (
-            <div className="px-6 py-2.5 bg-red-50 border-t border-red-200 text-xs text-red-700 flex items-center gap-2">
+            <div role="alert" className="px-6 py-2.5 bg-red-50 border-t border-red-200 text-xs text-red-700 flex items-center gap-2">
               <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
               <span className="font-semibold">{formError}</span>
             </div>
@@ -647,13 +633,15 @@ export const CallFormModal: React.FC<CallFormModalProps> = ({
           <div className="px-6 py-3.5 border-t border-slate-200 bg-slate-50/70 flex items-center justify-end gap-2.5 shrink-0">
             <button
               type="button"
-              onClick={onClose}
+              onClick={onBack}
+              disabled={isSaving}
               className="px-4 py-2 rounded-lg text-xs font-semibold text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 transition-colors cursor-pointer"
             >
               Cancel
             </button>
             <button
               type="submit"
+              disabled={isSaving}
               className="px-5 py-2 rounded-lg text-xs font-bold text-white bg-[#C8102E] hover:bg-[#a00c24] shadow-xs hover:shadow-sm transition-all flex items-center gap-1.5 cursor-pointer"
             >
               {isEditing ? (
@@ -664,7 +652,7 @@ export const CallFormModal: React.FC<CallFormModalProps> = ({
                 <CheckCircle className="w-4 h-4" />
               )}
               <span>
-                {isEditing
+                {isSaving ? 'Saving...' : isEditing
                   ? 'Save Call Changes'
                   : status === 'DRAFT'
                   ? 'Save Draft Call'

@@ -104,6 +104,14 @@ export const ViewCotrModal: React.FC<ViewCotrModalProps> = ({
               <p className="text-[11px] text-slate-500 mt-0.5">
                 Reference Code: <strong className="text-slate-800 font-mono">{certificate.proposalCode}</strong>
               </p>
+              {certificate.remarks && (
+                <div className="mt-3 pt-2.5 border-t border-slate-200 text-xs">
+                  <span className="font-bold text-slate-700 block uppercase tracking-wider text-[10px]">
+                    Technical Review &amp; Revision Notes:
+                  </span>
+                  <p className="text-slate-600 italic mt-0.5">&ldquo;{certificate.remarks}&rdquo;</p>
+                </div>
+              )}
             </div>
 
             <p>

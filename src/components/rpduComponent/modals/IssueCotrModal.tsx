@@ -166,7 +166,7 @@ export const IssueCotrModal: React.FC<IssueCotrModalProps> = ({
                 {initialData ? 'Edit Certificate of Technical Review' : 'Issue Certificate of Technical Review (COTR)'}
               </h3>
               <p className="text-[11px] text-slate-500 font-medium">
-                Standard Form WMSU-RPDU-CERT-001.00 &bull; Technical Review Clearance
+                Technical Review Clearance
               </p>
             </div>
           </div>

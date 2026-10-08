@@ -68,7 +68,7 @@ export const mapDbRowToCall = (row: any): CallForProposals => {
       if (row.creator) {
         const c = Array.isArray(row.creator) ? row.creator[0] : row.creator;
         if (c) {
-          const fullName = [c.first_name, c.last_name].filter(Boolean).join(' ').trim();
+          const fullName = [c.first_name, c.middle_name, c.last_name, c.suffix].filter(Boolean).join(' ').trim();
           return fullName || c.email || c.name || undefined;
         }
       }
@@ -102,7 +102,7 @@ export async function fetchCalls(token?: string): Promise<CallForProposals[]> {
   // Fallback: Direct Supabase query
   const { data, error } = await supabase
     .from('call_for_proposals')
-    .select('*, concept_proposals(id, status), creator:users(id, first_name, last_name, email, role)')
+    .select('*, concept_proposals(id, status), creator:users(id, first_name, middle_name, last_name, suffix, email, role)')
     .order('created_at', { ascending: false });
 
   if (error) {
@@ -219,7 +219,7 @@ export async function createCallApi(
   let { data, error } = await supabase
     .from('call_for_proposals')
     .insert(insertPayload)
-    .select('*, concept_proposals(id, status), creator:users(id, first_name, last_name, email, role)')
+    .select('*, concept_proposals(id, status), creator:users(id, first_name, middle_name, last_name, suffix, email, role)')
     .single();
 
   if (error && error.message && (error.message.includes('memo') || error.message.includes('priority_topics'))) {
@@ -228,7 +228,7 @@ export async function createCallApi(
     const retry = await supabase
       .from('call_for_proposals')
       .insert(insertPayload)
-      .select('*, concept_proposals(id, status), creator:users(id, first_name, last_name, email, role)')
+      .select('*, concept_proposals(id, status), creator:users(id, first_name, middle_name, last_name, suffix, email, role)')
       .single();
     data = retry.data;
     error = retry.error;
@@ -361,7 +361,7 @@ export async function updateCallApi(
     .from('call_for_proposals')
     .update(updates)
     .eq('id', id)
-    .select('*, concept_proposals(id, status), creator:users(id, first_name, last_name, email, role)')
+    .select('*, concept_proposals(id, status), creator:users(id, first_name, middle_name, last_name, suffix, email, role)')
     .single();
 
   if (error && error.message && (error.message.includes('memo') || error.message.includes('priority_topics'))) {
@@ -371,7 +371,7 @@ export async function updateCallApi(
       .from('call_for_proposals')
       .update(updates)
       .eq('id', id)
-      .select('*, concept_proposals(id, status), creator:users(id, first_name, last_name, email, role)')
+      .select('*, concept_proposals(id, status), creator:users(id, first_name, middle_name, last_name, suffix, email, role)')
       .single();
     data = retry.data;
     error = retry.error;
@@ -463,7 +463,7 @@ export async function closeCallApi(
     .from('call_for_proposals')
     .update(updates)
     .eq('id', id)
-    .select('*, concept_proposals(id, status)')
+    .select('*, concept_proposals(id, status), creator:users(id, first_name, middle_name, last_name, suffix, email, role)')
     .single();
 
   if (error && error.message && (error.message.includes('public_notice') || error.message.includes('closure_reason'))) {
@@ -475,7 +475,7 @@ export async function closeCallApi(
       .from('call_for_proposals')
       .update(updates)
       .eq('id', id)
-      .select('*, concept_proposals(id, status)')
+      .select('*, concept_proposals(id, status), creator:users(id, first_name, middle_name, last_name, suffix, email, role)')
       .single();
 
     if (retry.error && retry.error.message && retry.error.message.includes('closure_reason')) {
@@ -484,7 +484,7 @@ export async function closeCallApi(
         .from('call_for_proposals')
         .update(updates)
         .eq('id', id)
-        .select('*, concept_proposals(id, status)')
+        .select('*, concept_proposals(id, status), creator:users(id, first_name, middle_name, last_name, suffix, email, role)')
         .single();
       data = retryFinal.data;
       error = retryFinal.error;
@@ -561,7 +561,7 @@ export async function reopenCallApi(
     .from('call_for_proposals')
     .update(updates)
     .eq('id', id)
-    .select('*, concept_proposals(id, status)')
+    .select('*, concept_proposals(id, status), creator:users(id, first_name, middle_name, last_name, suffix, email, role)')
     .single();
 
   if (error || !data) {

@@ -1,22 +1,21 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Plus, Search, Calendar, Lock, Edit3, Trash2, CheckCircle2, AlertCircle, FilePlus, FileText, ExternalLink, Clock } from 'lucide-react';
 import { useCallForProposals } from '../../context/CallForProposalsContext';
+import { useAuth } from '../../context/AuthContext';
 import type { CallForProposals, CallStatus } from '../../types';
 import { parseMemoDetails, openMemoInNewTab } from '../../utils/memoUtils';
-import { CallFormModal } from './modals/CallFormModal';
 import { CloseCallDialog } from './modals/CloseCallDialog';
 import { DeleteCallModal } from './modals/DeleteCallModal';
 
 export const CallForProposalsManager: React.FC = () => {
-  const { calls, loadingCalls, createCall, updateCall, closeCall, reopenCall, deleteCall, showToast } = useCallForProposals();
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const { calls, loadingCalls, activeCall, closeCall, reopenCall, deleteCall, showToast } = useCallForProposals();
 
   const [activeTab, setActiveTab] = useState<'all' | 'OPEN' | 'DRAFT' | 'CLOSED'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedYear, setSelectedYear] = useState<number | 'all'>('all');
-
-  // Modal states
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingCall, setEditingCall] = useState<CallForProposals | null>(null);
 
   // Close Dialog state
   const [isCloseDialogOpen, setIsCloseDialogOpen] = useState(false);
@@ -56,14 +55,12 @@ export const CallForProposalsManager: React.FC = () => {
     reopenCall(call.id, call.endDate);
   };
 
-  const handleOpenCreateModal = () => {
-    setEditingCall(null);
-    setIsModalOpen(true);
+  const handleCreateCall = () => {
+    navigate('/rpdu/calls/new');
   };
 
-  const handleOpenEditModal = (call: CallForProposals) => {
-    setEditingCall(call);
-    setIsModalOpen(true);
+  const handleEditCall = (call: CallForProposals) => {
+    navigate(`/rpdu/calls/${encodeURIComponent(call.id)}/edit`);
   };
 
   const handleOpenCloseDialog = (call: CallForProposals) => {
@@ -84,16 +81,6 @@ export const CallForProposalsManager: React.FC = () => {
       setTargetCallToDelete(null);
     } finally {
       setIsDeleting(false);
-    }
-  };
-
-  const handleSaveModal = (
-    data: Omit<CallForProposals, 'id' | 'submissionCount' | 'acceptedCount' | 'underReviewCount' | 'rejectedCount' | 'createdAt' | 'updatedAt'>
-  ) => {
-    if (editingCall) {
-      updateCall(editingCall.id, data);
-    } else {
-      createCall(data);
     }
   };
 
@@ -161,7 +148,7 @@ export const CallForProposalsManager: React.FC = () => {
         </div>
 
         <button
-          onClick={handleOpenCreateModal}
+          onClick={handleCreateCall}
           className="px-5 py-3 rounded-sm bg-[#C8102E] text-white text-xs font-bold shadow-sm hover:bg-[#a00c24] hover:shadow transition-all flex items-center justify-center gap-2 cursor-pointer shrink-0"
         >
           <Plus className="w-4 h-4" />
@@ -241,7 +228,7 @@ export const CallForProposalsManager: React.FC = () => {
               There are no calls matching your selected filter or search criteria. Try creating a new call for proposals.
             </p>
             <button
-              onClick={handleOpenCreateModal}
+              onClick={handleCreateCall}
               className="inline-flex items-center gap-2 px-4 py-2 bg-[#C8102E] text-white rounded-sm text-xs font-bold shadow-xs hover:bg-[#a00c24] transition-all cursor-pointer"
             >
               <Plus className="w-4 h-4" /> Create Call
@@ -350,13 +337,19 @@ export const CallForProposalsManager: React.FC = () => {
                         </span>
                       </div>
                     )}
+                    <div className="text-slate-500">
+                      Called by{' '}
+                      <span className="font-medium text-slate-700">
+                        {call.createdBy && call.createdBy === user?.id ? 'You' : call.creatorName || 'Unknown user'}
+                      </span>
+                    </div>
                   </div>
                 </div>
 
                 {/* Action Buttons Panel */}
                 <div className="flex items-center gap-2 shrink-0 border-t lg:border-t-0 pt-3 lg:pt-0 border-slate-100">
                   <button
-                    onClick={() => handleOpenEditModal(call)}
+                    onClick={() => handleEditCall(call)}
                     className="px-3.5 py-2 rounded-sm text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 transition-colors flex items-center gap-1.5 cursor-pointer"
                     title="Edit call details, dates & status"
                   >
@@ -376,8 +369,11 @@ export const CallForProposalsManager: React.FC = () => {
                   ) : (
                     <button
                       onClick={() => handleOpenCallAction(call)}
-                      className="px-3.5 py-2 rounded-sm text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 transition-colors flex items-center gap-1.5 cursor-pointer"
-                      title="Open submission call window"
+                      disabled={Boolean(activeCall)}
+                      className={`px-3.5 py-2 rounded-sm text-xs font-bold border transition-colors flex items-center gap-1.5 ${activeCall
+                        ? 'text-slate-400 bg-slate-100 border-slate-200 cursor-not-allowed'
+                        : 'text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border-emerald-200 cursor-pointer'}`}
+                      title={activeCall ? `Close "${activeCall.title}" before opening another call.` : 'Open submission call window'}
                     >
                       <CheckCircle2 className="w-3.5 h-3.5" />
                       <span>Open Call</span>
@@ -399,14 +395,6 @@ export const CallForProposalsManager: React.FC = () => {
       </div>
 
       {/* Modal Components */}
-      <CallFormModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        onSave={handleSaveModal}
-        initialData={editingCall}
-        existingCalls={calls}
-      />
-
       <CloseCallDialog
         isOpen={isCloseDialogOpen}
         call={targetCallToClose}
