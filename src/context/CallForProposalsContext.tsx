@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import type { CallForProposals, UserProfile, UserRole, ProposalItem, ConceptProposal, ConceptProposalCriteria, ScreeningSectionComments } from '../types';
 import { MOCK_USERS, MOCK_PROPOSALS } from '../data/mockData';
 import { API_ENDPOINTS } from '../config/apiConfig';
@@ -12,6 +12,7 @@ import {
 } from '../lib/callApi';
 import { useAuth } from './AuthContext';
 import { getMyConceptProposalsApi, submitConceptProposalApi, type ConceptProposalPayload } from '../lib/conceptProposalApi';
+import { applyCallWindow, callStartAt, callEndAt } from '../utils/callWindow';
 
 interface CallForProposalsContextType {
   calls: CallForProposals[];
@@ -25,7 +26,7 @@ interface CallForProposalsContextType {
   createCall: (newCall: Omit<CallForProposals, 'id' | 'submissionCount' | 'acceptedCount' | 'underReviewCount' | 'rejectedCount' | 'createdAt' | 'updatedAt'>) => Promise<CallForProposals>;
   updateCall: (id: string, updatedFields: Partial<CallForProposals>) => Promise<void>;
   closeCall: (id: string, reason?: string) => Promise<void>;
-  reopenCall: (id: string, newEndDate: string) => Promise<void>;
+  reopenCall: (id: string, newStartDate: string, newEndDate: string) => Promise<void>;
   deleteCall: (id: string) => Promise<void>;
   passConceptProposal: (id: string, remarks?: string, criteria?: ConceptProposalCriteria) => void;
   failConceptProposal: (id: string, reasons: string[], remarks: string, criteria?: ConceptProposalCriteria, sectionComments?: ScreeningSectionComments) => void;
@@ -56,17 +57,34 @@ export const CallForProposalsProvider: React.FC<{ children: React.ReactNode }> =
   const { session, profile, loading: authLoading } = useAuth();
   const [calls, setCalls] = useState<CallForProposals[]>([]);
   const [loadingCalls, setLoadingCalls] = useState(true);
+  const callRequest = useRef(0);
   const [conceptProposals, setConceptProposals] = useState<ConceptProposal[]>([]);
 
+  useEffect(() => {
+    const boundaries = calls.flatMap((call) => {
+      const status = String(call.rawStatus || call.status).toUpperCase();
+      if (['OPEN', 'ACTIVE'].includes(status)) return [Date.parse(callStartAt(call)), Date.parse(callEndAt(call)) + 1];
+      return status === 'CLOSED' ? [Date.parse(callEndAt(call)) + 1] : [];
+    }).filter((date) => date > Date.now());
+    const updateWindows = () => setCalls((previous) => previous.map((call) => applyCallWindow(call)));
+    const timer = boundaries.length ? window.setTimeout(updateWindows, Math.min(Math.min(...boundaries) - Date.now() + 1, 2147483647)) : undefined;
+    window.addEventListener('focus', updateWindows);
+    return () => {
+      if (timer !== undefined) window.clearTimeout(timer);
+      window.removeEventListener('focus', updateWindows);
+    };
+  }, [calls]);
+
   const loadCalls = useCallback(async (token = session?.access_token) => {
+    const request = ++callRequest.current;
     try {
       setLoadingCalls(true);
       const data = await fetchCalls(token);
-      setCalls(data);
+      if (request === callRequest.current) setCalls(data);
     } catch (err) {
       console.error('Failed to load calls from backend:', err);
     } finally {
-      setLoadingCalls(false);
+      if (request === callRequest.current) setLoadingCalls(false);
     }
   }, [session?.access_token]);
 
@@ -94,7 +112,6 @@ export const CallForProposalsProvider: React.FC<{ children: React.ReactNode }> =
     if (session?.access_token) {
       loadConceptProposals(session.access_token);
     } else {
-      setLoadingCalls(false);
       setConceptProposals([]);
     }
   }, [authLoading, session, loadCalls, loadConceptProposals]);
@@ -165,11 +182,11 @@ export const CallForProposalsProvider: React.FC<{ children: React.ReactNode }> =
     }
   };
 
-  const reopenCall = async (id: string, newEndDate: string): Promise<void> => {
+  const reopenCall = async (id: string, newStartDate: string, newEndDate: string): Promise<void> => {
     try {
-      const reopened = await reopenCallApi(id, newEndDate, session?.access_token);
+      const reopened = await reopenCallApi(id, newStartDate, newEndDate, session?.access_token);
       setCalls((prev) => prev.map((c) => (c.id === id ? reopened : c)));
-      showToast(`Call reopened and active until ${newEndDate}.`);
+      showToast(`Submission window saved: ${newStartDate} to ${newEndDate}.`);
     } catch (err: any) {
       showToast(`Failed to reopen call: ${err.message || 'Unknown error'}`);
       throw err;

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Calendar, FileText, CheckCircle, Edit3, FilePlus, AlertCircle, Lock, Upload, Trash2, ExternalLink } from 'lucide-react';
 import type { CallForProposals, CallStatus } from '../../types';
+import { callDateToday } from '../../utils/callWindow';
 import { parseMemoDetails, formatFileSize, openMemoInNewTab, type MemoDetails } from '../../utils/memoUtils';
 
 const TOPIC_CATEGORIES = {
@@ -38,6 +39,7 @@ interface CallFormProps {
 const TITLE_MAX = 150;
 const DESCRIPTION_MAX = 2000;
 const MAX_DRAFTS = 4;
+const MAX_MEMO_BYTES = 15 * 1024 * 1024;
 
 export const CallForm: React.FC<CallFormProps> = ({
   onBack,
@@ -46,16 +48,17 @@ export const CallForm: React.FC<CallFormProps> = ({
   existingCalls = [],
 }) => {
   const isEditing = !!initialData;
-  const currentYear = new Date().getFullYear();
+  const isWindowLocked = String(initialData?.status).toUpperCase() === 'CLOSED';
+  const todayStr = callDateToday();
+  const currentYear = Number(todayStr.slice(0, 4));
   const availableYears = Array.from({ length: 5 }, (_, index) => currentYear + index);
-  const todayStr = new Date().toISOString().split('T')[0];
 
   const otherOpenCall = existingCalls.find((c) => {
     const s = String(c.status).toUpperCase();
-    return (s === 'OPEN' || s === 'ACTIVE') && c.id !== initialData?.id;
+    return (s === 'OPEN' || s === 'ACTIVE' || c.scheduledOpen) && c.id !== initialData?.id;
   });
 
-  const isOpenDisabled = Boolean(otherOpenCall);
+  const isOpenDisabled = Boolean(otherOpenCall) || isWindowLocked;
 
   const otherDraftsCount = existingCalls.filter((c) => {
     const s = String(c.status).toUpperCase();
@@ -80,7 +83,7 @@ export const CallForm: React.FC<CallFormProps> = ({
       setTitle(initialData.title);
       setFiscalYear(availableYears.includes(initialData.fiscalYear) ? initialData.fiscalYear : currentYear);
       const rawStatus = String(initialData.status).toUpperCase();
-      setStatus(rawStatus === 'DRAFT' ? 'DRAFT' : 'OPEN');
+      setStatus(rawStatus === 'CLOSED' ? 'CLOSED' : rawStatus === 'DRAFT' ? 'DRAFT' : 'OPEN');
       setDescription(initialData.description || '');
       setStartDate(initialData.startDate);
       setEndDate(initialData.endDate);
@@ -115,6 +118,11 @@ export const CallForm: React.FC<CallFormProps> = ({
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       const file = e.target.files[0];
+      if (file.size > MAX_MEMO_BYTES) {
+        setFormError('Memo attachments must not exceed 15 MB.');
+        e.target.value = '';
+        return;
+      }
       setMemoFile(file);
       const reader = new FileReader();
       reader.onload = (event) => {
@@ -174,7 +182,7 @@ export const CallForm: React.FC<CallFormProps> = ({
     // Only 1 Call can be OPEN at a time
     if (status === 'OPEN' && otherOpenCall) {
       setFormError(
-        `Only one Call for Proposals can be active at a time. "${otherOpenCall.title}" is currently open. Please close it first or save this call as DRAFT.`
+        `Only one Call for Proposals can be active at a time. "${otherOpenCall.title}" is open or scheduled to open. Please close it first or save this call as DRAFT.`
       );
       return;
     }
@@ -187,9 +195,9 @@ export const CallForm: React.FC<CallFormProps> = ({
       return;
     }
 
-    const memoVal = memoDetails
+    const memoVal = isEditing && !memoFile && memoDetails ? undefined : memoDetails
       ? (memoDetails.dataUrl ? JSON.stringify(memoDetails) : memoDetails.name)
-      : undefined;
+      : '';
 
     // Structured priority topics grouping selected subtopics under their parent topics
     const structuredTopics = Object.entries(TOPIC_CATEGORIES)
@@ -209,7 +217,7 @@ export const CallForm: React.FC<CallFormProps> = ({
         endDate,
         startTime: initialData?.startTime || '08:00',
         endTime: initialData?.endTime || '17:00',
-        status,
+        status: isWindowLocked ? (initialData?.rawStatus || initialData?.status) as CallStatus : status,
         description: description.trim(),
         memo: memoVal,
         memoAttachment: memoVal,
@@ -325,7 +333,7 @@ export const CallForm: React.FC<CallFormProps> = ({
                       }}
                       title={
                         isOpenDisabled && otherOpenCall
-                          ? `Cannot select OPEN: "${otherOpenCall.title}" is currently active. Close it first or save this call as DRAFT.`
+                          ? `Cannot select OPEN: "${otherOpenCall.title}" is open or scheduled to open. Close it first or save this call as DRAFT.`
                           : undefined
                       }
                       className={`py-2 px-3 text-center text-xs font-bold rounded-lg transition-all border ${
@@ -338,7 +346,7 @@ export const CallForm: React.FC<CallFormProps> = ({
                     >
                       <div className="flex items-center justify-center gap-1.5">
                         {isOpenDisabled && <Lock className="w-3.5 h-3.5 text-slate-400 shrink-0" />}
-                        <span>OPEN</span>
+                        <span>{isWindowLocked ? 'CLOSED' : 'OPEN'}</span>
                         {isOpenDisabled && (
                           <span className="text-[10px] bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded font-medium">
                             Locked
@@ -349,7 +357,9 @@ export const CallForm: React.FC<CallFormProps> = ({
 
                     <button
                       type="button"
+                      disabled={isWindowLocked}
                       onClick={() => {
+                        if (isWindowLocked) return;
                         setStatus('DRAFT');
                         setFormError(null);
                       }}
@@ -374,12 +384,13 @@ export const CallForm: React.FC<CallFormProps> = ({
                     </button>
                   </div>
 
+                  {isWindowLocked && <p className="mt-2 text-xs leading-5 text-slate-600">You can edit the timeline while this call is closed. Use Reopen Call on the call list to open a new submission window.</p>}
                   {/* Context Notice for Active Call */}
                   {isOpenDisabled && otherOpenCall && (
                     <div className="mt-2.5 px-3 py-2 rounded-lg bg-slate-50 border border-slate-200 text-xs text-slate-600 flex items-center gap-2">
                       <Lock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                       <span className="leading-tight">
-                        <strong className="text-slate-800 font-semibold">&ldquo;{otherOpenCall.title}&rdquo;</strong> is currently active. Only one call can be open at a time.
+                        <strong className="text-slate-800 font-semibold">&ldquo;{otherOpenCall.title}&rdquo;</strong> is open or scheduled to open. Only one call can be open at a time.
                       </span>
                     </div>
                   )}

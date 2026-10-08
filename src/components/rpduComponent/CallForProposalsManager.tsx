@@ -7,11 +7,14 @@ import type { CallForProposals, CallStatus } from '../../types';
 import { parseMemoDetails, openMemoInNewTab } from '../../utils/memoUtils';
 import { CloseCallDialog } from './modals/CloseCallDialog';
 import { DeleteCallModal } from './modals/DeleteCallModal';
+import { canReopenCall } from '../../utils/callWindow';
 
 export const CallForProposalsManager: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { calls, loadingCalls, activeCall, closeCall, reopenCall, deleteCall, showToast } = useCallForProposals();
+  const { calls, loadingCalls, activeCall, closeCall, updateCall, reopenCall, deleteCall, showToast } = useCallForProposals();
+
+  const reservedCall = activeCall || calls.find((call) => call.scheduledOpen) || null;
 
   const [activeTab, setActiveTab] = useState<'all' | 'OPEN' | 'DRAFT' | 'CLOSED'>('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -44,15 +47,20 @@ export const CallForProposalsManager: React.FC = () => {
   };
 
   const handleOpenCallAction = (call: CallForProposals) => {
-    const openCall = calls.find((c) => {
-      const s = String(c.status).toUpperCase();
-      return (s === 'OPEN' || s === 'ACTIVE') && c.id !== call.id;
-    });
-    if (openCall) {
-      showToast(`Cannot open call: "${openCall.title}" is already active. Only one call can be open at a time. Please close the active call first.`);
+    if (reservedCall) {
+      showToast(`Close "${reservedCall.title}" before opening or scheduling another call.`);
       return;
     }
-    reopenCall(call.id, call.endDate);
+    if (String(call.status).toUpperCase() === 'DRAFT') {
+      void updateCall(call.id, { status: 'OPEN' }).catch(() => {});
+      return;
+    }
+    if (!canReopenCall(call)) {
+      showToast('Only a closed call can be reopened. Cancel a scheduled opening first.');
+      return;
+    }
+    setTargetCallToClose(call);
+    setIsCloseDialogOpen(true);
   };
 
   const handleCreateCall = () => {
@@ -237,6 +245,8 @@ export const CallForProposalsManager: React.FC = () => {
         ) : (
           filteredCalls.map((call) => {
             const isOpen = String(call.status).toUpperCase() === 'OPEN' || String(call.status).toUpperCase() === 'ACTIVE';
+            const isClosed = String(call.status).toUpperCase() === 'CLOSED';
+            const reopenDisabled = Boolean(reservedCall) || (isClosed && !canReopenCall(call));
 
             return (
               <div
@@ -250,6 +260,7 @@ export const CallForProposalsManager: React.FC = () => {
                 <div className="space-y-3 flex-grow">
                   <div className="flex flex-wrap items-center gap-2">
                     {getStatusBadge(call.status)}
+                    {call.scheduledOpen && <span className="text-xs font-medium text-slate-600">Scheduled to open on {call.startDate}</span>}
                     <span className="text-xs font-semibold text-slate-400">
                       Year {call.fiscalYear}
                     </span>
@@ -287,11 +298,11 @@ export const CallForProposalsManager: React.FC = () => {
 
                   {/* Public Notice Banner if Closed */}
                   {(call.status === 'CLOSED' || String(call.status).toUpperCase() === 'CLOSED') && (call.publicNotice || call.closureReason) && (
-                    <div className="flex items-start gap-2 p-2.5 bg-amber-50/70 border border-amber-200/80 rounded-sm text-xs text-amber-900 max-w-3xl">
-                      <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-                      <div>
-                        <span className="font-bold text-amber-950">Public Notice: </span>
-                        <span className="leading-relaxed">{call.publicNotice || call.closureReason}</span>
+                    <div className="flex max-w-3xl items-start gap-2.5 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm">
+                      <AlertCircle aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0 text-[#C8102E]" />
+                      <div className="min-w-0">
+                        <p className="text-xs font-semibold text-slate-900">Public notice</p>
+                        <p className="mt-0.5 whitespace-pre-wrap break-words leading-5 text-slate-700">{call.publicNotice || call.closureReason}</p>
                       </div>
                     </div>
                   )}
@@ -357,26 +368,26 @@ export const CallForProposalsManager: React.FC = () => {
                     <span>Edit Call</span>
                   </button>
 
-                  {isOpen ? (
+                  {isOpen || call.scheduledOpen ? (
                     <button
                       onClick={() => handleOpenCloseDialog(call)}
                       className="px-3.5 py-2 rounded-sm text-xs font-bold text-red-700 bg-red-50 hover:bg-red-100 border border-red-200 transition-colors flex items-center gap-1.5 cursor-pointer"
                       title="Close submission window"
                     >
                       <Lock className="w-3.5 h-3.5" />
-                      <span>Close Window</span>
+                      <span>{call.scheduledOpen ? 'Cancel Scheduled Opening' : 'Close Window'}</span>
                     </button>
                   ) : (
                     <button
                       onClick={() => handleOpenCallAction(call)}
-                      disabled={Boolean(activeCall)}
-                      className={`px-3.5 py-2 rounded-sm text-xs font-bold border transition-colors flex items-center gap-1.5 ${activeCall
+                      disabled={reopenDisabled}
+                      className={`px-3.5 py-2 rounded-sm text-xs font-bold border transition-colors flex items-center gap-1.5 ${reopenDisabled
                         ? 'text-slate-400 bg-slate-100 border-slate-200 cursor-not-allowed'
                         : 'text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border-emerald-200 cursor-pointer'}`}
-                      title={activeCall ? `Close "${activeCall.title}" before opening another call.` : 'Open submission call window'}
+                      title={reservedCall ? `Close "${reservedCall.title}" before opening another call.` : isClosed && !canReopenCall(call) ? 'Cancel the scheduled opening before reopening.' : isClosed ? 'Set a new start date and deadline' : 'Open submission call window'}
                     >
                       <CheckCircle2 className="w-3.5 h-3.5" />
-                      <span>Open Call</span>
+                      <span>{isClosed ? 'Reopen Call' : 'Open Call'}</span>
                     </button>
                   )}
 
@@ -400,7 +411,8 @@ export const CallForProposalsManager: React.FC = () => {
         call={targetCallToClose}
         onClose={() => setIsCloseDialogOpen(false)}
         onConfirmClose={(id, reason) => closeCall(id, reason)}
-        onExtendCall={(id, newEndDate) => reopenCall(id, newEndDate)}
+        onExtendCall={(id, newEndDate) => updateCall(id, { endDate: newEndDate })}
+        onReopenCall={(id, newStartDate, newEndDate) => reopenCall(id, newStartDate, newEndDate)}
       />
 
       <DeleteCallModal

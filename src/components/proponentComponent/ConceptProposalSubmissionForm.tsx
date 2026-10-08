@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useId } from 'react';
+import React, { useState, useEffect, useId, useMemo } from 'react';
 import {
   FileText,
   Upload,
@@ -87,14 +87,30 @@ const RESEARCH_AGENDAS = [
 ];
 
 export const ConceptProposalSubmissionForm: React.FC = () => {
-  const { activeCall, conceptProposals, submitConceptProposal, showToast } = useCallForProposals();
-  const { user } = useAuth();
+  const { activeCall, calls, conceptProposals, submitConceptProposal, showToast } = useCallForProposals();
+  const { user, profile } = useAuth();
+  const [selectedCallId, setSelectedCallId] = useState('');
+  const [confirmedCallId, setConfirmedCallId] = useState<string | null>(null);
+  const accessibleCalls = useMemo(() => calls.filter((call) => (
+    (call.id === activeCall?.id && profile?.is_eligible_to_submit === true)
+    || conceptProposals.some((proposal) => proposal.callId === call.id && proposal.proponentId === user?.id)
+  )), [calls, activeCall?.id, profile?.is_eligible_to_submit, conceptProposals, user?.id]);
+  const selectedCall = accessibleCalls.find((call) => call.id === selectedCallId);
+  const canSubmit = Boolean(activeCall && selectedCallId === activeCall.id && profile?.is_eligible_to_submit === true);
 
   const endorsementInputId = useId();
   const conceptDocInputId = useId();
 
   // Tab View: 'submit' | 'my-submissions'
   const [activeTab, setActiveTab] = useState<'submit' | 'my-submissions'>('submit');
+  useEffect(() => {
+    if (!accessibleCalls.some((call) => call.id === selectedCallId)) {
+      setSelectedCallId(accessibleCalls.find((call) => call.id === activeCall?.id)?.id || accessibleCalls[0]?.id || '');
+    }
+  }, [accessibleCalls, selectedCallId, activeCall?.id]);
+  useEffect(() => {
+    setActiveTab(canSubmit ? 'submit' : 'my-submissions');
+  }, [canSubmit]);
 
   // 1. Research Agenda State
   const [selectedAgenda, setSelectedAgenda] = useState<string>(RESEARCH_AGENDAS[0].name);
@@ -157,6 +173,14 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
 
   // Errors
   const [errors, setErrors] = useState<Record<string, string>>({});
+  useEffect(() => {
+    setProposalTitle('');
+    setConceptProposalFile(null);
+    setEndorsementPdf(null);
+    setErrors({});
+    setConfirmModalOpen(false);
+    setConfirmedCallId(null);
+  }, [selectedCallId]);
 
   // File Upload Handlers
   const handleFileUpload = (
@@ -255,7 +279,7 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
   const handleOpenConfirm = (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!activeCall) {
+    if (!canSubmit || !activeCall) {
       showToast('There is no open Call for Proposals accepting submissions.');
       return;
     }
@@ -265,13 +289,14 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
       return;
     }
 
+    setConfirmedCallId(selectedCallId);
     setConfirmModalOpen(true);
   };
 
   // Final Submit Handler executed after user confirms in the modal
   const handleConfirmSubmit = async () => {
     if (submitting) return;
-    if (!activeCall) {
+    if (!canSubmit || !activeCall || confirmedCallId !== activeCall.id) {
       showToast('There is no open Call for Proposals accepting submissions.');
       setConfirmModalOpen(false);
       return;
@@ -286,7 +311,7 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
     try {
       const newProposal = await submitConceptProposal({
         title: proposalTitle.trim(),
-        callId: activeCall.id,
+        callId: confirmedCallId,
         researchAgenda: selectedAgenda,
         conceptPaperFile: conceptProposalFile?.file,
         endorsementFile: endorsementPdf?.file,
@@ -307,7 +332,7 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
 
   // Proponent's submissions list
   const mySubmissions = conceptProposals.filter((p) =>
-    p.leadInvestigatorEmail.toLowerCase() === user?.email?.toLowerCase()
+    p.callId === selectedCallId && (p.proponentId === user?.id || p.leadInvestigatorEmail.toLowerCase() === user?.email?.toLowerCase())
   );
 
   const filteredSubmissions = mySubmissions.filter((item) => {
@@ -347,13 +372,34 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
         </a>
       </div>
 
+      <div className="rounded-sm border border-slate-200 bg-white p-4 space-y-2">
+        <label htmlFor="submission-window" className="block text-sm font-semibold text-slate-900">Call for Proposals window</label>
+        <select
+          id="submission-window"
+          value={selectedCallId}
+          onChange={(event) => setSelectedCallId(event.target.value)}
+          className="w-full rounded-sm border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900"
+        >
+          {accessibleCalls.map((call) => (
+            <option key={call.id} value={call.id}>{call.title} · {call.startDate} to {call.endDate}</option>
+          ))}
+        </select>
+        <p className="text-xs text-slate-600">
+          {canSubmit ? 'This window is open for new submissions.' : String(selectedCall?.status).toUpperCase() === 'OPEN'
+            ? 'Your account cannot submit new proposals. Your existing submissions remain available.' : selectedCall?.scheduledOpen
+            ? `Submissions open on ${selectedCall.startDate}. Your existing submissions remain available.`
+            : 'This window is closed to new submissions. Your existing submissions remain available.'}
+        </p>
+      </div>
+
       {/* VIEW TABS: Submit New vs Track My Submissions */}
       <div className="flex items-center justify-between border-b border-slate-200">
         <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={() => setActiveTab('submit')}
-            className={`flex items-center gap-2 px-4 py-3 text-xs sm:text-sm font-bold border-b-2 transition-all cursor-pointer ${
+            disabled={!canSubmit}
+            className={`flex items-center gap-2 px-4 py-3 text-xs sm:text-sm font-bold border-b-2 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
               activeTab === 'submit'
                 ? 'border-[#C8102E] text-[#C8102E]'
                 : 'border-transparent text-slate-500 hover:text-slate-800'
@@ -382,7 +428,7 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
       </div>
 
       {/* TAB 1: STREAMLINED SUBMISSION FORM */}
-      {activeTab === 'submit' && (
+      {activeTab === 'submit' && canSubmit && (
         <form onSubmit={handleOpenConfirm} className="space-y-6">
           {/* STEP 1: SELECT RESEARCH AGENDA */}
           <div className="bg-white rounded-sm border border-slate-200/90 shadow-2xs p-5 sm:p-6 space-y-4">
@@ -771,7 +817,8 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
             <button
               type="button"
               onClick={() => setActiveTab('submit')}
-              className="px-5 py-3 rounded-sm bg-[#C8102E] text-white text-xs font-bold shadow-sm hover:bg-[#a00c24] hover:shadow transition-all flex items-center justify-center gap-2 cursor-pointer shrink-0"
+              disabled={!canSubmit}
+              className="px-5 py-3 rounded-sm bg-[#C8102E] text-white text-xs font-bold shadow-sm hover:bg-[#a00c24] hover:shadow transition-all flex items-center justify-center gap-2 cursor-pointer shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Plus className="w-4 h-4" />
               <span>Submit Concept Proposal</span>
@@ -860,13 +907,14 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
                 <h4 className="text-base font-bold text-slate-800">No Concept Proposals Found</h4>
                 <p className="text-xs text-slate-500 max-w-sm mx-auto">
                   {mySubmissions.length === 0
-                    ? "You haven't submitted any concept proposals yet under this account. Click below to submit your first proposal."
+                    ? "You haven't submitted any concept proposals in this window."
                     : 'There are no proposals matching your selected filter or search criteria.'}
                 </p>
                 <button
                   type="button"
                   onClick={() => setActiveTab('submit')}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-[#C8102E] text-white rounded-sm text-xs font-bold shadow-xs hover:bg-[#a00c24] transition-all cursor-pointer"
+                  disabled={!canSubmit}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-[#C8102E] text-white rounded-sm text-xs font-bold shadow-xs hover:bg-[#a00c24] transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <Plus className="w-4 h-4" /> Submit Concept Proposal
                 </button>
@@ -1038,7 +1086,7 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
                     Call for Proposals
                   </span>
                   <span className="font-semibold text-slate-900 flex-1 leading-snug">
-                    {activeCall?.title || 'Institutional Research & Innovation Call 2027'}
+                    {selectedCall?.title}
                   </span>
                 </div>
 
@@ -1642,7 +1690,7 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
                     Close
                   </button>
 
-                  {selectedSubmissionDetails.screeningStatus === 'failed' && (
+                  {selectedSubmissionDetails.screeningStatus === 'failed' && canSubmit && (
                     <button
                       type="button"
                       onClick={() => {

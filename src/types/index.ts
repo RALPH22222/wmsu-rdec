@@ -38,6 +38,10 @@ export interface CallForProposals {
   startTime?: string;
   endTime?: string;
   status: CallStatus;
+  rawStatus?: string;
+  scheduledOpen?: boolean;
+  windowStartAt?: string;
+  windowEndAt?: string;
   description: string;
   maxBudgetPerProject: number;
   totalGrantBudget: number;
@@ -110,6 +114,7 @@ export interface ScreeningSectionComments {
 
 export interface ConceptProposal {
   id: string;
+  proponentId?: string;
   code: string;
   title: string;
   callId: string;

@@ -4,6 +4,7 @@ import type { ConceptProposal } from '../types';
 interface ProposalRecord {
   id: string;
   call_id: string;
+  proponent_id: string;
   title: string;
   research_agenda: string;
   custom_research_agenda?: string | null;
@@ -22,6 +23,7 @@ function formatProposal(row: ProposalRecord): ConceptProposal {
   const fileUrl = (url: string) => url ? new URL(url, `${API_BASE_URL.replace(/\/api\/?$/, '')}/`).href : undefined;
   return {
     id: row.id,
+    proponentId: row.proponent_id,
     code: `CP-${row.submitted_at.slice(0, 4)}-${row.id.slice(0, 8).toUpperCase()}`,
     title: row.title,
     callId: row.call_id,

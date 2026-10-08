@@ -9,10 +9,10 @@ import { useAuth } from '../context/AuthContext';
  * they are immediately redirected to the login page.
  */
 export const ProtectedRoute: React.FC = () => {
-  const { session, user, loading } = useAuth();
+  const { session, user, profile, loading, loadingProfile, authError } = useAuth();
   const location = useLocation();
 
-  if (loading) {
+  if (loading || (loadingProfile && profile?.id !== user?.id)) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
         <div className="space-y-4 max-w-xs w-full text-center">
@@ -24,8 +24,8 @@ export const ProtectedRoute: React.FC = () => {
   }
 
   // Not authenticated -> Immediately redirect to /login and replace history
-  if (!session || !user) {
-    return <Navigate to="/login" state={{ from: location }} replace />;
+  if (!session || !user || profile?.id !== user.id || !profile?.portal_access?.allowed) {
+    return <Navigate to="/login" state={{ from: location, error: authError }} replace />;
   }
 
   return <Outlet />;

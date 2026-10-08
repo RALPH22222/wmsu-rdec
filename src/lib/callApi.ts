@@ -1,6 +1,7 @@
 import { API_ENDPOINTS } from '../config/apiConfig';
 import { supabase } from './supabase';
 import type { CallForProposals, CallStatus } from '../types';
+import { applyCallWindow, callDateToday } from '../utils/callWindow';
 
 /**
  * Convert database row to frontend CallForProposals
@@ -28,24 +29,21 @@ export const mapDbRowToCall = (row: any): CallForProposals => {
   const priorityTopics = Array.isArray(row.priority_topics) ? row.priority_topics : undefined;
   const priorityAreas = priorityTopics && priorityTopics.length > 0
     ? priorityTopics.flatMap((t: any) => Array.isArray(t.subtopics) ? t.subtopics : (t.subtopic ? [t.subtopic] : []))
-    : (Array.isArray(row.priority_areas) ? row.priority_areas : [
-      'Agriculture, Food Security & Sustainable Farming',
-      'Artificial Intelligence & Digital Transformation',
-      'Community Empowerment & Social Innovation',
-      'Health, Wellness & Bio-prospecting',
-      'Environmental Conservation & Biodiversity',
-    ]);
+    : (Array.isArray(row.priority_areas) ? row.priority_areas : []);
 
-  return {
+  return applyCallWindow({
     id: row.id,
     code: `CALL-${start.getFullYear()}-${row.id.slice(0, 4).toUpperCase()}`,
     title: row.title,
-    fiscalYear: start.getFullYear(),
-    startDate: row.start_date ? row.start_date.split('T')[0] : '',
-    endDate: row.end_date ? row.end_date.split('T')[0] : '',
-    startTime: row.start_date && row.start_date.includes('T') ? row.start_date.split('T')[1].slice(0, 5) : '08:00',
-    endTime: row.end_date && row.end_date.includes('T') ? row.end_date.split('T')[1].slice(0, 5) : '17:00',
+    fiscalYear: row.start_date ? Number(new Date(row.start_date).toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' }).slice(0, 4)) : start.getFullYear(),
+    startDate: row.start_date ? new Date(row.start_date).toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' }) : '',
+    endDate: row.end_date ? new Date(row.end_date).toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' }) : '',
+    startTime: row.start_date ? new Date(row.start_date).toLocaleTimeString('en-GB', { timeZone: 'Asia/Manila', hour: '2-digit', minute: '2-digit', hour12: false }) : '08:00',
+    endTime: row.end_date ? new Date(row.end_date).toLocaleTimeString('en-GB', { timeZone: 'Asia/Manila', hour: '2-digit', minute: '2-digit', hour12: false }) : '17:00',
     status: uiStatus,
+    rawStatus,
+    windowStartAt: row.start_date,
+    windowEndAt: row.end_date,
     memo: memoVal,
     memoAttachment: memoVal,
     memoFileUrl: row.memo_file_url || undefined,
@@ -77,7 +75,7 @@ export const mapDbRowToCall = (row: any): CallForProposals => {
     creator: row.creator || undefined,
     createdAt: row.created_at || row.createdAt || new Date().toISOString(),
     updatedAt: row.created_at || row.updatedAt || new Date().toISOString(),
-  };
+  });
 };
 
 /**
@@ -92,7 +90,7 @@ export async function fetchCalls(token?: string): Promise<CallForProposals[]> {
     if (res.ok) {
       const json = await res.json();
       if (json.success && Array.isArray(json.data)) {
-        return json.data;
+        return json.data.map((call: CallForProposals) => applyCallWindow(call));
       }
     }
   } catch (err) {
@@ -120,7 +118,7 @@ export async function createCallApi(
   callData: Omit<CallForProposals, 'id' | 'submissionCount' | 'acceptedCount' | 'underReviewCount' | 'rejectedCount' | 'createdAt' | 'updatedAt'>,
   token?: string
 ): Promise<CallForProposals> {
-  const memoVal = callData.memoAttachment || callData.memo || undefined;
+  const memoVal = callData.memo ?? callData.memoAttachment ?? callData.memoFileUrl;
   const dbStatus = String(callData.status || 'OPEN').toUpperCase();
 
   const payload = {
@@ -132,8 +130,6 @@ export async function createCallApi(
     endTime: callData.endTime,
     status: dbStatus,
     memo: memoVal,
-    memoAttachment: memoVal,
-    memoFileUrl: memoVal,
     priorityTopics: callData.priorityTopics,
     priorityAreas: callData.priorityAreas,
   };
@@ -157,9 +153,7 @@ export async function createCallApi(
       } else {
         const errJson = await res.json().catch(() => null);
         console.warn('Backend POST /api/calls returned error:', res.status, errJson);
-        if (res.status === 400 && errJson?.message) {
-          throw new Error(errJson.message);
-        }
+        throw new Error(errJson?.message || `Failed to create call (${res.status}).`);
       }
     } catch (err: any) {
       if (err.message && !err.message.includes('fetch')) {
@@ -174,7 +168,8 @@ export async function createCallApi(
     const { data: openCalls } = await supabase
       .from('call_for_proposals')
       .select('id, title')
-      .in('status', ['OPEN', 'ACTIVE', 'open', 'active'])
+      .eq('status', 'OPEN')
+      .gte('end_date', new Date(`${callDateToday()}T00:00:00+08:00`).toISOString())
       .limit(1);
     if (openCalls && openCalls.length > 0) {
       throw new Error(`Only one Call for Proposals can be active at a time. "${openCalls[0].title}" is currently open. Please close it first or save as DRAFT.`);
@@ -185,7 +180,7 @@ export async function createCallApi(
     const { data: draftCalls, count: draftCount } = await supabase
       .from('call_for_proposals')
       .select('id', { count: 'exact' })
-      .in('status', ['DRAFT', 'draft']);
+      .eq('status', 'DRAFT');
     const totalDrafts = typeof draftCount === 'number'
       ? draftCount
       : ((draftCalls as Array<{ id: string }> | null)?.length ?? 0);
@@ -194,8 +189,8 @@ export async function createCallApi(
     }
   }
 
-  const startIso = new Date(`${callData.startDate}T${callData.startTime || '08:00'}:00`).toISOString();
-  const endIso = new Date(`${callData.endDate}T${callData.endTime || '17:00'}:00`).toISOString();
+  const startIso = new Date(`${callData.startDate}T00:00:00+08:00`).toISOString();
+  const endIso = new Date(`${callData.endDate}T23:59:59.999+08:00`).toISOString();
 
   const { data: user } = await supabase.auth.getUser();
 
@@ -268,7 +263,7 @@ export async function updateCallApi(
   updatedFields: Partial<CallForProposals>,
   token?: string
 ): Promise<CallForProposals> {
-  const memoVal = updatedFields.memo || updatedFields.memoAttachment;
+  const memoVal = updatedFields.memo ?? updatedFields.memoAttachment ?? updatedFields.memoFileUrl;
   const payload = {
     title: updatedFields.title,
     description: updatedFields.description,
@@ -278,8 +273,6 @@ export async function updateCallApi(
     endTime: updatedFields.endTime,
     status: updatedFields.status ? String(updatedFields.status).toUpperCase() : undefined,
     memo: memoVal,
-    memoAttachment: memoVal,
-    memoFileUrl: memoVal,
     priorityTopics: updatedFields.priorityTopics,
     priorityAreas: updatedFields.priorityAreas,
   };
@@ -303,9 +296,7 @@ export async function updateCallApi(
       } else {
         const errJson = await res.json().catch(() => null);
         console.warn('Backend PUT /api/calls returned error:', res.status, errJson);
-        if (res.status === 400 && errJson?.message) {
-          throw new Error(errJson.message);
-        }
+        throw new Error(errJson?.message || `Failed to update call (${res.status}).`);
       }
     } catch (err: any) {
       if (err.message && !err.message.includes('fetch')) {
@@ -315,27 +306,41 @@ export async function updateCallApi(
     }
   }
 
+  const { data: existing, error: existingError } = await supabase.from('call_for_proposals').select('*').eq('id', id).single();
+  if (existingError || !existing) throw new Error('Call not found.');
+  const existingCall = mapDbRowToCall(existing);
+  const changesDates = (updatedFields.startDate && updatedFields.startDate !== existingCall.startDate)
+    || (updatedFields.endDate && updatedFields.endDate !== existingCall.endDate);
+  if (existingCall.status === 'CLOSED' && updatedFields.status && !['CLOSED', existingCall.rawStatus].includes(String(updatedFields.status).toUpperCase())) {
+    throw new Error('Use Reopen Call to open a new submission window.');
+  }
+  if ((updatedFields.endDate || existingCall.endDate) < (updatedFields.startDate || existingCall.startDate)) {
+    throw new Error('Submission end date cannot be earlier than start date.');
+  }
+
   const updates: Record<string, any> = {};
   if (updatedFields.title) updates.title = updatedFields.title.trim();
   if (updatedFields.description !== undefined) updates.description = updatedFields.description?.trim() || null;
   if (memoVal !== undefined) updates.memo = memoVal;
   if (updatedFields.priorityTopics !== undefined) updates.priority_topics = updatedFields.priorityTopics;
-  if (updatedFields.startDate) {
-    updates.start_date = new Date(`${updatedFields.startDate}T${updatedFields.startTime || '08:00'}:00`).toISOString();
+  if (updatedFields.startDate && updatedFields.startDate !== existingCall.startDate) {
+    updates.start_date = new Date(`${updatedFields.startDate}T00:00:00+08:00`).toISOString();
   }
-  if (updatedFields.endDate) {
-    updates.end_date = new Date(`${updatedFields.endDate}T${updatedFields.endTime || '17:00'}:00`).toISOString();
+  if (updatedFields.endDate && updatedFields.endDate !== existingCall.endDate) {
+    updates.end_date = new Date(`${updatedFields.endDate}T23:59:59.999+08:00`).toISOString();
   }
   if (updatedFields.status) {
     updates.status = String(updatedFields.status).toUpperCase();
   }
+  if (existingCall.status === 'CLOSED' && !existingCall.scheduledOpen) updates.status = 'CLOSED';
 
   // Direct Supabase fallback validations
-  if (updates.status === 'OPEN') {
+  if (updates.status === 'OPEN' && (!['OPEN', 'ACTIVE'].includes(String(existing.status).toUpperCase()) || changesDates)) {
     const { data: openCalls } = await supabase
       .from('call_for_proposals')
       .select('id, title')
-      .in('status', ['OPEN', 'ACTIVE', 'open', 'active'])
+      .eq('status', 'OPEN')
+      .gte('end_date', new Date(`${callDateToday()}T00:00:00+08:00`).toISOString())
       .neq('id', id)
       .limit(1);
     if (openCalls && openCalls.length > 0) {
@@ -347,7 +352,7 @@ export async function updateCallApi(
     const { data: draftCalls, count: draftCount } = await supabase
       .from('call_for_proposals')
       .select('id', { count: 'exact' })
-      .in('status', ['DRAFT', 'draft'])
+      .eq('status', 'DRAFT')
       .neq('id', id);
     const totalDrafts = typeof draftCount === 'number'
       ? draftCount
@@ -441,9 +446,7 @@ export async function closeCallApi(
       } else {
         const errJson = await res.json().catch(() => null);
         console.warn('Backend POST close returned error:', res.status, errJson);
-        if (res.status === 400 && errJson?.message) {
-          throw new Error(errJson.message);
-        }
+        throw new Error(errJson?.message || `Failed to close call (${res.status}).`);
       }
     } catch (err: any) {
       if (err.message && !err.message.includes('fetch')) {
@@ -502,102 +505,36 @@ export async function closeCallApi(
 }
 
 /**
- * Reopen call window with new deadline
+ * Reopening uses the backend so timing and role checks cannot be skipped by a fallback.
  */
 export async function reopenCallApi(
   id: string,
+  newStartDate: string,
   newEndDate: string,
   token?: string
 ): Promise<CallForProposals> {
-  if (token) {
-    try {
-      const res = await fetch(API_ENDPOINTS.CALLS.REOPEN(id), {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ newEndDate }),
-      });
-
-      if (res.ok) {
-        const json = await res.json();
-        if (json.success && json.data) {
-          return json.data;
-        }
-      } else {
-        const errJson = await res.json().catch(() => null);
-        console.warn('Backend POST reopen returned error:', res.status, errJson);
-        if (res.status === 400 && errJson?.message) {
-          throw new Error(errJson.message);
-        }
-      }
-    } catch (err: any) {
-      if (err.message && !err.message.includes('fetch')) {
-        throw err;
-      }
-      console.warn('Backend POST reopen failed, trying direct Supabase:', err);
-    }
-  }
-
-  // Direct Supabase fallback: Check if another call is already OPEN
-  const { data: openCalls } = await supabase
-    .from('call_for_proposals')
-    .select('id, title')
-    .in('status', ['OPEN', 'ACTIVE', 'open', 'active'])
-    .neq('id', id)
-    .limit(1);
-
-  if (openCalls && openCalls.length > 0) {
-    throw new Error(`Only one Call for Proposals can be active at a time. "${openCalls[0].title}" is currently open. Please close it first.`);
-  }
-
-  const updates: Record<string, any> = { status: 'OPEN' };
-  if (newEndDate) {
-    updates.end_date = new Date(`${newEndDate}T17:00:00`).toISOString();
-  }
-
-  const { data, error } = await supabase
-    .from('call_for_proposals')
-    .update(updates)
-    .eq('id', id)
-    .select('*, concept_proposals(id, status), creator:users(id, first_name, middle_name, last_name, suffix, email, role)')
-    .single();
-
-  if (error || !data) {
-    throw new Error(error?.message || 'Failed to reopen call in database');
-  }
-
-  return mapDbRowToCall(data);
+  if (!token) throw new Error('Please sign in before reopening a call.');
+  const res = await fetch(API_ENDPOINTS.CALLS.REOPEN(id), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ newStartDate, newEndDate }),
+  });
+  const result = await res.json();
+  if (!res.ok || !result.success) throw new Error(result.message || 'Failed to save the new submission window.');
+  return applyCallWindow(result.data);
 }
 
 /**
  * Delete call for proposals
  */
 export async function deleteCallApi(id: string, token?: string): Promise<void> {
-  if (token) {
-    try {
-      const res = await fetch(API_ENDPOINTS.CALLS.BY_ID(id), {
-        method: 'DELETE',
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (res.ok) {
-        return;
-      }
-    } catch (err) {
-      console.warn('Backend DELETE failed, trying direct Supabase:', err);
-    }
-  }
-
-  const { error } = await supabase
-    .from('call_for_proposals')
-    .delete()
-    .eq('id', id);
-
-  if (error) {
-    throw new Error(error.message || 'Failed to delete call in database');
+  if (!token) throw new Error('Please sign in before deleting a call.');
+  const res = await fetch(API_ENDPOINTS.CALLS.BY_ID(id), {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) {
+    const result = await res.json().catch(() => null);
+    throw new Error(result?.message || 'Failed to delete call.');
   }
 }

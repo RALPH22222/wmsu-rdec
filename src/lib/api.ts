@@ -20,6 +20,12 @@ export interface UserProfileData {
   role: string;
   created_at?: string;
   is_eligible_to_submit?: boolean;
+  portal_access?: {
+    allowed: boolean;
+    role: string | null;
+    accessibleCallIds: string[];
+    submissionCallId: string | null;
+  };
   departments?: UserDepartment | null;
 }
 
