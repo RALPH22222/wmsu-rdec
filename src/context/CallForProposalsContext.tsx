@@ -12,6 +12,7 @@ import {
 } from '../lib/callApi';
 import { useAuth } from './AuthContext';
 import { getMyConceptProposalsApi, submitConceptProposalApi, type ConceptProposalPayload } from '../lib/conceptProposalApi';
+import { getScreeningProposals } from '../lib/screeningApi';
 import { applyCallWindow, callStartAt, callEndAt } from '../utils/callWindow';
 
 interface CallForProposalsContextType {
@@ -22,6 +23,9 @@ interface CallForProposalsContextType {
   currentUser: UserProfile;
   proposals: ProposalItem[];
   conceptProposals: ConceptProposal[];
+  loadingConceptProposals: boolean;
+  screeningError: string | null;
+  refreshConceptProposals: () => Promise<void>;
   setCurrentUserRole: (role: UserRole) => void;
   createCall: (newCall: Omit<CallForProposals, 'id' | 'submissionCount' | 'acceptedCount' | 'underReviewCount' | 'rejectedCount' | 'createdAt' | 'updatedAt'>) => Promise<CallForProposals>;
   updateCall: (id: string, updatedFields: Partial<CallForProposals>) => Promise<void>;
@@ -55,10 +59,19 @@ const screeningRequest = async (token: string | undefined, path = '', init: Requ
 
 export const CallForProposalsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { session, profile, loading: authLoading } = useAuth();
+  const accessToken = session?.access_token;
+  const userId = session?.user.id;
+  const profileId = profile?.id;
+  const profileRole = profile?.role;
   const [calls, setCalls] = useState<CallForProposals[]>([]);
   const [loadingCalls, setLoadingCalls] = useState(true);
   const callRequest = useRef(0);
+  const callViewer = useRef<string | undefined | null>(null);
   const [conceptProposals, setConceptProposals] = useState<ConceptProposal[]>([]);
+  const [loadingConceptProposals, setLoadingConceptProposals] = useState(true);
+  const [screeningError, setScreeningError] = useState<string | null>(null);
+  const conceptRequest = useRef(0);
+  const conceptViewer = useRef<string | undefined | null>(null);
 
   useEffect(() => {
     const boundaries = calls.flatMap((call) => {
@@ -75,10 +88,10 @@ export const CallForProposalsProvider: React.FC<{ children: React.ReactNode }> =
     };
   }, [calls]);
 
-  const loadCalls = useCallback(async (token = session?.access_token) => {
+  const loadCalls = useCallback(async (token = accessToken, silent = false) => {
     const request = ++callRequest.current;
     try {
-      setLoadingCalls(true);
+      if (!silent) setLoadingCalls(true);
       const data = await fetchCalls(token);
       if (request === callRequest.current) setCalls(data);
     } catch (err) {
@@ -86,35 +99,49 @@ export const CallForProposalsProvider: React.FC<{ children: React.ReactNode }> =
     } finally {
       if (request === callRequest.current) setLoadingCalls(false);
     }
-  }, [session?.access_token]);
+  }, [accessToken]);
 
-  const loadConceptProposals = useCallback(async (token = session?.access_token) => {
-    if (!token || !profile) {
+  const loadConceptProposals = useCallback(async (token = accessToken) => {
+    const request = ++conceptRequest.current;
+    if (!token || !profileRole || profileId !== userId) {
       setConceptProposals([]);
+      setLoadingConceptProposals(false);
+      setScreeningError(null);
+      conceptViewer.current = null;
       return;
     }
+    if (conceptViewer.current !== userId) setLoadingConceptProposals(true);
+    conceptViewer.current = userId;
+    setScreeningError(null);
     try {
-      const data = ['RPDU', 'ADMIN'].includes(profile.role)
-        ? await screeningRequest(token)
+      const data = ['RPDU', 'ADMIN'].includes(profileRole)
+        ? await getScreeningProposals(token)
         : await getMyConceptProposalsApi(token);
+      if (request !== conceptRequest.current) return;
       setConceptProposals(data);
       localStorage.removeItem('wmsu_concept_proposals_screening');
     } catch (err) {
+      if (request !== conceptRequest.current) return;
       console.error('Failed to load concept proposals from backend:', err);
       setConceptProposals([]);
+      setScreeningError(err instanceof Error ? err.message : 'Unable to load screening information.');
+    } finally {
+      if (request === conceptRequest.current) setLoadingConceptProposals(false);
     }
-  }, [session?.access_token, profile]);
+  }, [accessToken, profileId, profileRole, userId]);
 
   // Only fetch once auth has resolved so we always have a valid token.
   useEffect(() => {
     if (authLoading) return;
-    loadCalls(session?.access_token ?? undefined);
-    if (session?.access_token) {
-      loadConceptProposals(session.access_token);
-    } else {
-      setConceptProposals([]);
-    }
-  }, [authLoading, session, loadCalls, loadConceptProposals]);
+    const sameViewer = callViewer.current === userId;
+    callViewer.current = userId;
+    void loadCalls(accessToken, sameViewer);
+  }, [authLoading, accessToken, userId, profileRole, loadCalls]);
+
+  useEffect(() => {
+    if (authLoading) return;
+    void loadConceptProposals(accessToken);
+  }, [authLoading, accessToken, loadConceptProposals]);
 
   const [currentUser, setCurrentUser] = useState<UserProfile>(MOCK_USERS[0]);
   const [proposals] = useState<ProposalItem[]>(MOCK_PROPOSALS);
@@ -263,6 +290,9 @@ export const CallForProposalsProvider: React.FC<{ children: React.ReactNode }> =
         currentUser,
         proposals,
         conceptProposals,
+        loadingConceptProposals,
+        screeningError,
+        refreshConceptProposals: loadConceptProposals,
         setCurrentUserRole,
         createCall,
         updateCall,

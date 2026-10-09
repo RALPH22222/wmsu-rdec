@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import {
   Search,
   CheckCircle2,
@@ -8,39 +9,34 @@ import {
   Building,
   Calendar,
   FileText,
-  CheckSquare,
-  Square,
   ListFilter,
   LayoutGrid,
   Table as TableIcon
 } from 'lucide-react';
 import { useCallForProposals } from '../../context/CallForProposalsContext';
 import type { ConceptProposal, ScreeningStatus } from '../../types';
-import { PreliminaryScreeningModal } from '../../components/rpduComponent/modals/PreliminaryScreeningModal';
 
 interface PreliminaryScreeningManagerProps {
   role?: 'rpdu' | 'admin';
 }
 
 export const PreliminaryScreeningManager: React.FC<PreliminaryScreeningManagerProps> = ({
-  role: _role = 'rpdu',
+  role = 'rpdu',
 }) => {
   const {
     conceptProposals,
-    passConceptProposal,
-    failConceptProposal,
-    resetScreeningStatus,
-    bulkPassConceptProposals,
+    loadingConceptProposals,
+    screeningError,
+    refreshConceptProposals,
   } = useCallForProposals();
+  const navigate = useNavigate();
+  const restored = useLocation().state?.screeningList;
 
-  const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | ScreeningStatus>('all');
-  const [thematicFilter, setThematicFilter] = useState<string>('all');
-  const [collegeFilter, setCollegeFilter] = useState<string>('all');
-  const [selectedProposal, setSelectedProposal] = useState<ConceptProposal | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');
+  const [searchQuery, setSearchQuery] = useState(typeof restored?.searchQuery === 'string' ? restored.searchQuery : '');
+  const [statusFilter, setStatusFilter] = useState<'all' | ScreeningStatus>(['all', 'pending', 'passed', 'failed'].includes(restored?.statusFilter) ? restored.statusFilter : 'all');
+  const [thematicFilter, setThematicFilter] = useState<string>(typeof restored?.thematicFilter === 'string' ? restored.thematicFilter : 'all');
+  const [collegeFilter, setCollegeFilter] = useState<string>(typeof restored?.collegeFilter === 'string' ? restored.collegeFilter : 'all');
+  const [viewMode, setViewMode] = useState<'cards' | 'table'>(restored?.viewMode === 'table' ? 'table' : 'cards');
 
   // Derived Statistics
   const stats = useMemo(() => {
@@ -81,43 +77,22 @@ export const PreliminaryScreeningManager: React.FC<PreliminaryScreeningManagerPr
   }, [conceptProposals, statusFilter, thematicFilter, collegeFilter, searchQuery]);
 
   const handleOpenReview = (proposal: ConceptProposal) => {
-    setSelectedProposal(proposal);
-    setIsModalOpen(true);
+    navigate(`/${role}/screening/${proposal.id}`, {
+      state: { screeningList: { searchQuery, statusFilter, thematicFilter, collegeFilter, viewMode } },
+    });
   };
 
-  const handleQuickPass = (id: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    passConceptProposal(id);
-  };
-
-  const handleQuickFailPrompt = (proposal: ConceptProposal, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setSelectedProposal(proposal);
-    setIsModalOpen(true);
-  };
-
-  const handleToggleSelect = (id: string) => {
-    setSelectedIds((prev) =>
-      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
-    );
-  };
-
-  const handleSelectAllPending = () => {
-    const pendingIds = filteredProposals
-      .filter((p) => p.screeningStatus === 'pending')
-      .map((p) => p.id);
-    if (selectedIds.length === pendingIds.length && pendingIds.length > 0) {
-      setSelectedIds([]);
-    } else {
-      setSelectedIds(pendingIds);
-    }
-  };
-
-  const handleBatchPass = () => {
-    if (selectedIds.length === 0) return;
-    bulkPassConceptProposals(selectedIds);
-    setSelectedIds([]);
-  };
+  if (loadingConceptProposals) return (
+    <div role="status" aria-label="Loading screening information">
+      <span className="sr-only">Loading screening information</span>
+      <div aria-hidden="true" className="space-y-5 motion-safe:animate-pulse">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">{Array.from({ length: 4 }, (_, index) => <div key={index} className="h-24 rounded-sm border border-slate-200 bg-white p-4"><div className="h-3 w-2/3 rounded bg-slate-100" /><div className="mt-4 h-6 w-10 rounded bg-slate-100" /></div>)}</div>
+        <div className="h-24 rounded-sm border border-slate-200 bg-white" />
+        {Array.from({ length: 3 }, (_, index) => <div key={index} className="space-y-3 rounded-sm border border-slate-200 bg-white p-5"><div className="h-4 w-2/3 rounded bg-slate-100" /><div className="h-3 w-1/3 rounded bg-slate-100" /></div>)}
+      </div>
+    </div>
+  );
+  if (screeningError) return <div role="alert" className="rounded-sm border border-red-200 bg-red-50 p-5 text-sm text-red-800">{screeningError}<button type="button" onClick={() => void refreshConceptProposals()} className="ml-3 font-semibold underline">Try again</button></div>;
 
   return (
     <div className="space-y-6">
@@ -345,44 +320,6 @@ export const PreliminaryScreeningManager: React.FC<PreliminaryScreeningManagerPr
         </div>
       </div>
 
-      {/* Batch Actions Bar (when pending items are selectable) */}
-      {statusFilter === 'pending' && filteredProposals.length > 0 && (
-        <div className="bg-slate-50 border border-slate-200 p-3 rounded-sm flex flex-wrap items-center justify-between gap-3 text-xs">
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={handleSelectAllPending}
-              className="flex items-center gap-1.5 font-bold text-slate-800 cursor-pointer hover:text-slate-900"
-            >
-              {selectedIds.length === filteredProposals.length && filteredProposals.length > 0 ? (
-                <CheckSquare className="w-4 h-4 text-slate-700" />
-              ) : (
-                <Square className="w-4 h-4 text-slate-400" />
-              )}
-              <span>Select All Pending ({filteredProposals.length})</span>
-            </button>
-            {selectedIds.length > 0 && (
-              <span className="text-slate-600 font-medium">
-                &bull; {selectedIds.length} proposal{selectedIds.length > 1 ? 's' : ''} selected
-              </span>
-            )}
-          </div>
-
-          {selectedIds.length > 0 && (
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={handleBatchPass}
-                className="px-3 py-1.5 rounded bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-2xs cursor-pointer transition-colors"
-              >
-                <CheckCircle2 className="w-3.5 h-3.5" />
-                <span>Pass Selected ({selectedIds.length})</span>
-              </button>
-            </div>
-          )}
-        </div>
-      )}
-
       {/* Main Proposals Presentation: Card View */}
       {viewMode === 'cards' && (
         <div className="grid grid-cols-1 gap-4">
@@ -390,7 +327,6 @@ export const PreliminaryScreeningManager: React.FC<PreliminaryScreeningManagerPr
             const isPassed = proposal.screeningStatus === 'passed';
             const isFailed = proposal.screeningStatus === 'failed';
             const isPending = proposal.screeningStatus === 'pending';
-            const isSelected = selectedIds.includes(proposal.id);
 
             return (
               <div
@@ -400,29 +336,15 @@ export const PreliminaryScreeningManager: React.FC<PreliminaryScreeningManagerPr
                   : isFailed
                     ? 'border-red-200'
                     : 'border-slate-200 hover:border-slate-300'
-                  } ${isSelected ? 'ring-2 ring-amber-400 bg-amber-50/20' : ''}`}
+                  }`}
               >
                 <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
 
                   {/* Left Column: Details */}
                   <div className="space-y-2.5 flex-1 min-w-0">
 
-                    {/* Header line: Checkbox (if pending), Status, Call */}
+                    {/* Header line: Status, Call */}
                     <div className="flex flex-wrap items-center gap-2">
-                      {isPending && statusFilter === 'pending' && (
-                        <button
-                          type="button"
-                          onClick={() => handleToggleSelect(proposal.id)}
-                          className="text-slate-400 hover:text-slate-700 cursor-pointer"
-                        >
-                          {isSelected ? (
-                            <CheckSquare className="w-4 h-4 text-amber-600" />
-                          ) : (
-                            <Square className="w-4 h-4 text-slate-300" />
-                          )}
-                        </button>
-                      )}
-
                       {/* Status Badge */}
                       <span
                         className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full capitalize flex items-center gap-1.5 ${isPassed
@@ -551,7 +473,7 @@ export const PreliminaryScreeningManager: React.FC<PreliminaryScreeningManagerPr
                     )}
                   </div>
 
-                  {/* Right Column: Actions (PASS & FAIL Prominent Buttons) */}
+                  {/* Right Column: Review actions */}
                   <div className="flex flex-col sm:flex-row md:flex-col items-stretch md:items-end justify-between gap-2 shrink-0 self-stretch md:self-center border-t md:border-t-0 pt-3 md:pt-0">
 
                     {/* View Files Button */}
@@ -561,40 +483,9 @@ export const PreliminaryScreeningManager: React.FC<PreliminaryScreeningManagerPr
                       className="px-3.5 py-1.5 rounded text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 transition-colors flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs"
                     >
                       <Eye className="w-3.5 h-3.5" />
-                      <span>Review Files (2)</span>
+                      <span>Review Files ({proposal.attachments.filter((file) => file.dataUrl).length})</span>
                     </button>
 
-
-                    {/* Dedicated PASS / FAIL Controls */}
-                    <div className="flex items-center gap-2">
-                      {/* PASS Button */}
-                      <button
-                        type="button"
-                        onClick={(e) => handleQuickPass(proposal.id, e)}
-                        className={`px-3.5 py-1.5 rounded text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs ${isPassed
-                          ? 'bg-emerald-600 text-white ring-2 ring-emerald-500/30'
-                          : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-600 hover:text-white border border-emerald-200'
-                          }`}
-                        title="Mark concept proposal as PASS"
-                      >
-                        <CheckCircle2 className="w-3.5 h-3.5" />
-                        <span>Pass</span>
-                      </button>
-
-                      {/* FAIL Button */}
-                      <button
-                        type="button"
-                        onClick={(e) => handleQuickFailPrompt(proposal, e)}
-                        className={`px-3.5 py-1.5 rounded text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs ${isFailed
-                          ? 'bg-red-600 text-white ring-2 ring-red-500/30'
-                          : 'bg-red-50 text-red-700 hover:bg-red-600 hover:text-white border border-red-200'
-                          }`}
-                        title="Mark concept proposal as FAIL"
-                      >
-                        <XCircle className="w-3.5 h-3.5" />
-                        <span>Fail</span>
-                      </button>
-                    </div>
 
                     {!isPending && (
                       <button
@@ -700,29 +591,9 @@ export const PreliminaryScreeningManager: React.FC<PreliminaryScreeningManagerPr
                           title="Review Files (Concept Proposal & Endorsement Form)"
                         >
                           <Eye className="w-3.5 h-3.5" />
-                          <span>Files (2)</span>
+                          <span>Review Files</span>
                         </button>
 
-                        <button
-                          type="button"
-                          onClick={(e) => handleQuickPass(proposal.id, e)}
-                          className={`px-3 py-1 rounded text-xs font-bold cursor-pointer transition-colors shadow-2xs ${isPassed
-                            ? 'bg-emerald-600 text-white'
-                            : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-600 hover:text-white border border-emerald-200'
-                            }`}
-                        >
-                          Pass
-                        </button>
-                        <button
-                          type="button"
-                          onClick={(e) => handleQuickFailPrompt(proposal, e)}
-                          className={`px-3 py-1 rounded text-xs font-bold cursor-pointer transition-colors shadow-2xs ${isFailed
-                            ? 'bg-red-600 text-white'
-                            : 'bg-red-50 text-red-700 hover:bg-red-600 hover:text-white border border-red-200'
-                            }`}
-                        >
-                          Fail
-                        </button>
                       </div>
                     </td>
                   </tr>
@@ -757,15 +628,6 @@ export const PreliminaryScreeningManager: React.FC<PreliminaryScreeningManagerPr
         </div>
       )}
 
-      {/* Comprehensive Screening Modal */}
-      <PreliminaryScreeningModal
-        isOpen={isModalOpen}
-        proposal={conceptProposals.find((p) => p.id === selectedProposal?.id) || selectedProposal}
-        onClose={() => setIsModalOpen(false)}
-        onPass={passConceptProposal}
-        onFail={failConceptProposal}
-        onReset={resetScreeningStatus}
-      />
     </div>
   );
 };

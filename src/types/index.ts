@@ -126,6 +126,7 @@ export interface ConceptProposal {
   department: string;
   submittedAt: string;
   submittedTime?: string;
+  submittedTimestamp?: string | null;
   screeningStatus: ScreeningStatus;
   budgetRequested: number;
   thematicArea: string;
@@ -141,6 +142,7 @@ export interface ConceptProposal {
   sectionComments?: ScreeningSectionComments;
   screenedBy?: string;
   screenedAt?: string;
+  screenedTimestamp?: string | null;
 }
 
 export type BudgetCategory =

@@ -181,7 +181,7 @@ export const SubmissionPeriodPortal: React.FC<SubmissionPeriodPortalProps> = ({ 
                   <div className="h-12 w-56 rounded-lg bg-slate-200" />
                 </div>
               </div>
-              <div className="min-w-0 rounded-2xl border border-slate-200 bg-white p-5 sm:p-7">
+              <div className="min-w-0 rounded-sm border border-slate-200 bg-white p-5 sm:p-7">
                 <div className="flex justify-between gap-4">
                   <div className="h-5 w-40 rounded bg-slate-100" />
                   <div className="h-6 w-16 rounded-full bg-slate-100" />
@@ -203,7 +203,7 @@ export const SubmissionPeriodPortal: React.FC<SubmissionPeriodPortalProps> = ({ 
         <div aria-hidden="true" className="max-w-7xl mx-auto px-4 py-16 sm:px-6 lg:px-8 motion-safe:animate-pulse">
           <div className="mx-auto mb-10 h-8 w-60 rounded bg-slate-100" />
           <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-            {[0, 1, 2, 3].map((item) => <div key={item} className="h-56 rounded-xl border border-slate-200 bg-slate-50" />)}
+            {[0, 1, 2, 3].map((item) => <div key={item} className="h-56 rounded-sm border border-slate-200 bg-slate-50" />)}
           </div>
         </div>
       </div>
@@ -255,7 +255,7 @@ export const SubmissionPeriodPortal: React.FC<SubmissionPeriodPortalProps> = ({ 
               </a>
             </div>
 
-            <aside aria-label="Submission details" className={`lg:col-start-2 lg:row-start-1 lg:row-span-2 min-w-0 rounded-2xl border bg-white p-5 shadow-sm sm:p-7 ${isClosed ? 'border-red-200' : 'border-slate-200'}`}>
+            <aside aria-label="Submission details" className={`lg:col-start-2 lg:row-start-1 lg:row-span-2 min-w-0 rounded-sm border bg-white p-5 shadow-sm sm:p-7 ${isClosed ? 'border-red-200' : 'border-slate-200'}`}>
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <h2 className="flex items-center gap-2 text-base font-semibold text-slate-900">
                   <Calendar className="h-5 w-5 text-[#C8102E]" /> {isClosed ? 'Submission window' : 'Submission schedule'}
@@ -397,7 +397,7 @@ export const SubmissionPeriodPortal: React.FC<SubmissionPeriodPortalProps> = ({ 
             {filteredAreas.map((area) => (
               <div
                 key={area.id}
-                className="bg-white rounded-xl p-5 border border-slate-200 hover:border-slate-300 transition-colors flex flex-col justify-between"
+                className="bg-white rounded-sm p-5 border border-slate-200 hover:border-slate-300 transition-colors flex flex-col justify-between"
               >
                 <div>
                   <div className="flex items-center justify-between mb-4">
@@ -454,7 +454,7 @@ export const SubmissionPeriodPortal: React.FC<SubmissionPeriodPortalProps> = ({ 
               return (
                 <div
                   key={idx}
-                  className="bg-white rounded-xl p-6 border border-slate-200 flex flex-col justify-between"
+                  className="bg-white rounded-sm p-6 border border-slate-200 flex flex-col justify-between"
                 >
                   <div>
                     <div className="flex items-center justify-between mb-4">
@@ -512,7 +512,7 @@ export const SubmissionPeriodPortal: React.FC<SubmissionPeriodPortalProps> = ({ 
       {/* TEMPLATES & DOWNLOADS SECTION */}
       <section id="templates" className="scroll-mt-24 py-16 bg-white border-t border-slate-200">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="bg-white rounded-xl p-6 sm:p-8 border border-slate-200 flex flex-col md:flex-row items-center justify-between gap-6">
+          <div className="bg-white rounded-sm p-6 sm:p-8 border border-slate-200 flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="space-y-2 text-center md:text-left">
               <h3 className="text-lg sm:text-xl font-bold text-slate-900 flex items-center justify-center md:justify-start gap-2">
                 <FileText className="w-5 h-5 text-[#C8102E]" />
@@ -549,7 +549,7 @@ export const SubmissionPeriodPortal: React.FC<SubmissionPeriodPortalProps> = ({ 
       {/* QUICK ASSISTANCE BANNER */}
       <section className="py-12 bg-white border-t border-slate-100">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="rounded-xl bg-slate-900 text-white p-6 sm:p-8 flex flex-col md:flex-row items-center justify-between gap-6">
+          <div className="rounded-sm bg-slate-900 text-white p-6 sm:p-8 flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="space-y-1.5 text-center md:text-left">
               <span className="text-xs uppercase tracking-wider text-red-400 font-semibold">
                 RPDU Help &amp; Consultation

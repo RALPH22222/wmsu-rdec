@@ -24,6 +24,7 @@ import EvaluatorDashboard from './pages/evaluator/evaluatorDashboard';
 import { EvaluatorReviewsPage } from './pages/evaluator/EvaluatorReviewsPage';
 import { EvaluatorLettersPage } from './pages/evaluator/EvaluatorLettersPage';
 import { PreliminaryScreeningPage } from './pages/screening/PreliminaryScreeningPage';
+import { ScreeningReviewPage } from './pages/screening/ScreeningReviewPage';
 import { InceptionSchedulingPage } from './pages/rpdu/InceptionSchedulingPage';
 import { LetterDeskPage } from './pages/rpdu/LetterDeskPage';
 import Login from './pages/auth/Login';
@@ -107,6 +108,7 @@ export function App() {
                 <Route path="/admin/calls/new" element={<CallFormPage role="admin" mode="create" />} />
                 <Route path="/admin/calls/:callId/edit" element={<CallFormPage role="admin" />} />
                 <Route path="/admin/screening" element={<AdminPreliminaryScreeningPage />} />
+                <Route path="/admin/screening/:proposalId" element={<ScreeningReviewPage role="admin" />} />
                 <Route path="/admin/letters" element={<AdminLetterDeskPage />} />
                 <Route path="/admin/clearance" element={<Navigate to="/admin/letters?template=WMSU-RPDU-CERT-001.00" replace />} />
                 <Route path="/admin/contracts" element={<Navigate to="/admin/letters?template=WMSU-RPDU-PSC-001.00" replace />} />
@@ -120,6 +122,7 @@ export function App() {
                 <Route path="/rpdu/calls/new" element={<CallFormPage role="rpdu" mode="create" />} />
                 <Route path="/rpdu/calls/:callId/edit" element={<CallFormPage role="rpdu" />} />
                 <Route path="/rpdu/screening" element={<PreliminaryScreeningPage role="rpdu" />} />
+                <Route path="/rpdu/screening/:proposalId" element={<ScreeningReviewPage role="rpdu" />} />
                 <Route path="/rpdu/passed-proposals" element={<PassedProposalsPage />} />
                 <Route path="/rpdu/letters" element={<LetterDeskPage />} />
                 <Route path="/rpdu/clearance" element={<Navigate to="/rpdu/letters?template=WMSU-RPDU-CERT-001.00" replace />} />

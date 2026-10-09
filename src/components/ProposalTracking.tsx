@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useState } from 'react';
+import { Fragment, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { FileCheck, RefreshCw, Search, X } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -36,6 +36,8 @@ const formatDate = (value: string | null) => value ? new Date(value).toLocaleStr
 
 export const ProposalTracking = ({ role }: { role: 'admin' | 'rpdu' }) => {
   const { session } = useAuth();
+  const accessToken = session?.access_token;
+  const userId = session?.user.id;
   const [proposals, setProposals] = useState<TrackingProposal[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -44,20 +46,24 @@ export const ProposalTracking = ({ role }: { role: 'admin' | 'rpdu' }) => {
   const [stage, setStage] = useState('all');
   const [search, setSearch] = useState('');
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const loadedView = useRef<{ userId: string | undefined; refresh: number } | null>(null);
 
   useEffect(() => {
     const controller = new AbortController();
     const load = async () => {
-      setLoading(true);
+      if (loadedView.current?.userId !== userId || loadedView.current?.refresh !== refresh) setLoading(true);
       setError('');
       try {
-        if (!session?.access_token) throw new Error('Please sign in to view proposal tracking.');
+        if (!accessToken) throw new Error('Please sign in to view proposal tracking.');
         const response = await fetch(API_ENDPOINTS.RPDU.TRACKING, {
-          headers: { Authorization: `Bearer ${session.access_token}` }, signal: controller.signal,
+          headers: { Authorization: `Bearer ${accessToken}` }, signal: controller.signal,
         });
         const result = await response.json();
         if (!response.ok || !result.success) throw new Error(result.message || 'Unable to load proposal tracking.');
-        if (!controller.signal.aborted) setProposals(result.data);
+        if (!controller.signal.aborted) {
+          setProposals(result.data);
+          loadedView.current = { userId, refresh };
+        }
       } catch (failure) {
         if (!controller.signal.aborted) setError(failure instanceof Error ? failure.message : 'Unable to load proposal tracking.');
       } finally {
@@ -66,7 +72,7 @@ export const ProposalTracking = ({ role }: { role: 'admin' | 'rpdu' }) => {
     };
     void load();
     return () => controller.abort();
-  }, [session?.access_token, refresh]);
+  }, [accessToken, userId, refresh]);
 
   const calls = [...new Map(proposals.map((proposal) => [proposal.callId, proposal.callTitle])).entries()];
   const callProposals = proposals.filter((proposal) => callId === 'all' || proposal.callId === callId);
