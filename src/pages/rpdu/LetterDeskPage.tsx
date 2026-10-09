@@ -8,8 +8,7 @@ import {
   Search,
   X,
   CheckCircle2,
-  ChevronDown,
-  ChevronUp
+  Clock
 } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
@@ -35,6 +34,7 @@ type Source = {
   certificateReady: boolean;
   contractReady?: boolean;
   contractIssued?: boolean;
+  existingContract?: { id: string; status: 'DRAFT' | 'ISSUED' } | null;
   prerequisites?: {
     screeningPassed: boolean;
     technicalClearanceApproved: boolean;
@@ -72,7 +72,10 @@ type ContractData = {
   schoolYear: string;
   collegeDepartment: string;
   coResearchers: string;
+  workPlan: string;
 };
+
+type ContractContext = { contractData: ContractData; missingFields: string[]; lockedFields: string[]; studyLeader: string; signatories: Partial<Signatories>; existingContract: Source['existingContract'] };
 
 type Preview = {
   html: string;
@@ -88,6 +91,7 @@ type IssuedDocument = {
   issued_at: string;
   template_code: string;
   letter_date?: string;
+  is_notarized?: boolean;
   template_variables: {
     title: string;
     recipientName: string;
@@ -132,18 +136,8 @@ export function LetterDeskPage() {
   const [reviewId, setReviewId] = useState('');
   const [headApprovalConfirmed, setHeadApprovalConfirmed] = useState(false);
 
-  // Contract specific fields
-  const [contractData, setContractData] = useState<ContractData>({
-    contractNumber: `PSC-2026-${Math.floor(100 + Math.random() * 900)}`,
-    durationMonths: '12',
-    startDate: new Date().toISOString().split('T')[0],
-    endDate: new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split('T')[0],
-    contractAmount: '180000',
-    compensationArrangement: 'Deloading',
-    schoolYear: '2026–2027',
-    collegeDepartment: 'College of Science and Mathematics',
-    coResearchers: '',
-  });
+  const [contractContext, setContractContext] = useState<ContractContext | null>(null);
+  const [contextLoading, setContextLoading] = useState(false);
 
   // Signatories
   const [signatories, setSignatories] = useState<Signatories>({
@@ -167,18 +161,23 @@ export function LetterDeskPage() {
   const [newlyIssuedId, setNewlyIssuedId] = useState<string | null>(null);
   const [issuedDocs, setIssuedDocs] = useState<IssuedDocument[]>([]);
   const [archivedHtml, setArchivedHtml] = useState('');
+  const archivedPdfUrl = (() => {
+    if (!/^(https?:\/\/|\/uploads\/)/i.test(archivedHtml)) return '';
+    try { return new URL(archivedHtml, new URL(API_BASE_URL).origin).href; }
+    catch { return ''; }
+  })();
   const [selectedIssuedDoc, setSelectedIssuedDoc] = useState<IssuedDocument | null>(null);
 
   // Filter & Search for Issued Documents
   const [archiveFilter, setArchiveFilter] = useState<'ALL' | 'CERTIFICATE' | 'CONTRACT' | 'LETTERS'>('ALL');
   const [archiveSearch, setArchiveSearch] = useState('');
-  const [showPrereqDetails, setShowPrereqDetails] = useState(false);
 
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   const roleAllowed = profile?.role === 'RPDU' || profile?.role === 'ADMIN';
+
   const selectedSource = sources.find((item) => item.id === conceptId);
 
   // All proposal records are available for testing without restraints
@@ -191,8 +190,7 @@ export function LetterDeskPage() {
     if (isContractTemplate(template)) {
       return Boolean(
         signatories.firstParty?.trim() &&
-        signatories.secondParty?.trim() &&
-        signatories.coordinator.trim() &&
+        signatories.vicePresident.trim() &&
         signatories.director.trim()
       );
     }
@@ -235,8 +233,12 @@ export function LetterDeskPage() {
       })
       .then((data) => {
         if (!active) return;
-        setSources(data);
-        if (requestedProposal.current && data.some((item) => item.id === requestedProposal.current)) {
+        const normalized = (data || []).map((item: any) => ({
+          ...item,
+          id: item.id || item.conceptProposalId || '',
+        }));
+        setSources(normalized);
+        if (requestedProposal.current && normalized.some((item: any) => item.id === requestedProposal.current)) {
           setConceptId(requestedProposal.current);
           setStage(2);
         }
@@ -265,21 +267,35 @@ export function LetterDeskPage() {
   };
 
   useEffect(() => {
-    loadIssued();
-    if (requestedIssued.current) {
-      openIssuedDocument(requestedIssued.current);
-    }
+    if (!roleAllowed || !session?.access_token) return;
+    const controller = new AbortController();
+    const read = async <T,>(path: string): Promise<T> => {
+      const response = await fetch(`${API_BASE_URL}/letters${path}`, { signal: controller.signal, headers: { Authorization: `Bearer ${session.access_token}` } });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.message || 'Could not load issued documents.');
+      return result.data as T;
+    };
+    const requestedId = requestedIssued.current;
+    Promise.all([read<IssuedDocument[]>('/issued'), requestedId ? read<{ rendered_html: string; template_variables: IssuedDocument['template_variables'] }>(`/issued/${requestedId}`) : Promise.resolve(null)])
+      .then(([documents, document]) => {
+        if (controller.signal.aborted) return;
+        setIssuedDocs(documents);
+        if (document) { setArchivedHtml(document.rendered_html); setSelectedIssuedDoc(documents.find(item => item.id === requestedId) || null); }
+      }).catch(cause => { if (!controller.signal.aborted) setError(cause instanceof Error ? cause.message : 'Could not load issued documents.'); });
+    return () => controller.abort();
   }, [roleAllowed, session?.access_token]);
 
-  // When a source is picked, automatically populate study leader into contract/signatory
   useEffect(() => {
-    if (selectedSource) {
-      setSignatories((prev) => ({
-        ...prev,
-        secondParty: selectedSource.proponentName,
-      }));
-    }
-  }, [selectedSource]);
+    if (!isContractTemplate(template) || !conceptId || !session?.access_token) return;
+    let active = true;
+    setError('');
+    fetch(`${API_BASE_URL}/letters/contract-context/${conceptId}`, { headers: { Authorization: `Bearer ${session.access_token}` } })
+      .then(async response => { const result = await response.json(); if (!response.ok) throw new Error(result.message || 'Could not load saved contract information.'); return result.data as ContractContext; })
+      .then(data => { if (active) { setContractContext(data); setSignatories(current => ({ ...current, ...data.signatories, secondParty: data.studyLeader })); } })
+      .catch(cause => { if (active) setError(cause instanceof Error ? cause.message : 'Could not load contract information.'); })
+      .finally(() => { if (active) setContextLoading(false); });
+    return () => { active = false; };
+  }, [template, conceptId, session?.access_token]);
 
   const clearDraft = () => {
     setPreview(null);
@@ -291,6 +307,7 @@ export function LetterDeskPage() {
     setTemplate(value);
     setHeadApprovalConfirmed(false);
     setConceptId('');
+    setContractContext(null);
     setReviewId('');
     clearDraft();
   };
@@ -315,10 +332,13 @@ export function LetterDeskPage() {
         templateCode: template,
         conceptId,
         reviewId,
-        signatories,
+        signatories: {
+          ...signatories,
+          secondParty: signatories.secondParty || selectedSource?.proponentName || contractContext?.studyLeader || 'Study Leader',
+        },
         signatures,
         headApprovalConfirmed,
-        contractData,
+        contractData: contractContext?.contractData,
       });
       setPreview(data);
       setStage(4);
@@ -338,11 +358,14 @@ export function LetterDeskPage() {
         templateCode: template,
         conceptId,
         reviewId,
-        signatories,
+        signatories: {
+          ...signatories,
+          secondParty: signatories.secondParty || selectedSource?.proponentName || contractContext?.studyLeader || 'Study Leader',
+        },
         signatures,
         headApprovalConfirmed,
-        contractData,
         digest: preview.digest,
+        contractData: contractContext?.contractData,
       });
       setNewlyIssuedId(record.id);
       await loadIssued();
@@ -358,7 +381,7 @@ export function LetterDeskPage() {
     setBusy(true);
     setError('');
     try {
-      const doc = await api<{ id: string; rendered_html: string; template_variables: any }>(`/issued/${id}`);
+      const doc = await api<{ id: string; rendered_html: string; template_variables: IssuedDocument['template_variables'] }>(`/issued/${id}`);
       setArchivedHtml(doc.rendered_html);
       const found = issuedDocs.find((i) => i.id === id);
       setSelectedIssuedDoc(found || null);
@@ -383,7 +406,8 @@ export function LetterDeskPage() {
       const title = doc.template_variables?.title?.toLowerCase() || '';
       const name = doc.template_variables?.recipientName?.toLowerCase() || '';
       const code = doc.template_code?.toLowerCase() || '';
-      return title.includes(q) || name.includes(q) || code.includes(q);
+      const contractNum = doc.template_variables?.contractData?.contractNumber?.toLowerCase() || '';
+      return title.includes(q) || name.includes(q) || code.includes(q) || contractNum.includes(q);
     });
   }, [issuedDocs, archiveFilter, archiveSearch]);
 
@@ -594,11 +618,11 @@ export function LetterDeskPage() {
           <div className="mx-auto max-w-2xl space-y-7">
             <div>
               <h2 className="text-xl font-bold text-slate-900">
-                {isContractTemplate(template) ? 'Contract Terms & Governance Verification' : 'Select Associated Research Proposal'}
+                {isContractTemplate(template) ? 'Select the Proponent’s PSC' : 'Select Associated Research Proposal'}
               </h2>
               <p className="mt-1 text-sm text-slate-600">
                 {isContractTemplate(template)
-                  ? 'Connect the PSC to the approved proposal, verify workflow prerequisites, and configure contractual parameters.'
+                  ? 'Select the proposal. Saved information is filled automatically; the proponent completes missing details after RPDU sends the prepared PSC.'
                   : template === CERTIFICATE
                   ? 'Select the technically reviewed proposal to issue the clearance certificate.'
                   : 'Select the proposal record to address this official correspondence.'}
@@ -616,17 +640,22 @@ export function LetterDeskPage() {
                 value={conceptId}
                 onChange={(event) => {
                   setConceptId(event.target.value);
+                  setContractContext(null);
+                  setContextLoading(isContractTemplate(template) && Boolean(event.target.value));
                   setHeadApprovalConfirmed(false);
                   setReviewId('');
                   clearDraft();
                 }}
               >
                 <option value="">-- Choose a research proposal --</option>
-                {choices.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.title} ({item.proponentName})
-                  </option>
-                ))}
+                {choices.map((item) => {
+                  const val = item.id || (item as any).conceptProposalId;
+                  return (
+                    <option key={val} value={val}>
+                      {item.title} ({item.proponentName})
+                    </option>
+                  );
+                })}
               </select>
             </div>
 
@@ -647,238 +676,11 @@ export function LetterDeskPage() {
               </div>
             )}
 
-            {/* CONTRACT SPECIFIC PREREQUISITE CHECKS & PARAMETERS */}
-            {isContractTemplate(template) && selectedSource && (
-              <div className="space-y-6">
-                {/* PREREQUISITE GOVERNANCE CHECKLIST (COMPACT) */}
-                <div className="rounded-lg border border-emerald-200 bg-emerald-50/70 p-4 transition-all">
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0" />
-                        <span className="text-sm font-bold text-emerald-950">
-                          Ready for PSC Issuance
-                        </span>
-                      </div>
-                      <p className="text-xs text-emerald-800 pl-7">
-                        Technical review and budget requirements have been completed.
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setShowPrereqDetails((prev) => !prev)}
-                      className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-800 hover:text-emerald-950 underline underline-offset-2 cursor-pointer shrink-0 pt-0.5"
-                    >
-                      <span>{showPrereqDetails ? 'Hide details' : 'View details'}</span>
-                      {showPrereqDetails ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                    </button>
-                  </div>
-
-                  {showPrereqDetails && (
-                    <div className="mt-3.5 pt-3 border-t border-emerald-200/80 grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-emerald-900 pl-7">
-                      <div className="flex items-center gap-2">
-                        <Check size={14} className="text-emerald-600 shrink-0" />
-                        <span>Preliminary Screening — <strong>Passed</strong></span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Check size={14} className="text-emerald-600 shrink-0" />
-                        <span>Technical Review — <strong>Approved</strong></span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Check size={14} className="text-emerald-600 shrink-0" />
-                        <span>Operating Budget — <strong>Approved</strong></span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Check size={14} className="text-emerald-600 shrink-0" />
-                        <span>Line-Item Budget — <strong>Signed</strong></span>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* PARAMETERS FORM */}
-                <div className="space-y-5 rounded-lg border border-slate-200 bg-slate-50/60 p-6">
-                  <div className="text-slate-900 font-bold text-sm border-b border-slate-200 pb-2">
-                    Official Contract Parameters (WMSU-RPDU-CA-001.01)
-                  </div>
-
-                  {/* COMPENSATION ARRANGEMENT SELECTION */}
-                  <div>
-                    <label className="block text-sm font-bold text-slate-800 mb-2.5">
-                      Compensation Arrangement *
-                    </label>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      {/* Option 1: Teaching De-loading */}
-                      <label
-                        className={`cursor-pointer rounded-lg border-2 p-5 transition-all text-left ${
-                          contractData.compensationArrangement === 'Deloading'
-                            ? 'border-[#C8102E] bg-red-50/60 shadow-sm'
-                            : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/50'
-                        }`}
-                      >
-                        <div className="flex items-center gap-3">
-                          <input
-                            type="radio"
-                            name="compensationArrangement"
-                            value="Deloading"
-                            checked={contractData.compensationArrangement === 'Deloading'}
-                            onChange={() => setContractData((d) => ({ ...d, compensationArrangement: 'Deloading' }))}
-                            className="h-5 w-5 accent-[#C8102E] cursor-pointer"
-                          />
-                          <span className="text-base font-bold text-slate-900">
-                            Teaching De-loading
-                          </span>
-                        </div>
-                        <div className="mt-3.5 space-y-2 pl-8 text-sm text-slate-600">
-                          <div>No Study Leader honorarium</div>
-                          <div>Co-Researchers: ₱2,000 / quarter</div>
-                        </div>
-                      </label>
-
-                      {/* Option 2: Research Honorarium */}
-                      <label
-                        className={`cursor-pointer rounded-lg border-2 p-5 transition-all text-left ${
-                          contractData.compensationArrangement === 'Honorarium'
-                            ? 'border-[#C8102E] bg-red-50/60 shadow-sm'
-                            : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/50'
-                        }`}
-                      >
-                        <div className="flex items-center gap-3">
-                          <input
-                            type="radio"
-                            name="compensationArrangement"
-                            value="Honorarium"
-                            checked={contractData.compensationArrangement === 'Honorarium'}
-                            onChange={() => setContractData((d) => ({ ...d, compensationArrangement: 'Honorarium' }))}
-                            className="h-5 w-5 accent-[#C8102E] cursor-pointer"
-                          />
-                          <span className="text-base font-bold text-slate-900">
-                            Research Honorarium
-                          </span>
-                        </div>
-                        <div className="mt-3.5 space-y-2 pl-8 text-sm text-slate-600">
-                          <div>Study Leader: ₱4,500 / quarter</div>
-                          <div>Co-Researchers: ₱2,000 / quarter</div>
-                          <div>No teaching de-loading</div>
-                        </div>
-                      </label>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1" htmlFor="contract-num">
-                        Internal Tracking ID *
-                      </label>
-                      <input
-                        id="contract-num"
-                        type="text"
-                        value={contractData.contractNumber}
-                        onChange={(e) => setContractData((d) => ({ ...d, contractNumber: e.target.value }))}
-                        className="w-full rounded-md border border-slate-300 bg-white p-2.5 text-sm font-semibold text-slate-900 focus:border-[#C8102E] focus:outline-hidden"
-                      />
-                      <span className="text-[10px] text-slate-500 mt-0.5 block">Official Doc No: WMSU-RPDU-CA-001.01</span>
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1" htmlFor="contract-budget">
-                        Approved Operating Budget (₱) *
-                      </label>
-                      <input
-                        id="contract-budget"
-                        type="number"
-                        step="1000"
-                        value={contractData.contractAmount}
-                        onChange={(e) => setContractData((d) => ({ ...d, contractAmount: e.target.value }))}
-                        className="w-full rounded-md border border-slate-300 bg-white p-2.5 text-sm font-semibold text-slate-900 focus:border-[#C8102E] focus:outline-hidden"
-                      />
-                      <span className="text-[10px] text-slate-500 mt-0.5 block">Project cost under Section 5 (separate from honorarium)</span>
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1" htmlFor="contract-duration">
-                        Project Duration (Months) *
-                      </label>
-                      <input
-                        id="contract-duration"
-                        type="number"
-                        value={contractData.durationMonths}
-                        onChange={(e) => setContractData((d) => ({ ...d, durationMonths: e.target.value }))}
-                        className="w-full rounded-md border border-slate-300 bg-white p-2.5 text-sm font-semibold text-slate-900 focus:border-[#C8102E] focus:outline-hidden"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1" htmlFor="contract-school-year">
-                        Academic / School Year (SY) *
-                      </label>
-                      <input
-                        id="contract-school-year"
-                        type="text"
-                        value={contractData.schoolYear}
-                        onChange={(e) => setContractData((d) => ({ ...d, schoolYear: e.target.value }))}
-                        placeholder="e.g. 2026–2027"
-                        className="w-full rounded-md border border-slate-300 bg-white p-2.5 text-sm font-semibold text-slate-900 focus:border-[#C8102E] focus:outline-hidden"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1" htmlFor="contract-start">
-                        Start Date
-                      </label>
-                      <input
-                        id="contract-start"
-                        type="date"
-                        value={contractData.startDate}
-                        onChange={(e) => setContractData((d) => ({ ...d, startDate: e.target.value }))}
-                        className="w-full rounded-md border border-slate-300 bg-white p-2.5 text-sm text-slate-900 focus:border-[#C8102E] focus:outline-hidden"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1" htmlFor="contract-end">
-                        Target Completion Date
-                      </label>
-                      <input
-                        id="contract-end"
-                        type="date"
-                        value={contractData.endDate}
-                        onChange={(e) => setContractData((d) => ({ ...d, endDate: e.target.value }))}
-                        className="w-full rounded-md border border-slate-300 bg-white p-2.5 text-sm text-slate-900 focus:border-[#C8102E] focus:outline-hidden"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1" htmlFor="contract-dept">
-                      College / Department of Study Leader
-                    </label>
-                    <input
-                      id="contract-dept"
-                      type="text"
-                      value={contractData.collegeDepartment}
-                      onChange={(e) => setContractData((d) => ({ ...d, collegeDepartment: e.target.value }))}
-                      placeholder="e.g. College of Science and Mathematics"
-                      className="w-full rounded-md border border-slate-300 bg-white p-2.5 text-sm text-slate-900 focus:border-[#C8102E] focus:outline-hidden"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1" htmlFor="contract-coresearchers">
-                      Co-Researchers (Optional, comma-separated)
-                    </label>
-                    <input
-                      id="contract-coresearchers"
-                      type="text"
-                      placeholder="e.g. Prof. Maria Theresa Santos, Engr. Dan Ramos"
-                      value={contractData.coResearchers}
-                      onChange={(e) => setContractData((d) => ({ ...d, coResearchers: e.target.value }))}
-                      className="w-full rounded-md border border-slate-300 bg-white p-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-[#C8102E] focus:outline-hidden"
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
+            {isContractTemplate(template) && contextLoading && <p role="status" className="text-sm text-slate-600">Checking existing PSC…</p>}
+            {isContractTemplate(template) && contractContext?.existingContract && <div role="status" className="border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+              <p>{contractContext.existingContract.status === 'DRAFT' ? 'A PSC draft already exists. Continue this draft using the next step; its existing record will be issued.' : 'A PSC has already been issued for this proposal. Another PSC cannot be generated.'}</p>
+              <button type="button" onClick={() => contractContext.existingContract!.status === 'DRAFT' ? setStage(3) : openIssuedDocument(contractContext.existingContract!.id)} className="mt-2 font-semibold underline">{contractContext.existingContract.status === 'DRAFT' ? 'Continue existing draft' : 'Open existing PSC'}</button>
+            </div>}
 
             {/* Reviewer picker for invitation letters */}
             {selectedSource && template === INVITATION && (
@@ -916,7 +718,7 @@ export function LetterDeskPage() {
               </button>
               <button
                 type="button"
-                disabled={!choices.some((item) => item.id === conceptId) || (template === INVITATION && !reviewId)}
+                disabled={!choices.some((item) => (item.id || (item as any).conceptProposalId) === conceptId) || (isContractTemplate(template) && (!contractContext || (contractContext.existingContract?.status === 'ISSUED' && !contractContext.existingContract?.id))) || (template === INVITATION && !reviewId)}
                 onClick={() => setStage(3)}
                 className="inline-flex items-center gap-2 bg-[#C8102E] hover:bg-[#A00D26] px-6 py-3 text-sm font-bold text-white rounded-md shadow-xs transition-colors cursor-pointer disabled:cursor-not-allowed disabled:bg-slate-300"
               >
@@ -959,107 +761,77 @@ export function LetterDeskPage() {
             )}
 
             <div className="space-y-6">
-              {/* FOR CONTRACT (PSC): CONFORME (First Party & Second Party) */}
+              {/* FOR CONTRACT (PSC): INSTITUTIONAL SIGNATORIES & WITNESSES */}
               {isContractTemplate(template) ? (
-                <>
-                  <div className="p-5 rounded-lg border border-slate-200 bg-slate-50 space-y-4">
-                    <div className="text-xs font-extrabold uppercase tracking-wider text-slate-700 border-b border-slate-200 pb-2">
-                      CONFORME — Contracting Parties
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div>
-                        <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1" htmlFor="first-party-name">
-                          First Party: University President *
-                        </label>
-                        <input
-                          id="first-party-name"
-                          maxLength={120}
-                          value={signatories.firstParty || 'Dr. Ma. Carla A. Ochotorena'}
-                          onChange={(event) => updateSignatory('firstParty', event.target.value)}
-                          placeholder="President's Full Name"
-                          className="w-full rounded-md border border-slate-300 bg-white p-3 text-sm text-slate-900 font-semibold focus:border-[#C8102E] focus:outline-hidden"
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* First Party: University President */}
+                    <div>
+                      <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1" htmlFor="psc-first-party">
+                        University President (First Party) *
+                      </label>
+                      <input
+                        id="psc-first-party"
+                        maxLength={120}
+                        value={signatories.firstParty || ''}
+                        onChange={(event) => updateSignatory('firstParty', event.target.value)}
+                        placeholder="Dr. Ma. Carla A. Ochotorena"
+                        className="w-full rounded-md border border-slate-300 bg-white p-3 text-sm text-slate-900 font-semibold focus:border-[#C8102E] focus:outline-hidden"
+                      />
+                      <div className="mt-3">
+                        <SignatureField
+                          label="President Signature"
+                          value={signatures.firstParty || ''}
+                          onChange={(value) => updateSignature('firstParty', value)}
                         />
-                        <div className="mt-3">
-                          <SignatureField
-                            label="President's Signature"
-                            value={signatures.firstParty || ''}
-                            onChange={(value) => updateSignature('firstParty', value)}
-                          />
-                        </div>
                       </div>
+                    </div>
 
-                      <div>
-                        <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1" htmlFor="second-party-name">
-                          Second Party: Study Leader *
+                    {/* Witness 1: RDEC Director */}
+                    <div>
+                      <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1" htmlFor="psc-director-witness">
+                        RDEC Director (Witness) *
+                      </label>
+                      <input
+                        id="psc-director-witness"
+                        maxLength={120}
+                        value={signatories.director}
+                        onChange={(event) => updateSignatory('director', event.target.value)}
+                        placeholder="Dr. Roberto M. Bernardo"
+                        className="w-full rounded-md border border-slate-300 bg-white p-3 text-sm text-slate-900 font-semibold focus:border-[#C8102E] focus:outline-hidden"
+                      />
+                      <div className="mt-3">
+                        <SignatureField
+                          label="Director Signature"
+                          value={signatures.director}
+                          onChange={(value) => updateSignature('director', value)}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Witness 2: VP RESEL */}
+                    <div className="md:col-span-2 flex justify-center">
+                      <div className="w-full md:w-[calc(50%-0.75rem)]">
+                        <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1" htmlFor="psc-vp-witness">
+                          Vice President, RESEL (Witness) *
                         </label>
                         <input
-                          id="second-party-name"
+                          id="psc-vp-witness"
                           maxLength={120}
-                          value={signatories.secondParty || selectedSource?.proponentName || ''}
-                          onChange={(event) => updateSignatory('secondParty', event.target.value)}
-                          placeholder="Study Leader's Full Name"
+                          value={signatories.vicePresident}
+                          onChange={(event) => updateSignatory('vicePresident', event.target.value)}
+                          placeholder="Dr. Joel G. Fernando"
                           className="w-full rounded-md border border-slate-300 bg-white p-3 text-sm text-slate-900 font-semibold focus:border-[#C8102E] focus:outline-hidden"
                         />
                         <div className="mt-3">
                           <SignatureField
-                            label="Study Leader's Signature"
-                            value={signatures.secondParty || ''}
-                            onChange={(value) => updateSignature('secondParty', value)}
+                            label="Vice President Signature"
+                            value={signatures.vicePresident}
+                            onChange={(value) => updateSignature('vicePresident', value)}
                           />
                         </div>
                       </div>
                     </div>
                   </div>
-
-                  <div className="p-5 rounded-lg border border-slate-200 bg-slate-50 space-y-4">
-                    <div className="text-xs font-extrabold uppercase tracking-wider text-slate-700 border-b border-slate-200 pb-2">
-                      WITNESSES — Endorsing University Officials
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div>
-                        <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1" htmlFor="director-name">
-                          Witness 1: RDEC Director *
-                        </label>
-                        <input
-                          id="director-name"
-                          maxLength={120}
-                          value={signatories.director}
-                          onChange={(event) => updateSignatory('director', event.target.value)}
-                          placeholder="Full name of RDEC Director"
-                          className="w-full rounded-md border border-slate-300 bg-white p-3 text-sm text-slate-900 font-semibold focus:border-[#C8102E] focus:outline-hidden"
-                        />
-                        <div className="mt-3">
-                          <SignatureField
-                            label="Director Signature"
-                            value={signatures.director}
-                            onChange={(value) => updateSignature('director', value)}
-                          />
-                        </div>
-                      </div>
-
-                      <div>
-                        <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1" htmlFor="coordinator-name">
-                          Witness 2: RPDU Coordinator / VP RESEL *
-                        </label>
-                        <input
-                          id="coordinator-name"
-                          maxLength={120}
-                          value={signatories.coordinator}
-                          onChange={(event) => updateSignatory('coordinator', event.target.value)}
-                          placeholder="Full name of RPDU Coordinator"
-                          className="w-full rounded-md border border-slate-300 bg-white p-3 text-sm text-slate-900 font-semibold focus:border-[#C8102E] focus:outline-hidden"
-                        />
-                        <div className="mt-3">
-                          <SignatureField
-                            label="Coordinator / VP RESEL Signature"
-                            value={signatures.coordinator}
-                            onChange={(value) => updateSignature('coordinator', value)}
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
@@ -1107,24 +879,26 @@ export function LetterDeskPage() {
                   )}
 
                   {template === SCREENING && (
-                    <div className="md:col-span-2">
-                      <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1" htmlFor="vice-president-name">
-                        Vice President, RESEL *
-                      </label>
-                      <input
-                        id="vice-president-name"
-                        maxLength={120}
-                        value={signatories.vicePresident}
-                        onChange={(event) => updateSignatory('vicePresident', event.target.value)}
-                        placeholder="Full name of Vice President"
-                        className="w-full rounded-md border border-slate-300 bg-white p-3 text-sm text-slate-900 font-semibold focus:border-[#C8102E] focus:outline-hidden"
-                      />
-                      <div className="mt-3">
-                        <SignatureField
-                          label="Vice President Signature"
-                          value={signatures.vicePresident}
-                          onChange={(value) => updateSignature('vicePresident', value)}
+                    <div className="md:col-span-2 flex justify-center">
+                      <div className="w-full md:w-[calc(50%-0.75rem)]">
+                        <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1" htmlFor="vice-president-name">
+                          Vice President, RESEL *
+                        </label>
+                        <input
+                          id="vice-president-name"
+                          maxLength={120}
+                          value={signatories.vicePresident}
+                          onChange={(event) => updateSignatory('vicePresident', event.target.value)}
+                          placeholder="Full name of Vice President"
+                          className="w-full rounded-md border border-slate-300 bg-white p-3 text-sm text-slate-900 font-semibold focus:border-[#C8102E] focus:outline-hidden"
                         />
+                        <div className="mt-3">
+                          <SignatureField
+                            label="Vice President Signature"
+                            value={signatures.vicePresident}
+                            onChange={(value) => updateSignature('vicePresident', value)}
+                          />
+                        </div>
                       </div>
                     </div>
                   )}
@@ -1226,7 +1000,7 @@ export function LetterDeskPage() {
                     : busy
                     ? 'Issuing Document…'
                     : isContractTemplate(template)
-                    ? 'Issue & Archive Contract (PSC)'
+                    ? 'Send PSC to Proponent'
                     : template === CERTIFICATE
                     ? 'Issue & Archive Certificate (COTR)'
                     : 'Issue Official Letter'}
@@ -1242,7 +1016,7 @@ export function LetterDeskPage() {
                   <div>
                     <div className="font-bold">
                       {isContractTemplate(template)
-                        ? 'Professional Service Contract successfully issued!'
+                        ? 'PSC sent to the proponent for completion and download.'
                         : template === CERTIFICATE
                         ? 'Certificate of Technical Review successfully cleared!'
                         : 'Official letter successfully issued!'}
@@ -1326,19 +1100,89 @@ export function LetterDeskPage() {
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
           <input
             type="text"
-            placeholder="Search by proposal title or recipient..."
+            placeholder="Search by proposal title, recipient, or contract ref..."
             value={archiveSearch}
             onChange={(e) => setArchiveSearch(e.target.value)}
             className="w-full pl-10 pr-4 py-2.5 rounded-md border border-slate-200 bg-white text-xs text-slate-900 placeholder:text-slate-400 focus:border-[#C8102E] focus:outline-hidden"
           />
         </div>
 
-        {/* List of Issued Documents */}
+        {/* List / Table of Issued Documents */}
         {filteredIssuedDocs.length === 0 ? (
           <div className="rounded-lg border border-dashed border-slate-200 bg-white p-12 text-center text-slate-500">
             <FileText className="w-8 h-8 mx-auto mb-2 text-slate-300 stroke-1" />
             <p className="font-semibold text-slate-700">No issued records match your criteria.</p>
             <p className="text-xs text-slate-400 mt-0.5">Use the form above to prepare and issue a document.</p>
+          </div>
+        ) : archiveFilter === 'CONTRACT' ? (
+          /* ISSUED CONTRACTS TABLE */
+          <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white shadow-2xs">
+            <table className="w-full text-left text-xs border-collapse">
+              <thead>
+                <tr className="border-b border-slate-200 bg-slate-50/80 text-[11px] font-bold uppercase tracking-wider text-slate-600">
+                  <th className="py-3 px-4">Contract Ref &amp; Date</th>
+                  <th className="py-3 px-4">Research Project Title</th>
+                  <th className="py-3 px-4">Study Leader</th>
+                  <th className="py-3 px-4 text-center">Notarization Status</th>
+                  <th className="py-3 px-4 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {filteredIssuedDocs.map((item) => {
+                  const formattedDate = new Date(item.issued_at).toLocaleDateString('en-PH', {
+                    timeZone: 'Asia/Manila',
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric',
+                  });
+                  const contractNo = item.template_variables?.contractData?.contractNumber || `PSC-${item.id.slice(0, 8).toUpperCase()}`;
+                  const isNotarized = Boolean(item.is_notarized);
+
+                  return (
+                    <tr key={item.id} className="hover:bg-slate-50/70 transition-colors">
+                      <td className="py-3.5 px-4 whitespace-nowrap">
+                        <span className="font-bold text-slate-900 block">{contractNo}</span>
+                        <span className="text-[11px] text-slate-400 font-medium">Issued {formattedDate}</span>
+                      </td>
+                      <td className="py-3.5 px-4 min-w-[200px] max-w-[340px]">
+                        <span className="font-bold text-slate-900 line-clamp-2 leading-snug">
+                          {item.template_variables?.title || 'Institutional Research Project'}
+                        </span>
+                      </td>
+                      <td className="py-3.5 px-4 whitespace-nowrap">
+                        <span className="font-semibold text-slate-800 block">
+                          {item.template_variables?.recipientName || 'Study Leader'}
+                        </span>
+                        <span className="text-[11px] text-slate-500">Study Leader</span>
+                      </td>
+                      <td className="py-3.5 px-4 text-center whitespace-nowrap">
+                        {isNotarized ? (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                            Notarized Copy Submitted
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-slate-100 text-slate-700 border border-slate-200">
+                            <Clock className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                            Awaiting Notarized Submission
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-3.5 px-4 text-right whitespace-nowrap">
+                        <button
+                          type="button"
+                          disabled={busy}
+                          onClick={() => openIssuedDocument(item.id)}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-[#C8102E] hover:text-[#A00D26] hover:bg-red-50/60 rounded-md transition-colors cursor-pointer"
+                        >
+                          <Printer className="w-3.5 h-3.5" /> View &amp; Print Document
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1358,18 +1202,39 @@ export function LetterDeskPage() {
                   className="rounded-lg border border-slate-200 bg-white p-5 hover:border-slate-300 shadow-2xs hover:shadow-xs transition-all flex flex-col justify-between"
                 >
                   <div>
-                    <div className="flex items-center justify-between gap-2 mb-2">
-                      <span
-                        className={`inline-flex items-center px-2.5 py-0.5 rounded-sm text-[10px] font-bold border ${
-                          isPsc
-                            ? 'bg-indigo-50 text-indigo-800 border-indigo-200'
-                            : isCotr
-                            ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
-                            : 'bg-red-50 text-red-800 border-red-200'
-                        }`}
-                      >
-                        {isPsc ? 'Contract (PSC)' : isCotr ? 'Certificate (COTR)' : 'Official Letter'}
-                      </span>
+                    <div className="flex items-center justify-between gap-2 mb-2 flex-wrap">
+                      <div className="flex items-center gap-1.5">
+                        <span
+                          className={`inline-flex items-center px-2.5 py-0.5 rounded-sm text-[10px] font-bold border ${
+                            isPsc
+                              ? 'bg-indigo-50 text-indigo-800 border-indigo-200'
+                              : isCotr
+                              ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                              : 'bg-red-50 text-red-800 border-red-200'
+                          }`}
+                        >
+                          {isPsc ? 'Contract (PSC)' : isCotr ? 'Certificate (COTR)' : 'Official Letter'}
+                        </span>
+                        {isPsc && (
+                          <span
+                            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+                              item.is_notarized
+                                ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                                : 'bg-slate-100 text-slate-700 border-slate-200'
+                            }`}
+                          >
+                            {item.is_notarized ? (
+                              <>
+                                <CheckCircle2 className="w-3 h-3 text-emerald-600" /> Notarized Copy Submitted
+                              </>
+                            ) : (
+                              <>
+                                <Clock className="w-3 h-3 text-slate-500" /> Awaiting Notarized Copy
+                              </>
+                            )}
+                          </span>
+                        )}
+                      </div>
                       <span className="text-[11px] text-slate-400 font-medium">Issued {formattedDate}</span>
                     </div>
 
@@ -1383,7 +1248,7 @@ export function LetterDeskPage() {
                     </p>
                   </div>
 
-                  <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-end">
+                  <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
                     <button
                       type="button"
                       disabled={busy}
@@ -1413,13 +1278,14 @@ export function LetterDeskPage() {
               </div>
 
               <div className="flex items-center gap-2">
+                {archivedPdfUrl ? <a href={archivedPdfUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 rounded-md bg-[#C8102E] hover:bg-[#A00D26] px-4 py-2 text-xs font-bold text-white"><Printer size={14} />Open submitted PDF</a> :
                 <button
                   type="button"
                   onClick={() => archiveFrame.current?.contentWindow?.print()}
                   className="inline-flex items-center gap-1.5 rounded-md bg-[#C8102E] hover:bg-[#A00D26] px-4 py-2 text-xs font-bold text-white shadow-xs transition-colors cursor-pointer"
                 >
                   <Printer size={14} /> Print / Save PDF
-                </button>
+                </button>}
                 <button
                   type="button"
                   onClick={() => {
@@ -1437,7 +1303,8 @@ export function LetterDeskPage() {
               ref={archiveFrame}
               title="Archived official document"
               sandbox="allow-modals allow-same-origin allow-popups"
-              srcDoc={archivedHtml}
+              srcDoc={archivedPdfUrl ? undefined : archivedHtml}
+              src={archivedPdfUrl || undefined}
               className="h-[750px] w-full rounded-sm bg-white border border-slate-200 shadow-sm"
             />
           </section>

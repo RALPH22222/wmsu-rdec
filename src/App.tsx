@@ -20,6 +20,7 @@ import ProponentDashboard from './pages/proponents/ProponentDashboard';
 import BudgetAllocationPage from './pages/proponents/BudgetAllocationPage';
 import ProfilePage from './pages/proponents/ProfilePage';
 import ScreeningLettersPage from './pages/proponents/ScreeningLettersPage';
+import ProponentContractsPage from './pages/proponents/ProponentContractsPage';
 import EvaluatorDashboard from './pages/evaluator/evaluatorDashboard';
 import { EvaluatorReviewsPage } from './pages/evaluator/EvaluatorReviewsPage';
 import { EvaluatorLettersPage } from './pages/evaluator/EvaluatorLettersPage';
@@ -90,6 +91,7 @@ export function App() {
                 <Route path="/proponent/submit" element={<ProponentDashboard />} />
                 <Route path="/proponent/budget" element={<BudgetAllocationPage />} />
                 <Route path="/proponent/letters" element={<ScreeningLettersPage />} />
+                <Route path="/proponent/contracts" element={<ProponentContractsPage />} />
                 <Route path="/proponent/profile" element={<ProfilePage />} />
                 <Route path="/dashboard" element={<ProponentDashboard />} />
               </Route>
@@ -111,9 +113,9 @@ export function App() {
                 <Route path="/admin/screening/:proposalId" element={<ScreeningReviewPage role="admin" />} />
                 <Route path="/admin/letters" element={<AdminLetterDeskPage />} />
                 <Route path="/admin/clearance" element={<Navigate to="/admin/letters?template=WMSU-RPDU-CERT-001.00" replace />} />
-                <Route path="/admin/contracts" element={<Navigate to="/admin/letters?template=WMSU-RPDU-PSC-001.00" replace />} />
+                <Route path="/admin/contracts" element={<Navigate to="/admin/letters?template=WMSU-RPDU-PSC-001.00&tab=contracts" replace />} />
                 <Route path="/admin/scheduling" element={<AdminInceptionSchedulingPage />} />
-                <Route path="/admin/notarization" element={<AdminInceptionSchedulingPage />} />
+                <Route path="/admin/notarization" element={<Navigate to="/admin/letters?template=WMSU-RPDU-PSC-001.00&tab=contracts" replace />} />
               </Route>
 
               {/* Dedicated RPDU Layout */}
@@ -126,9 +128,9 @@ export function App() {
                 <Route path="/rpdu/passed-proposals" element={<PassedProposalsPage />} />
                 <Route path="/rpdu/letters" element={<LetterDeskPage />} />
                 <Route path="/rpdu/clearance" element={<Navigate to="/rpdu/letters?template=WMSU-RPDU-CERT-001.00" replace />} />
-                <Route path="/rpdu/contracts" element={<Navigate to="/rpdu/letters?template=WMSU-RPDU-PSC-001.00" replace />} />
+                <Route path="/rpdu/contracts" element={<Navigate to="/rpdu/letters?template=WMSU-RPDU-PSC-001.00&tab=contracts" replace />} />
                 <Route path="/rpdu/scheduling" element={<InceptionSchedulingPage />} />
-                <Route path="/rpdu/notarization" element={<InceptionSchedulingPage />} />
+                <Route path="/rpdu/notarization" element={<Navigate to="/rpdu/letters?template=WMSU-RPDU-PSC-001.00&tab=contracts" replace />} />
               </Route>
             </Route>
 
