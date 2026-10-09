@@ -603,6 +603,18 @@ export default function ProponentContractsPage() {
                       Submitted: {new Date(selectedProposal.contract.submittedAt).toLocaleDateString('en-PH', { year: 'numeric', month: 'short', day: 'numeric' })}
                     </p>
                   )}
+                  {selectedProposal.contract?.isNotarized && selectedProposal.contract?.contractFileUrl && (
+                    <div className="pt-1">
+                      <a
+                        href={resolveFileUrl(selectedProposal.contract.contractFileUrl)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#C8102E] hover:underline"
+                      >
+                        <ExternalLink size={12} /> View Submitted Notarized PDF
+                      </a>
+                    </div>
+                  )}
                 </div>
 
                 <form onSubmit={handleUploadNotarized} className="space-y-3">

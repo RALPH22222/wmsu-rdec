@@ -1299,14 +1299,22 @@ export function LetterDeskPage() {
               </div>
             </div>
 
-            <iframe
-              ref={archiveFrame}
-              title="Archived official document"
-              sandbox="allow-modals allow-same-origin allow-popups"
-              srcDoc={archivedPdfUrl ? undefined : archivedHtml}
-              src={archivedPdfUrl || undefined}
-              className="h-[750px] w-full rounded-sm bg-white border border-slate-200 shadow-sm"
-            />
+            {archivedPdfUrl ? (
+              <iframe
+                ref={archiveFrame}
+                title="Archived notarized document"
+                src={archivedPdfUrl}
+                className="h-[750px] w-full rounded-sm bg-white border border-slate-200 shadow-sm"
+              />
+            ) : (
+              <iframe
+                ref={archiveFrame}
+                title="Archived official document"
+                sandbox="allow-modals allow-same-origin allow-popups"
+                srcDoc={archivedHtml}
+                className="h-[750px] w-full rounded-sm bg-white border border-slate-200 shadow-sm"
+              />
+            )}
           </section>
         )}
       </section>
