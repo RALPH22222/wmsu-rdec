@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useId, useMemo } from 'react';
+import React, { useState, useEffect, useId } from 'react';
 import {
   FileText,
   Upload,
@@ -86,28 +86,21 @@ const RESEARCH_AGENDAS = [
   },
 ];
 
+const formatWindowDate = (date: string) => new Date(`${date}T00:00:00+08:00`).toLocaleDateString('en-PH', {
+  timeZone: 'Asia/Manila', month: 'short', day: 'numeric', year: 'numeric',
+});
+
 export const ConceptProposalSubmissionForm: React.FC = () => {
-  const { activeCall, calls, conceptProposals, submitConceptProposal, showToast } = useCallForProposals();
+  const { activeCall, loadingCalls, conceptProposals, submitConceptProposal, showToast } = useCallForProposals();
   const { user, profile } = useAuth();
-  const [selectedCallId, setSelectedCallId] = useState('');
   const [confirmedCallId, setConfirmedCallId] = useState<string | null>(null);
-  const accessibleCalls = useMemo(() => calls.filter((call) => (
-    (call.id === activeCall?.id && profile?.is_eligible_to_submit === true)
-    || conceptProposals.some((proposal) => proposal.callId === call.id && proposal.proponentId === user?.id)
-  )), [calls, activeCall?.id, profile?.is_eligible_to_submit, conceptProposals, user?.id]);
-  const selectedCall = accessibleCalls.find((call) => call.id === selectedCallId);
-  const canSubmit = Boolean(activeCall && selectedCallId === activeCall.id && profile?.is_eligible_to_submit === true);
+  const canSubmit = Boolean(!loadingCalls && activeCall && profile?.is_eligible_to_submit === true);
 
   const endorsementInputId = useId();
   const conceptDocInputId = useId();
 
   // Tab View: 'submit' | 'my-submissions'
   const [activeTab, setActiveTab] = useState<'submit' | 'my-submissions'>('submit');
-  useEffect(() => {
-    if (!accessibleCalls.some((call) => call.id === selectedCallId)) {
-      setSelectedCallId(accessibleCalls.find((call) => call.id === activeCall?.id)?.id || accessibleCalls[0]?.id || '');
-    }
-  }, [accessibleCalls, selectedCallId, activeCall?.id]);
   useEffect(() => {
     setActiveTab(canSubmit ? 'submit' : 'my-submissions');
   }, [canSubmit]);
@@ -180,7 +173,7 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
     setErrors({});
     setConfirmModalOpen(false);
     setConfirmedCallId(null);
-  }, [selectedCallId]);
+  }, [activeCall?.id]);
 
   // File Upload Handlers
   const handleFileUpload = (
@@ -289,7 +282,7 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
       return;
     }
 
-    setConfirmedCallId(selectedCallId);
+    setConfirmedCallId(activeCall.id);
     setConfirmModalOpen(true);
   };
 
@@ -332,7 +325,7 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
 
   // Proponent's submissions list
   const mySubmissions = conceptProposals.filter((p) =>
-    p.callId === selectedCallId && (p.proponentId === user?.id || p.leadInvestigatorEmail.toLowerCase() === user?.email?.toLowerCase())
+    p.proponentId === user?.id || p.leadInvestigatorEmail.toLowerCase() === user?.email?.toLowerCase()
   );
 
   const filteredSubmissions = mySubmissions.filter((item) => {
@@ -372,25 +365,30 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
         </a>
       </div>
 
-      <div className="rounded-sm border border-slate-200 bg-white p-4 space-y-2">
-        <label htmlFor="submission-window" className="block text-sm font-semibold text-slate-900">Call for Proposals window</label>
-        <select
-          id="submission-window"
-          value={selectedCallId}
-          onChange={(event) => setSelectedCallId(event.target.value)}
-          className="w-full rounded-sm border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900"
-        >
-          {accessibleCalls.map((call) => (
-            <option key={call.id} value={call.id}>{call.title} · {call.startDate} to {call.endDate}</option>
-          ))}
-        </select>
-        <p className="text-xs text-slate-600">
-          {canSubmit ? 'This window is open for new submissions.' : String(selectedCall?.status).toUpperCase() === 'OPEN'
-            ? 'Your account cannot submit new proposals. Your existing submissions remain available.' : selectedCall?.scheduledOpen
-            ? `Submissions open on ${selectedCall.startDate}. Your existing submissions remain available.`
-            : 'This window is closed to new submissions. Your existing submissions remain available.'}
-        </p>
-      </div>
+      <section aria-label="Current Call for Proposals" className="rounded-sm border border-slate-200 bg-white p-4 sm:p-5">
+        {loadingCalls ? <div role="status">
+          <span className="sr-only">Loading current Call for Proposals</span>
+          <div aria-hidden="true" className="space-y-3 motion-safe:animate-pulse"><div className="h-3 w-36 rounded bg-slate-100" /><div className="h-5 w-2/3 rounded bg-slate-100" /><div className="h-4 w-1/2 rounded bg-slate-100" /></div>
+        </div> : activeCall ? <>
+          <div className="mb-2 flex items-center justify-between gap-3">
+            <p className="text-xs font-semibold text-slate-500">Current Call for Proposals</p>
+            <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700">OPEN</span>
+          </div>
+          <div className="flex flex-col gap-2 lg:flex-row lg:items-baseline lg:justify-between lg:gap-5">
+            <h3 className="min-w-0 break-words text-lg font-bold leading-snug text-slate-900">{activeCall.title}</h3>
+            <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm leading-relaxed lg:shrink-0 lg:justify-end">
+              <p className="whitespace-nowrap text-slate-700">Opens <time dateTime={activeCall.startDate} className="font-semibold text-slate-900">{formatWindowDate(activeCall.startDate)}</time></p>
+              <p className="whitespace-nowrap text-slate-700">Deadline <time dateTime={activeCall.endDate} className="font-semibold text-[#C8102E]">{formatWindowDate(activeCall.endDate)}</time></p>
+            </div>
+          </div>
+          <p className="mt-2 text-xs text-slate-600">{canSubmit
+            ? 'New proposals will be submitted to this open window automatically.'
+            : 'Your account cannot submit new proposals. Your existing submissions remain available.'}</p>
+        </> : <>
+          <h3 className="text-sm font-semibold text-slate-900">No open Call for Proposals</h3>
+          <p className="mt-2 text-xs text-slate-600">New submissions are currently closed. Your existing submissions remain available in My Submissions.</p>
+        </>}
+      </section>
 
       {/* VIEW TABS: Submit New vs Track My Submissions */}
       <div className="flex items-center justify-between border-b border-slate-200">
@@ -907,7 +905,7 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
                 <h4 className="text-base font-bold text-slate-800">No Concept Proposals Found</h4>
                 <p className="text-xs text-slate-500 max-w-sm mx-auto">
                   {mySubmissions.length === 0
-                    ? "You haven't submitted any concept proposals in this window."
+                    ? "You haven't submitted any concept proposals yet."
                     : 'There are no proposals matching your selected filter or search criteria.'}
                 </p>
                 <button
@@ -1086,7 +1084,7 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
                     Call for Proposals
                   </span>
                   <span className="font-semibold text-slate-900 flex-1 leading-snug">
-                    {selectedCall?.title}
+                    {activeCall?.title}
                   </span>
                 </div>
 
