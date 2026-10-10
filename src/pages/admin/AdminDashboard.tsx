@@ -1,17 +1,16 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Calendar, FileCheck, FileText, Layers, Users, ClipboardCheck } from 'lucide-react';
+import { Calendar, FileText, Layers, Users, ClipboardCheck } from 'lucide-react';
 import { useCallForProposals } from '../../context/CallForProposalsContext';
 import { useAuth } from '../../context/AuthContext';
 import { formatUserFullName } from '../../utils/userUtils';
-import { ProposalTracking } from '../../components/ProposalTracking';
 import { CallForProposalsManager } from '../../components/adminComponent/CallForProposalsManager';
 
 export const AdminDashboard: React.FC = () => {
   const navigate = useNavigate();
   const { activeCall, calls, conceptProposals } = useCallForProposals();
   const { user, profile, loadingProfile } = useAuth();
-  const [activeTab, setActiveTab] = useState<'calls' | 'proposals' | 'evaluators'>('calls');
+  const [activeTab, setActiveTab] = useState<'calls' | 'evaluators'>('calls');
 
   const fullName = formatUserFullName(profile, user, 'Administrator');
 
@@ -23,11 +22,6 @@ export const AdminDashboard: React.FC = () => {
     <div className="space-y-8 max-w-7xl mx-auto">
       {/* Admin Header */}
       <div className="space-y-1.5">
-        <div className="flex items-center gap-2">
-          <span className="inline-block px-2.5 py-0.5 rounded-md text-[11px] font-bold bg-[#C8102E] text-white uppercase tracking-wider shadow-2xs">
-            Admin Page
-          </span>
-        </div>
         <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
           {loadingProfile && !profile ? (
             <span className="inline-block w-64 h-8 bg-slate-200 animate-pulse rounded align-middle" />
@@ -128,21 +122,6 @@ export const AdminDashboard: React.FC = () => {
 
           <button
             type="button"
-            onClick={() => setActiveTab('proposals')}
-            className={`py-3.5 px-1 border-b-2 font-bold text-xs sm:text-sm transition-colors cursor-pointer flex items-center gap-2 whitespace-nowrap ${activeTab === 'proposals'
-                ? 'border-[#C8102E] text-[#C8102E]'
-                : 'border-transparent text-slate-500 hover:text-slate-800'
-              }`}
-          >
-            <FileCheck className="w-4 h-4" />
-            <span>Proposal Tracking</span>
-            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 ml-1">
-              {passedScreeningCount}
-            </span>
-          </button>
-
-          <button
-            type="button"
             onClick={() => setActiveTab('evaluators')}
             className={`py-3.5 px-1 border-b-2 font-bold text-xs sm:text-sm transition-colors cursor-pointer flex items-center gap-2 whitespace-nowrap ${activeTab === 'evaluators'
                 ? 'border-[#C8102E] text-[#C8102E]'
@@ -157,8 +136,6 @@ export const AdminDashboard: React.FC = () => {
 
       {/* Tab Panels */}
       {activeTab === 'calls' && <CallForProposalsManager />}
-
-      {activeTab === 'proposals' && <ProposalTracking role="admin" />}
 
       {activeTab === 'evaluators' && (
         <div className="bg-white p-12 text-center rounded-sm border border-slate-200 shadow-xs">

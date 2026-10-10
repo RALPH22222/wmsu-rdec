@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { useCallForProposals } from '../../context/CallForProposalsContext';
 import { useAuth } from '../../context/AuthContext';
+import { checkConceptProposalTitleApi, ConceptProposalTitleExistsError } from '../../lib/conceptProposalApi';
 import type { ConceptProposal } from '../../types';
 
 interface UploadedFile {
@@ -92,12 +93,13 @@ const formatWindowDate = (date: string) => new Date(`${date}T00:00:00+08:00`).to
 
 export const ConceptProposalSubmissionForm: React.FC = () => {
   const { activeCall, loadingCalls, conceptProposals, submitConceptProposal, showToast } = useCallForProposals();
-  const { user, profile } = useAuth();
+  const { user, profile, session } = useAuth();
   const [confirmedCallId, setConfirmedCallId] = useState<string | null>(null);
   const canSubmit = Boolean(!loadingCalls && activeCall && profile?.is_eligible_to_submit === true);
 
   const endorsementInputId = useId();
   const conceptDocInputId = useId();
+  const titleErrorId = useId();
 
   // Tab View: 'submit' | 'my-submissions'
   const [activeTab, setActiveTab] = useState<'submit' | 'my-submissions'>('submit');
@@ -144,6 +146,7 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
 
   // Modals & UI status
   const [submitting, setSubmitting] = useState(false);
+  const [checkingTitle, setCheckingTitle] = useState(false);
   const [submittedProposal, setSubmittedProposal] = useState<ConceptProposal | null>(null);
   const [confirmModalOpen, setConfirmModalOpen] = useState(false);
   const [successModalOpen, setSuccessModalOpen] = useState(false);
@@ -269,8 +272,9 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
   };
 
   // Trigger confirmation modal after validating form inputs
-  const handleOpenConfirm = (e: React.FormEvent) => {
+  const handleOpenConfirm = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (checkingTitle || submitting) return;
 
     if (!canSubmit || !activeCall) {
       showToast('There is no open Call for Proposals accepting submissions.');
@@ -282,8 +286,21 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
       return;
     }
 
-    setConfirmedCallId(activeCall.id);
-    setConfirmModalOpen(true);
+    setCheckingTitle(true);
+    try {
+      if (!(await checkConceptProposalTitleApi(proposalTitle, session?.access_token))) {
+        const message = new ConceptProposalTitleExistsError().message;
+        setErrors((previous) => ({ ...previous, title: message }));
+        showToast(message);
+        return;
+      }
+      setConfirmedCallId(activeCall.id);
+      setConfirmModalOpen(true);
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : 'Unable to verify your proposal title. Please try again.');
+    } finally {
+      setCheckingTitle(false);
+    }
   };
 
   // Final Submit Handler executed after user confirms in the modal
@@ -317,6 +334,9 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
       setEndorsementPdf(null);
     } catch (error) {
       setConfirmModalOpen(false);
+      if (error instanceof ConceptProposalTitleExistsError) {
+        setErrors((previous) => ({ ...previous, title: error.message }));
+      }
       showToast(error instanceof Error ? error.message : 'Failed to submit concept proposal. Please try again.');
     } finally {
       setSubmitting(false);
@@ -565,6 +585,9 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
                 rows={2}
                 maxLength={255}
                 value={proposalTitle}
+                readOnly={checkingTitle || submitting}
+                aria-invalid={Boolean(errors.title)}
+                aria-describedby={errors.title ? titleErrorId : undefined}
                 onChange={(e) => {
                   setProposalTitle(e.target.value);
                   if (errors.title) {
@@ -582,7 +605,7 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
                     : 'border-slate-300 focus:border-[#C8102E] focus:ring-1 focus:ring-[#C8102E]'
                 }`}
               />
-              {errors.title && <p className="text-xs text-red-600 font-medium">{errors.title}</p>}
+              {errors.title && <p id={titleErrorId} role="alert" className="text-xs text-red-600 font-medium">{errors.title}</p>}
             </div>
 
             {/* Concept Proposal Document Upload */}
@@ -785,11 +808,11 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
           <div className="flex items-center justify-end pt-2">
             <button
               type="submit"
-              disabled={submitting}
+              disabled={submitting || checkingTitle}
               className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-3 text-sm font-bold rounded bg-[#C8102E] hover:bg-[#a50d26] text-white shadow-sm transition-colors cursor-pointer disabled:opacity-50"
             >
               <Send className="w-4 h-4" />
-              <span>Submit Concept Proposal</span>
+              <span>{checkingTitle ? 'Checking title...' : 'Submit Concept Proposal'}</span>
             </button>
           </div>
         </form>

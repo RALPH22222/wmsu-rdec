@@ -7,6 +7,8 @@ import { getScreeningProposal, resetScreeningProposal, saveScreeningProposal } f
 import { formatScreeningComments, readScreeningComments, screeningCommentSections } from '../../lib/screeningComments';
 import type { ConceptProposal, ScreeningSectionComments } from '../../types';
 
+const DEFAULT_PASS_COMMENT = 'Congratulations! Your concept proposal has passed the preliminary screening. You may now proceed with your detailed proposal submission.';
+
 const dateTime = (value?: string | null) => value ? new Date(value).toLocaleString('en-PH', {
   timeZone: 'Asia/Manila', year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit',
 }) : 'Not recorded';
@@ -24,7 +26,9 @@ export function ScreeningReviewPage({ role }: { role: 'rpdu' | 'admin' }) {
   const [notice, setNotice] = useState('');
   const [saving, setSaving] = useState(false);
   const [decision, setDecision] = useState<'PASS' | 'FAIL' | ''>('');
-  const [passRemarks, setPassRemarks] = useState('');
+  const [passRemarks, setPassRemarks] = useState(DEFAULT_PASS_COMMENT);
+  const [passSectionComments, setPassSectionComments] = useState<ScreeningSectionComments>({});
+  const [passStep, setPassStep] = useState(0);
   const [failRemarks, setFailRemarks] = useState('');
   const [sectionComments, setSectionComments] = useState<ScreeningSectionComments>({});
   const [failStep, setFailStep] = useState(0);
@@ -47,7 +51,9 @@ export function ScreeningReviewPage({ role }: { role: 'rpdu' | 'admin' }) {
         if (initialize) {
           setDecision(data.screeningStatus === 'passed' ? 'PASS' : data.screeningStatus === 'failed' ? 'FAIL' : '');
           const feedback = readScreeningComments(data.screeningRemarks);
-          setPassRemarks(data.screeningStatus === 'passed' ? data.screeningRemarks || '' : '');
+          setPassRemarks(data.screeningStatus === 'passed' ? feedback.overall : DEFAULT_PASS_COMMENT);
+          setPassSectionComments(data.screeningStatus === 'passed' ? feedback.sections : {});
+          setPassStep(0);
           setFailRemarks(data.screeningStatus === 'failed' ? feedback.overall : '');
           setSectionComments(data.screeningStatus === 'failed' ? feedback.sections : {});
           setFailStep(0);
@@ -74,7 +80,9 @@ export function ScreeningReviewPage({ role }: { role: 'rpdu' | 'admin' }) {
       setFailStep((step) => step + 1);
       return;
     }
-    const remarks = decision === 'PASS' ? passRemarks.trim() : formatScreeningComments(failRemarks, sectionComments);
+    const remarks = decision === 'PASS'
+      ? formatScreeningComments(passRemarks, passSectionComments)
+      : formatScreeningComments(failRemarks, sectionComments);
     if (decision === 'FAIL' && !remarks) {
       setError('Provide an overall remark or at least one section comment explaining why this proposal failed.');
       return;
@@ -89,9 +97,12 @@ export function ScreeningReviewPage({ role }: { role: 'rpdu' | 'admin' }) {
     try {
       const saved = await saveScreeningProposal(proposal.id, decision, remarks.trim(), accessToken);
       setProposal(saved);
-      if (decision === 'PASS') setPassRemarks(saved.screeningRemarks || '');
+      const feedback = readScreeningComments(saved.screeningRemarks);
+      if (decision === 'PASS') {
+        setPassRemarks(feedback.overall);
+        setPassSectionComments(feedback.sections);
+      }
       else {
-        const feedback = readScreeningComments(saved.screeningRemarks);
         setFailRemarks(feedback.overall);
         setSectionComments(feedback.sections);
       }
@@ -112,7 +123,9 @@ export function ScreeningReviewPage({ role }: { role: 'rpdu' | 'admin' }) {
       const saved = await getScreeningProposal(proposal.id, accessToken);
       setProposal(saved);
       setDecision('');
-      setPassRemarks('');
+      setPassRemarks(DEFAULT_PASS_COMMENT);
+      setPassSectionComments({});
+      setPassStep(0);
       setFailRemarks('');
       setSectionComments({});
       setFailStep(0);
@@ -124,6 +137,7 @@ export function ScreeningReviewPage({ role }: { role: 'rpdu' | 'admin' }) {
   };
 
   const savedFeedback = readScreeningComments(proposal?.screeningRemarks);
+  const passSection = screeningCommentSections[passStep];
   const failSection = screeningCommentSections[failStep];
 
   return (
@@ -198,7 +212,18 @@ export function ScreeningReviewPage({ role }: { role: 'rpdu' | 'admin' }) {
                   <div className="grid grid-cols-2 gap-2">
                     {(['PASS', 'FAIL'] as const).map((value) => <label key={value} className={`flex cursor-pointer items-center gap-2 rounded-sm border p-3 text-sm font-semibold ${decision === value ? 'border-slate-700 bg-slate-50 text-slate-900' : 'border-slate-200 text-slate-600'}`}><input type="radio" name="screening-decision" value={value} required checked={decision === value} onChange={() => setDecision(value)} />{value === 'PASS' ? <CheckCircle2 size={16} /> : <XCircle size={16} />}{value === 'PASS' ? 'Pass' : 'Fail'}</label>)}
                   </div>
-                  {decision === 'PASS' && <label className="block text-xs font-semibold text-slate-600">Pass comments / next steps<textarea rows={5} maxLength={5000} value={passRemarks} onChange={(event) => setPassRemarks(event.target.value)} className="mt-2 block w-full rounded-sm border border-slate-200 p-3 text-sm font-normal text-slate-800 focus:border-[#C8102E] focus:outline-none focus:ring-1 focus:ring-[#C8102E]" placeholder="Record your approval comments or instructions for detailed proposal submission." /></label>}
+                  {decision === 'PASS' && <label className="block text-xs font-semibold text-slate-600">Pass comments / next steps<textarea rows={5} maxLength={5000} value={passRemarks} onChange={(event) => setPassRemarks(event.target.value)} className="mt-2 block w-full rounded-sm border border-slate-200 p-3 text-sm font-normal text-slate-800 focus:border-[#C8102E] focus:outline-none focus:ring-1 focus:ring-[#C8102E]" placeholder="Enter your approval comments or next steps." /></label>}
+                  {decision === 'PASS' && <details className="rounded-sm border border-slate-200 p-3">
+                    <summary className="cursor-pointer text-xs font-semibold text-slate-600">Additional section comments (optional)</summary>
+                    <div className="mt-4 space-y-4">
+                      <p aria-live="polite" className="text-xs font-semibold text-slate-500">Step {passStep + 1} of {screeningCommentSections.length}</p>
+                      <label key={passStep} className="block text-xs font-semibold text-slate-600">{passSection.label}<textarea rows={4} maxLength={5000} value={passSectionComments[passSection.key] || ''} onChange={(event) => setPassSectionComments((previous) => ({ ...previous, [passSection.key]: event.target.value }))} className="mt-2 block w-full rounded-sm border border-slate-200 p-3 text-sm font-normal text-slate-800 focus:border-[#C8102E] focus:outline-none focus:ring-1 focus:ring-[#C8102E]" placeholder={`Add suggestions for the ${passSection.label.toLowerCase()}, if any.`} /></label>
+                      <div className="flex items-center justify-between gap-3">
+                        <button type="button" disabled={passStep === 0} onClick={() => setPassStep((step) => step - 1)} className="rounded-sm border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-40">Back</button>
+                        {passStep < screeningCommentSections.length - 1 && <button type="button" onClick={() => setPassStep((step) => step + 1)} className="rounded-sm bg-slate-900 px-4 py-2 text-xs font-semibold text-white hover:bg-slate-700">Next</button>}
+                      </div>
+                    </div>
+                  </details>}
                   {decision === 'FAIL' && <div className="space-y-4">
                     <p className="text-xs text-slate-500">Comment on the sections that need revision, or provide overall feedback. At least one comment is required.</p>
                     <p aria-live="polite" className="text-xs font-semibold text-slate-500">Step {failStep + 1} of {screeningCommentSections.length + 1}</p>

@@ -173,19 +173,19 @@ export const ProponentSidebar: React.FC<ProponentSidebarProps> = ({
           <Link
             to="/proponent/profile"
             onClick={onCloseMobile}
-            className={`w-full flex items-center justify-between gap-3 p-3 rounded-xl transition-all cursor-pointer group text-left ${
+            className={`w-full flex items-center justify-between gap-3 p-3 rounded-xl cursor-pointer text-left ${
               isProfileActive
                 ? 'bg-red-50/80 border border-red-200 shadow-2xs'
-                : 'bg-white border border-slate-200/90 hover:border-red-200 hover:bg-slate-50/90 shadow-2xs'
+                : 'bg-white border border-slate-200/90 shadow-2xs'
             }`}
             title="Click to view and edit profile"
           >
             <div className="flex items-center gap-3 min-w-0">
               <div
-                className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-xs shrink-0 transition-colors ${
+                className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-xs shrink-0 ${
                   isProfileActive
                     ? 'bg-[#C8102E] text-white'
-                    : 'bg-red-50/80 text-[#C8102E] border border-red-100 group-hover:bg-[#C8102E] group-hover:text-white'
+                    : 'bg-red-50/80 text-[#C8102E] border border-red-100'
                 }`}
               >
                 <UserIcon className="w-5 h-5" strokeWidth={1.75} />
@@ -199,7 +199,7 @@ export const ProponentSidebar: React.FC<ProponentSidebarProps> = ({
                 ) : (
                   <>
                     <div
-                      className="text-sm font-bold text-slate-900 truncate group-hover:text-[#C8102E] transition-colors leading-snug"
+                      className="text-sm font-bold text-slate-900 truncate leading-snug"
                       title={fullName}
                     >
                       {fullName}

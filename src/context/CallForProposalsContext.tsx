@@ -8,6 +8,7 @@ import {
   updateCallApi,
   closeCallApi,
   reopenCallApi,
+  confirmCallOpeningApi,
   deleteCallApi,
 } from '../lib/callApi';
 import { useAuth } from './AuthContext';
@@ -31,6 +32,7 @@ interface CallForProposalsContextType {
   updateCall: (id: string, updatedFields: Partial<CallForProposals>) => Promise<void>;
   closeCall: (id: string, reason?: string) => Promise<void>;
   reopenCall: (id: string, newStartDate: string, newEndDate: string) => Promise<void>;
+  confirmCallOpening: (id: string) => Promise<void>;
   deleteCall: (id: string) => Promise<void>;
   passConceptProposal: (id: string, remarks?: string, criteria?: ConceptProposalCriteria) => void;
   failConceptProposal: (id: string, reasons: string[], remarks: string, criteria?: ConceptProposalCriteria, sectionComments?: ScreeningSectionComments) => void;
@@ -77,6 +79,7 @@ export const CallForProposalsProvider: React.FC<{ children: React.ReactNode }> =
     const boundaries = calls.flatMap((call) => {
       const status = String(call.rawStatus || call.status).toUpperCase();
       if (['OPEN', 'ACTIVE'].includes(status)) return [Date.parse(callStartAt(call)), Date.parse(callEndAt(call)) + 1];
+      if (status === 'DRAFT') return [Date.parse(callStartAt(call)), Date.parse(callEndAt(call)) + 1];
       return status === 'CLOSED' ? [Date.parse(callEndAt(call)) + 1] : [];
     }).filter((date) => date > Date.now());
     const updateWindows = () => setCalls((previous) => previous.map((call) => applyCallWindow(call)));
@@ -220,6 +223,12 @@ export const CallForProposalsProvider: React.FC<{ children: React.ReactNode }> =
     }
   };
 
+  const confirmCallOpening = async (id: string): Promise<void> => {
+    const opened = await confirmCallOpeningApi(id, session?.access_token);
+    setCalls((previous) => previous.map((call) => call.id === id ? opened : call));
+    showToast('Opening confirmed. The call is now accepting submissions.');
+  };
+
   const deleteCall = async (id: string): Promise<void> => {
     try {
       await deleteCallApi(id, session?.access_token);
@@ -298,6 +307,7 @@ export const CallForProposalsProvider: React.FC<{ children: React.ReactNode }> =
         updateCall,
         closeCall,
         reopenCall,
+        confirmCallOpening,
         deleteCall,
         passConceptProposal,
         failConceptProposal,

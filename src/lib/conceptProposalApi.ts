@@ -1,6 +1,25 @@
 import { API_BASE_URL, API_ENDPOINTS } from '../config/apiConfig';
 import type { ConceptProposal } from '../types';
 
+export class ConceptProposalTitleExistsError extends Error {
+  constructor() {
+    super('A concept proposal with this title already exists. Please use a different title.');
+    this.name = 'ConceptProposalTitleExistsError';
+  }
+}
+
+export async function checkConceptProposalTitleApi(title: string, token?: string): Promise<boolean> {
+  if (!token) throw new Error('Please sign in before checking your proposal title.');
+  const response = await fetch(`${API_ENDPOINTS.PROPONENT.CONCEPT_PROPOSALS}/check-title`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ title: title.trim() }),
+  });
+  const result = await response.json();
+  if (!response.ok || !result.success) throw new Error(result.message || 'Unable to verify your proposal title. Please try again.');
+  return result.available === true;
+}
+
 interface ProposalRecord {
   id: string;
   call_id: string;
@@ -110,6 +129,7 @@ export async function submitConceptProposalApi(
   const result = await response.json();
 
   if (!response.ok || !result.success) {
+    if (result.code === 'CONCEPT_PROPOSAL_TITLE_EXISTS') throw new ConceptProposalTitleExistsError();
     throw new Error(result.message || 'Failed to submit concept proposal');
   }
 

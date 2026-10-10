@@ -1,11 +1,13 @@
 import { ArrowLeft } from 'lucide-react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useCallForProposals } from '../context/CallForProposalsContext';
+import { useAuth } from '../context/AuthContext';
 import { CallForm as AdminCallForm } from '../components/adminComponent/CallForm';
 import { CallForm as RpduCallForm } from '../components/rpduComponent/CallForm';
 
 export function CallFormPage({ role, mode = 'edit' }: { role: 'admin' | 'rpdu'; mode?: 'create' | 'edit' }) {
   const { callId } = useParams();
+  const { user, profile, loadingProfile } = useAuth();
   const navigate = useNavigate();
   const { calls, loadingCalls, createCall, updateCall, refreshCalls } = useCallForProposals();
   const isCreating = mode === 'create';
@@ -23,7 +25,7 @@ export function CallFormPage({ role, mode = 'edit' }: { role: 'admin' | 'rpdu'; 
         <span aria-current="page" className="text-slate-900 font-semibold">{isCreating ? 'Create New Call' : 'Edit Call'}</span>
       </nav>
 
-      {loadingCalls ? (
+      {loadingCalls || loadingProfile ? (
         <div role="status" aria-busy="true" className="bg-white border border-slate-200 rounded-sm shadow-sm overflow-hidden">
           <span className="sr-only">Loading call details...</span>
           <div aria-hidden="true" className="animate-pulse motion-reduce:animate-none">
@@ -82,6 +84,10 @@ export function CallFormPage({ role, mode = 'edit' }: { role: 'admin' | 'rpdu'; 
               <div className="h-9 w-40 bg-slate-200 rounded-lg" />
             </div>
           </div>
+        </div>
+      ) : !isCreating && call && profile?.role !== 'ADMIN' && call.createdBy !== user?.id ? (
+        <div role="alert" className="bg-white border border-slate-200 rounded-sm p-8 text-sm text-slate-600">
+          Only the call creator or an admin can edit this window.
         </div>
       ) : isCreating || call ? (
         <CallForm

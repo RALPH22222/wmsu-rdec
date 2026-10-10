@@ -8,10 +8,11 @@ import { parseMemoDetails, openMemoInNewTab } from '../../utils/memoUtils';
 import { CloseCallDialog } from './modals/CloseCallDialog';
 import { DeleteCallModal } from './modals/DeleteCallModal';
 import { canReopenCall } from '../../utils/callWindow';
+import { CallOpeningConfirmation } from '../CallOpeningConfirmation';
 
 export const CallForProposalsManager: React.FC = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const { calls, loadingCalls, activeCall, closeCall, updateCall, reopenCall, deleteCall, showToast } = useCallForProposals();
 
   const reservedCall = activeCall || calls.find((call) => call.scheduledOpen) || null;
@@ -52,7 +53,7 @@ export const CallForProposalsManager: React.FC = () => {
       return;
     }
     if (String(call.status).toUpperCase() === 'DRAFT') {
-      void updateCall(call.id, { status: 'OPEN' }).catch(() => {});
+      showToast('The creator must review and confirm the opening when its submission start date arrives.');
       return;
     }
     if (!canReopenCall(call)) {
@@ -141,6 +142,7 @@ export const CallForProposalsManager: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      <CallOpeningConfirmation />
       {/* Top Header Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-sm border border-slate-200 shadow-sm">
         <div>
@@ -246,7 +248,8 @@ export const CallForProposalsManager: React.FC = () => {
           filteredCalls.map((call) => {
             const isOpen = String(call.status).toUpperCase() === 'OPEN' || String(call.status).toUpperCase() === 'ACTIVE';
             const isClosed = String(call.status).toUpperCase() === 'CLOSED';
-            const reopenDisabled = Boolean(reservedCall) || (isClosed && !canReopenCall(call));
+            const canManage = profile?.role === 'ADMIN' || Boolean(user?.id && call.createdBy === user.id);
+            const reopenDisabled = Boolean(reservedCall) || !isClosed || !canManage || !canReopenCall(call);
 
             return (
               <div
@@ -358,7 +361,7 @@ export const CallForProposalsManager: React.FC = () => {
                 </div>
 
                 {/* Action Buttons Panel */}
-                <div className="flex items-center gap-2 shrink-0 border-t lg:border-t-0 pt-3 lg:pt-0 border-slate-100">
+                {canManage && <div className="flex items-center gap-2 shrink-0 border-t lg:border-t-0 pt-3 lg:pt-0 border-slate-100">
                   <button
                     onClick={() => handleEditCall(call)}
                     className="px-3.5 py-2 rounded-sm text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 transition-colors flex items-center gap-1.5 cursor-pointer"
@@ -387,7 +390,7 @@ export const CallForProposalsManager: React.FC = () => {
                       title={reservedCall ? `Close "${reservedCall.title}" before opening another call.` : isClosed && !canReopenCall(call) ? 'Cancel the scheduled opening before reopening.' : isClosed ? 'Set a new start date and deadline' : 'Open submission call window'}
                     >
                       <CheckCircle2 className="w-3.5 h-3.5" />
-                      <span>{isClosed ? 'Reopen Call' : 'Open Call'}</span>
+                      <span>{isClosed ? 'Reopen Call' : 'Awaiting confirmation'}</span>
                     </button>
                   )}
 
@@ -398,7 +401,7 @@ export const CallForProposalsManager: React.FC = () => {
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
-                </div>
+                </div>}
               </div>
             );
           })

@@ -177,7 +177,7 @@ export const CloseCallDialog: React.FC<CloseCallDialogProps> = ({
           ) : (
             <div className="space-y-3">
               <p className="text-xs text-slate-600 leading-relaxed">
-                {mode === 'reopen' ? 'Choose today to reopen immediately, or a future date to schedule reopening. Set a new submission deadline.' : 'Submissions remain open through the selected deadline day.'} Dates use the Philippine calendar.
+                {mode === 'reopen' ? 'Choose today to reopen immediately. A future date saves a draft that will ask you to confirm opening when that date arrives. Set a new submission deadline.' : 'Submissions remain open through the selected deadline day.'} Dates use the Philippine calendar.
               </p>
 
               {mode === 'reopen' && <div>

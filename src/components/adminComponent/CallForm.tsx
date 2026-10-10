@@ -58,7 +58,7 @@ export const CallForm: React.FC<CallFormProps> = ({
     return (s === 'OPEN' || s === 'ACTIVE' || c.scheduledOpen) && c.id !== initialData?.id;
   });
 
-  const isOpenDisabled = Boolean(otherOpenCall) || isWindowLocked;
+  const isOpenDisabled = Boolean(otherOpenCall) || isWindowLocked || initialData?.status === 'DRAFT';
 
   const otherDraftsCount = existingCalls.filter((c) => {
     const s = String(c.status).toUpperCase();
@@ -180,7 +180,7 @@ export const CallForm: React.FC<CallFormProps> = ({
     }
 
     // Only 1 Call can be OPEN at a time
-    if (status === 'OPEN' && otherOpenCall) {
+    if (status === 'OPEN' && startDate <= todayStr && otherOpenCall) {
       setFormError(
         `Only one Call for Proposals can be active at a time. "${otherOpenCall.title}" is open or scheduled to open. Please close it first or save this call as DRAFT.`
       );
@@ -188,7 +188,7 @@ export const CallForm: React.FC<CallFormProps> = ({
     }
 
     // Maximum 4 drafts allowed
-    if (status === 'DRAFT' && otherDraftsCount >= MAX_DRAFTS) {
+    if ((status === 'DRAFT' || startDate > todayStr) && otherDraftsCount >= MAX_DRAFTS) {
       setFormError(
         `Maximum limit of ${MAX_DRAFTS} draft calls reached (${otherDraftsCount}/${MAX_DRAFTS}). Please publish, edit, or delete an existing draft.`
       );
@@ -217,7 +217,7 @@ export const CallForm: React.FC<CallFormProps> = ({
         endDate,
         startTime: initialData?.startTime || '08:00',
         endTime: initialData?.endTime || '17:00',
-        status: isWindowLocked ? (initialData?.rawStatus || initialData?.status) as CallStatus : status,
+        status: isWindowLocked ? (initialData?.rawStatus || initialData?.status) as CallStatus : startDate > todayStr || initialData?.status === 'DRAFT' ? 'DRAFT' : status,
         description: description.trim(),
         memo: memoVal,
         memoAttachment: memoVal,
@@ -334,7 +334,7 @@ export const CallForm: React.FC<CallFormProps> = ({
                       title={
                         isOpenDisabled && otherOpenCall
                           ? `Cannot select OPEN: "${otherOpenCall.title}" is open or scheduled to open. Close it first or save this call as DRAFT.`
-                          : undefined
+                          : initialData?.status === 'DRAFT' ? 'Confirm opening from the call list when the submission start date arrives.' : undefined
                       }
                       className={`py-2 px-3 text-center text-xs font-bold rounded-lg transition-all border ${
                         isOpenDisabled
@@ -384,6 +384,7 @@ export const CallForm: React.FC<CallFormProps> = ({
                     </button>
                   </div>
 
+                  {!isWindowLocked && (startDate > todayStr || initialData?.status === 'DRAFT') && <p className="mt-2 text-xs leading-5 text-slate-600">This window will remain a draft until its creator confirms opening it on or after the submission start date.</p>}
                   {isWindowLocked && <p className="mt-2 text-xs leading-5 text-slate-600">You can edit the timeline while this call is closed. Use Reopen Call on the call list to open a new submission window.</p>}
                   {/* Context Notice for Active Call */}
                   {isOpenDisabled && otherOpenCall && (
@@ -665,7 +666,7 @@ export const CallForm: React.FC<CallFormProps> = ({
               <span>
                 {isSaving ? 'Saving...' : isEditing
                   ? 'Save Call Changes'
-                  : status === 'DRAFT'
+                  : status === 'DRAFT' || startDate > todayStr
                   ? 'Save Draft Call'
                   : 'Create & Publish Call'}
               </span>
