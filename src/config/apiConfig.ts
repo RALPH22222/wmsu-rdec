@@ -52,6 +52,20 @@ export const API_ENDPOINTS = {
     SPECIAL_ORDER: (id: string) => `${API_BASE_URL}/scheduling/meetings/${id}/special-order`,
   },
 
+  // Detailed proposal evaluation pipeline
+  PIPELINE: {
+    PROPOSALS: `${API_BASE_URL}/pipeline/proposals`,
+    PROPOSAL_BY_ID: (id: string) => `${API_BASE_URL}/pipeline/proposals/${encodeURIComponent(id)}`,
+    PROPOSAL_REVIEWS: (id: string) => `${API_BASE_URL}/pipeline/proposals/${encodeURIComponent(id)}/reviews`,
+    PROPOSAL_REVISIONS: (id: string) => `${API_BASE_URL}/pipeline/proposals/${encodeURIComponent(id)}/revisions`,
+    REVIEW_BY_ID: (id: string) => `${API_BASE_URL}/pipeline/reviews/${encodeURIComponent(id)}`,
+    EVALUATORS: `${API_BASE_URL}/pipeline/evaluators`,
+    MY_REVIEWS: `${API_BASE_URL}/pipeline/my-reviews`,
+    MY_REVIEW: (id: string) => `${API_BASE_URL}/pipeline/my-reviews/${encodeURIComponent(id)}`,
+    MY_REVIEW_SUBMISSIONS: (id: string) => `${API_BASE_URL}/pipeline/my-reviews/${encodeURIComponent(id)}/submissions`,
+    MY_PROPOSALS: `${API_BASE_URL}/pipeline/my-proposals`,
+  },
+
   // Admin Role Endpoints (Ready for expansion)
   ADMIN: {
     // USERS: `${API_BASE_URL}/admin/users`,

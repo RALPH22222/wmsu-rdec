@@ -181,164 +181,132 @@ export interface HybridBudgetAllocation {
 }
 
 // ============================================================================
-// Detailed Proposal Evaluation Pipeline (Phase 2–3)
+// Detailed Proposal Evaluation Pipeline — shapes returned by /api/pipeline
 // ============================================================================
 
-export type DetailedProposalStatus =
-  | 'pending_assignment'
-  | 'under_review'
-  | 'revision_requested'
-  | 'approved'
-  | 'rejected';
+export type PipelineStatus = 'PENDING_ASSIGNMENT' | 'UNDER_REVIEW' | 'REVISION_REQUESTED' | 'APPROVED' | 'REJECTED';
+export type ReviewRecommendation = 'APPROVE' | 'REVISE' | 'REJECT';
+export type ReviewRowStatus = 'PENDING' | 'APPROVED' | 'REVISION_REQUESTED' | 'REJECTED';
 
-export type EvaluatorRecommendation = 'approve' | 'revise' | 'reject';
-
-export type ProposalSection =
-  | 'title'
-  | 'abstract'
-  | 'rationale'
-  | 'objectives'
-  | 'methodology'
-  | 'timeline'
-  | 'budget'
-  | 'outputs'
-  | 'general';
-
-export type ActionItemSeverity = 'required' | 'suggested';
-
-export interface ProposalFile {
-  name: string;
-  /** Display size, e.g. "48.2 KB". */
-  size: string;
-  /** Exact byte count when known (uploads); used for the storage cap and size display. */
-  sizeBytes?: number;
-  type: string;
-  dataUrl?: string;
-  uploadedAt: string;
+export interface PipelineRevision {
+  id: string;
+  revisionNumber: number;
+  revisedFileUrl: string;
+  revisionHistoryFileUrl: string | null;
+  notes: string;
+  submittedAt: string;
 }
 
-export interface ProposalTimelineItem {
-  phase: string;
-  months: string;
-  deliverable: string;
+export interface ReviewSubmission {
+  round: number;
+  scores: Record<string, number>;
+  totalScore: number;
+  remarks: string;
+  recommendation: ReviewRecommendation;
+  assessmentFileUrl: string;
+  actionSheetUrl: string;
+  submittedAt: string;
 }
 
 export interface StatusHistoryEntry {
-  status: DetailedProposalStatus;
-  at: string;
-  by: string;
-  note?: string;
+  status: PipelineStatus;
   round: number;
+  note?: string;
+  changedAt: string;
+  /** RPDU view: the person's name. */
+  changedBy?: string;
+  /** Proponent view: 'You' | 'RPDU' | 'Evaluator' | 'System'. */
+  actorRole?: string;
 }
 
-export interface DetailedProposal {
+export interface RpduReview {
   id: string;
-  code: string;
-  conceptProposalId?: string;
-  callId: string;
-  callTitle: string;
-  title: string;
-  // Identity — stripped by anonymizeProposal()
-  proponentId: string;
-  leadInvestigator: string;
-  leadInvestigatorEmail: string;
-  coInvestigators: string[];
-  college: string;
+  evaluatorId: string;
+  evaluatorName: string;
   department: string;
-  // Content
-  thematicArea: string;
-  durationMonths: number;
-  budgetRequested: number;
-  abstract: string;
-  rationale: string;
-  objectives: string[];
-  methodology: string;
-  expectedOutputs: ConceptProposalOutputs;
-  timeline: ProposalTimelineItem[];
-  manuscript: ProposalFile;
-  submittedAt: string;
-  // Pipeline
-  status: DetailedProposalStatus;
-  currentRound: number;
-  statusHistory: StatusHistoryEntry[];
+  blindLabel: string;
+  status: ReviewRowStatus;
+  assessmentFileUrl: string | null;
+  actionSheetUrl: string | null;
+  assignedAt: string;
+  canRemove: boolean;
+  submissions: ReviewSubmission[];
 }
 
-export type ProponentIdentityField =
-  | 'proponentId'
-  | 'leadInvestigator'
-  | 'leadInvestigatorEmail'
-  | 'coInvestigators'
-  | 'college'
-  | 'department';
+export interface RpduProposal {
+  id: string;
+  conceptProposalId: string;
+  code: string;
+  title: string;
+  status: PipelineStatus;
+  currentRound: number;
+  submittedAt: string;
+  updatedAt: string;
+  manuscriptUrl: string | null;
+  proponent: { id: string; name: string; department: string };
+  panel: RpduReview[];
+  revisions: PipelineRevision[];
+  history: StatusHistoryEntry[];
+}
 
-// conceptProposalId is also withheld: it joins to the concept proposal, which names the proponent.
-export type BlindProposal = Omit<DetailedProposal, ProponentIdentityField | 'conceptProposalId'> & { blind: true };
-
-export interface Evaluator {
+export interface PipelineEvaluator {
   id: string;
   name: string;
   email: string;
-  title: string;
-  college: string;
   department: string;
-  expertise: string[];
-  isExternal: boolean;
+  activeLoad: number;
 }
 
-export interface EvaluatorAssignment {
+/** What an evaluator may see. Never carries proponent, department, or concept identifiers. */
+export interface BlindReview {
   id: string;
-  proposalId: string;
-  evaluatorId: string;
+  code: string;
+  title: string;
   blindLabel: string;
-  assignedAt: string;
-  assignedBy: string;
-  dueDate: string;
+  proposalStatus: PipelineStatus;
+  currentRound: number;
+  canSubmit: boolean;
+  manuscriptUrl: string | null;
+  revisions: PipelineRevision[];
+  submissions: ReviewSubmission[];
+  history: { status: PipelineStatus; round: number; changedAt: string }[];
 }
 
-export interface EvaluationCriterionScore {
-  criterionId: string;
-  score: number;
-}
-
-export interface ActionSheetItem {
-  id: string;
-  section: ProposalSection;
-  severity: ActionItemSeverity;
-  comment: string;
-}
-
-export interface Evaluation {
-  id: string;
-  proposalId: string;
-  assignmentId: string;
-  evaluatorId: string;
-  round: number;
-  scores: EvaluationCriterionScore[];
+export interface ProponentFeedbackEvaluation {
+  blindLabel: string;
+  recommendation: ReviewRecommendation;
   totalScore: number;
+  scores: Record<string, number>;
   remarks: string;
-  actionSheet: ActionSheetItem[];
-  recommendation: EvaluatorRecommendation;
+  actionSheetUrl: string;
   submittedAt: string;
 }
 
-export interface RevisionResponse {
-  actionItemId: string;
-  response: string;
+export interface ProponentRoundFeedback {
+  round: number;
+  evaluations: ProponentFeedbackEvaluation[];
 }
 
-export interface ProposalRevision {
+export interface ProponentProposal {
   id: string;
-  proposalId: string;
-  revisionNumber: number;
-  respondsToRound: number;
-  file: ProposalFile;
-  changeSummary: string;
-  responses: RevisionResponse[];
-  uploadedAt: string;
-  uploadedBy: string;
+  code: string;
+  title: string;
+  status: PipelineStatus;
+  currentRound: number;
+  submittedAt: string;
+  manuscriptUrl: string | null;
+  canUploadRevision: boolean;
+  revisions: PipelineRevision[];
+  feedback: ProponentRoundFeedback[];
+  history: StatusHistoryEntry[];
 }
 
-export type BlindRevision = Omit<ProposalRevision, 'uploadedBy'> & { blind: true };
+export interface EligibleConcept {
+  id: string;
+  title: string;
+  screenedAt: string | null;
+}
+
 export interface TechnicalReviewCertificate {
   id: string;
   certificateNumber: string;

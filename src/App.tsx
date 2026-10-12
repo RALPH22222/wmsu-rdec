@@ -1,11 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation, Outlet } from 'react-router-dom';
 import { Navbar } from './components/Navbar';
 import { Footer } from './components/Footer';
 import { HomePage } from './pages/HomePage';
 import { AuthProvider } from './context/AuthContext';
-import { CallForProposalsProvider } from './context/CallForProposalsContext';
-import { ProposalPipelineProvider } from './context/ProposalPipelineContext';
+import { CallForProposalsProvider, useCallForProposals } from './context/CallForProposalsContext';
 import { AdminLayout } from './layouts/AdminLayout';
 import { RpduLayout } from './layouts/RpduLayout';
 import { EvaluatorLayout } from './layouts/EvaluatorLayout';
@@ -23,7 +22,8 @@ import BudgetAllocationPage from './pages/proponents/BudgetAllocationPage';
 import ProfilePage from './pages/proponents/ProfilePage';
 import ScreeningLettersPage from './pages/proponents/ScreeningLettersPage';
 import ProponentContractsPage from './pages/proponents/ProponentContractsPage';
-import RevisionHistoryPage from './pages/proponents/RevisionHistoryPage';
+import { RevisionHistoryPage } from './pages/proponents/RevisionHistoryPage';
+import { PipelineProposalDetailPage } from './pages/rpdu/PipelineProposalDetailPage';
 import EvaluatorDashboard from './pages/evaluator/evaluatorDashboard';
 import { EvaluatorReviewsPage } from './pages/evaluator/EvaluatorReviewsPage';
 import { EvaluatorLettersPage } from './pages/evaluator/EvaluatorLettersPage';
@@ -61,9 +61,13 @@ function PublicLayout({ onSignInClick }: { onSignInClick: () => void }) {
 
 
 
-export function App() {
-  const [toast, setToast] = useState<string | null>(null);
+function GlobalToast() {
+  const { toastMessage, hideToast } = useCallForProposals();
+  if (!toastMessage) return null;
+  return <Toast message={toastMessage} onClose={hideToast} />;
+}
 
+export function App() {
   const handleSignIn = () => {
     window.location.href = '/login';
   };
@@ -71,12 +75,11 @@ export function App() {
   return (
     <AuthProvider>
       <CallForProposalsProvider>
-        <ProposalPipelineProvider>
         <BrowserRouter>
           <ScrollToTop />
 
           {/* Global Toast Notification */}
-          {toast && <Toast message={toast} onClose={() => setToast(null)} />}
+          <GlobalToast />
 
           <Routes>
             {/* Public Portal Layout with Navbar & Footer */}
@@ -106,7 +109,7 @@ export function App() {
               <Route element={<EvaluatorLayout />}>
                 <Route path="/evaluator" element={<EvaluatorDashboard />} />
                 <Route path="/evaluator/reviews" element={<EvaluatorReviewsPage />} />
-                <Route path="/evaluator/review/:assignmentId" element={<EvaluationPortalPage />} />
+                <Route path="/evaluator/reviews/:reviewId" element={<EvaluationPortalPage />} />
                 <Route path="/evaluator/letters" element={<EvaluatorLettersPage />} />
                 <Route path="/evaluator/profile" element={<ProfilePage />} />
               </Route>
@@ -123,6 +126,7 @@ export function App() {
                 <Route path="/admin/contracts" element={<Navigate to="/admin/letters?template=WMSU-RPDU-PSC-001.00&tab=contracts" replace />} />
                 <Route path="/admin/scheduling" element={<AdminInceptionSchedulingPage />} />
                 <Route path="/admin/evaluations" element={<EvaluatorAssignmentPage role="admin" />} />
+                <Route path="/admin/evaluations/:id" element={<PipelineProposalDetailPage role="admin" />} />
                 <Route path="/admin/notarization" element={<Navigate to="/admin/letters?template=WMSU-RPDU-PSC-001.00&tab=contracts" replace />} />
               </Route>
 
@@ -139,6 +143,7 @@ export function App() {
                 <Route path="/rpdu/contracts" element={<Navigate to="/rpdu/letters?template=WMSU-RPDU-PSC-001.00&tab=contracts" replace />} />
                 <Route path="/rpdu/scheduling" element={<InceptionSchedulingPage />} />
                 <Route path="/rpdu/evaluations" element={<EvaluatorAssignmentPage role="rpdu" />} />
+                <Route path="/rpdu/evaluations/:id" element={<PipelineProposalDetailPage role="rpdu" />} />
                 <Route path="/rpdu/notarization" element={<Navigate to="/rpdu/letters?template=WMSU-RPDU-PSC-001.00&tab=contracts" replace />} />
               </Route>
             </Route>
@@ -147,7 +152,6 @@ export function App() {
             <Route path="*" element={<Navigate to="/login" replace />} />
           </Routes>
         </BrowserRouter>
-        </ProposalPipelineProvider>
       </CallForProposalsProvider>
     </AuthProvider>
   );

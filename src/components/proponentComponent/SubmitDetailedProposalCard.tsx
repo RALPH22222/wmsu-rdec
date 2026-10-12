@@ -1,0 +1,36 @@
+import { useId, useState } from 'react';
+import { Upload } from 'lucide-react';
+import type { EligibleConcept } from '../../types';
+import { ACCEPTED_DOCUMENT_TYPES, MAX_UPLOAD_BYTES } from '../../lib/proposalPipeline';
+import { formatDate, formatFileSize } from '../../lib/format';
+
+interface SubmitDetailedProposalCardProps { concept: EligibleConcept; onSubmit: (conceptId: string, file: File) => Promise<unknown> }
+
+export function SubmitDetailedProposalCard({ concept, onSubmit }: SubmitDetailedProposalCardProps) {
+  const inputId = useId();
+  const [file, setFile] = useState<File | null>(null);
+  const [busy, setBusy] = useState(false);
+  const tooBig = file ? file.size > MAX_UPLOAD_BYTES : false;
+
+  const submit = async () => {
+    if (!file || tooBig) return;
+    setBusy(true);
+    try { await onSubmit(concept.id, file); } catch { /* toast shown by hook */ } finally { setBusy(false); }
+  };
+
+  return (
+    <article className="rounded-sm border border-amber-200 bg-amber-50/60 p-4 sm:p-5">
+      <p className="text-[11px] font-bold uppercase tracking-wider text-amber-700">Passed preliminary screening{concept.screenedAt ? ` · ${formatDate(concept.screenedAt)}` : ''}</p>
+      <h3 className="mt-1 text-sm font-bold text-slate-900">{concept.title}</h3>
+      <p className="mt-1 text-xs text-slate-600">Submit your detailed proposal to enter technical review.</p>
+      <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-end">
+        <div className="min-w-0 flex-1">
+          <label htmlFor={inputId} className="block text-xs font-bold text-slate-700">Detailed proposal <span className="font-normal text-slate-400">PDF or Word, up to 15 MB</span></label>
+          <input id={inputId} type="file" accept={ACCEPTED_DOCUMENT_TYPES} onChange={(e) => setFile(e.target.files?.[0] ?? null)} className="mt-1 block min-h-11 w-full rounded-sm border border-slate-200 bg-white text-sm file:mr-3 file:min-h-11 file:border-0 file:bg-slate-100 file:px-3 file:text-xs file:font-semibold" />
+          {file && <p className={`mt-1 text-xs ${tooBig ? 'text-red-700' : 'text-slate-500'}`}>{file.name} · {formatFileSize(file.size)}{tooBig ? ' — too large' : ''}</p>}
+        </div>
+        <button type="button" onClick={submit} disabled={!file || tooBig || busy} className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-sm bg-[#C8102E] px-4 text-sm font-semibold text-white hover:bg-[#A00D26] disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500"><Upload className="h-4 w-4" />{busy ? 'Submitting…' : 'Submit'}</button>
+      </div>
+    </article>
+  );
+}

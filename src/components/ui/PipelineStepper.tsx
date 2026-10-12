@@ -1,9 +1,9 @@
 import React from 'react';
 import { Check, X } from 'lucide-react';
-import type { DetailedProposalStatus } from '../../types';
+import type { PipelineStatus } from '../../types';
 
 interface PipelineStepperProps {
-  status: DetailedProposalStatus;
+  status: PipelineStatus;
   currentRound: number;
   compact?: boolean;
 }
@@ -18,23 +18,23 @@ interface Step {
   outcome?: 'approved' | 'rejected';
 }
 
-function buildSteps(status: DetailedProposalStatus, currentRound: number): Step[] {
-  const decided = status === 'approved' || status === 'rejected';
+function buildSteps(status: PipelineStatus, currentRound: number): Step[] {
+  const decided = status === 'APPROVED' || status === 'REJECTED';
   const revisionsDone = currentRound - 1;
 
   const reviewState: StepState =
-    status === 'under_review' ? 'active' : decided || status === 'revision_requested' ? 'complete' : 'upcoming';
+    status === 'UNDER_REVIEW' ? 'active' : decided || status === 'REVISION_REQUESTED' ? 'complete' : 'upcoming';
 
   const revisionState: StepState =
-    status === 'revision_requested' ? 'active' : currentRound > 1 ? 'complete' : 'upcoming';
+    status === 'REVISION_REQUESTED' ? 'active' : currentRound > 1 ? 'complete' : 'upcoming';
 
   return [
     { key: 'submitted', label: 'Submitted', description: 'Detailed proposal received', state: 'complete' },
     {
       key: 'assigned',
       label: 'Evaluators Assigned',
-      description: status === 'pending_assignment' ? 'Waiting for a 3-member panel' : 'Panel of 3 evaluators',
-      state: status === 'pending_assignment' ? 'active' : 'complete',
+      description: status === 'PENDING_ASSIGNMENT' ? 'Waiting for a 3-member panel' : 'Panel of 3 evaluators',
+      state: status === 'PENDING_ASSIGNMENT' ? 'active' : 'complete',
     },
     {
       key: 'review',
@@ -58,9 +58,9 @@ function buildSteps(status: DetailedProposalStatus, currentRound: number): Step[
             : 'Only if the panel requests changes',
       state: revisionState,
     },
-    status === 'approved'
+    status === 'APPROVED'
       ? { key: 'decision', label: 'Approved', description: 'Cleared by the review panel', state: 'complete', outcome: 'approved' }
-      : status === 'rejected'
+      : status === 'REJECTED'
         ? { key: 'decision', label: 'Rejected', description: 'Not endorsed by the review panel', state: 'complete', outcome: 'rejected' }
         : { key: 'decision', label: 'Decision', description: 'Final panel outcome', state: 'upcoming' },
   ];

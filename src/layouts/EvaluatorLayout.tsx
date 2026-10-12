@@ -7,7 +7,7 @@ export function EvaluatorLayout() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const { pathname } = useLocation();
   const title = pathname === '/evaluator/reviews' ? 'Assigned Technical Reviews'
-    : pathname.startsWith('/evaluator/review/') ? 'Double-Blind Evaluation'
+    : pathname.startsWith('/evaluator/reviews/') ? 'Double-Blind Evaluation'
     : pathname === '/evaluator/letters' ? 'Invitation Letters'
       : pathname === '/evaluator/profile' ? 'Institutional Profile & Affiliation'
         : 'Evaluator Dashboard';

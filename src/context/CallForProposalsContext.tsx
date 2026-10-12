@@ -41,6 +41,7 @@ interface CallForProposalsContextType {
   submitConceptProposal: (proposal: ConceptProposalPayload) => Promise<ConceptProposal>;
   toastMessage: string | null;
   showToast: (msg: string) => void;
+  hideToast: () => void;
 }
 
 const CallForProposalsContext = createContext<CallForProposalsContextType | undefined>(undefined);
@@ -150,12 +151,16 @@ export const CallForProposalsProvider: React.FC<{ children: React.ReactNode }> =
   const [proposals] = useState<ProposalItem[]>(MOCK_PROPOSALS);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  const showToast = (msg: string) => {
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const hideToast = useCallback(() => {
+    if (toastTimer.current) { clearTimeout(toastTimer.current); toastTimer.current = null; }
+    setToastMessage(null);
+  }, []);
+  const showToast = useCallback((msg: string) => {
+    if (toastTimer.current) clearTimeout(toastTimer.current);
     setToastMessage(msg);
-    setTimeout(() => {
-      setToastMessage(null);
-    }, 4000);
-  };
+    toastTimer.current = setTimeout(() => { toastTimer.current = null; setToastMessage(null); }, 4000);
+  }, []);
 
   const setCurrentUserRole = (role: UserRole) => {
     const user = MOCK_USERS.find((u) => u.role === role) || MOCK_USERS[0];
@@ -316,6 +321,7 @@ export const CallForProposalsProvider: React.FC<{ children: React.ReactNode }> =
         submitConceptProposal,
         toastMessage,
         showToast,
+        hideToast,
       }}
     >
       {children}

@@ -1,291 +1,104 @@
-import React, { useId, useState } from 'react';
-import { AlertCircle, AlertTriangle, CheckCircle2, Send, XCircle, type LucideIcon } from 'lucide-react';
-import type { EvaluationCriterionScore, EvaluatorRecommendation } from '../../types';
-import { useProposalPipeline } from '../../context/ProposalPipelineContext';
-import {
-  EVALUATION_CRITERIA,
-  MAX_CRITERION_SCORE,
-  MIN_CRITERION_SCORE,
-  MIN_REMARKS_LENGTH,
-  RECOMMENDATION_META,
-  computeTotalScore,
-  validateEvaluation,
-} from '../../lib/proposalPipeline';
+import { useId, useMemo, useState } from 'react';
+import { Send } from 'lucide-react';
+import type { BlindReview, ReviewRecommendation } from '../../types';
+import type { SubmitReviewPayload } from '../../lib/pipelineApi';
+import { ACCEPTED_DOCUMENT_TYPES, EVALUATION_CRITERIA, MAX_REMARKS_LENGTH, MAX_UPLOAD_BYTES, RECOMMENDATION_META, computeTotalScore, validateSubmissionDraft } from '../../lib/proposalPipeline';
+import { formatFileSize } from '../../lib/format';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
-import { ActionSheetBuilder, type DraftActionItem } from './ActionSheetBuilder';
-import { TotalScoreMeter } from './TotalScoreMeter';
 
-interface EvaluationScoringFormProps {
-  assignmentId: string;
-  onSubmitted: () => void;
+interface EvaluationScoringFormProps { review: BlindReview; onSubmit: (payload: SubmitReviewPayload) => Promise<unknown> }
+
+const RECOMMENDATIONS: ReviewRecommendation[] = ['APPROVE', 'REVISE', 'REJECT'];
+const TONE_RING: Record<string, string> = { emerald: 'border-emerald-600 bg-emerald-50', amber: 'border-amber-600 bg-amber-50', red: 'border-red-600 bg-red-50' };
+
+function FileField({ id, label, file, onChange }: { id: string; label: string; file: File | null; onChange: (file: File | null) => void }) {
+  const tooBig = file ? file.size > MAX_UPLOAD_BYTES : false;
+  return (
+    <div>
+      <label htmlFor={id} className="block text-xs font-bold text-slate-700">{label} <span className="font-normal text-slate-400">PDF or Word, up to 15 MB</span></label>
+      <input id={id} type="file" accept={ACCEPTED_DOCUMENT_TYPES} onChange={(e) => onChange(e.target.files?.[0] ?? null)} className="mt-1 block min-h-11 w-full rounded-sm border border-slate-200 bg-white text-sm file:mr-3 file:min-h-11 file:border-0 file:bg-slate-100 file:px-3 file:text-xs file:font-semibold" />
+      {file && <p className={`mt-1 text-xs ${tooBig ? 'text-red-700' : 'text-slate-500'}`}>{file.name} · {formatFileSize(file.size)}{tooBig ? ' — too large' : ''}</p>}
+    </div>
+  );
 }
 
-const SCORE_OPTIONS = Array.from(
-  { length: MAX_CRITERION_SCORE - MIN_CRITERION_SCORE + 1 },
-  (_, i) => MIN_CRITERION_SCORE + i
-);
-
-const RECOMMENDATIONS: { value: EvaluatorRecommendation; icon: LucideIcon; selected: string; iconSelected: string }[] = [
-  {
-    value: 'approve',
-    icon: CheckCircle2,
-    selected: 'border-emerald-500 bg-emerald-50/50 ring-1 ring-emerald-500 text-emerald-900',
-    iconSelected: 'text-emerald-600',
-  },
-  {
-    value: 'revise',
-    icon: AlertTriangle,
-    selected: 'border-amber-500 bg-amber-50/50 ring-1 ring-amber-500 text-amber-900',
-    iconSelected: 'text-amber-600',
-  },
-  {
-    value: 'reject',
-    icon: XCircle,
-    selected: 'border-red-500 bg-red-50/50 ring-1 ring-red-500 text-red-900',
-    iconSelected: 'text-red-600',
-  },
-];
-
-const BlockLabel: React.FC<{ children: React.ReactNode; htmlFor?: string; aside?: React.ReactNode }> = ({
-  children,
-  htmlFor,
-  aside,
-}) => (
-  <div className="flex items-center justify-between gap-2">
-    {htmlFor ? (
-      <label htmlFor={htmlFor} className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
-        {children}
-      </label>
-    ) : (
-      <h3 className="text-[11px] font-bold uppercase tracking-wider text-slate-400">{children}</h3>
-    )}
-    {aside}
-  </div>
-);
-
-/**
- * Scoring form for one assignment and the current round. Holds the whole draft locally;
- * the page keys it by assignment id so switching assignments starts a fresh draft.
- */
-export const EvaluationScoringForm: React.FC<EvaluationScoringFormProps> = ({ assignmentId, onSubmitted }) => {
-  const { submitEvaluation } = useProposalPipeline();
-  const remarksId = useId();
-
-  const [scores, setScores] = useState<Record<string, number>>({});
+export function EvaluationScoringForm({ review, onSubmit }: EvaluationScoringFormProps) {
+  const baseId = useId();
+  const [recommendation, setRecommendation] = useState<ReviewRecommendation | null>(null);
+  const [scores, setScores] = useState<Record<string, number | undefined>>({});
   const [remarks, setRemarks] = useState('');
-  const [recommendation, setRecommendation] = useState<EvaluatorRecommendation | null>(null);
-  const [actionSheet, setActionSheet] = useState<DraftActionItem[]>([]);
-  const [confirmOpen, setConfirmOpen] = useState(false);
-  const [attempted, setAttempted] = useState(false);
-  const [errors, setErrors] = useState<string[]>([]);
+  const [assessmentFile, setAssessmentFile] = useState<File | null>(null);
+  const [actionSheetFile, setActionSheetFile] = useState<File | null>(null);
+  const [showErrors, setShowErrors] = useState(false);
+  const [confirming, setConfirming] = useState(false);
+  const [busy, setBusy] = useState(false);
 
-  const scoreList: EvaluationCriterionScore[] = EVALUATION_CRITERIA.filter((c) => scores[c.id] !== undefined).map((c) => ({
-    criterionId: c.id,
-    score: scores[c.id],
-  }));
-  const total = computeTotalScore(scoreList);
-  const remarksLength = remarks.trim().length;
+  const total = useMemo(() => computeTotalScore(scores), [scores]);
+  const validation = validateSubmissionDraft({ recommendation, scores, remarks, hasAssessmentFile: Boolean(assessmentFile), hasActionSheetFile: Boolean(actionSheetFile) });
+  const oversized = [assessmentFile, actionSheetFile].some((file) => file && file.size > MAX_UPLOAD_BYTES);
+  const errors = oversized ? [...validation.errors, 'Each file must be 15 MB or smaller'] : validation.errors;
 
-  // Validated live on every render; the missing list is shown only after the first submit attempt.
-  const validation = validateEvaluation({
-    scores: scoreList,
-    remarks,
-    recommendation,
-    actionSheet: actionSheet.map((item) => ({ id: item.key, section: item.section, severity: item.severity, comment: item.comment })),
-  });
-  const shownErrors = [...(attempted ? validation.missing : []), ...errors];
-
-  const setScore = (criterionId: string, score: number) => setScores((prev) => ({ ...prev, [criterionId]: score }));
-
-  const handleSubmitClick = () => {
-    setAttempted(true);
-    setErrors([]);
-    if (validation.ok) setConfirmOpen(true);
-  };
-
-  const handleConfirm = () => {
-    if (!recommendation) return;
-    const result = submitEvaluation({
-      assignmentId,
-      scores: scoreList,
-      remarks,
-      actionSheet: actionSheet.map((item) => ({ section: item.section, severity: item.severity, comment: item.comment })),
-      recommendation,
-    });
-    setConfirmOpen(false);
-    if (result.ok) {
-      onSubmitted();
-    } else {
-      setErrors(result.missing);
-    }
+  const attempt = () => { setShowErrors(true); if (errors.length === 0) setConfirming(true); };
+  const send = async () => {
+    if (!recommendation || !assessmentFile || !actionSheetFile) return;
+    setBusy(true);
+    try {
+      await onSubmit({ recommendation, scores: scores as Record<string, number>, remarks: remarks.trim(), assessmentFile, actionSheetFile });
+      setConfirming(false);
+    } catch { /* toast shown by hook */ } finally { setBusy(false); }
   };
 
   return (
-    <div className="bg-white border border-slate-200 rounded-sm shadow-xs">
-      <div className="p-4 border-b border-slate-100">
-        <h2 className="text-base font-bold text-slate-900">Score this proposal</h2>
-        <p className="text-xs text-slate-500 mt-0.5">
-          Rate each criterion from {MIN_CRITERION_SCORE} (poor) to {MAX_CRITERION_SCORE} (excellent). Submissions are final for
-          the round.
-        </p>
-      </div>
-
-      <div className="p-4 space-y-6">
-        {/* Criteria */}
-        <div className="space-y-4">
-          <BlockLabel aside={<span className="text-[11px] font-semibold text-slate-500">{scoreList.length} of {EVALUATION_CRITERIA.length} scored</span>}>
-            Criteria
-          </BlockLabel>
-          {EVALUATION_CRITERIA.map((criterion) => {
-            const value = scores[criterion.id];
-            const points = value !== undefined ? ((value / MAX_CRITERION_SCORE) * criterion.weight).toFixed(1) : null;
+    <form className="space-y-5 pb-20 sm:pb-0" onSubmit={(e) => { e.preventDefault(); attempt(); }} noValidate>
+      <fieldset>
+        <legend className="text-xs font-bold uppercase tracking-wider text-slate-400">Recommendation</legend>
+        <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-3" role="radiogroup">
+          {RECOMMENDATIONS.map((value) => {
+            const meta = RECOMMENDATION_META[value];
+            const active = recommendation === value;
             return (
-              <div key={criterion.id} className="space-y-2">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold text-slate-800 leading-snug">{criterion.label}</p>
-                    <p className="text-xs text-slate-500 leading-relaxed mt-0.5">{criterion.description}</p>
-                  </div>
-                  <span className="shrink-0 px-1.5 py-0.5 rounded-sm bg-slate-100 text-[11px] font-bold text-slate-600">
-                    {criterion.weight} pts
-                  </span>
-                </div>
-                <div className="grid grid-cols-5 sm:grid-cols-10 gap-1 sm:gap-px" role="group" aria-label={`${criterion.label} score`}>
-                  {SCORE_OPTIONS.map((n) => {
-                    const selected = value === n;
-                    return (
-                      <button
-                        key={n}
-                        type="button"
-                        onClick={() => setScore(criterion.id, n)}
-                        aria-label={`${criterion.label}: ${n}`}
-                        aria-pressed={selected}
-                        className={`h-9 min-w-0 rounded-sm border text-sm font-semibold tabular-nums transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#C8102E]/40 focus-visible:ring-offset-1 ${
-                          selected
-                            ? 'bg-[#C8102E] border-[#C8102E] text-white'
-                            : 'bg-white border-slate-200 text-slate-700 hover:border-[#C8102E] hover:text-[#C8102E]'
-                        }`}
-                      >
-                        {n}
-                      </button>
-                    );
-                  })}
-                </div>
-                {points !== null && (
-                  <p className="text-[11px] text-slate-500 text-right">
-                    {value}/{MAX_CRITERION_SCORE} · {points} of {criterion.weight} pts
-                  </p>
-                )}
-              </div>
+              <button key={value} type="button" role="radio" aria-checked={active} onClick={() => setRecommendation(value)} className={`min-h-14 rounded-sm border-2 p-3 text-left ${active ? TONE_RING[meta.tone] : 'border-slate-200 bg-white hover:border-slate-300'}`}>
+                <span className="block text-sm font-bold text-slate-900">{meta.label}</span>
+                <span className="block text-[11px] text-slate-500">{meta.description}</span>
+              </button>
             );
           })}
         </div>
+      </fieldset>
 
-        {/* Live total */}
-        <div className="p-3.5 rounded-sm border border-slate-200 bg-slate-50/60 space-y-1">
-          <BlockLabel>Total weighted score</BlockLabel>
-          <TotalScoreMeter total={total} />
-        </div>
+      <fieldset>
+        <legend className="flex w-full items-baseline justify-between text-xs font-bold uppercase tracking-wider text-slate-400">Scores <span className="text-sm normal-case tracking-normal text-slate-900">{total}<span className="text-slate-400">/100</span></span></legend>
+        <ul className="mt-2 divide-y divide-slate-100 rounded-sm border border-slate-200 bg-white">
+          {EVALUATION_CRITERIA.map((criterion) => {
+            const selectId = `${baseId}-${criterion.id}`;
+            return (
+              <li key={criterion.id} className="flex items-center justify-between gap-3 p-3">
+                <label htmlFor={selectId} className="min-w-0"><span className="block text-sm font-semibold text-slate-900">{criterion.label} <span className="text-xs font-normal text-slate-400">({criterion.weight})</span></span><span className="block text-[11px] text-slate-500">{criterion.description}</span></label>
+                <select id={selectId} value={scores[criterion.id] ?? ''} onChange={(e) => setScores((prev) => ({ ...prev, [criterion.id]: e.target.value ? Number(e.target.value) : undefined }))} className="min-h-11 w-20 shrink-0 rounded-sm border border-slate-200 bg-white px-2 text-sm font-semibold focus:border-[#C8102E] focus:outline-none">
+                  <option value="">–</option>
+                  {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => <option key={n} value={n}>{n}</option>)}
+                </select>
+              </li>
+            );
+          })}
+        </ul>
+      </fieldset>
 
-        {/* Remarks */}
-        <div className="space-y-2">
-          <BlockLabel
-            htmlFor={remarksId}
-            aside={
-              <span
-                className={`text-[11px] font-semibold tabular-nums ${remarksLength >= MIN_REMARKS_LENGTH ? 'text-emerald-700' : 'text-slate-500'}`}
-              >
-                {remarksLength} / min {MIN_REMARKS_LENGTH}
-              </span>
-            }
-          >
-            Remarks
-          </BlockLabel>
-          <textarea
-            id={remarksId}
-            rows={5}
-            value={remarks}
-            onChange={(e) => setRemarks(e.target.value)}
-            placeholder="Summarize the proposal's strengths and weaknesses for the RPDU and the proponent…"
-            className="w-full text-sm rounded-sm border border-slate-200 p-3 text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#C8102E]/20 focus:border-[#C8102E]"
-          />
-        </div>
-
-        {/* Action sheet */}
-        <div className="space-y-2">
-          <BlockLabel aside={<span className="text-[11px] font-semibold text-slate-500">{actionSheet.length} item{actionSheet.length === 1 ? '' : 's'}</span>}>
-            Action sheet
-          </BlockLabel>
-          <p className="text-xs text-slate-500">Required when recommending revision or rejection.</p>
-          <ActionSheetBuilder items={actionSheet} onChange={setActionSheet} />
-        </div>
-
-        {/* Recommendation */}
-        <div className="space-y-2">
-          <BlockLabel>Recommendation</BlockLabel>
-          <div className="grid grid-cols-1 gap-2">
-            {RECOMMENDATIONS.map((option) => {
-              const meta = RECOMMENDATION_META[option.value];
-              const selected = recommendation === option.value;
-              const Icon = option.icon;
-              return (
-                <button
-                  key={option.value}
-                  type="button"
-                  onClick={() => setRecommendation(option.value)}
-                  aria-pressed={selected}
-                  className={`p-3 rounded-sm border text-left flex items-start gap-2.5 transition-all cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#C8102E]/40 ${
-                    selected ? option.selected : 'border-slate-200 hover:border-slate-300 text-slate-700 bg-white'
-                  }`}
-                >
-                  <Icon className={`w-4 h-4 mt-0.5 shrink-0 ${selected ? option.iconSelected : 'text-slate-400'}`} />
-                  <div>
-                    <p className="text-xs font-bold">{meta.label}</p>
-                    <p className="text-[11px] text-slate-500 mt-0.5">{meta.description}</p>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Errors */}
-        {shownErrors.length > 0 && (
-          <div className="p-3 rounded-sm border border-red-200 bg-red-50 text-red-800 space-y-1.5" role="alert">
-            <p className="flex items-center gap-1.5 text-xs font-bold">
-              <AlertCircle className="w-4 h-4" />
-              Complete the following before submitting
-            </p>
-            <ul className="list-disc pl-5 space-y-0.5 text-xs">
-              {shownErrors.map((message) => (
-                <li key={message}>{message}</li>
-              ))}
-            </ul>
-          </div>
-        )}
-
-        <button
-          type="button"
-          onClick={handleSubmitClick}
-          className="w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-sm text-sm font-bold text-white bg-[#C8102E] hover:bg-[#A00D26] shadow-xs transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#C8102E]/40 focus-visible:ring-offset-2"
-        >
-          <Send className="w-4 h-4" />
-          Submit Evaluation
-        </button>
+      <div>
+        <label htmlFor={`${baseId}-remarks`} className="block text-xs font-bold text-slate-700">Overall remarks <span className="font-normal text-slate-400">{remarks.trim().length}/{MAX_REMARKS_LENGTH}</span></label>
+        <textarea id={`${baseId}-remarks`} value={remarks} onChange={(e) => setRemarks(e.target.value)} rows={5} maxLength={MAX_REMARKS_LENGTH} placeholder="Summarise strengths, weaknesses, and what must change (at least 20 characters)." className="mt-1 w-full rounded-sm border border-slate-200 p-3 text-sm focus:border-[#C8102E] focus:outline-none" />
       </div>
 
-      <ConfirmDialog
-        isOpen={confirmOpen}
-        onClose={() => setConfirmOpen(false)}
-        onConfirm={handleConfirm}
-        tone="brand"
-        icon={Send}
-        title="Submit evaluation?"
-        description="Your scores and action sheet will be sent to the RPDU and cannot be edited after submission."
-        confirmLabel="Submit evaluation"
-      />
-    </div>
-  );
-};
+      <FileField id={`${baseId}-assessment`} label="Assessment form" file={assessmentFile} onChange={setAssessmentFile} />
+      <FileField id={`${baseId}-sheet`} label="Action sheet" file={actionSheetFile} onChange={setActionSheetFile} />
 
-export default EvaluationScoringForm;
+      {showErrors && errors.length > 0 && <ul role="alert" className="list-disc space-y-0.5 rounded-sm border border-red-200 bg-red-50 p-3 pl-7 text-xs text-red-800">{errors.map((item) => <li key={item}>{item}</li>)}</ul>}
+
+      <div className="fixed inset-x-0 bottom-0 z-20 border-t border-slate-200 bg-white p-3 sm:static sm:border-0 sm:bg-transparent sm:p-0">
+        <button type="submit" className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-sm bg-[#C8102E] px-5 text-sm font-semibold text-white hover:bg-[#A00D26] sm:w-auto"><Send className="h-4 w-4" />Submit evaluation</button>
+      </div>
+
+      <ConfirmDialog isOpen={confirming} onClose={() => setConfirming(false)} onConfirm={send} loading={busy} title="Submit this evaluation?" confirmLabel="Submit" description={`Round ${review.currentRound} · ${recommendation ? RECOMMENDATION_META[recommendation].label : ''} · ${total}/100. You cannot change it after submitting.`} />
+    </form>
+  );
+}

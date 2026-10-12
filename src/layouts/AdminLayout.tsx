@@ -15,7 +15,8 @@ export const AdminLayout: React.FC = () => {
     if (location.pathname.startsWith('/admin/scheduling') || location.pathname.startsWith('/admin/notarization')) return 'Inception Meetings & Special Order Scheduling';
     if (location.pathname.startsWith('/admin/proposals')) return 'Proposals Queue';
     if (location.pathname.startsWith('/admin/evaluators')) return 'Evaluators Panel';
-    if (location.pathname.startsWith('/admin/evaluations')) return 'Technical Evaluations Pipeline';
+    if (/^\/admin\/evaluations\/.+/.test(location.pathname)) return 'Proposal Review Panel';
+    if (location.pathname.startsWith('/admin/evaluations')) return 'Technical Evaluations';
     return 'Call for Proposals & Grants Management';
   };
 

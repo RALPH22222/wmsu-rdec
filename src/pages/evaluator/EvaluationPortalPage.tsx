@@ -1,142 +1,70 @@
-import React, { useRef } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { ArrowDown, ArrowLeft, FileSearch, Hourglass, ShieldCheck } from 'lucide-react';
-import { useProposalPipeline, type MyAssignment } from '../../context/ProposalPipelineContext';
+import { ArrowLeft, EyeOff } from 'lucide-react';
+import { useMyReview } from '../../hooks/useMyReviews';
+import { nextStepFor } from '../../lib/proposalPipeline';
+import { formatDate } from '../../lib/format';
 import { StatusBadge } from '../../components/ui/StatusBadge';
-import { EmptyState } from '../../components/ui/EmptyState';
-import { BlindProposalViewer } from '../../components/evaluatorComponent/BlindProposalViewer';
+import { DocumentLink } from '../../components/ui/DocumentLink';
+import { RoundAccordion } from '../../components/ui/RoundAccordion';
 import { EvaluationScoringForm } from '../../components/evaluatorComponent/EvaluationScoringForm';
-import { EvaluationSummary } from '../../components/evaluatorComponent/EvaluationSummary';
-import { DueDateChip } from '../../components/evaluatorComponent/DueDateChip';
+import { SubmissionSummary } from '../../components/evaluatorComponent/SubmissionSummary';
 
-/** Explains why scoring is closed when there is no submission for the current round. */
-const ScoringClosedNotice: React.FC<{ item: MyAssignment }> = ({ item }) => {
-  const { status } = item.proposal;
-  const [title, body] =
-    status === 'pending_assignment'
-      ? [
-          'Scoring opens when the panel is complete',
-          'The RPDU is still assembling the three-member evaluator panel. You can read the proposal now; the scoring form appears once the technical review starts.',
-        ]
-      : status === 'revision_requested'
-        ? [
-            'Waiting for revised manuscript',
-            'The panel requested revisions. Scoring reopens for the next round when the revised manuscript is uploaded.',
-          ]
-        : ['Review closed', 'This proposal already has a final decision; no further evaluations are accepted.'];
+/** Remounts the body per review id so a stale optimistic write for one review never lands on another. */
+export function EvaluationPortalPage() {
+  const { reviewId } = useParams<{ reviewId: string }>();
+  return <PortalBody key={reviewId} reviewId={reviewId} />;
+}
+
+function PortalBody({ reviewId }: { reviewId: string | undefined }) {
+  const { review, loading, error, submit } = useMyReview(reviewId);
+
+  if (loading) return <section className="mx-auto max-w-3xl space-y-3" aria-label="Loading review"><div className="h-24 animate-pulse rounded-sm bg-slate-100" /><div className="h-64 animate-pulse rounded-sm bg-slate-100" /></section>;
+  if (error || !review) return <section className="mx-auto max-w-3xl space-y-3"><Link to="/evaluator/reviews" className="inline-flex items-center gap-1 text-xs font-semibold text-slate-600"><ArrowLeft className="h-4 w-4" />Back</Link><p role="alert" className="rounded-sm border border-red-200 bg-red-50 p-4 text-sm text-red-800">{error || 'Review not found.'}</p></section>;
+
+  const current = review.submissions.find((s) => s.round === review.currentRound);
+  const earlier = review.submissions.filter((s) => s.round !== review.currentRound).sort((a, b) => b.round - a.round);
 
   return (
-    <div className="bg-white border border-slate-200 rounded-sm shadow-xs p-5 space-y-2">
-      <div className="w-9 h-9 rounded-sm bg-slate-100 text-slate-500 flex items-center justify-center">
-        <Hourglass className="w-5 h-5" />
-      </div>
-      <h2 className="text-sm font-bold text-slate-900">{title}</h2>
-      <p className="text-xs text-slate-500 leading-relaxed">{body}</p>
-    </div>
-  );
-};
+    <section className="mx-auto max-w-3xl space-y-4">
+      <Link to="/evaluator/reviews" className="inline-flex min-h-11 items-center gap-1 text-xs font-semibold text-slate-600 hover:text-slate-900"><ArrowLeft className="h-4 w-4" />Assigned reviews</Link>
 
-export const EvaluationPortalPage: React.FC = () => {
-  const { assignmentId } = useParams<{ assignmentId: string }>();
-  const { getMyAssignments } = useProposalPipeline();
-  const panelRef = useRef<HTMLDivElement>(null);
+      <header className="rounded-sm border border-slate-200 bg-white p-4 shadow-xs sm:p-5">
+        <div className="flex flex-wrap items-center gap-2"><span className="font-mono text-[11px] font-bold text-slate-500">{review.code}</span><StatusBadge status={review.proposalStatus} size="md" /><span className="text-xs text-slate-500">Round {review.currentRound} · You are {review.blindLabel}</span></div>
+        <h2 className="mt-2 break-words font-brand text-lg font-bold text-slate-900">{review.title}</h2>
+        <p className="mt-2 flex items-start gap-2 text-xs text-slate-500"><EyeOff className="mt-0.5 h-4 w-4 shrink-0" />Double-blind review: the research team's identity is withheld from you, and yours from them.</p>
+        <p className="mt-3 rounded-sm bg-slate-50 p-3 text-xs text-slate-700">{nextStepFor(review.proposalStatus, 'evaluator')}</p>
+      </header>
 
-  const item = getMyAssignments().find((a) => a.assignment.id === assignmentId);
-
-  if (!item) {
-    return (
-      <div className="max-w-3xl mx-auto">
-        <EmptyState
-          icon={FileSearch}
-          title="Assignment not found"
-          description="This evaluation link does not match any proposal assigned to you."
-          action={
-            <Link
-              to="/evaluator"
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-sm text-xs font-bold bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              Back to Assigned Proposals
-            </Link>
-          }
-        />
-      </div>
-    );
-  }
-
-  const { assignment, proposal, evaluation, canEvaluate, isOverdue, revisions, previousRoundActionSheet } = item;
-  const latestRevision = revisions.length > 0 ? revisions[revisions.length - 1] : undefined;
-
-  // After a successful submit the page re-renders with the evaluation (EvaluationSummary);
-  // bring the top of the panel into view. The context already shows the toast.
-  const handleSubmitted = () => {
-    const panel = panelRef.current;
-    if (!panel) return;
-    panel.scrollTop = 0;
-    panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  };
-
-  return (
-    <div className="max-w-7xl mx-auto space-y-5">
-      {/* Page header */}
-      <div className="space-y-3">
-        <Link
-          to="/evaluator"
-          className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-[#C8102E] transition-colors"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Assigned Proposals
-        </Link>
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-sm bg-slate-100 text-slate-700">{proposal.code}</span>
-          <span
-            className={`px-2 py-0.5 rounded-sm text-[11px] font-bold ${
-              proposal.currentRound > 1 ? 'bg-blue-50 text-blue-700' : 'bg-slate-200/70 text-slate-600'
-            }`}
-          >
-            Round {proposal.currentRound}
-          </span>
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-sm text-[11px] font-semibold text-slate-600 border border-slate-200 bg-white">
-            <ShieldCheck className="w-3.5 h-3.5 text-slate-400" />
-            Evaluating as {assignment.blindLabel}
-          </span>
-          <StatusBadge status={proposal.status} />
-          {!evaluation && <DueDateChip dueDate={assignment.dueDate} isOverdue={isOverdue} active={canEvaluate} />}
-        </div>
-        {canEvaluate && (
-          <a
-            href="#evaluation-panel"
-            className="xl:hidden inline-flex items-center gap-1.5 px-3 py-2 rounded-sm text-xs font-bold bg-[#C8102E] hover:bg-[#A00D26] text-white shadow-xs transition-colors"
-          >
-            <ArrowDown className="w-4 h-4" />
-            Go to scoring form
-          </a>
+      <section className="rounded-sm border border-slate-200 bg-white p-4 shadow-xs sm:p-5">
+        <h3 className="mb-3 text-xs font-bold uppercase tracking-wider text-slate-400">Documents</h3>
+        <div className="flex flex-wrap gap-2"><DocumentLink href={review.manuscriptUrl} label="Original manuscript" /></div>
+        {review.revisions.length > 0 && (
+          <ul className="mt-3 space-y-2">
+            {[...review.revisions].reverse().map((revision) => (
+              <li key={revision.id} className="rounded-sm border border-slate-100 p-3">
+                <p className="text-sm font-semibold text-slate-900">Revision {revision.revisionNumber} <span className="text-xs font-normal text-slate-400">· {formatDate(revision.submittedAt)}</span></p>
+                {revision.notes && <p className="mt-1 whitespace-pre-wrap break-words text-xs text-slate-600">{revision.notes}</p>}
+                <div className="mt-2 flex flex-wrap gap-2"><DocumentLink href={revision.revisedFileUrl} label="Revised manuscript" muted /><DocumentLink href={revision.revisionHistoryFileUrl} label="Revision history" muted /></div>
+              </li>
+            ))}
+          </ul>
         )}
-      </div>
+      </section>
 
-      <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_420px] gap-6 items-start">
-        <BlindProposalViewer
-          proposal={proposal}
-          previousActionSheet={previousRoundActionSheet}
-          latestRevision={latestRevision}
-        />
+      <section className="rounded-sm border border-slate-200 bg-white p-4 shadow-xs sm:p-5">
+        <h3 className="mb-3 text-xs font-bold uppercase tracking-wider text-slate-400">Round {review.currentRound} evaluation</h3>
+        {current ? <SubmissionSummary submission={current} />
+          : review.canSubmit ? <EvaluationScoringForm key={review.currentRound} review={review} onSubmit={submit} />
+          : <p className="rounded-sm bg-slate-50 p-3 text-sm text-slate-600">Scoring is closed for this round.</p>}
+      </section>
 
-        <div
-          id="evaluation-panel"
-          ref={panelRef}
-          className="scroll-mt-20 xl:sticky xl:top-24 xl:max-h-[calc(100vh-7rem)] xl:overflow-y-auto xl:overscroll-contain xl:[scrollbar-width:thin]"
-        >
-          {evaluation ? (
-            <EvaluationSummary evaluation={evaluation} />
-          ) : canEvaluate ? (
-            <EvaluationScoringForm key={assignment.id} assignmentId={assignment.id} onSubmitted={handleSubmitted} />
-          ) : (
-            <ScoringClosedNotice item={item} />
-          )}
+      {earlier.length > 0 && (
+        <div className="space-y-3">
+          {earlier.map((submission) => <RoundAccordion key={submission.round} round={submission.round} summary="Your earlier evaluation"><SubmissionSummary submission={submission} /></RoundAccordion>)}
         </div>
-      </div>
-    </div>
+      )}
+    </section>
   );
-};
+}
 
 export default EvaluationPortalPage;
