@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
 import type { Session, User } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import { getProfile, type UserProfileData } from '../lib/api';
@@ -9,6 +9,7 @@ interface AuthContextType {
   profile: UserProfileData | null;
   loading: boolean;
   loadingProfile: boolean;
+  authError: string | null;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
 }
@@ -19,6 +20,7 @@ const AuthContext = createContext<AuthContextType>({
   profile: null,
   loading: true,
   loadingProfile: false,
+  authError: null,
   signOut: async () => { },
   refreshProfile: async () => { },
 });
@@ -29,50 +31,33 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [profile, setProfile] = useState<UserProfileData | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadingProfile, setLoadingProfile] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
+  const profileRequest = useRef(0);
 
-  const fetchUserProfile = useCallback(async (token: string, currentUserId?: string) => {
-    setLoadingProfile(true);
-    let resolvedProfile: UserProfileData | null = null;
-
-    // 1. Try Express backend API
+  const fetchUserProfile = useCallback(async (token: string, isSilent = false) => {
+    const request = ++profileRequest.current;
+    if (!isSilent) setLoadingProfile(true);
     try {
       const data = await getProfile(token);
-      if (data && (data.first_name || data.last_name)) {
-        resolvedProfile = data;
+      if (!data?.portal_access?.allowed) throw new Error('Unable to verify access to your Call for Proposals window.');
+      if (request !== profileRequest.current) return;
+      setProfile(data);
+      setAuthError(null);
+    } catch (error) {
+      if (request !== profileRequest.current) return;
+      setAuthError(error instanceof Error ? error.message : 'Unable to verify portal access.');
+      // Never forcefully destroy session or sign out on background revalidation errors
+      if (!isSilent) {
+        setProfile(null);
       }
-    } catch {
-      // Backend may be offline or unroutable, fallback to direct Supabase
+    } finally {
+      if (request === profileRequest.current && !isSilent) setLoadingProfile(false);
     }
-
-    // 2. If not found or backend was down, fetch directly from Supabase 'users' table
-    if (!resolvedProfile) {
-      try {
-        const uid = currentUserId || (await supabase.auth.getUser()).data.user?.id;
-        if (uid) {
-          const { data: dbUser, error } = await supabase
-            .from('users')
-            .select('id, first_name, middle_name, last_name, suffix, email, contact_number, department_id, sex, role, created_at, is_eligible_to_submit, departments:department_id(id, name)')
-            .eq('id', uid)
-            .maybeSingle();
-
-          if (!error && dbUser) {
-            resolvedProfile = dbUser as unknown as UserProfileData;
-          }
-        }
-      } catch (err) {
-        console.warn('Direct Supabase profile fetch error:', err);
-      }
-    }
-
-    if (resolvedProfile) {
-      setProfile(resolvedProfile);
-    }
-    setLoadingProfile(false);
   }, []);
 
-  const refreshProfile = useCallback(async () => {
+  const refreshProfile = useCallback(async (isSilent = true) => {
     if (session?.access_token) {
-      await fetchUserProfile(session.access_token, session.user?.id);
+      await fetchUserProfile(session.access_token, isSilent);
     }
   }, [session, fetchUserProfile]);
 
@@ -81,7 +66,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.access_token) {
-        fetchUserProfile(session.access_token, session.user.id);
+        fetchUserProfile(session.access_token);
       }
       setLoading(false);
     });
@@ -91,9 +76,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setSession(newSession);
         setUser(newSession?.user ?? null);
         if (newSession?.access_token) {
-          fetchUserProfile(newSession.access_token, newSession.user.id);
+          fetchUserProfile(newSession.access_token);
         } else {
+          profileRequest.current++;
           setProfile(null);
+          setLoadingProfile(false);
         }
         setLoading(false);
       }
@@ -119,6 +106,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         profile,
         loading,
         loadingProfile,
+        authError,
         signOut,
         refreshProfile,
       }}

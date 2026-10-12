@@ -1,14 +1,19 @@
 import React, { useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { Menu, Bell, ChevronRight } from 'lucide-react';
-import { Sidebar } from '../components/Sidebar';
+import { RpduSidebar } from '../components/rpduComponent/RpduSidebar';
 
 export const RpduLayout: React.FC = () => {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const location = useLocation();
 
   const getPageTitle = () => {
+    if (location.pathname.startsWith('/rpdu/letters')) return 'Official Letters';
+    if (location.pathname.startsWith('/rpdu/passed-proposals')) return 'Passed Proposals';
     if (location.pathname.startsWith('/rpdu/screening')) return 'Preliminary Screening — Concept Proposals';
+    if (location.pathname.startsWith('/rpdu/clearance')) return 'Technical Review Clearance (COTR)';
+    if (location.pathname.startsWith('/rpdu/contracts')) return 'Contracts & Notarization (PSC)';
+    if (location.pathname.startsWith('/rpdu/scheduling') || location.pathname.startsWith('/rpdu/notarization')) return 'Inception Meetings & Special Order Scheduling';
     if (location.pathname.startsWith('/rpdu/proposals')) return 'Proposals Queue';
     if (location.pathname.startsWith('/rpdu/evaluators')) return 'Evaluators Panel';
     if (location.pathname.startsWith('/rpdu/evaluations')) return 'Technical Evaluations Pipeline';
@@ -20,7 +25,7 @@ export const RpduLayout: React.FC = () => {
   return (
     <div className="min-h-screen bg-slate-100 flex flex-col lg:flex-row text-slate-800 font-sans selection:bg-[#C8102E] selection:text-white">
       {/* Shared Sidebar */}
-      <Sidebar
+      <RpduSidebar
         mobileOpen={mobileSidebarOpen}
         onCloseMobile={() => setMobileSidebarOpen(false)}
       />

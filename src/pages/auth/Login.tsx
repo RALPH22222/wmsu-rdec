@@ -1,15 +1,34 @@
-import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import React, { useEffect, useRef, useState } from 'react';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
+import { getProfile } from '../../lib/api';
 import { ArrowRight, ArrowLeft, Lock, Mail, Eye, EyeOff } from 'lucide-react';
 
 export default function Login() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(location.state?.error || null);
+  const warningDialog = useRef<HTMLDialogElement>(null);
+
+  useEffect(() => {
+    const dialog = warningDialog.current;
+    if (!dialog) return;
+    if (error && !dialog.open) {
+      dialog.showModal();
+      if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        dialog.animate([
+          { opacity: 0, transform: 'scale(0.85)' },
+          { opacity: 1, transform: 'scale(1.03)', offset: 0.7 },
+          { opacity: 1, transform: 'scale(1)' },
+        ], { duration: 260, easing: 'ease-out' });
+      }
+    }
+    if (!error && dialog.open) dialog.close();
+  }, [error]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,15 +46,14 @@ export default function Login() {
       return;
     }
 
-    // Fetch user role
-    const { data: userData, error: userError } = await supabase
-      .from('users')
-      .select('role')
-      .eq('id', authData.user.id)
-      .single();
-
-    if (userError) {
-      setError(userError.message);
+    // The backend checks eligibility and ownership of each submission window.
+    let userData;
+    try {
+      userData = await getProfile(authData.session.access_token);
+      if (!userData?.portal_access?.allowed) throw new Error('Unable to verify portal access.');
+    } catch (error) {
+      await supabase.auth.signOut();
+      setError(error instanceof Error ? error.message : 'Unable to verify portal access.');
       setLoading(false);
       return;
     }
@@ -132,12 +150,6 @@ export default function Login() {
             <p className="text-slate-600 mt-2 text-sm font-medium">Access your WMSU RPDS account</p>
           </div>
 
-          {error && (
-            <div className="mb-6 p-4 bg-red-50 text-[#C8102E] text-sm rounded-sm border-l-2 border-[#C8102E]">
-              {error}
-            </div>
-          )}
-
           <form onSubmit={handleLogin} className="space-y-8">
             <div className="relative">
               <label className="text-xs uppercase tracking-wider text-slate-600 block mb-2 font-medium">
@@ -185,14 +197,14 @@ export default function Login() {
               <button
                 type="submit"
                 disabled={loading}
-                className="group w-full bg-[#C8102E] text-white py-3 px-4 rounded-sm hover:bg-[#A00D26] transition-all duration-200 shadow-xs hover:shadow flex items-center justify-center gap-2 text-sm font-semibold cursor-pointer disabled:opacity-50"
+                className="group w-full bg-[#C8102E] text-white py-3 px-4 rounded-sm hover:bg-[#A00D26] transition-all duration-300 shadow-xs hover:shadow flex items-center justify-center gap-2 text-sm font-semibold cursor-pointer disabled:opacity-50"
               >
                 {loading ? (
                   <span className="h-5 w-20 bg-white/20 animate-pulse rounded-sm"></span>
                 ) : (
                   <>
                     <span>Sign In</span>
-                    <ArrowRight className="w-4 h-4 transition-transform duration-300 ease-out group-hover:translate-x-1.5" />
+                    <ArrowRight className="w-4 h-4 transition-transform duration-300 ease-out group-hover:translate-x-1.5 motion-reduce:transform-none motion-reduce:transition-none" />
                   </>
                 )}
               </button>
@@ -209,6 +221,30 @@ export default function Login() {
           </div>
         </div>
       </div>
+      <dialog
+        ref={warningDialog}
+        role="alertdialog"
+        aria-labelledby="sign-in-warning-title"
+        aria-describedby="sign-in-warning-message"
+        onClose={() => setError(null)}
+        className="fixed m-auto w-[calc(100%-2rem)] max-w-lg max-h-[calc(100dvh-2rem)] rounded-xl border-0 bg-white p-0 text-slate-900 shadow-2xl backdrop:bg-black/40"
+      >
+        <div className="px-6 pt-9 pb-7 sm:px-10 text-center">
+          <div aria-hidden="true" className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full border-4 border-[#facea8] text-[#f8bb86]">
+            <span className="text-6xl font-light leading-none">!</span>
+          </div>
+          <h2 id="sign-in-warning-title" className="text-2xl sm:text-[28px] font-semibold text-[#545454]">Sign-in unavailable</h2>
+          <p id="sign-in-warning-message" className="mt-4 text-base leading-relaxed text-[#545454]">{error}</p>
+          <button
+            type="button"
+            autoFocus
+            onClick={() => warningDialog.current?.close()}
+            className="mt-7 rounded-md bg-[#C8102E] px-10 py-3 text-base font-medium text-white hover:bg-[#A00D26] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#C8102E] transition-colors cursor-pointer"
+          >
+            OK
+          </button>
+        </div>
+      </dialog>
     </div>
   );
 }

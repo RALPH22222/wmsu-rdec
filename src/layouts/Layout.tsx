@@ -10,6 +10,8 @@ export default function Layout() {
   const getPageTitle = () => {
     if (location.pathname === '/proponent/profile') return 'Institutional Profile & Affiliation';
     if (location.pathname === '/proponent/budget') return 'Line-Item Budget Allocation';
+    if (location.pathname === '/proponent/letters') return 'Screening Result Letters';
+    if (location.pathname === '/proponent/contracts') return 'Clearance & Contracts';
     if (location.pathname === '/proponent/revisions') return 'Technical Review Feedback & Revision History';
     return 'Concept Proposal Submission';
   };
@@ -76,7 +78,7 @@ export default function Layout() {
         </header>
 
         {/* Proponent Main Workspace */}
-        <main className="flex-1 p-3.5 sm:p-6 lg:p-8 w-full max-w-full overflow-x-clip">
+        <main className="flex-1 p-3.5 sm:p-6 lg:p-8 w-full max-w-full overflow-x-hidden">
           <Outlet />
         </main>
       </div>

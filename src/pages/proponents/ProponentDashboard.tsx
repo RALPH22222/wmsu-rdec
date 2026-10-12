@@ -2,7 +2,7 @@ import { ConceptProposalSubmissionForm } from '../../components/proponentCompone
 
 export default function ProponentDashboard() {
   return (
-    <div className="space-y-8 max-w-7xl mx-auto">
+    <div className="max-w-7xl mx-auto">
       <ConceptProposalSubmissionForm />
     </div>
   );

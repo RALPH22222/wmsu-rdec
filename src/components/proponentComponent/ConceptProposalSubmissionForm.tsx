@@ -15,13 +15,17 @@ import {
   Search,
   Plus,
   AlertCircle,
-  Layers
+  Layers,
+  Loader2,
+  Check
 } from 'lucide-react';
 import { useCallForProposals } from '../../context/CallForProposalsContext';
 import { useAuth } from '../../context/AuthContext';
-import type { ConceptProposal, ConceptProposalAttachment } from '../../types';
+import { checkConceptProposalTitleApi, ConceptProposalTitleExistsError } from '../../lib/conceptProposalApi';
+import type { ConceptProposal } from '../../types';
 
 interface UploadedFile {
+  file: File;
   name: string;
   size: string;
   type: string;
@@ -83,15 +87,25 @@ const RESEARCH_AGENDAS = [
   },
 ];
 
+const formatWindowDate = (date: string) => new Date(`${date}T00:00:00+08:00`).toLocaleDateString('en-PH', {
+  timeZone: 'Asia/Manila', month: 'short', day: 'numeric', year: 'numeric',
+});
+
 export const ConceptProposalSubmissionForm: React.FC = () => {
-  const { activeCall, conceptProposals, submitConceptProposal, showToast } = useCallForProposals();
-  const { user } = useAuth();
+  const { activeCall, loadingCalls, conceptProposals, submitConceptProposal, showToast } = useCallForProposals();
+  const { user, profile, session } = useAuth();
+  const [confirmedCallId, setConfirmedCallId] = useState<string | null>(null);
+  const canSubmit = Boolean(!loadingCalls && activeCall && profile?.is_eligible_to_submit === true);
 
   const endorsementInputId = useId();
   const conceptDocInputId = useId();
+  const titleErrorId = useId();
 
   // Tab View: 'submit' | 'my-submissions'
   const [activeTab, setActiveTab] = useState<'submit' | 'my-submissions'>('submit');
+  useEffect(() => {
+    setActiveTab(canSubmit ? 'submit' : 'my-submissions');
+  }, [canSubmit]);
 
   // 1. Research Agenda State
   const [selectedAgenda, setSelectedAgenda] = useState<string>(RESEARCH_AGENDAS[0].name);
@@ -112,9 +126,7 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
   // 2. Concept Proposal Details - Interchangeable with logged-in user
   const [proposalTitle, setProposalTitle] = useState('');
   const [leadInvestigator, setLeadInvestigator] = useState(loggedInName);
-  const [leadEmail, setLeadEmail] = useState(user?.email || 'juan.delacruz@wmsu.edu.ph');
   const [college, setCollege] = useState(loggedInCollege);
-  const [department, setDepartment] = useState('Department of Computer Science');
   const [conceptProposalFile, setConceptProposalFile] = useState<UploadedFile | null>(null);
 
   // Sync if logged-in user changes
@@ -122,8 +134,6 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
     if (user) {
       if (loggedInName) setLeadInvestigator(loggedInName);
       if (loggedInCollege) setCollege(loggedInCollege);
-      if (user.email) setLeadEmail(user.email);
-      if (user.user_metadata?.department) setDepartment(user.user_metadata.department);
     }
   }, [user]);
 
@@ -136,7 +146,9 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
 
   // Modals & UI status
   const [submitting, setSubmitting] = useState(false);
+  const [checkingTitle, setCheckingTitle] = useState(false);
   const [submittedProposal, setSubmittedProposal] = useState<ConceptProposal | null>(null);
+  const [confirmModalOpen, setConfirmModalOpen] = useState(false);
   const [successModalOpen, setSuccessModalOpen] = useState(false);
   const [selectedSubmissionDetails, setSelectedSubmissionDetails] = useState<ConceptProposal | null>(null);
 
@@ -146,17 +158,25 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
   const [submissionAgendaFilter, setSubmissionAgendaFilter] = useState<string | 'all'>('all');
 
   useEffect(() => {
-    if (selectedSubmissionDetails) {
+    if (selectedSubmissionDetails || confirmModalOpen || successModalOpen) {
       const originalOverflow = document.body.style.overflow;
       document.body.style.overflow = 'hidden';
       return () => {
         document.body.style.overflow = originalOverflow;
       };
     }
-  }, [selectedSubmissionDetails]);
+  }, [selectedSubmissionDetails, confirmModalOpen, successModalOpen]);
 
   // Errors
   const [errors, setErrors] = useState<Record<string, string>>({});
+  useEffect(() => {
+    setProposalTitle('');
+    setConceptProposalFile(null);
+    setEndorsementPdf(null);
+    setErrors({});
+    setConfirmModalOpen(false);
+    setConfirmedCallId(null);
+  }, [activeCall?.id]);
 
   // File Upload Handlers
   const handleFileUpload = (
@@ -176,6 +196,19 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
       }
     }
 
+    // Enforce 15MB file size limit
+    const MAX_FILE_BYTES = 15 * 1024 * 1024; // 15MB
+    if (file.size > MAX_FILE_BYTES) {
+      const sizeMb = (file.size / (1024 * 1024)).toFixed(1);
+      const errMsg = `File "${file.name}" (${sizeMb} MB) exceeds the 15MB file size limit. Please choose a smaller file.`;
+      setErrors((prev) => ({
+        ...prev,
+        [category === 'endorsement_pdf' ? 'endorsement' : 'conceptFile']: errMsg,
+      }));
+      showToast(errMsg);
+      return;
+    }
+
     const fileSizeFormatted =
       file.size > 1024 * 1024
         ? `${(file.size / (1024 * 1024)).toFixed(1)} MB`
@@ -184,6 +217,7 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
     const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
     const fileInfo: UploadedFile = {
+      file,
       name: file.name,
       size: fileSizeFormatted,
       type: file.name.split('.').pop()?.toUpperCase() || 'PDF',
@@ -215,8 +249,10 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
 
     if (!proposalTitle.trim()) {
       errs.title = 'Please enter your Concept Proposal Title.';
-    } else if (proposalTitle.trim().length < 10) {
-      errs.title = 'Proposal title must be at least 10 characters long.';
+    } else if (proposalTitle.trim().length < 5) {
+      errs.title = 'Proposal title must be at least 5 characters long.';
+    } else if (proposalTitle.trim().length > 255) {
+      errs.title = 'Proposal title cannot exceed 255 characters.';
     }
 
     if (!selectedAgenda) {
@@ -224,88 +260,93 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
     }
 
     if (!conceptProposalFile) {
-      errs.conceptFile = 'Please upload your Concept Proposal document (PDF or Word format).';
+      errs.conceptFile = 'Please upload your Concept Proposal document (PDF or Word format, max 15MB).';
     }
 
     if (!endorsementPdf) {
-      errs.endorsement = 'Please upload your official College Dean Endorsement PDF.';
+      errs.endorsement = 'Please upload your official College Dean Endorsement PDF (max 15MB).';
     }
 
     setErrors(errs);
     return Object.keys(errs).length === 0;
   };
 
-  // Submit Handler
-  const handleSubmit = (e: React.FormEvent) => {
+  // Trigger confirmation modal after validating form inputs
+  const handleOpenConfirm = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (checkingTitle || submitting) return;
+
+    if (!canSubmit || !activeCall) {
+      showToast('There is no open Call for Proposals accepting submissions.');
+      return;
+    }
 
     if (!validateForm()) {
       showToast('Please upload required files and select your research agenda.');
       return;
     }
 
+    setCheckingTitle(true);
+    try {
+      if (!(await checkConceptProposalTitleApi(proposalTitle, session?.access_token))) {
+        const message = new ConceptProposalTitleExistsError().message;
+        setErrors((previous) => ({ ...previous, title: message }));
+        showToast(message);
+        return;
+      }
+      setConfirmedCallId(activeCall.id);
+      setConfirmModalOpen(true);
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : 'Unable to verify your proposal title. Please try again.');
+    } finally {
+      setCheckingTitle(false);
+    }
+  };
+
+  // Final Submit Handler executed after user confirms in the modal
+  const handleConfirmSubmit = async () => {
+    if (submitting) return;
+    if (!canSubmit || !activeCall || confirmedCallId !== activeCall.id) {
+      showToast('There is no open Call for Proposals accepting submissions.');
+      setConfirmModalOpen(false);
+      return;
+    }
+    if (!validateForm()) {
+      setConfirmModalOpen(false);
+      return;
+    }
+
     setSubmitting(true);
 
-    const attachments: ConceptProposalAttachment[] = [];
-
-    if (conceptProposalFile) {
-      attachments.push({
-        name: conceptProposalFile.name,
-        size: conceptProposalFile.size,
-        type: conceptProposalFile.type,
-        category: 'concept_proposal',
+    try {
+      const newProposal = await submitConceptProposal({
+        title: proposalTitle.trim(),
+        callId: confirmedCallId,
+        researchAgenda: selectedAgenda,
+        conceptPaperFile: conceptProposalFile?.file,
+        endorsementFile: endorsementPdf?.file,
       });
+      setConfirmModalOpen(false);
+      setSubmittedProposal(newProposal);
+      setSuccessModalOpen(true);
+      setProposalTitle('');
+      setConceptProposalFile(null);
+      setEndorsementPdf(null);
+    } catch (error) {
+      setConfirmModalOpen(false);
+      if (error instanceof ConceptProposalTitleExistsError) {
+        setErrors((previous) => ({ ...previous, title: error.message }));
+      }
+      showToast(error instanceof Error ? error.message : 'Failed to submit concept proposal. Please try again.');
+    } finally {
+      setSubmitting(false);
     }
-
-    if (endorsementPdf) {
-      attachments.push({
-        name: endorsementPdf.name,
-        size: endorsementPdf.size,
-        type: 'PDF',
-        category: 'endorsement_pdf',
-      });
-    }
-
-    const newProposal = submitConceptProposal({
-      title: proposalTitle.trim(),
-      callId: activeCall?.id || 'call-2027-01',
-      callTitle: activeCall?.title || 'Institutional Research & Innovation Call 2027',
-      leadInvestigator: leadInvestigator.trim(),
-      leadInvestigatorEmail: leadEmail.trim(),
-      coInvestigators: [],
-      college,
-      department,
-      thematicArea: selectedAgenda,
-      budgetRequested: activeCall?.maxBudgetPerProject || 500000,
-      durationMonths: 12,
-      executiveSummary: `Concept Proposal submitted under ${selectedAgenda}. File: ${conceptProposalFile?.name || 'Attached'}`,
-      objectives: ['Implement research milestones as detailed in attached concept proposal.'],
-      expectedOutputs: {},
-      methodologySummary: `Refer to uploaded concept proposal document: ${conceptProposalFile?.name || 'Document attached.'}`,
-      criteriaChecklist: {
-        eligibleProponent: true,
-        withinBudgetCap: true,
-        alignedPriority: true,
-        requiredFormsAttached: Boolean(endorsementPdf),
-      },
-      attachments,
-    });
-
-    setSubmitting(false);
-    setSubmittedProposal(newProposal);
-    setSuccessModalOpen(true);
   };
 
   // Proponent's submissions list
-  const mySubmissions = conceptProposals.filter((p) => {
-    return (
-      p.leadInvestigatorEmail?.toLowerCase() === leadEmail.toLowerCase() ||
-      p.leadInvestigator?.toLowerCase() === leadInvestigator.toLowerCase() ||
-      p.leadInvestigator.includes('Juan') ||
-      p.leadInvestigator.includes('Alvarez') ||
-      p.leadInvestigator.includes('Tan')
-    );
-  });
+  const mySubmissions = conceptProposals.filter((p) =>
+    p.proponentId === user?.id || p.leadInvestigatorEmail.toLowerCase() === user?.email?.toLowerCase()
+  );
 
   const filteredSubmissions = mySubmissions.filter((item) => {
     const matchesStatus =
@@ -344,13 +385,39 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
         </a>
       </div>
 
+      <section aria-label="Current Call for Proposals" className="rounded-sm border border-slate-200 bg-white p-4 sm:p-5">
+        {loadingCalls ? <div role="status">
+          <span className="sr-only">Loading current Call for Proposals</span>
+          <div aria-hidden="true" className="space-y-3 motion-safe:animate-pulse"><div className="h-3 w-36 rounded bg-slate-100" /><div className="h-5 w-2/3 rounded bg-slate-100" /><div className="h-4 w-1/2 rounded bg-slate-100" /></div>
+        </div> : activeCall ? <>
+          <div className="mb-2 flex items-center justify-between gap-3">
+            <p className="text-xs font-semibold text-slate-500">Current Call for Proposals</p>
+            <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700">OPEN</span>
+          </div>
+          <div className="flex flex-col gap-2 lg:flex-row lg:items-baseline lg:justify-between lg:gap-5">
+            <h3 className="min-w-0 break-words text-lg font-bold leading-snug text-slate-900">{activeCall.title}</h3>
+            <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm leading-relaxed lg:shrink-0 lg:justify-end">
+              <p className="whitespace-nowrap text-slate-700">Opens <time dateTime={activeCall.startDate} className="font-semibold text-slate-900">{formatWindowDate(activeCall.startDate)}</time></p>
+              <p className="whitespace-nowrap text-slate-700">Deadline <time dateTime={activeCall.endDate} className="font-semibold text-[#C8102E]">{formatWindowDate(activeCall.endDate)}</time></p>
+            </div>
+          </div>
+          <p className="mt-2 text-xs text-slate-600">{canSubmit
+            ? 'New proposals will be submitted to this open window automatically.'
+            : 'Your account cannot submit new proposals. Your existing submissions remain available.'}</p>
+        </> : <>
+          <h3 className="text-sm font-semibold text-slate-900">No open Call for Proposals</h3>
+          <p className="mt-2 text-xs text-slate-600">New submissions are currently closed. Your existing submissions remain available in My Submissions.</p>
+        </>}
+      </section>
+
       {/* VIEW TABS: Submit New vs Track My Submissions */}
       <div className="flex items-center justify-between border-b border-slate-200">
         <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={() => setActiveTab('submit')}
-            className={`flex items-center gap-2 px-4 py-3 text-xs sm:text-sm font-bold border-b-2 transition-all cursor-pointer ${
+            disabled={!canSubmit}
+            className={`flex items-center gap-2 px-4 py-3 text-xs sm:text-sm font-bold border-b-2 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
               activeTab === 'submit'
                 ? 'border-[#C8102E] text-[#C8102E]'
                 : 'border-transparent text-slate-500 hover:text-slate-800'
@@ -379,13 +446,13 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
       </div>
 
       {/* TAB 1: STREAMLINED SUBMISSION FORM */}
-      {activeTab === 'submit' && (
-        <form onSubmit={handleSubmit} className="space-y-6">
+      {activeTab === 'submit' && canSubmit && (
+        <form onSubmit={handleOpenConfirm} className="space-y-6">
           {/* STEP 1: SELECT RESEARCH AGENDA */}
           <div className="bg-white rounded-sm border border-slate-200/90 shadow-2xs p-5 sm:p-6 space-y-4">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div className="flex items-center gap-2">
-                <span className="w-6 h-6 rounded-full bg-red-50 text-[#C8102E] font-bold text-xs flex items-center justify-center border border-red-100">
+                <span className="w-6 h-6 rounded-full bg-slate-100 text-slate-700 font-bold text-xs flex items-center justify-center border border-slate-200">
                   1
                 </span>
                 <div>
@@ -397,7 +464,7 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
                   </p>
                 </div>
               </div>
-              <span className="text-[11px] font-bold text-[#C8102E] uppercase tracking-wider">
+              <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
                 Required
               </span>
             </div>
@@ -479,7 +546,7 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
           <div className="bg-white rounded-sm border border-slate-200/90 shadow-2xs p-5 sm:p-6 space-y-4">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div className="flex items-center gap-2">
-                <span className="w-6 h-6 rounded-full bg-red-50 text-[#C8102E] font-bold text-xs flex items-center justify-center border border-red-100">
+                <span className="w-6 h-6 rounded-full bg-slate-100 text-slate-700 font-bold text-xs flex items-center justify-center border border-slate-200">
                   2
                 </span>
                 <div>
@@ -491,19 +558,36 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
                   </p>
                 </div>
               </div>
-              <span className="text-[11px] font-bold text-[#C8102E] uppercase tracking-wider">
+              <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
                 Required
               </span>
             </div>
 
             {/* Proposal Title */}
             <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-800">
-                Concept Proposal Title <span className="text-red-500">*</span>
-              </label>
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold text-slate-800">
+                  Concept Proposal Title <span className="text-red-500">*</span>
+                </label>
+                <span
+                  className={`text-[11px] font-semibold ${
+                    proposalTitle.length >= 250
+                      ? 'text-red-600 font-bold'
+                      : proposalTitle.length >= 220
+                      ? 'text-amber-600'
+                      : 'text-slate-400'
+                  }`}
+                >
+                  {proposalTitle.length}/255 characters
+                </span>
+              </div>
               <textarea
                 rows={2}
+                maxLength={255}
                 value={proposalTitle}
+                readOnly={checkingTitle || submitting}
+                aria-invalid={Boolean(errors.title)}
+                aria-describedby={errors.title ? titleErrorId : undefined}
                 onChange={(e) => {
                   setProposalTitle(e.target.value);
                   if (errors.title) {
@@ -521,14 +605,14 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
                     : 'border-slate-300 focus:border-[#C8102E] focus:ring-1 focus:ring-[#C8102E]'
                 }`}
               />
-              {errors.title && <p className="text-xs text-red-600 font-medium">{errors.title}</p>}
+              {errors.title && <p id={titleErrorId} role="alert" className="text-xs text-red-600 font-medium">{errors.title}</p>}
             </div>
 
             {/* Concept Proposal Document Upload */}
             <div className="space-y-2 pt-2 border-t border-slate-100">
               <label className="text-xs font-bold text-slate-800 flex items-center justify-between">
                 <span className="flex items-center gap-1.5">
-                  <FileText className="w-4 h-4 text-[#C8102E]" />
+                  <FileText className="w-4 h-4 text-slate-500" />
                   <span>Concept Proposal Document (PDF or Word)</span>
                   <span className="text-red-500">*</span>
                 </span>
@@ -543,15 +627,18 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
               )}
 
               {conceptProposalFile ? (
-                <div className="p-3.5 bg-slate-50 rounded border border-slate-200 flex items-center justify-between">
+                <div className="p-3 bg-white rounded-sm border border-slate-200 flex items-center justify-between shadow-2xs">
                   <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-9 h-9 rounded bg-[#C8102E]/10 text-[#C8102E] flex items-center justify-center font-bold text-xs shrink-0">
+                    <div className="w-9 h-9 rounded bg-slate-100 text-slate-700 border border-slate-200/80 flex items-center justify-center font-bold text-xs shrink-0">
                       {conceptProposalFile.type}
                     </div>
                     <div className="min-w-0">
-                      <p className="text-xs font-bold text-slate-900 truncate">
-                        {conceptProposalFile.name}
-                      </p>
+                      <div className="flex items-center gap-1.5">
+                        <p className="text-xs font-semibold text-slate-900 truncate">
+                          {conceptProposalFile.name}
+                        </p>
+                        <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0 stroke-[2.5]" />
+                      </div>
                       <p className="text-[10px] text-slate-500">
                         {conceptProposalFile.size} &bull; Uploaded at {conceptProposalFile.uploadedAt}
                       </p>
@@ -560,7 +647,7 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => setConceptProposalFile(null)}
-                    className="p-1.5 text-slate-400 hover:text-red-600 rounded transition-colors cursor-pointer"
+                    className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-slate-50 rounded transition-colors cursor-pointer"
                     title="Remove file"
                   >
                     <Trash2 className="w-4 h-4" />
@@ -578,9 +665,9 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
                     setIsDraggingConcept(false);
                     handleFileUpload(e.dataTransfer.files, 'concept_proposal');
                   }}
-                  className={`p-6 border-2 border-dashed rounded text-center transition-all cursor-pointer ${
+                  className={`p-6 border-2 border-dashed rounded-sm text-center transition-all cursor-pointer ${
                     isDraggingConcept
-                      ? 'border-[#C8102E] bg-red-50/40'
+                      ? 'border-slate-400 bg-slate-50'
                       : errors.conceptFile
                       ? 'border-red-400 bg-red-50/20'
                       : 'border-slate-300 hover:border-slate-400 bg-slate-50/50'
@@ -594,14 +681,14 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
                     className="hidden"
                     onChange={(e) => handleFileUpload(e.target.files, 'concept_proposal')}
                   />
-                  <div className="w-10 h-10 rounded-full bg-red-50 text-[#C8102E] flex items-center justify-center mx-auto mb-2 border border-red-100">
-                    <Upload className="w-5 h-5" />
+                  <div className="w-9 h-9 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center mx-auto mb-2 border border-slate-200">
+                    <Upload className="w-4 h-4" />
                   </div>
-                  <p className="text-xs font-bold text-slate-800">
+                  <p className="text-xs font-semibold text-slate-800">
                     Click to browse or drag &amp; drop Concept Proposal file
                   </p>
                   <p className="text-[10px] text-slate-500 mt-1">
-                    Accepts completed Concept Proposal in PDF, DOC, or DOCX format.
+                    Accepts completed Concept Proposal in PDF, DOC, or DOCX format (Max 15MB).
                   </p>
                 </div>
               )}
@@ -612,7 +699,7 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
           <div className="bg-white rounded-sm border border-slate-200/90 shadow-2xs p-5 sm:p-6 space-y-4">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div className="flex items-center gap-2">
-                <span className="w-6 h-6 rounded-full bg-red-50 text-[#C8102E] font-bold text-xs flex items-center justify-center border border-red-100">
+                <span className="w-6 h-6 rounded-full bg-slate-100 text-slate-700 font-bold text-xs flex items-center justify-center border border-slate-200">
                   3
                 </span>
                 <div>
@@ -624,7 +711,7 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
                   </p>
                 </div>
               </div>
-              <span className="text-[11px] font-bold text-[#C8102E] uppercase tracking-wider">
+              <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
                 Required
               </span>
             </div>
@@ -632,11 +719,11 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
             <div className="space-y-2">
               <label className="text-xs font-bold text-slate-800 flex items-center justify-between">
                 <span className="flex items-center gap-1.5">
-                  <FileCheck className="w-4 h-4 text-[#C8102E]" />
+                  <FileCheck className="w-4 h-4 text-slate-500" />
                   <span>College Dean / Dept Chairperson Endorsement PDF</span>
                   <span className="text-red-500">*</span>
                 </span>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-red-50 text-[#C8102E] border border-red-200">
+                <span className="text-[10px] text-slate-400 font-medium">
                   PDF format required
                 </span>
               </label>
@@ -649,24 +736,27 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
               )}
 
               {endorsementPdf ? (
-                <div className="p-3.5 bg-emerald-50/60 rounded border border-emerald-200 flex items-center justify-between">
+                <div className="p-3 bg-white rounded-sm border border-slate-200 flex items-center justify-between shadow-2xs">
                   <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-9 h-9 rounded bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold text-xs shrink-0">
+                    <div className="w-9 h-9 rounded bg-slate-100 text-slate-700 border border-slate-200/80 flex items-center justify-center font-bold text-xs shrink-0">
                       PDF
                     </div>
                     <div className="min-w-0">
-                      <p className="text-xs font-bold text-emerald-950 truncate">
-                        {endorsementPdf.name}
-                      </p>
-                      <p className="text-[10px] text-emerald-700">
-                        {endorsementPdf.size} &bull; Uploaded at {endorsementPdf.uploadedAt} &bull; Verified
+                      <div className="flex items-center gap-1.5">
+                        <p className="text-xs font-semibold text-slate-900 truncate">
+                          {endorsementPdf.name}
+                        </p>
+                        <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0 stroke-[2.5]" />
+                      </div>
+                      <p className="text-[10px] text-slate-500">
+                        {endorsementPdf.size} &bull; Uploaded at {endorsementPdf.uploadedAt}
                       </p>
                     </div>
                   </div>
                   <button
                     type="button"
                     onClick={() => setEndorsementPdf(null)}
-                    className="p-1.5 text-slate-400 hover:text-red-600 rounded transition-colors cursor-pointer"
+                    className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-slate-50 rounded transition-colors cursor-pointer"
                     title="Remove file"
                   >
                     <Trash2 className="w-4 h-4" />
@@ -684,9 +774,9 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
                     setIsDraggingEndorsement(false);
                     handleFileUpload(e.dataTransfer.files, 'endorsement_pdf');
                   }}
-                  className={`p-6 border-2 border-dashed rounded text-center transition-all cursor-pointer ${
+                  className={`p-6 border-2 border-dashed rounded-sm text-center transition-all cursor-pointer ${
                     isDraggingEndorsement
-                      ? 'border-[#C8102E] bg-red-50/40'
+                      ? 'border-slate-400 bg-slate-50'
                       : errors.endorsement
                       ? 'border-red-400 bg-red-50/20'
                       : 'border-slate-300 hover:border-slate-400 bg-slate-50/50'
@@ -700,10 +790,10 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
                     className="hidden"
                     onChange={(e) => handleFileUpload(e.target.files, 'endorsement_pdf')}
                   />
-                  <div className="w-10 h-10 rounded-full bg-red-50 text-[#C8102E] flex items-center justify-center mx-auto mb-2 border border-red-100">
-                    <Upload className="w-5 h-5" />
+                  <div className="w-9 h-9 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center mx-auto mb-2 border border-slate-200">
+                    <Upload className="w-4 h-4" />
                   </div>
-                  <p className="text-xs font-bold text-slate-800">
+                  <p className="text-xs font-semibold text-slate-800">
                     Click to browse or drag &amp; drop Dean Endorsement Form
                   </p>
                   <p className="text-[10px] text-slate-500 mt-1">
@@ -718,11 +808,11 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
           <div className="flex items-center justify-end pt-2">
             <button
               type="submit"
-              disabled={submitting}
+              disabled={submitting || checkingTitle}
               className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-3 text-sm font-bold rounded bg-[#C8102E] hover:bg-[#a50d26] text-white shadow-sm transition-colors cursor-pointer disabled:opacity-50"
             >
               <Send className="w-4 h-4" />
-              <span>Submit Concept Proposal</span>
+              <span>{checkingTitle ? 'Checking title...' : 'Submit Concept Proposal'}</span>
             </button>
           </div>
         </form>
@@ -748,7 +838,8 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
             <button
               type="button"
               onClick={() => setActiveTab('submit')}
-              className="px-5 py-3 rounded-sm bg-[#C8102E] text-white text-xs font-bold shadow-sm hover:bg-[#a00c24] hover:shadow transition-all flex items-center justify-center gap-2 cursor-pointer shrink-0"
+              disabled={!canSubmit}
+              className="px-5 py-3 rounded-sm bg-[#C8102E] text-white text-xs font-bold shadow-sm hover:bg-[#a00c24] hover:shadow transition-all flex items-center justify-center gap-2 cursor-pointer shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Plus className="w-4 h-4" />
               <span>Submit Concept Proposal</span>
@@ -837,13 +928,14 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
                 <h4 className="text-base font-bold text-slate-800">No Concept Proposals Found</h4>
                 <p className="text-xs text-slate-500 max-w-sm mx-auto">
                   {mySubmissions.length === 0
-                    ? "You haven't submitted any concept proposals yet under this account. Click below to submit your first proposal."
+                    ? "You haven't submitted any concept proposals yet."
                     : 'There are no proposals matching your selected filter or search criteria.'}
                 </p>
                 <button
                   type="button"
                   onClick={() => setActiveTab('submit')}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-[#C8102E] text-white rounded-sm text-xs font-bold shadow-xs hover:bg-[#a00c24] transition-all cursor-pointer"
+                  disabled={!canSubmit}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-[#C8102E] text-white rounded-sm text-xs font-bold shadow-xs hover:bg-[#a00c24] transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <Plus className="w-4 h-4" /> Submit Concept Proposal
                 </button>
@@ -968,6 +1060,180 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
                 );
               })
             )}
+          </div>
+        </div>
+      )}
+
+      {/* CONFIRMATION MODAL BEFORE SUBMISSION */}
+      {confirmModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/75 backdrop-blur-sm overflow-hidden">
+          <div className="bg-white rounded-sm border border-slate-200 shadow-2xl max-w-lg w-full flex flex-col overflow-hidden my-auto animate-in fade-in zoom-in-95 duration-150">
+            {/* Header */}
+            <div className="bg-white px-6 py-4.5 border-b border-slate-200/80 flex items-center justify-between shrink-0">
+              <div>
+                <h3 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
+                  Confirm Proposal Submission
+                </h3>
+                <p className="text-xs text-slate-500 font-medium">
+                  Review your proposal details before final confirmation
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setConfirmModalOpen(false)}
+                disabled={submitting}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer disabled:opacity-50"
+                aria-label="Close Modal"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 space-y-4 text-xs overflow-y-auto max-h-[70vh]">
+              {/* Notice */}
+              <div className="p-3.5 rounded-sm bg-amber-50/80 border border-amber-200 text-amber-950 flex items-start gap-2.5 leading-relaxed">
+                <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                <div className="text-[11px] text-amber-900">
+                  <strong className="font-semibold text-amber-950">Important Notice: </strong>
+                  Once submitted, your proposal details and uploaded files cannot be modified directly and will be forwarded to the RPDU Committee for preliminary screening.
+                </div>
+              </div>
+
+              {/* Proposal Summary Details */}
+              <div className="bg-slate-50/80 rounded-sm border border-slate-200/90 divide-y divide-slate-200/70 text-xs">
+                <div className="px-4 py-2.5 flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-3">
+                  <span className="w-36 shrink-0 text-[11px] font-medium text-slate-500">
+                    Call for Proposals
+                  </span>
+                  <span className="font-semibold text-slate-900 flex-1 leading-snug">
+                    {activeCall?.title}
+                  </span>
+                </div>
+
+                <div className="px-4 py-2.5 flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-3">
+                  <span className="w-36 shrink-0 text-[11px] font-medium text-slate-500">
+                    Proposal Title
+                  </span>
+                  <span className="font-semibold text-slate-900 flex-1 leading-snug">
+                    {proposalTitle.trim()}
+                  </span>
+                </div>
+
+                <div className="px-4 py-2.5 flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-3">
+                  <span className="w-36 shrink-0 text-[11px] font-medium text-slate-500">
+                    Research Agenda
+                  </span>
+                  <span className="font-semibold text-slate-900 flex-1 leading-snug">
+                    {selectedAgenda}
+                  </span>
+                </div>
+
+                <div className="px-4 py-2.5 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3">
+                  <span className="w-36 shrink-0 text-[11px] font-medium text-slate-500">
+                    Lead Proponent
+                  </span>
+                  <div className="flex flex-wrap items-center gap-2 flex-1">
+                    <span className="font-semibold text-slate-900">
+                      {leadInvestigator}
+                    </span>
+                    {college && (
+                      <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-slate-100 text-slate-700 border border-slate-200">
+                        {college}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Attached Documents */}
+              <div className="space-y-2 pt-1">
+                <span className="text-[11px] font-bold text-slate-700 flex items-center gap-1.5">
+                  <FileCheck className="w-3.5 h-3.5 text-slate-500" />
+                  Attached Documents for Screening:
+                </span>
+
+                <div className="space-y-1.5">
+                  {conceptProposalFile && (
+                    <div className="p-2.5 bg-white border border-slate-200 rounded-sm flex items-center justify-between text-xs">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="w-7 h-7 rounded bg-slate-100 text-slate-700 flex items-center justify-center font-bold text-[10px] shrink-0 border border-slate-200">
+                          {conceptProposalFile.type}
+                        </div>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1.5">
+                            <p className="font-semibold text-slate-800 truncate text-[11px]">
+                              {conceptProposalFile.name}
+                            </p>
+                            <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0 stroke-[2.5]" />
+                          </div>
+                          <p className="text-[10px] text-slate-400">
+                            Concept Proposal &bull; {conceptProposalFile.size}
+                          </p>
+                        </div>
+                      </div>
+                      <span className="p-1 text-emerald-600 shrink-0" title="Ready">
+                        <Check className="w-4 h-4 stroke-[2.5]" />
+                      </span>
+                    </div>
+                  )}
+
+                  {endorsementPdf && (
+                    <div className="p-2.5 bg-white border border-slate-200 rounded-sm flex items-center justify-between text-xs">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="w-7 h-7 rounded bg-slate-100 text-slate-700 flex items-center justify-center font-bold text-[10px] shrink-0 border border-slate-200">
+                          PDF
+                        </div>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1.5">
+                            <p className="font-semibold text-slate-800 truncate text-[11px]">
+                              {endorsementPdf.name}
+                            </p>
+                            <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0 stroke-[2.5]" />
+                          </div>
+                          <p className="text-[10px] text-slate-400">
+                            Dean Endorsement &bull; {endorsementPdf.size}
+                          </p>
+                        </div>
+                      </div>
+                      <span className="p-1 text-emerald-600 shrink-0" title="Ready">
+                        <Check className="w-4 h-4 stroke-[2.5]" />
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="bg-slate-50 px-6 py-4 border-t border-slate-200/80 flex items-center justify-between shrink-0">
+              <button
+                type="button"
+                onClick={() => setConfirmModalOpen(false)}
+                disabled={submitting}
+                className="px-4 py-2 text-xs font-bold rounded-sm border border-slate-300 bg-white text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer disabled:opacity-50"
+              >
+                Keep Editing
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmSubmit}
+                disabled={submitting}
+                className="inline-flex items-center gap-2 px-5 py-2 text-xs font-bold rounded-sm bg-[#C8102E] text-white hover:bg-[#a00c24] transition-colors cursor-pointer shadow-xs disabled:opacity-50"
+              >
+                {submitting ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <span>Submitting...</span>
+                  </>
+                ) : (
+                  <>
+                    <Send className="w-3.5 h-3.5" />
+                    <span>Confirm &amp; Submit</span>
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -1301,13 +1567,16 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
                     {conceptDoc ? (
                       <div className="p-3 bg-slate-50 rounded-sm border border-slate-200 flex items-center justify-between gap-3 shadow-2xs">
                         <div className="flex items-center gap-3 min-w-0">
-                          <div className="w-9 h-9 rounded bg-[#C8102E]/10 text-[#C8102E] flex items-center justify-center font-bold text-xs shrink-0">
+                          <div className="w-9 h-9 rounded bg-slate-100 text-slate-700 border border-slate-200/80 flex items-center justify-center font-bold text-xs shrink-0">
                             {conceptDoc.type || 'PDF'}
                           </div>
                           <div className="min-w-0">
-                            <p className="text-xs font-bold text-slate-900 truncate" title={conceptDoc.name}>
-                              {conceptDoc.name}
-                            </p>
+                            <div className="flex items-center gap-1.5">
+                              <p className="text-xs font-semibold text-slate-900 truncate" title={conceptDoc.name}>
+                                {conceptDoc.name}
+                              </p>
+                              <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0 stroke-[2.5]" />
+                            </div>
                             <p className="text-[10px] text-slate-500">
                               {conceptDoc.size} &bull; Uploaded concept proposal document
                             </p>
@@ -1340,7 +1609,7 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
                 <div className="space-y-3 bg-white p-4 rounded-sm border border-slate-200">
                   <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
                     <div className="flex items-center gap-2">
-                      <span className="w-6 h-6 rounded-full bg-red-50 text-[#C8102E] font-bold text-xs flex items-center justify-center border border-red-100">
+                      <span className="w-6 h-6 rounded-full bg-slate-100 text-slate-700 font-bold text-xs flex items-center justify-center border border-slate-200">
                         3
                       </span>
                       <div>
@@ -1352,22 +1621,25 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
                         </p>
                       </div>
                     </div>
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 border border-emerald-200">
+                    <span className="text-[10px] font-medium px-2 py-0.5 rounded bg-slate-100 text-slate-600 border border-slate-200">
                       PDF Verified
                     </span>
                   </div>
 
                   {endorsementDoc ? (
-                    <div className="p-3 bg-emerald-50/60 rounded-sm border border-emerald-200 flex items-center justify-between gap-3 shadow-2xs">
+                    <div className="p-3 bg-white rounded-sm border border-slate-200 flex items-center justify-between gap-3 shadow-2xs">
                       <div className="flex items-center gap-3 min-w-0">
-                        <div className="w-9 h-9 rounded bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold text-xs shrink-0">
+                        <div className="w-9 h-9 rounded bg-slate-100 text-slate-700 border border-slate-200/80 flex items-center justify-center font-bold text-xs shrink-0">
                           PDF
                         </div>
                         <div className="min-w-0">
-                          <p className="text-xs font-bold text-emerald-950 truncate" title={endorsementDoc.name}>
-                            {endorsementDoc.name}
-                          </p>
-                          <p className="text-[10px] text-emerald-700">
+                          <div className="flex items-center gap-1.5">
+                            <p className="text-xs font-semibold text-slate-900 truncate" title={endorsementDoc.name}>
+                              {endorsementDoc.name}
+                            </p>
+                            <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0 stroke-[2.5]" />
+                          </div>
+                          <p className="text-[10px] text-slate-500">
                             {endorsementDoc.size} &bull; Official Dean Endorsement Form
                           </p>
                         </div>
@@ -1382,7 +1654,7 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
                             showToast(`Downloading Endorsement Form: ${endorsementDoc.name}`);
                           }
                         }}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-emerald-800 bg-white hover:bg-emerald-700 hover:text-white rounded border border-emerald-200 transition-colors shrink-0"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 bg-white hover:bg-slate-50 rounded border border-slate-200 transition-colors shrink-0"
                         title={`Download ${endorsementDoc.name}`}
                       >
                         <Download className="w-3.5 h-3.5" />
@@ -1439,7 +1711,7 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
                     Close
                   </button>
 
-                  {selectedSubmissionDetails.screeningStatus === 'failed' && (
+                  {selectedSubmissionDetails.screeningStatus === 'failed' && canSubmit && (
                     <button
                       type="button"
                       onClick={() => {

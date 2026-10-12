@@ -1,15 +1,20 @@
-import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import type { CallForProposals, UserProfile, UserRole, ProposalItem, ConceptProposal, ConceptProposalCriteria, ScreeningSectionComments } from '../types';
-import { MOCK_USERS, MOCK_PROPOSALS, INITIAL_CONCEPT_PROPOSALS } from '../data/mockData';
+import { MOCK_USERS, MOCK_PROPOSALS } from '../data/mockData';
+import { API_ENDPOINTS } from '../config/apiConfig';
 import {
   fetchCalls,
   createCallApi,
   updateCallApi,
   closeCallApi,
   reopenCallApi,
+  confirmCallOpeningApi,
   deleteCallApi,
 } from '../lib/callApi';
-import { supabase } from '../lib/supabase';
+import { useAuth } from './AuthContext';
+import { getMyConceptProposalsApi, submitConceptProposalApi, type ConceptProposalPayload } from '../lib/conceptProposalApi';
+import { getScreeningProposals } from '../lib/screeningApi';
+import { applyCallWindow, callStartAt, callEndAt } from '../utils/callWindow';
 
 interface CallForProposalsContextType {
   calls: CallForProposals[];
@@ -19,93 +24,138 @@ interface CallForProposalsContextType {
   currentUser: UserProfile;
   proposals: ProposalItem[];
   conceptProposals: ConceptProposal[];
+  loadingConceptProposals: boolean;
+  screeningError: string | null;
+  refreshConceptProposals: () => Promise<void>;
   setCurrentUserRole: (role: UserRole) => void;
   createCall: (newCall: Omit<CallForProposals, 'id' | 'submissionCount' | 'acceptedCount' | 'underReviewCount' | 'rejectedCount' | 'createdAt' | 'updatedAt'>) => Promise<CallForProposals>;
   updateCall: (id: string, updatedFields: Partial<CallForProposals>) => Promise<void>;
   closeCall: (id: string, reason?: string) => Promise<void>;
-  reopenCall: (id: string, newEndDate: string) => Promise<void>;
+  reopenCall: (id: string, newStartDate: string, newEndDate: string) => Promise<void>;
+  confirmCallOpening: (id: string) => Promise<void>;
   deleteCall: (id: string) => Promise<void>;
   passConceptProposal: (id: string, remarks?: string, criteria?: ConceptProposalCriteria) => void;
   failConceptProposal: (id: string, reasons: string[], remarks: string, criteria?: ConceptProposalCriteria, sectionComments?: ScreeningSectionComments) => void;
   resetScreeningStatus: (id: string) => void;
   bulkPassConceptProposals: (ids: string[]) => void;
-  submitConceptProposal: (proposal: Omit<ConceptProposal, 'id' | 'code' | 'submittedAt' | 'submittedTime' | 'screeningStatus'>) => ConceptProposal;
+  submitConceptProposal: (proposal: ConceptProposalPayload) => Promise<ConceptProposal>;
   toastMessage: string | null;
   showToast: (msg: string) => void;
-  hideToast: () => void;
 }
 
 const CallForProposalsContext = createContext<CallForProposalsContextType | undefined>(undefined);
 
+const screeningRequest = async (token: string | undefined, path = '', init: RequestInit = {}) => {
+  if (!token) throw new Error('Your session has expired. Please sign in again.');
+  const headers = new Headers(init.headers);
+  headers.set('Content-Type', 'application/json');
+  headers.set('Authorization', `Bearer ${token}`);
+  const response = await fetch(`${API_ENDPOINTS.RPDU.SCREENING}${path}`, {
+    ...init,
+    headers,
+  });
+  const result = await response.json();
+  if (!response.ok || !result.success) throw new Error(result.message || 'Screening request failed.');
+  return result.data;
+};
+
 export const CallForProposalsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { session, profile, loading: authLoading } = useAuth();
+  const accessToken = session?.access_token;
+  const userId = session?.user.id;
+  const profileId = profile?.id;
+  const profileRole = profile?.role;
   const [calls, setCalls] = useState<CallForProposals[]>([]);
   const [loadingCalls, setLoadingCalls] = useState(true);
+  const callRequest = useRef(0);
+  const callViewer = useRef<string | undefined | null>(null);
+  const [conceptProposals, setConceptProposals] = useState<ConceptProposal[]>([]);
+  const [loadingConceptProposals, setLoadingConceptProposals] = useState(true);
+  const [screeningError, setScreeningError] = useState<string | null>(null);
+  const conceptRequest = useRef(0);
+  const conceptViewer = useRef<string | undefined | null>(null);
 
-  const loadCalls = useCallback(async () => {
+  useEffect(() => {
+    const boundaries = calls.flatMap((call) => {
+      const status = String(call.rawStatus || call.status).toUpperCase();
+      if (['OPEN', 'ACTIVE'].includes(status)) return [Date.parse(callStartAt(call)), Date.parse(callEndAt(call)) + 1];
+      if (status === 'DRAFT') return [Date.parse(callStartAt(call)), Date.parse(callEndAt(call)) + 1];
+      return status === 'CLOSED' ? [Date.parse(callEndAt(call)) + 1] : [];
+    }).filter((date) => date > Date.now());
+    const updateWindows = () => setCalls((previous) => previous.map((call) => applyCallWindow(call)));
+    const timer = boundaries.length ? window.setTimeout(updateWindows, Math.min(Math.min(...boundaries) - Date.now() + 1, 2147483647)) : undefined;
+    window.addEventListener('focus', updateWindows);
+    return () => {
+      if (timer !== undefined) window.clearTimeout(timer);
+      window.removeEventListener('focus', updateWindows);
+    };
+  }, [calls]);
+
+  const loadCalls = useCallback(async (token = accessToken, silent = false) => {
+    const request = ++callRequest.current;
     try {
-      setLoadingCalls(true);
-      const session = (await supabase.auth.getSession()).data.session;
-      const data = await fetchCalls(session?.access_token);
-      setCalls(data);
+      if (!silent) setLoadingCalls(true);
+      const data = await fetchCalls(token);
+      if (request === callRequest.current) setCalls(data);
     } catch (err) {
       console.error('Failed to load calls from backend:', err);
     } finally {
-      setLoadingCalls(false);
+      if (request === callRequest.current) setLoadingCalls(false);
     }
-  }, []);
+  }, [accessToken]);
+
+  const loadConceptProposals = useCallback(async (token = accessToken) => {
+    const request = ++conceptRequest.current;
+    if (!token || !profileRole || profileId !== userId) {
+      setConceptProposals([]);
+      setLoadingConceptProposals(false);
+      setScreeningError(null);
+      conceptViewer.current = null;
+      return;
+    }
+    if (conceptViewer.current !== userId) setLoadingConceptProposals(true);
+    conceptViewer.current = userId;
+    setScreeningError(null);
+    try {
+      const data = ['RPDU', 'ADMIN'].includes(profileRole)
+        ? await getScreeningProposals(token)
+        : await getMyConceptProposalsApi(token);
+      if (request !== conceptRequest.current) return;
+      setConceptProposals(data);
+      localStorage.removeItem('wmsu_concept_proposals_screening');
+    } catch (err) {
+      if (request !== conceptRequest.current) return;
+      console.error('Failed to load concept proposals from backend:', err);
+      setConceptProposals([]);
+      setScreeningError(err instanceof Error ? err.message : 'Unable to load screening information.');
+    } finally {
+      if (request === conceptRequest.current) setLoadingConceptProposals(false);
+    }
+  }, [accessToken, profileId, profileRole, userId]);
+
+  // Only fetch once auth has resolved so we always have a valid token.
+  useEffect(() => {
+    if (authLoading) return;
+    const sameViewer = callViewer.current === userId;
+    callViewer.current = userId;
+    void loadCalls(accessToken, sameViewer);
+  }, [authLoading, accessToken, userId, profileRole, loadCalls]);
 
   useEffect(() => {
-    loadCalls();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
-      loadCalls();
-    });
-
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, [loadCalls]);
-
-  const [conceptProposals, setConceptProposals] = useState<ConceptProposal[]>(() => {
-    const saved = localStorage.getItem('wmsu_concept_proposals_screening');
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch {
-        return INITIAL_CONCEPT_PROPOSALS;
-      }
-    }
-    return INITIAL_CONCEPT_PROPOSALS;
-  });
+    if (authLoading) return;
+    void loadConceptProposals(accessToken);
+  }, [authLoading, accessToken, loadConceptProposals]);
 
   const [currentUser, setCurrentUser] = useState<UserProfile>(MOCK_USERS[0]);
   const [proposals] = useState<ProposalItem[]>(MOCK_PROPOSALS);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  useEffect(() => {
-    localStorage.setItem('wmsu_concept_proposals_screening', JSON.stringify(conceptProposals));
-  }, [conceptProposals]);
-
-  // Stable callbacks (other contexts list them as hook deps). The previous hide timer is
-  // cleared first so a quick second toast gets its full 4 seconds.
-  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const hideToast = useCallback(() => {
-    if (toastTimerRef.current !== null) {
-      clearTimeout(toastTimerRef.current);
-      toastTimerRef.current = null;
-    }
-    setToastMessage(null);
-  }, []);
-
-  const showToast = useCallback((msg: string) => {
-    if (toastTimerRef.current !== null) clearTimeout(toastTimerRef.current);
+  const showToast = (msg: string) => {
     setToastMessage(msg);
-    toastTimerRef.current = setTimeout(() => {
-      toastTimerRef.current = null;
+    setTimeout(() => {
       setToastMessage(null);
     }, 4000);
-  }, []);
+  };
 
   const setCurrentUserRole = (role: UserRole) => {
     const user = MOCK_USERS.find((u) => u.role === role) || MOCK_USERS[0];
@@ -122,11 +172,14 @@ export const CallForProposalsProvider: React.FC<{ children: React.ReactNode }> =
     newCallData: Omit<CallForProposals, 'id' | 'submissionCount' | 'acceptedCount' | 'underReviewCount' | 'rejectedCount' | 'createdAt' | 'updatedAt'>
   ): Promise<CallForProposals> => {
     try {
-      const session = (await supabase.auth.getSession()).data.session;
       const created = await createCallApi(newCallData, session?.access_token);
-      setCalls((prev) => [created, ...prev.filter((c) => c.id !== created.id)]);
+      const callWithFields: CallForProposals = {
+        ...created,
+        fiscalYear: newCallData.fiscalYear || created.fiscalYear,
+      };
+      setCalls((prev) => [callWithFields, ...prev.filter((c) => c.id !== callWithFields.id)]);
       showToast(`Successfully created "${created.title}" (${created.code})`);
-      return created;
+      return callWithFields;
     } catch (err: any) {
       showToast(`Failed to create call: ${err.message || 'Unknown error'}`);
       throw err;
@@ -135,9 +188,12 @@ export const CallForProposalsProvider: React.FC<{ children: React.ReactNode }> =
 
   const updateCall = async (id: string, updatedFields: Partial<CallForProposals>): Promise<void> => {
     try {
-      const session = (await supabase.auth.getSession()).data.session;
       const updated = await updateCallApi(id, updatedFields, session?.access_token);
-      setCalls((prev) => prev.map((c) => (c.id === id ? updated : c)));
+      const callWithFields: CallForProposals = {
+        ...updated,
+        fiscalYear: updatedFields.fiscalYear || updated.fiscalYear,
+      };
+      setCalls((prev) => prev.map((c) => (c.id === id ? callWithFields : c)));
       showToast('Call for Proposals updated successfully.');
     } catch (err: any) {
       showToast(`Failed to update call: ${err.message || 'Unknown error'}`);
@@ -147,7 +203,6 @@ export const CallForProposalsProvider: React.FC<{ children: React.ReactNode }> =
 
   const closeCall = async (id: string, reason?: string): Promise<void> => {
     try {
-      const session = (await supabase.auth.getSession()).data.session;
       const closed = await closeCallApi(id, reason, session?.access_token);
       setCalls((prev) => prev.map((c) => (c.id === id ? closed : c)));
       showToast('Call for Proposals has been CLOSED.');
@@ -157,21 +212,25 @@ export const CallForProposalsProvider: React.FC<{ children: React.ReactNode }> =
     }
   };
 
-  const reopenCall = async (id: string, newEndDate: string): Promise<void> => {
+  const reopenCall = async (id: string, newStartDate: string, newEndDate: string): Promise<void> => {
     try {
-      const session = (await supabase.auth.getSession()).data.session;
-      const reopened = await reopenCallApi(id, newEndDate, session?.access_token);
+      const reopened = await reopenCallApi(id, newStartDate, newEndDate, session?.access_token);
       setCalls((prev) => prev.map((c) => (c.id === id ? reopened : c)));
-      showToast(`Call reopened and active until ${newEndDate}.`);
+      showToast(`Submission window saved: ${newStartDate} to ${newEndDate}.`);
     } catch (err: any) {
       showToast(`Failed to reopen call: ${err.message || 'Unknown error'}`);
       throw err;
     }
   };
 
+  const confirmCallOpening = async (id: string): Promise<void> => {
+    const opened = await confirmCallOpeningApi(id, session?.access_token);
+    setCalls((previous) => previous.map((call) => call.id === id ? opened : call));
+    showToast('Opening confirmed. The call is now accepting submissions.');
+  };
+
   const deleteCall = async (id: string): Promise<void> => {
     try {
-      const session = (await supabase.auth.getSession()).data.session;
       await deleteCallApi(id, session?.access_token);
       setCalls((prev) => prev.filter((c) => c.id !== id));
       showToast('Call for Proposals deleted.');
@@ -181,144 +240,52 @@ export const CallForProposalsProvider: React.FC<{ children: React.ReactNode }> =
     }
   };
 
-  const passConceptProposal = (id: string, remarks?: string, criteria?: ConceptProposalCriteria) => {
-    const today = new Date().toISOString().split('T')[0];
-    const reviewerName = `${currentUser.name} (${currentUser.title || 'RPDU Head'})`;
+  const saveScreeningDecision = async (id: string, decision: 'PASS' | 'FAIL', remarks?: string) => {
+    await screeningRequest(session?.access_token, `/${id}`, { method: 'PUT', body: JSON.stringify({ decision, remarks }) });
+    await loadConceptProposals(session?.access_token);
+  };
 
-    setConceptProposals((prev) =>
-      prev.map((item) => {
-        if (item.id === id) {
-          return {
-            ...item,
-            screeningStatus: 'passed' as const,
-            screeningRemarks: remarks || 'PASSED: Concept proposal satisfies all institutional eligibility criteria, thematic priority alignment, and budget guidelines. Endorsed for full proposal development.',
-            failureReasons: undefined,
-            criteriaChecklist: criteria || item.criteriaChecklist,
-            screenedBy: reviewerName,
-            screenedAt: today,
-          };
-        }
-        return item;
-      })
-    );
-    showToast(`Concept Proposal "${id}" PASSED Preliminary Screening.`);
+  const passConceptProposal = (id: string, remarks?: string, _criteria?: ConceptProposalCriteria) => {
+    void saveScreeningDecision(id, 'PASS', remarks)
+      .then(() => showToast(`Concept Proposal "${id}" PASSED Preliminary Screening.`))
+      .catch((error) => showToast(`Failed to save screening decision: ${error.message}`));
   };
 
   const failConceptProposal = (
     id: string,
     reasons: string[],
     remarks: string,
-    criteria?: ConceptProposalCriteria,
-    sectionComments?: ScreeningSectionComments
+    _criteria?: ConceptProposalCriteria,
+    _sectionComments?: ScreeningSectionComments
   ) => {
-    const today = new Date().toISOString().split('T')[0];
-    const reviewerName = `${currentUser.name} (${currentUser.title || 'RPDU Head'})`;
-
-    setConceptProposals((prev) =>
-      prev.map((item) => {
-        if (item.id === id) {
-          return {
-            ...item,
-            screeningStatus: 'failed' as const,
-            failureReasons: reasons.length > 0 ? reasons : ['Failed preliminary eligibility & compliance check.'],
-            screeningRemarks: remarks || 'FAILED: Concept proposal does not satisfy preliminary institutional criteria.',
-            criteriaChecklist: criteria || item.criteriaChecklist,
-            sectionComments: sectionComments || item.sectionComments,
-            screenedBy: reviewerName,
-            screenedAt: today,
-          };
-        }
-        return item;
-      })
-    );
-    showToast(`Concept Proposal "${id}" marked as FAILED in Preliminary Screening.`);
+    const detail = [remarks, ...reasons].filter(Boolean).join(' — ');
+    void saveScreeningDecision(id, 'FAIL', detail)
+      .then(() => showToast(`Concept Proposal "${id}" marked as FAILED in Preliminary Screening.`))
+      .catch((error) => showToast(`Failed to save screening decision: ${error.message}`));
   };
 
   const resetScreeningStatus = (id: string) => {
-    setConceptProposals((prev) =>
-      prev.map((item) => {
-        if (item.id === id) {
-          return {
-            ...item,
-            screeningStatus: 'pending' as const,
-            screeningRemarks: undefined,
-            failureReasons: undefined,
-            sectionComments: undefined,
-            screenedBy: undefined,
-            screenedAt: undefined,
-          };
-        }
-        return item;
-      })
-    );
-    showToast(`Reset screening status for "${id}" to Pending.`);
+    void screeningRequest(session?.access_token, `/${id}`, { method: 'DELETE' })
+      .then(() => loadConceptProposals(session?.access_token))
+      .then(() => showToast(`Reset screening status for "${id}" to Pending.`))
+      .catch((error) => showToast(`Failed to reset screening decision: ${error.message}`));
   };
 
   const bulkPassConceptProposals = (ids: string[]) => {
-    const today = new Date().toISOString().split('T')[0];
-    const reviewerName = `${currentUser.name} (${currentUser.title || 'RPDU Head'})`;
-
-    setConceptProposals((prev) =>
-      prev.map((item) => {
-        if (ids.includes(item.id)) {
-          return {
-            ...item,
-            screeningStatus: 'passed' as const,
-            screeningRemarks: item.screeningRemarks || 'PASSED via batch preliminary clearance.',
-            screenedBy: reviewerName,
-            screenedAt: today,
-          };
-        }
-        return item;
-      })
-    );
-    showToast(`${ids.length} Concept Proposals successfully approved with PASS.`);
+    void Promise.all(ids.map((id) => screeningRequest(session?.access_token, `/${id}`, {
+      method: 'PUT', body: JSON.stringify({ decision: 'PASS', remarks: 'PASSED via batch preliminary clearance.' }),
+    })))
+      .then(() => loadConceptProposals(session?.access_token))
+      .then(() => showToast(`${ids.length} Concept Proposals successfully approved with PASS.`))
+      .catch((error) => showToast(`Failed to save screening decisions: ${error.message}`));
   };
 
-  const submitConceptProposal = (
-    proposalData: Omit<ConceptProposal, 'id' | 'code' | 'submittedAt' | 'submittedTime' | 'screeningStatus'>
-  ): ConceptProposal => {
-    const now = new Date();
-    const dateStr = now.toISOString().split('T')[0];
-    const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    const id = `cp-${Date.now()}`;
-
-    const collegeMap: Record<string, string> = {
-      'College of Science & Mathematics': 'CSM',
-      'College of Agriculture & Forestry': 'CAF',
-      'College of Engineering': 'COE',
-      'College of Computing Studies': 'CCS',
-      'College of Liberal Arts': 'CLA',
-      'College of Nursing': 'CN',
-      'College of Teacher Education': 'CTE',
-      'College of Architecture': 'CA',
-    };
-    const collegeAbbr = collegeMap[proposalData.college] || 'WMSU';
-    const count = conceptProposals.length + 1;
-    const code = `CP-2027-${collegeAbbr}-${String(count).padStart(2, '0')}`;
-
-    const newProposal: ConceptProposal = {
-      ...proposalData,
-      id,
-      code,
-      submittedAt: dateStr,
-      submittedTime: timeStr,
-      screeningStatus: 'pending',
-    };
-
+  const submitConceptProposal = async (proposalData: ConceptProposalPayload): Promise<ConceptProposal> => {
+    if (!session?.access_token) throw new Error('Please sign in before submitting a proposal.');
+    const newProposal = await submitConceptProposalApi(proposalData, session.access_token);
     setConceptProposals((prev) => [newProposal, ...prev]);
-
-    if (proposalData.callId) {
-      setCalls((prev) =>
-        prev.map((c) =>
-          c.id === proposalData.callId
-            ? { ...c, submissionCount: (c.submissionCount || 0) + 1 }
-            : c
-        )
-      );
-    }
-
-    showToast(`Concept Proposal "${code}" successfully submitted for Preliminary Screening.`);
+    await loadCalls();
+    showToast(`Concept Proposal "${newProposal.code}" successfully submitted for Preliminary Screening.`);
     return newProposal;
   };
 
@@ -332,11 +299,15 @@ export const CallForProposalsProvider: React.FC<{ children: React.ReactNode }> =
         currentUser,
         proposals,
         conceptProposals,
+        loadingConceptProposals,
+        screeningError,
+        refreshConceptProposals: loadConceptProposals,
         setCurrentUserRole,
         createCall,
         updateCall,
         closeCall,
         reopenCall,
+        confirmCallOpening,
         deleteCall,
         passConceptProposal,
         failConceptProposal,
@@ -345,7 +316,6 @@ export const CallForProposalsProvider: React.FC<{ children: React.ReactNode }> =
         submitConceptProposal,
         toastMessage,
         showToast,
-        hideToast,
       }}
     >
       {children}

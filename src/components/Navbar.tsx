@@ -32,18 +32,18 @@ export const Navbar: React.FC<NavbarProps> = ({ onSignInClick }) => {
           {/* Logo & Brand Identity */}
           <Link
             to="/"
-            className="flex items-center gap-3.5 group focus:outline-none focus:ring-2 focus:ring-white/30 rounded-sm p-1"
+            className="flex min-w-0 items-center gap-2 sm:gap-3.5 group focus:outline-none focus:ring-2 focus:ring-white/30 rounded-sm p-1"
             aria-label="Home - WMSU Project Proposal"
           >
             <div className="flex items-center -space-x-2">
-              <div className="relative z-10 h-9 w-9 lg:h-10 lg:w-10 rounded-full overflow-hidden bg-white ring-2 ring-[#C8102E] border border-white/20 p-0.5 flex items-center justify-center transition-transform duration-300 group-hover:scale-105 shadow-xs">
+              <div className="relative z-10 h-8 w-8 sm:h-9 sm:w-9 lg:h-10 lg:w-10 rounded-full overflow-hidden bg-white ring-2 ring-[#C8102E] border border-white/20 p-0.5 flex items-center justify-center shadow-xs">
                 <img
                   src="/WMSU.png"
                   alt="WMSU Logo"
                   className="h-full w-full object-contain rounded-full"
                 />
               </div>
-              <div className="relative z-0 h-9 w-9 lg:h-10 lg:w-10 rounded-full overflow-hidden bg-white ring-2 ring-[#C8102E] border border-white/20 p-0.5 flex items-center justify-center transition-transform duration-300 group-hover:scale-105 shadow-xs">
+              <div className="relative z-0 h-8 w-8 sm:h-9 sm:w-9 lg:h-10 lg:w-10 rounded-full overflow-hidden bg-white ring-2 ring-[#C8102E] border border-white/20 p-0.5 flex items-center justify-center shadow-xs">
                 <img
                   src="/RDEC-WMSU.png"
                   alt="RDEC-WMSU Logo"
@@ -52,24 +52,24 @@ export const Navbar: React.FC<NavbarProps> = ({ onSignInClick }) => {
               </div>
             </div>
 
-            <div className="flex flex-col leading-tight">
-              <span className="text-[10px] lg:text-[11px] font-normal tracking-wider text-white/80 uppercase">
+            <div className="min-w-0 flex flex-col leading-tight">
+              <span className="hidden sm:block text-[10px] lg:text-[11px] font-normal tracking-wider text-white/80 uppercase">
                 Western Mindanao State University
               </span>
-              <span className="text-sm lg:text-base font-semibold tracking-tight text-white">
-                RDEC Proposal Portal
+              <span className="truncate text-sm lg:text-base font-semibold tracking-tight text-white">
+                RDEC <span className="hidden sm:inline">Proposal </span>Portal
               </span>
             </div>
           </Link>
 
           {/* Desktop Navigation Links */}
-          <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-white/90">
+          <nav aria-label="Main navigation" className="hidden xl:flex items-center gap-6 text-sm font-medium text-white/90">
 
             <a
               href="#call-for-proposals"
               className="hover:text-white transition-colors py-1 hover:underline underline-offset-4"
             >
-              Call 2027
+              Call for Proposals
             </a>
             <a
               href="#priority-areas"
@@ -98,22 +98,30 @@ export const Navbar: React.FC<NavbarProps> = ({ onSignInClick }) => {
           </nav>
 
           {/* Right Action */}
-          <div className="flex items-center gap-3">
+          <div className="flex shrink-0 items-center gap-1 sm:gap-3">
+            <Link
+              to="/register"
+              className="hidden sm:inline-flex min-h-11 items-center justify-center px-4 py-2.5 rounded-lg border border-white/60 text-sm font-semibold text-white hover:bg-white/10 transition-colors focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white"
+            >
+              Sign Up
+            </Link>
             <button
               type="button"
               onClick={onSignInClick}
-              className="group inline-flex items-center gap-2 px-4 py-2 sm:px-5 sm:py-2.5 rounded-sm font-bold text-xs sm:text-sm text-[#C8102E] bg-white hover:bg-slate-100 shadow-xs hover:shadow transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-white/50 cursor-pointer"
+              className="group inline-flex min-h-11 items-center gap-2 px-3 py-2 sm:px-5 sm:py-2.5 rounded-lg font-semibold text-sm text-[#C8102E] bg-white hover:bg-slate-100 transition-colors focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white cursor-pointer"
             >
-              <span>Get Started</span>
-              <ArrowRight className="w-4 h-4 text-[#C8102E] transition-transform duration-300 ease-out group-hover:translate-x-1.5" />
+              <span>Sign In</span>
+              <ArrowRight className="hidden sm:block w-4 h-4 text-[#C8102E] transition-transform duration-500 ease-in-out group-hover:translate-x-1.5 group-focus-visible:translate-x-1.5 motion-reduce:transform-none motion-reduce:transition-none" />
             </button>
 
             {/* Mobile menu trigger */}
             <button
               type="button"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="md:hidden p-2 rounded-sm text-white hover:bg-red-800/50 transition-colors"
+              className="xl:hidden min-h-11 min-w-11 p-2 rounded-lg text-white hover:bg-red-800/50 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white cursor-pointer"
               aria-label="Toggle Navigation Menu"
+              aria-expanded={mobileMenuOpen}
+              aria-controls="mobile-navigation"
             >
               {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
@@ -122,14 +130,14 @@ export const Navbar: React.FC<NavbarProps> = ({ onSignInClick }) => {
 
         {/* Mobile Dropdown Menu */}
         {mobileMenuOpen && (
-          <div className="md:hidden py-4 border-t border-red-800/40 bg-[#C8102E] rounded-b-sm shadow-lg px-2 space-y-2 text-white">
+          <div id="mobile-navigation" className="xl:hidden py-4 border-t border-red-800/40 bg-[#C8102E] rounded-b-sm shadow-lg px-2 space-y-2 text-white">
 
             <a
               href="#call-for-proposals"
               onClick={() => setMobileMenuOpen(false)}
               className="block px-3 py-2 rounded-sm text-sm font-medium hover:bg-red-800/40"
             >
-              Call for Proposals 2027
+              Call for Proposals
             </a>
             <a
               href="#priority-areas"
@@ -159,6 +167,13 @@ export const Navbar: React.FC<NavbarProps> = ({ onSignInClick }) => {
             >
               Helpdesk &amp; Inquiries
             </a>
+            <Link
+              to="/register"
+              onClick={() => setMobileMenuOpen(false)}
+              className="sm:hidden flex min-h-11 items-center justify-center px-4 py-2.5 rounded-lg border border-white/60 text-sm font-semibold hover:bg-white/10 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+            >
+              Sign Up
+            </Link>
           </div>
         )}
       </div>

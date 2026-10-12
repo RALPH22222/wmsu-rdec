@@ -25,15 +25,13 @@ export const API_ENDPOINTS = {
   // Proponent Role Endpoints
   PROPONENT: {
     PROFILE: `${API_BASE_URL}/profile`,
-    // Future Proponent Endpoints:
-    // CONCEPT_PROPOSALS: `${API_BASE_URL}/proponent/concept-proposals`,
+    CONCEPT_PROPOSALS: `${API_BASE_URL}/proponent/concept-proposals`,
     // BUDGET_ALLOCATIONS: `${API_BASE_URL}/proponent/budget-allocations`,
   },
 
   // RPDU Role Endpoints (Ready for expansion)
   RPDU: {
-    // CALLS: `${API_BASE_URL}/rpdu/calls`,
-    // SCREENING: `${API_BASE_URL}/rpdu/screening`,
+    SCREENING: `${API_BASE_URL}/screening/proposals`,
   },
 
   // Call for Proposals Endpoints
@@ -42,6 +40,16 @@ export const API_ENDPOINTS = {
     BY_ID: (id: string) => `${API_BASE_URL}/calls/${id}`,
     CLOSE: (id: string) => `${API_BASE_URL}/calls/${id}/close`,
     REOPEN: (id: string) => `${API_BASE_URL}/calls/${id}/reopen`,
+  },
+
+  // Inception Scheduling Endpoints
+  SCHEDULING: {
+    BASE: `${API_BASE_URL}/scheduling`,
+    MEETINGS: `${API_BASE_URL}/scheduling/meetings`,
+    CONTRACTS: `${API_BASE_URL}/scheduling/contracts`,
+    BY_ID: (id: string) => `${API_BASE_URL}/scheduling/meetings/${id}`,
+    STATUS: (id: string) => `${API_BASE_URL}/scheduling/meetings/${id}/status`,
+    SPECIAL_ORDER: (id: string) => `${API_BASE_URL}/scheduling/meetings/${id}/special-order`,
   },
 
   // Admin Role Endpoints (Ready for expansion)

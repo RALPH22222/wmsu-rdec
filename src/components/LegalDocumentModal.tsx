@@ -84,24 +84,25 @@ export const LegalDocumentModal: React.FC<LegalDocumentModalProps> = ({
     }
   }, [documentType]);
 
-  useEffect(() => {
-    if (isOpen) {
-      fetchDocument();
-      window.addEventListener('keydown', handleKeyDown);
-      document.body.style.overflow = 'hidden';
-    }
-
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-      document.body.style.overflow = 'unset';
-    };
-  }, [isOpen, fetchDocument]);
-
-  const handleKeyDown = (e: KeyboardEvent) => {
+  const handleKeyDown = useCallback((e: KeyboardEvent) => {
     if (e.key === 'Escape') {
       onClose();
     }
-  };
+  }, [onClose]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    const fetchTimer = window.setTimeout(fetchDocument, 0);
+    window.addEventListener('keydown', handleKeyDown);
+    document.body.style.overflow = 'hidden';
+
+    return () => {
+      window.clearTimeout(fetchTimer);
+      window.removeEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [isOpen, fetchDocument, handleKeyDown]);
 
   if (!isOpen) return null;
 
@@ -141,7 +142,7 @@ export const LegalDocumentModal: React.FC<LegalDocumentModalProps> = ({
             return (
               <div key={idx} className="pt-3 pb-1">
                 <div className="flex items-center gap-2">
-                  <span className="w-1.5 h-3.5 bg-[#C8102E] shrink-0" />
+                  <span className="w-1.5 h-3.5 bg-brand shrink-0" />
                   <h4 className="text-sm sm:text-base font-bold text-slate-900 tracking-tight">
                     {parseInlineMarkdown(sectionText)}
                   </h4>
@@ -163,7 +164,7 @@ export const LegalDocumentModal: React.FC<LegalDocumentModalProps> = ({
                   if (boldLabelMatch) {
                     return (
                       <div key={lIdx} className="flex items-start gap-2.5 text-xs sm:text-sm">
-                        <span className="w-1.5 h-1.5 rounded-none bg-[#C8102E] mt-2 shrink-0" />
+                        <span className="w-1.5 h-1.5 rounded-none bg-brand mt-2 shrink-0" />
                         <div className="leading-relaxed">
                           <strong className="font-semibold text-slate-900">
                             {boldLabelMatch[1]}:{' '}
@@ -178,7 +179,7 @@ export const LegalDocumentModal: React.FC<LegalDocumentModalProps> = ({
 
                   return (
                     <div key={lIdx} className="flex items-start gap-2.5 text-xs sm:text-sm text-slate-600">
-                      <span className="w-1.5 h-1.5 rounded-none bg-[#C8102E] mt-2 shrink-0" />
+                      <span className="w-1.5 h-1.5 rounded-none bg-brand mt-2 shrink-0" />
                       <span className="leading-relaxed">{parseInlineMarkdown(cleaned)}</span>
                     </div>
                   );
@@ -200,7 +201,7 @@ export const LegalDocumentModal: React.FC<LegalDocumentModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-in fade-in duration-200"
+      className="fixed inset-0 z-100 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-in fade-in duration-200"
       onClick={onClose}
     >
       {/* Modal Dialog Card - SweetAlert Style, Clean Academic Aesthetic */}
@@ -223,11 +224,11 @@ export const LegalDocumentModal: React.FC<LegalDocumentModalProps> = ({
 
         {/* SweetAlert Animated Icon Badge */}
         <div className="flex flex-col items-center text-center space-y-3 shrink-0">
-          <div className="w-14 h-14 rounded-full bg-red-50 text-[#C8102E] flex items-center justify-center shadow-2xs">
+          <div className="w-14 h-14 rounded-full bg-red-50 text-brand flex items-center justify-center shadow-2xs">
             {isPrivacy ? (
-              <ShieldCheck className="w-7 h-7 text-[#C8102E]" strokeWidth={2} />
+              <ShieldCheck className="w-7 h-7 text-brand" strokeWidth={2} />
             ) : (
-              <FileText className="w-7 h-7 text-[#C8102E]" strokeWidth={2} />
+              <FileText className="w-7 h-7 text-brand" strokeWidth={2} />
             )}
           </div>
 
@@ -280,15 +281,15 @@ export const LegalDocumentModal: React.FC<LegalDocumentModalProps> = ({
           ) : error ? (
             /* Database Error State - No static fallback */
             <div className="py-8 text-center space-y-3">
-              <div className="w-10 h-10 rounded-full bg-red-50 text-[#C8102E] flex items-center justify-center mx-auto">
-                <AlertTriangle className="w-5 h-5 text-[#C8102E]" />
+              <div className="w-10 h-10 rounded-full bg-red-50 text-brand flex items-center justify-center mx-auto">
+                <AlertTriangle className="w-5 h-5 text-brand" />
               </div>
               <h5 className="text-sm font-bold text-slate-900">Document Unavailable</h5>
               <p className="text-xs text-slate-600 max-w-md mx-auto leading-relaxed">{error}</p>
               <button
                 type="button"
                 onClick={fetchDocument}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#C8102E] text-white text-xs font-semibold rounded-sm hover:bg-[#A00D26] transition-colors cursor-pointer mt-2"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-brand text-white text-xs font-semibold rounded-sm hover:bg-brand-dark transition-colors cursor-pointer mt-2"
               >
                 <RefreshCw className="w-3.5 h-3.5" />
                 <span>Retry Database Query</span>
@@ -316,7 +317,7 @@ export const LegalDocumentModal: React.FC<LegalDocumentModalProps> = ({
                 onAccept();
                 onClose();
               }}
-              className="py-2.5 px-6 rounded-sm text-xs sm:text-sm font-semibold text-white bg-[#C8102E] hover:bg-[#A00D26] shadow-xs hover:shadow transition-all flex items-center justify-center gap-2 cursor-pointer"
+              className="py-2.5 px-6 rounded-sm text-xs sm:text-sm font-semibold text-white bg-brand hover:bg-brand-dark shadow-xs hover:shadow transition-all flex items-center justify-center gap-2 cursor-pointer"
             >
               <CheckCircle2 className="w-4 h-4" />
               <span>I Understand & Agree</span>

@@ -17,6 +17,17 @@ export interface PriorityTopic {
   subtopics: string[];
 }
 
+export interface CallCreator {
+  id?: string;
+  name?: string;
+  first_name?: string;
+  middle_name?: string;
+  last_name?: string;
+  suffix?: string;
+  email?: string;
+  role?: string;
+}
+
 export interface CallForProposals {
   id: string;
   code: string;
@@ -27,6 +38,10 @@ export interface CallForProposals {
   startTime?: string;
   endTime?: string;
   status: CallStatus;
+  rawStatus?: string;
+  scheduledOpen?: boolean;
+  windowStartAt?: string;
+  windowEndAt?: string;
   description: string;
   maxBudgetPerProject: number;
   totalGrantBudget: number;
@@ -43,6 +58,9 @@ export interface CallForProposals {
   rejectedCount: number;
   closureReason?: string;
   publicNotice?: string;
+  createdBy?: string;
+  creatorName?: string;
+  creator?: CallCreator;
   createdAt: string;
   updatedAt: string;
 }
@@ -96,6 +114,7 @@ export interface ScreeningSectionComments {
 
 export interface ConceptProposal {
   id: string;
+  proponentId?: string;
   code: string;
   title: string;
   callId: string;
@@ -107,6 +126,7 @@ export interface ConceptProposal {
   department: string;
   submittedAt: string;
   submittedTime?: string;
+  submittedTimestamp?: string | null;
   screeningStatus: ScreeningStatus;
   budgetRequested: number;
   thematicArea: string;
@@ -122,6 +142,7 @@ export interface ConceptProposal {
   sectionComments?: ScreeningSectionComments;
   screenedBy?: string;
   screenedAt?: string;
+  screenedTimestamp?: string | null;
 }
 
 export type BudgetCategory =
@@ -318,3 +339,175 @@ export interface ProposalRevision {
 }
 
 export type BlindRevision = Omit<ProposalRevision, 'uploadedBy'> & { blind: true };
+export interface TechnicalReviewCertificate {
+  id: string;
+  certificateNumber: string;
+  proposalId: string;
+  proposalCode: string;
+  proposalTitle: string;
+  proponentName: string;
+  proponentEmail?: string;
+  college: string;
+  department: string;
+  twgReviewers: string[];
+  issueDate: string;
+  signatoryName: string;
+  signatoryTitle: string;
+  status: 'pending_issuance' | 'issued' | 'revised_and_cleared';
+  certificatePdf?: {
+    name: string;
+    size: number;
+    uploadedAt: string;
+    dataUrl?: string;
+  } | null;
+  remarks?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type PscStatus =
+  | 'draft'
+  | 'forwarded_to_president'
+  | 'signed_by_president'
+  | 'forwarded_to_legal'
+  | 'notarized'
+  | 'active';
+
+export interface NotarizationDetails {
+  notaryPublicName: string;
+  docNo: string;
+  pageNo: string;
+  bookNo: string;
+  seriesYear: string;
+  notarizedDate: string;
+  notarizedBy: string;
+  notes?: string;
+  scannedNotarizedPdf?: {
+    name: string;
+    size: number;
+    uploadedAt: string;
+    dataUrl?: string;
+  } | null;
+}
+
+export interface CoResearcherMember {
+  id: string;
+  name: string;
+  college?: string;
+  department?: string;
+}
+
+export type CompensationArrangement = 'honorarium' | 'deloading';
+
+export interface ProfessionalServiceContract {
+  id: string;
+  contractNumber: string;
+  proposalId: string;
+  proposalCode: string;
+  projectTitle: string;
+  // Research Team (Second Party)
+  studyLeaderName?: string;
+  proponentName: string; // Keep as primary / alias for studyLeaderName
+  studyLeaderCollege?: string;
+  studyLeaderDepartment?: string;
+  proponentRole?: string;
+  proponentDepartment: string;
+  proponentCollege?: string;
+  coResearchers?: CoResearcherMember[];
+
+  // Project Budget & Honorarium
+  projectOperatingBudget?: number;
+  contractAmount: number; // Kept for backward compatibility
+  compensationArrangement?: CompensationArrangement;
+  studyLeaderHonorariumQuarterly?: number; // 4500
+  coResearcherHonorariumQuarterly?: number; // 2000
+
+  // Project Duration
+  durationMonths: number;
+  startDate: string;
+  endDate: string;
+
+  // First Party
+  firstPartyName: string;
+  firstPartyTitle: string;
+
+  // Lifecycle Status
+  status: PscStatus;
+
+  // Document Tracking
+  contractPdf?: {
+    name: string;
+    size: number;
+    uploadedAt: string;
+    dataUrl?: string;
+  } | null;
+  signedContractPdf?: {
+    name: string;
+    size: number;
+    uploadedAt: string;
+    dataUrl?: string;
+  } | null;
+  notarizedContractPdf?: {
+    name: string;
+    size: number;
+    uploadedAt: string;
+    dataUrl?: string;
+  } | null;
+
+  notarization?: NotarizationDetails | null;
+  forwardedToPresidentAt?: string;
+  signedByPresidentAt?: string;
+  forwardedToLegalAt?: string;
+  notarizedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface InceptionProjectItem {
+  contractId?: string;
+  contractNumber?: string;
+  proposalId: string;
+  proposalCode: string;
+  projectTitle: string;
+  leadInvestigator: string;
+  studyLeaderCollege?: string;
+  studyLeaderDepartment?: string;
+}
+
+export type InceptionMeetingStatus = 'scheduled' | 'completed' | 'rescheduled' | 'cancelled';
+
+export interface InceptionMeeting {
+  id: string;
+  contractId?: string;
+  contractNumber?: string;
+  proposalId: string;
+  proposalCode: string;
+  projectTitle: string;
+  leadInvestigator: string; // Study Leader Name
+  studyLeaderDepartment?: string;
+  studyLeaderCollege?: string;
+  projects?: InceptionProjectItem[];
+  coResearchers?: Array<{ id: string; name: string; college?: string; department?: string }>;
+  meetingTitle: string;
+  meetingDate: string;
+  meetingTime: string;
+  venue: string; // Physical Room/Venue (Face-to-Face only)
+  meetingType: 'in_person'; // Inception meetings are strictly Face-to-Face (F2F)
+  attendees: string[];
+  agenda?: string;
+  specialOrderNumber?: string;
+  specialOrderStatus: 'pending_request' | 'forwarded_to_op' | 'so_issued';
+  specialOrderDate?: string;
+  status: InceptionMeetingStatus;
+  completedDate?: string;
+  minutesPdf?: {
+    name: string;
+    size: number;
+    uploadedAt: string;
+    dataUrl?: string;
+  } | null;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
