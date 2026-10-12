@@ -33,10 +33,19 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [loadingProfile, setLoadingProfile] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
   const profileRequest = useRef(0);
+  // The user whose profile is loaded (or loading). Supabase re-emits auth events on token
+  // refresh and every time the tab becomes visible; the profile only needs reloading when
+  // the signed-in user actually changes.
+  const profileUserId = useRef<string | null>(null);
+  // The non-silent request that owns the loading flag, so a later silent refresh can't leave it stuck on.
+  const loadingRequest = useRef(0);
 
   const fetchUserProfile = useCallback(async (token: string, isSilent = false) => {
     const request = ++profileRequest.current;
-    if (!isSilent) setLoadingProfile(true);
+    if (!isSilent) {
+      loadingRequest.current = request;
+      setLoadingProfile(true);
+    }
     try {
       const data = await getProfile(token);
       if (!data?.portal_access?.allowed) throw new Error('Unable to verify access to your Call for Proposals window.');
@@ -49,9 +58,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       // Never forcefully destroy session or sign out on background revalidation errors
       if (!isSilent) {
         setProfile(null);
+        // Let the next auth event (sign-in, tab refocus) retry the load.
+        profileUserId.current = null;
       }
     } finally {
-      if (request === profileRequest.current && !isSilent) setLoadingProfile(false);
+      if (!isSilent && request === loadingRequest.current) setLoadingProfile(false);
     }
   }, []);
 
@@ -61,13 +72,26 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   }, [session, fetchUserProfile]);
 
+  /** Loads the profile only when the signed-in user changes; clears it on sign-out. */
+  const syncProfile = useCallback((nextSession: Session | null) => {
+    const userId = nextSession?.user?.id ?? null;
+    if (!nextSession?.access_token || !userId) {
+      profileUserId.current = null;
+      profileRequest.current++;
+      setProfile(null);
+      setLoadingProfile(false);
+      return;
+    }
+    if (profileUserId.current === userId) return; // token refresh or tab refocus: keep the loaded profile
+    profileUserId.current = userId;
+    fetchUserProfile(nextSession.access_token);
+  }, [fetchUserProfile]);
+
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
-      if (session?.access_token) {
-        fetchUserProfile(session.access_token);
-      }
+      syncProfile(session);
       setLoading(false);
     });
 
@@ -75,13 +99,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       (_event, newSession) => {
         setSession(newSession);
         setUser(newSession?.user ?? null);
-        if (newSession?.access_token) {
-          fetchUserProfile(newSession.access_token);
-        } else {
-          profileRequest.current++;
-          setProfile(null);
-          setLoadingProfile(false);
-        }
+        syncProfile(newSession);
         setLoading(false);
       }
     );
@@ -89,13 +107,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     return () => {
       subscription.unsubscribe();
     };
-  }, [fetchUserProfile]);
+  }, [syncProfile]);
 
   const signOut = async () => {
+    // Reset first: if Supabase fails to clear the session it emits no SIGNED_OUT event, and a
+    // later sign-in as the same user must still load the profile.
+    profileUserId.current = null;
+    profileRequest.current++;
     await supabase.auth.signOut();
     setSession(null);
     setUser(null);
     setProfile(null);
+    setLoadingProfile(false);
   };
 
   return (
