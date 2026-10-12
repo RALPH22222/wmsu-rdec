@@ -12,7 +12,7 @@ export function EvaluatorReviewsPage() {
         <h2 id="assigned-reviews-title" className="font-brand text-lg font-bold text-slate-900">Assigned technical reviews</h2>
         <p className="text-xs text-slate-500">Proposals are shown without the research team's identity. You are identified to the research team only by your seat letter.</p>
       </header>
-      {error && <p role="alert" className="flex flex-col gap-2 rounded-sm border border-red-200 bg-red-50 p-4 text-sm text-red-800 sm:flex-row sm:items-center sm:justify-between">{error}<button type="button" onClick={refresh} className="min-h-11 rounded-sm border border-red-300 px-3 text-xs font-semibold sm:min-h-0 sm:py-1.5">Retry</button></p>}
+      {error && <p role="alert" className="flex flex-col gap-2 rounded-sm border border-red-200 bg-red-50 p-4 text-sm text-red-800 sm:flex-row sm:items-center sm:justify-between">{error}<button type="button" onClick={refresh} className="min-h-11 rounded-sm border border-red-300 px-3 text-xs font-semibold">Retry</button></p>}
       {loading ? <div className="space-y-3" aria-label="Loading assigned reviews"><div className="h-24 animate-pulse rounded-sm bg-slate-100" /><div className="h-24 animate-pulse rounded-sm bg-slate-100" /></div>
         : reviews.length === 0 ? (error ? null : <EmptyState icon={ClipboardList} title="No reviews assigned" description="New assignments appear here after RPDU adds you to a review panel." />)
         : (

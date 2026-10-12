@@ -48,7 +48,7 @@ export function EvaluatorAssignmentPage({ role = 'rpdu' }: EvaluatorAssignmentPa
       {error && (
         <p role="alert" className="flex flex-col gap-2 rounded-sm border border-red-200 bg-red-50 p-4 text-sm text-red-800 sm:flex-row sm:items-center sm:justify-between">
           {error}
-          <button type="button" onClick={refresh} className="min-h-11 rounded-sm border border-red-300 px-3 text-xs font-semibold sm:min-h-0 sm:py-1.5">Retry</button>
+          <button type="button" onClick={refresh} className="min-h-11 rounded-sm border border-red-300 px-3 text-xs font-semibold">Retry</button>
         </p>
       )}
 

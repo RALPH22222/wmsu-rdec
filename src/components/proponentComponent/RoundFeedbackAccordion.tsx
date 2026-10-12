@@ -18,7 +18,7 @@ export function RoundFeedbackAccordion({ feedback, defaultOpen = false }: RoundF
           <article key={evaluation.blindLabel} className="rounded-sm border border-slate-100 p-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <p className="text-sm font-semibold text-slate-900">{evaluation.blindLabel}</p>
-              <p className="text-xs"><span className={`rounded-sm px-2 py-0.5 font-bold ${TONE_BADGE[meta.tone]}`}>{meta.label}</span> <span className="ml-2 font-bold text-slate-900">{evaluation.totalScore}</span><span className="text-slate-400">/100</span></p>
+              <p className="text-xs"><span className={`rounded-sm px-2 py-0.5 font-bold ${TONE_BADGE[meta.tone]}`}>{meta.label}</span> <span className="ml-2 font-bold text-slate-900">{evaluation.totalScore}</span><span className="text-slate-500">/100</span></p>
             </div>
             <div className="mt-3"><ScoreList scores={evaluation.scores} /></div>
             <p className="mt-3 whitespace-pre-wrap break-words text-xs text-slate-700">{evaluation.remarks}</p>

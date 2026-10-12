@@ -36,13 +36,13 @@ function PortalBody({ reviewId }: { reviewId: string | undefined }) {
       </header>
 
       <section className="rounded-sm border border-slate-200 bg-white p-4 shadow-xs sm:p-5">
-        <h3 className="mb-3 text-xs font-bold uppercase tracking-wider text-slate-400">Documents</h3>
+        <h3 className="mb-3 text-xs font-bold uppercase tracking-wider text-slate-500">Documents</h3>
         <div className="flex flex-wrap gap-2"><DocumentLink href={review.manuscriptUrl} label="Original manuscript" /></div>
         {review.revisions.length > 0 && (
           <ul className="mt-3 space-y-2">
             {[...review.revisions].reverse().map((revision) => (
               <li key={revision.id} className="rounded-sm border border-slate-100 p-3">
-                <p className="text-sm font-semibold text-slate-900">Revision {revision.revisionNumber} <span className="text-xs font-normal text-slate-400">· {formatDate(revision.submittedAt)}</span></p>
+                <p className="text-sm font-semibold text-slate-900">Revision {revision.revisionNumber} <span className="text-xs font-normal text-slate-500">· {formatDate(revision.submittedAt)}</span></p>
                 {revision.notes && <p className="mt-1 whitespace-pre-wrap break-words text-xs text-slate-600">{revision.notes}</p>}
                 <div className="mt-2 flex flex-wrap gap-2"><DocumentLink href={revision.revisedFileUrl} label="Revised manuscript" muted /><DocumentLink href={revision.revisionHistoryFileUrl} label="Revision history" muted /></div>
               </li>
@@ -52,7 +52,7 @@ function PortalBody({ reviewId }: { reviewId: string | undefined }) {
       </section>
 
       <section className="rounded-sm border border-slate-200 bg-white p-4 shadow-xs sm:p-5">
-        <h3 className="mb-3 text-xs font-bold uppercase tracking-wider text-slate-400">Round {review.currentRound} evaluation</h3>
+        <h3 className="mb-3 text-xs font-bold uppercase tracking-wider text-slate-500">Round {review.currentRound} evaluation</h3>
         {current ? <SubmissionSummary submission={current} />
           : review.canSubmit ? <EvaluationScoringForm key={review.currentRound} review={review} onSubmit={submit} />
           : <p className="rounded-sm bg-slate-50 p-3 text-sm text-slate-600">Scoring is closed for this round.</p>}

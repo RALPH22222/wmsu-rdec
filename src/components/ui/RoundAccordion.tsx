@@ -12,7 +12,7 @@ export function RoundAccordion({ round, summary, defaultOpen = false, children }
         <span className="min-w-0"><span className="block text-sm font-bold text-slate-900">Round {round}</span><span className="block truncate text-xs text-slate-500">{summary}</span></span>
         <ChevronDown className={`h-4 w-4 shrink-0 text-slate-400 transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
-      {open && <div id={panelId} className="space-y-3 border-t border-slate-100 p-4">{children}</div>}
+      <div id={panelId} hidden={!open} className="space-y-3 border-t border-slate-100 p-4">{children}</div>
     </section>
   );
 }

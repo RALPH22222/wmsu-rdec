@@ -89,7 +89,7 @@ const NEXT_STEP: Record<PipelineStatus, Record<PipelineAudience, string>> = {
   },
   REVISION_REQUESTED: {
     rpdu: 'Waiting for the proponent to upload a revision.',
-    evaluator: 'The proponent is revising. A new round opens when they upload.',
+    evaluator: 'The research team is revising. A new round opens when they upload.',
     proponent: 'Upload your revised manuscript and revision history to start the next round.',
   },
   APPROVED: {

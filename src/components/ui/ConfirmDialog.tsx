@@ -123,7 +123,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
             type="button"
             onClick={onClose}
             disabled={loading}
-            className="flex-1 py-2.5 px-4 rounded-sm text-xs sm:text-sm font-semibold text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 hover:text-slate-900 transition-colors cursor-pointer disabled:opacity-50"
+            className="min-h-11 flex-1 py-2.5 px-4 rounded-sm text-xs sm:text-sm font-semibold text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 hover:text-slate-900 transition-colors cursor-pointer disabled:opacity-50"
           >
             {cancelLabel}
           </button>
@@ -131,7 +131,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
             type="button"
             onClick={() => void onConfirm()}
             disabled={loading}
-            className={`flex-1 py-2.5 px-4 rounded-sm text-xs sm:text-sm font-semibold text-white shadow-xs hover:shadow transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-75 ${styles.button}`}
+            className={`min-h-11 flex-1 py-2.5 px-4 rounded-sm text-xs sm:text-sm font-semibold text-white shadow-xs hover:shadow transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-75 ${styles.button}`}
           >
             {loading && <Loader2 className="w-4 h-4 animate-spin" />}
             <span>{confirmLabel}</span>

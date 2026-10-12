@@ -15,7 +15,7 @@ function FileField({ id, label, file, onChange }: { id: string; label: string; f
   const tooBig = file ? file.size > MAX_UPLOAD_BYTES : false;
   return (
     <div>
-      <label htmlFor={id} className="block text-xs font-bold text-slate-700">{label} <span className="font-normal text-slate-400">PDF or Word, up to 15 MB</span></label>
+      <label htmlFor={id} className="block text-xs font-bold text-slate-700">{label} <span className="font-normal text-slate-500">PDF or Word, up to 15 MB</span></label>
       <input id={id} type="file" accept={ACCEPTED_DOCUMENT_TYPES} onChange={(e) => onChange(e.target.files?.[0] ?? null)} className="mt-1 block min-h-11 w-full rounded-sm border border-slate-200 bg-white text-sm file:mr-3 file:min-h-11 file:border-0 file:bg-slate-100 file:px-3 file:text-xs file:font-semibold" />
       {file && <p className={`mt-1 text-xs ${tooBig ? 'text-red-700' : 'text-slate-500'}`}>{file.name} · {formatFileSize(file.size)}{tooBig ? ' — too large' : ''}</p>}
     </div>
@@ -51,7 +51,7 @@ export function EvaluationScoringForm({ review, onSubmit }: EvaluationScoringFor
   return (
     <form className="space-y-5 pb-20 sm:pb-0" onSubmit={(e) => { e.preventDefault(); attempt(); }} noValidate>
       <fieldset>
-        <legend className="text-xs font-bold uppercase tracking-wider text-slate-400">Recommendation</legend>
+        <legend className="text-xs font-bold uppercase tracking-wider text-slate-500">Recommendation</legend>
         <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-3" role="radiogroup">
           {RECOMMENDATIONS.map((value) => {
             const meta = RECOMMENDATION_META[value];
@@ -67,13 +67,13 @@ export function EvaluationScoringForm({ review, onSubmit }: EvaluationScoringFor
       </fieldset>
 
       <fieldset>
-        <legend className="flex w-full items-baseline justify-between text-xs font-bold uppercase tracking-wider text-slate-400">Scores <span className="text-sm normal-case tracking-normal text-slate-900">{total}<span className="text-slate-400">/100</span></span></legend>
+        <legend className="flex w-full items-baseline justify-between text-xs font-bold uppercase tracking-wider text-slate-500">Scores <span className="text-sm normal-case tracking-normal text-slate-900">{total}<span className="text-slate-500">/100</span></span></legend>
         <ul className="mt-2 divide-y divide-slate-100 rounded-sm border border-slate-200 bg-white">
           {EVALUATION_CRITERIA.map((criterion) => {
             const selectId = `${baseId}-${criterion.id}`;
             return (
               <li key={criterion.id} className="flex items-center justify-between gap-3 p-3">
-                <label htmlFor={selectId} className="min-w-0"><span className="block text-sm font-semibold text-slate-900">{criterion.label} <span className="text-xs font-normal text-slate-400">({criterion.weight})</span></span><span className="block text-[11px] text-slate-500">{criterion.description}</span></label>
+                <label htmlFor={selectId} className="min-w-0"><span className="block text-sm font-semibold text-slate-900">{criterion.label} <span className="text-xs font-normal text-slate-500">({criterion.weight})</span></span><span className="block text-[11px] text-slate-500">{criterion.description}</span></label>
                 <select id={selectId} value={scores[criterion.id] ?? ''} onChange={(e) => setScores((prev) => ({ ...prev, [criterion.id]: e.target.value ? Number(e.target.value) : undefined }))} className="min-h-11 w-20 shrink-0 rounded-sm border border-slate-200 bg-white px-2 text-sm font-semibold focus:border-[#C8102E] focus:outline-none">
                   <option value="">–</option>
                   {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => <option key={n} value={n}>{n}</option>)}
@@ -85,7 +85,7 @@ export function EvaluationScoringForm({ review, onSubmit }: EvaluationScoringFor
       </fieldset>
 
       <div>
-        <label htmlFor={`${baseId}-remarks`} className="block text-xs font-bold text-slate-700">Overall remarks <span className="font-normal text-slate-400">{remarks.trim().length}/{MAX_REMARKS_LENGTH}</span></label>
+        <label htmlFor={`${baseId}-remarks`} className="block text-xs font-bold text-slate-700">Overall remarks <span className="font-normal text-slate-500">{remarks.trim().length}/{MAX_REMARKS_LENGTH}</span></label>
         <textarea id={`${baseId}-remarks`} value={remarks} onChange={(e) => setRemarks(e.target.value)} rows={5} maxLength={MAX_REMARKS_LENGTH} placeholder="Summarise strengths, weaknesses, and what must change (at least 20 characters)." className="mt-1 w-full rounded-sm border border-slate-200 p-3 text-sm focus:border-[#C8102E] focus:outline-none" />
       </div>
 

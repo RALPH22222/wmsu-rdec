@@ -25,7 +25,7 @@ export function SubmitDetailedProposalCard({ concept, onSubmit }: SubmitDetailed
       <p className="mt-1 text-xs text-slate-600">Submit your detailed proposal to enter technical review.</p>
       <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-end">
         <div className="min-w-0 flex-1">
-          <label htmlFor={inputId} className="block text-xs font-bold text-slate-700">Detailed proposal <span className="font-normal text-slate-400">PDF or Word, up to 15 MB</span></label>
+          <label htmlFor={inputId} className="block text-xs font-bold text-slate-700">Detailed proposal <span className="font-normal text-slate-500">PDF or Word, up to 15 MB</span></label>
           <input id={inputId} type="file" accept={ACCEPTED_DOCUMENT_TYPES} onChange={(e) => setFile(e.target.files?.[0] ?? null)} className="mt-1 block min-h-11 w-full rounded-sm border border-slate-200 bg-white text-sm file:mr-3 file:min-h-11 file:border-0 file:bg-slate-100 file:px-3 file:text-xs file:font-semibold" />
           {file && <p className={`mt-1 text-xs ${tooBig ? 'text-red-700' : 'text-slate-500'}`}>{file.name} · {formatFileSize(file.size)}{tooBig ? ' — too large' : ''}</p>}
         </div>

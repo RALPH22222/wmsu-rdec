@@ -12,7 +12,7 @@ export function RevisionTimeline({ proposal }: { proposal: ProponentProposal }) 
       {items.map((item, index) => (
         <li key={item.key} className="relative">
           <span className={`absolute -left-[23px] top-1 h-3 w-3 rounded-full border-2 border-white ${index === 0 ? 'bg-[#C8102E]' : 'bg-slate-300'}`} aria-hidden="true" />
-          <p className="text-sm font-semibold text-slate-900">{item.title} <span className="text-xs font-normal text-slate-400">· {formatDate(item.at)}</span></p>
+          <p className="text-sm font-semibold text-slate-900">{item.title} <span className="text-xs font-normal text-slate-500">· {formatDate(item.at)}</span></p>
           {item.notes && <p className="mt-1 whitespace-pre-wrap break-words text-xs text-slate-600">{item.notes}</p>}
           <div className="mt-2 flex flex-wrap gap-2">{item.links.map((link) => <DocumentLink key={link.label} href={link.href} label={link.label} muted />)}</div>
         </li>

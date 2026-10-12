@@ -13,7 +13,7 @@ import { RevisionUploadForm } from '../../components/proponentComponent/Revision
 import { RevisionTimeline } from '../../components/proponentComponent/RevisionTimeline';
 
 const Card = ({ title, children }: { title: string; children: ReactNode }) => (
-  <section className="rounded-sm border border-slate-200 bg-white p-4 shadow-xs sm:p-5"><h3 className="mb-3 text-xs font-bold uppercase tracking-wider text-slate-400">{title}</h3>{children}</section>
+  <section className="rounded-sm border border-slate-200 bg-white p-4 shadow-xs sm:p-5"><h3 className="mb-3 text-xs font-bold uppercase tracking-wider text-slate-500">{title}</h3>{children}</section>
 );
 
 export function RevisionHistoryPage() {
@@ -25,7 +25,7 @@ export function RevisionHistoryPage() {
 
   return (
     <section className="mx-auto max-w-5xl space-y-4">
-      {error && <p role="alert" className="flex flex-col gap-2 rounded-sm border border-red-200 bg-red-50 p-4 text-sm text-red-800 sm:flex-row sm:items-center sm:justify-between">{error}<button type="button" onClick={refresh} className="min-h-11 rounded-sm border border-red-300 px-3 text-xs font-semibold sm:min-h-0 sm:py-1.5">Retry</button></p>}
+      {error && <p role="alert" className="flex flex-col gap-2 rounded-sm border border-red-200 bg-red-50 p-4 text-sm text-red-800 sm:flex-row sm:items-center sm:justify-between">{error}<button type="button" onClick={refresh} className="min-h-11 rounded-sm border border-red-300 px-3 text-xs font-semibold">Retry</button></p>}
 
       {eligibleConcepts.length > 0 && <div className="space-y-3">{eligibleConcepts.map((concept) => <SubmitDetailedProposalCard key={concept.id} concept={concept} onSubmit={submitDetailedProposal} />)}</div>}
 

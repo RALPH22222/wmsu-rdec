@@ -31,7 +31,7 @@ export function ReviewPanelList({ panel, onRemove }: ReviewPanelListProps) {
         {panel.map((seat) => (
           <li key={seat.id} className="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="min-w-0">
-              <p className="text-sm font-semibold text-slate-900">{seat.evaluatorName} <span className="text-xs font-normal text-slate-400">· {seat.blindLabel}</span></p>
+              <p className="text-sm font-semibold text-slate-900">{seat.evaluatorName} <span className="text-xs font-normal text-slate-500">· {seat.blindLabel}</span></p>
               <p className="text-xs text-slate-500">{seat.department || 'No department'} · Assigned {formatDate(seat.assignedAt)}</p>
             </div>
             <div className="flex flex-wrap items-center gap-2">

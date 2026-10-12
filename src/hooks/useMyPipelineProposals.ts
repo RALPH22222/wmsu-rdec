@@ -39,7 +39,8 @@ export function useMyPipelineProposals() {
     try {
       const proposal = await uploadRevisionApi(proposalId, payload, token);
       upsert(proposal);
-      showToast(`Revision ${proposal.revisions.length} uploaded — round ${proposal.currentRound} is under review`);
+      const latestRevisionNumber = Math.max(0, ...proposal.revisions.map((r) => r.revisionNumber));
+      showToast(`Revision ${latestRevisionNumber} uploaded — round ${proposal.currentRound} is under review`);
       return proposal;
     } catch (failure) {
       showToast(failure instanceof Error ? failure.message : 'Unable to upload the revision');
