@@ -24,8 +24,8 @@ export function SubmitDetailedProposalCard({ concept, onSubmit }: SubmitDetailed
   };
 
   return (
-    <article className="rounded-sm border border-amber-200 bg-amber-50/60 p-4 sm:p-5">
-      <p className="text-[11px] font-bold uppercase tracking-wider text-amber-700">Passed preliminary screening{concept.screenedAt ? ` · ${formatDate(concept.screenedAt)}` : ''}</p>
+    <article className="rounded-sm border border-slate-200 bg-white p-4 sm:p-5">
+      <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">Passed preliminary screening{concept.screenedAt ? ` · ${formatDate(concept.screenedAt)}` : ''}</p>
       <h3 className="mt-1 text-sm font-bold text-slate-900">{concept.title}</h3>
       <p className="mt-1 text-xs text-slate-600">Submit your detailed proposal to enter technical review.</p>
       <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-end">
