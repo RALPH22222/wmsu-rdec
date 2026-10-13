@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import { FileSearch } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { useMyPipelineProposals } from '../../hooks/useMyPipelineProposals';
 import { nextStepFor } from '../../lib/proposalPipeline';
 import { formatDate } from '../../lib/format';
@@ -7,7 +8,6 @@ import { StatusBadge } from '../../components/ui/StatusBadge';
 import { PipelineStepper } from '../../components/ui/PipelineStepper';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { HistoryList } from '../../components/ui/HistoryList';
-import { SubmitDetailedProposalCard } from '../../components/proponentComponent/SubmitDetailedProposalCard';
 import { RoundFeedbackAccordion } from '../../components/proponentComponent/RoundFeedbackAccordion';
 import { RevisionUploadForm } from '../../components/proponentComponent/RevisionUploadForm';
 import { RevisionTimeline } from '../../components/proponentComponent/RevisionTimeline';
@@ -17,7 +17,7 @@ const Card = ({ title, children }: { title: string; children: ReactNode }) => (
 );
 
 export function RevisionHistoryPage() {
-  const { proposals, eligibleConcepts, loading, error, refresh, submitDetailedProposal, uploadRevision } = useMyPipelineProposals();
+  const { proposals, eligibleConcepts, loading, error, refresh, uploadRevision } = useMyPipelineProposals();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const selected = proposals.find((item) => item.id === selectedId) ?? proposals[0] ?? null;
 
@@ -25,12 +25,16 @@ export function RevisionHistoryPage() {
 
   return (
     <section className="mx-auto max-w-5xl space-y-4">
+      <header className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-2xl font-bold text-slate-900">Evaluation &amp; Revisions</h1>
+        <Link to="/proponent/detailed-proposals" className="inline-flex min-h-11 items-center rounded-sm bg-[#C8102E] px-4 text-xs font-semibold text-white hover:bg-[#A00D26]">Submit detailed proposal</Link>
+      </header>
       {error && <p role="alert" className="flex flex-col gap-2 rounded-sm border border-red-200 bg-red-50 p-4 text-sm text-red-800 sm:flex-row sm:items-center sm:justify-between">{error}<button type="button" onClick={refresh} className="min-h-11 rounded-sm border border-red-300 px-3 text-xs font-semibold">Retry</button></p>}
 
-      {eligibleConcepts.length > 0 && <div className="space-y-3">{eligibleConcepts.map((concept) => <SubmitDetailedProposalCard key={concept.id} concept={concept} onSubmit={submitDetailedProposal} />)}</div>}
+      {eligibleConcepts.length > 0 && <p className="rounded-sm border border-amber-200 bg-amber-50 p-4 text-sm text-slate-700">{eligibleConcepts.length} {eligibleConcepts.length === 1 ? 'concept proposal is' : 'concept proposals are'} ready for detailed proposal submission. <Link to="/proponent/detailed-proposals" className="font-semibold text-[#C8102E] underline">Open the submission hub</Link>.</p>}
 
       {proposals.length === 0 ? (
-        eligibleConcepts.length === 0 && !error && <EmptyState icon={FileSearch} title="No detailed proposals yet" description="Once a concept proposal passes preliminary screening you can submit the detailed proposal here." />
+        !error && <EmptyState icon={FileSearch} title="No detailed proposals yet" description="Submit your detailed proposal in the submission hub after preliminary screening. Evaluator feedback and requested revisions will appear here." />
       ) : (
         <div className={`grid gap-4 ${proposals.length > 1 ? 'xl:grid-cols-[18rem_minmax(0,1fr)]' : ''}`}>
           {proposals.length > 1 && (

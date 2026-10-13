@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   FileText,
+  FileUp,
   MailCheck,
   DollarSign,
   FileSignature,
@@ -35,6 +36,7 @@ export const ProponentSidebar: React.FC<ProponentSidebarProps> = ({
     location.pathname === '/proponent/submit' ||
     location.pathname === '/dashboard';
   const isBudgetActive = location.pathname === '/proponent/budget';
+  const isDetailedProposalActive = location.pathname === '/proponent/detailed-proposals';
   const isLettersActive = location.pathname === '/proponent/letters';
   const isContractsActive = location.pathname === '/proponent/contracts';
   const isRevisionsActive = location.pathname === '/proponent/revisions';
@@ -125,6 +127,19 @@ export const ProponentSidebar: React.FC<ProponentSidebarProps> = ({
                 >
                   <FileText className={`w-5 h-5 shrink-0 ${isProposalActive ? 'text-white' : 'text-slate-400'}`} />
                   <span className="truncate">Concept Proposal</span>
+                </Link>
+
+                <Link
+                  to="/proponent/detailed-proposals"
+                  onClick={onCloseMobile}
+                  className={`w-full flex items-center gap-3.5 px-4 py-3 text-sm font-semibold rounded-sm text-left transition-colors border ${
+                    isDetailedProposalActive
+                      ? 'bg-[#C8102E] text-white shadow-xs border-[#C8102E]'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50 border-transparent'
+                  }`}
+                >
+                  <FileUp className={`w-5 h-5 shrink-0 ${isDetailedProposalActive ? 'text-white' : 'text-slate-400'}`} />
+                  <span className="truncate">Detailed Proposal</span>
                 </Link>
 
                 <Link

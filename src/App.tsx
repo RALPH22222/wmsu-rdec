@@ -23,6 +23,7 @@ import ProfilePage from './pages/proponents/ProfilePage';
 import ScreeningLettersPage from './pages/proponents/ScreeningLettersPage';
 import ProponentContractsPage from './pages/proponents/ProponentContractsPage';
 import { RevisionHistoryPage } from './pages/proponents/RevisionHistoryPage';
+import { DetailedProposalSubmissionPage } from './pages/proponents/DetailedProposalSubmissionPage';
 import { PipelineProposalDetailPage } from './pages/rpdu/PipelineProposalDetailPage';
 import EvaluatorDashboard from './pages/evaluator/evaluatorDashboard';
 import { EvaluatorReviewsPage } from './pages/evaluator/EvaluatorReviewsPage';
@@ -97,6 +98,7 @@ export function App() {
               <Route element={<Layout />}>
                 <Route path="/proponent" element={<ProponentDashboard />} />
                 <Route path="/proponent/submit" element={<ProponentDashboard />} />
+                <Route path="/proponent/detailed-proposals" element={<DetailedProposalSubmissionPage />} />
                 <Route path="/proponent/budget" element={<BudgetAllocationPage />} />
                 <Route path="/proponent/letters" element={<ScreeningLettersPage />} />
                 <Route path="/proponent/contracts" element={<ProponentContractsPage />} />
