@@ -1,9 +1,10 @@
-import { useState } from 'react';
-import { UserMinus } from 'lucide-react';
+import { useId, useState } from 'react';
+import { Lock, UserMinus } from 'lucide-react';
 import type { RpduReview } from '../../types';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { DocumentLink } from '../ui/DocumentLink';
 import { formatDate } from '../../lib/format';
+import { HEAD_ONLY_ASSIGN } from '../../lib/headOnly';
 
 const SEAT_STATUS: Record<RpduReview['status'], { label: string; className: string }> = {
   PENDING: { label: 'Pending', className: 'bg-slate-100 text-slate-700' },
@@ -12,9 +13,15 @@ const SEAT_STATUS: Record<RpduReview['status'], { label: string; className: stri
   REJECTED: { label: 'Disapproval', className: 'bg-red-50 text-red-700' },
 };
 
-interface ReviewPanelListProps { panel: RpduReview[]; onRemove: (reviewId: string) => Promise<void> }
+interface ReviewPanelListProps {
+  panel: RpduReview[];
+  onRemove: (reviewId: string) => Promise<void>;
+  /** Step 7.1 belongs to the RPDU Head (or ADMIN); staff see Remove disabled. */
+  canManage: boolean;
+}
 
-export function ReviewPanelList({ panel, onRemove }: ReviewPanelListProps) {
+export function ReviewPanelList({ panel, onRemove, canManage }: ReviewPanelListProps) {
+  const hintId = useId();
   const [removing, setRemoving] = useState<RpduReview | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -39,13 +46,14 @@ export function ReviewPanelList({ panel, onRemove }: ReviewPanelListProps) {
               {seat.assessmentFileUrl && <DocumentLink href={seat.assessmentFileUrl} label="Assessment" muted />}
               {seat.actionSheetUrl && <DocumentLink href={seat.actionSheetUrl} label="Action sheet" muted />}
               {seat.canRemove && (
-                <button type="button" onClick={() => setRemoving(seat)} className="inline-flex min-h-11 items-center gap-1 rounded-sm border border-slate-200 px-3 text-xs font-semibold text-slate-600 hover:bg-slate-50" title="Remove from panel"><UserMinus className="h-4 w-4" />Remove</button>
+                <button type="button" onClick={() => setRemoving(seat)} disabled={!canManage} aria-describedby={canManage ? undefined : hintId} className="inline-flex min-h-11 items-center gap-1 rounded-sm border border-slate-200 px-3 text-xs font-semibold text-slate-600 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50" title={canManage ? 'Remove from panel' : HEAD_ONLY_ASSIGN}><UserMinus className="h-4 w-4" />Remove</button>
               )}
             </div>
           </li>
         ))}
       </ul>
-      <ConfirmDialog isOpen={Boolean(removing)} onClose={() => setRemoving(null)} onConfirm={confirm} loading={busy} tone="danger" title="Remove evaluator?" confirmLabel="Remove" description={removing ? `${removing.evaluatorName} will be removed as ${removing.blindLabel}. If the proposal is under review it returns to Awaiting Evaluators.` : ''} />
+      {!canManage && panel.some((seat) => seat.canRemove) && <p id={hintId} className="mt-1 flex items-center gap-1.5 text-xs text-slate-500"><Lock className="h-3.5 w-3.5 shrink-0" />{HEAD_ONLY_ASSIGN}</p>}
+      <ConfirmDialog isOpen={Boolean(removing) && canManage} onClose={() => setRemoving(null)} onConfirm={confirm} loading={busy} tone="danger" title="Remove evaluator?" confirmLabel="Remove" description={removing ? `${removing.evaluatorName} will be removed as ${removing.blindLabel}. If the proposal is under review it returns to Awaiting Evaluators.` : ''} />
     </>
   );
 }

@@ -19,6 +19,7 @@ export function useMyPipelineProposals() {
       return {
         proposals: exists ? prev.proposals.map((item) => (item.id === proposal.id ? proposal : item)) : [proposal, ...prev.proposals],
         eligibleConcepts: conceptId ? prev.eligibleConcepts.filter((item) => item.id !== conceptId) : prev.eligibleConcepts,
+        pendingConcepts: prev.pendingConcepts,
       };
     });
   }, [setData]);
@@ -48,5 +49,5 @@ export function useMyPipelineProposals() {
     }
   }, [token, upsert, showToast]);
 
-  return { proposals: resource.data?.proposals ?? [], eligibleConcepts: resource.data?.eligibleConcepts ?? [], loading: resource.loading, error: resource.error, refresh: resource.refresh, submitDetailedProposal, uploadRevision };
+  return { proposals: resource.data?.proposals ?? [], eligibleConcepts: resource.data?.eligibleConcepts ?? [], pendingConcepts: resource.data?.pendingConcepts ?? [], loading: resource.loading, error: resource.error, refresh: resource.refresh, submitDetailedProposal, uploadRevision };
 }

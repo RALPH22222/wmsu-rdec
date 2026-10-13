@@ -2,18 +2,39 @@ import { ArrowRight, FileCheck2, FileText } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { SubmitDetailedProposalCard } from '../../components/proponentComponent/SubmitDetailedProposalCard';
 import { EmptyState } from '../../components/ui/EmptyState';
+import { TONE_CLASSES } from '../../components/ui/toneClasses';
 import { useMyPipelineProposals } from '../../hooks/useMyPipelineProposals';
+import { STAGE_META, stageExplanation } from '../../lib/aihrMeta';
 import { formatDate } from '../../lib/format';
+import type { PendingConcept } from '../../types';
+
+function ConceptStageList({ titleId, title, concepts }: { titleId: string; title: string; concepts: PendingConcept[] }) {
+  return (
+    <section aria-labelledby={titleId} className="rounded-sm border border-slate-200 bg-white p-5">
+      <h2 id={titleId} className="text-sm font-bold text-slate-900">{title}</h2>
+      <ul className="mt-2 divide-y divide-slate-100">
+        {concepts.map((concept) => (
+          <li key={concept.id} className="flex flex-col gap-2 py-3 sm:flex-row sm:items-start sm:justify-between">
+            <div className="min-w-0"><p className="break-words text-sm font-semibold text-slate-900">{concept.title}</p><p className="mt-1 text-xs text-slate-500">{stageExplanation(concept.stage)}</p></div>
+            <span className={`inline-flex shrink-0 items-center rounded-sm border px-2 py-0.5 text-[11px] font-bold ${TONE_CLASSES[STAGE_META[concept.stage].tone].badge}`}>{STAGE_META[concept.stage].label}</span>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
 
 export function DetailedProposalSubmissionPage() {
-  const { proposals, eligibleConcepts, loading, error, refresh, submitDetailedProposal } = useMyPipelineProposals();
+  const { proposals, eligibleConcepts, pendingConcepts, loading, error, refresh, submitDetailedProposal } = useMyPipelineProposals();
   const submitted = proposals.filter((proposal) => proposal.manuscriptUrl);
+  const waiting = pendingConcepts.filter((c) => c.stage === 'AWAITING_AIHR' || c.stage === 'QUEUED_FOR_EN_BANC');
+  const closed = pendingConcepts.filter((c) => c.stage === 'AIHR_FAILED' || c.stage === 'NOT_APPROVED');
 
   return (
     <section className="mx-auto max-w-5xl space-y-5">
       <header>
         <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">Detailed Proposal Submission Hub</h1>
-        <p className="mt-2 text-sm text-slate-600">Submit your detailed research proposal after your concept proposal passes preliminary screening.</p>
+        <p className="mt-2 text-sm text-slate-600">Submit your detailed research proposal once your concept has passed preliminary screening and the Agency In-House Review.</p>
       </header>
 
       <section aria-labelledby="detailed-template-title" className="rounded-sm border border-slate-200 bg-white p-5">
@@ -42,8 +63,11 @@ export function DetailedProposalSubmissionPage() {
               {eligibleConcepts.map((concept) => <SubmitDetailedProposalCard key={concept.id} concept={concept} onSubmit={submitDetailedProposal} />)}
             </section>
           ) : (
-            <EmptyState icon={FileCheck2} title={submitted.length ? 'All eligible detailed proposals have been submitted' : 'No concept proposals ready for this step'} description={submitted.length ? 'Follow evaluator feedback and upload requested revisions in Evaluation & Revisions.' : 'Your concept proposal will appear here once it passes preliminary screening.'} action={<Link to={submitted.length ? '/proponent/revisions' : '/proponent'} className="inline-flex min-h-11 items-center gap-2 text-xs font-semibold text-[#C8102E]">{submitted.length ? 'Evaluation & Revisions' : 'View concept proposals'}<ArrowRight className="h-4 w-4" /></Link>} />
+            <EmptyState icon={FileCheck2} title={submitted.length ? 'All eligible detailed proposals have been submitted' : 'No concept proposals ready for this step'} description={submitted.length ? 'Follow evaluator feedback and upload requested revisions in Evaluation & Revisions.' : waiting.length > 0 ? 'Your passed concepts are listed below while RPDU completes the AIHR and en banc steps.' : 'Your concept proposal will appear here once it passes preliminary screening and the Agency In-House Review.'} action={<Link to={submitted.length ? '/proponent/revisions' : '/proponent'} className="inline-flex min-h-11 items-center gap-2 text-xs font-semibold text-[#C8102E]">{submitted.length ? 'Evaluation & Revisions' : 'View concept proposals'}<ArrowRight className="h-4 w-4" /></Link>} />
           )}
+
+          {waiting.length > 0 && <ConceptStageList titleId="pending-concepts-title" title="Waiting on RPDU" concepts={waiting} />}
+          {closed.length > 0 && <ConceptStageList titleId="closed-concepts-title" title="Not proceeding this call" concepts={closed} />}
 
           {submitted.length > 0 && (
             <section aria-labelledby="submitted-details-title" className="rounded-sm border border-slate-200 bg-white p-5">

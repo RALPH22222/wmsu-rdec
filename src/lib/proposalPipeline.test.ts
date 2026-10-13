@@ -34,7 +34,9 @@ test('assessment points mirror the backend vocabulary in form order', () => {
 });
 
 test('every status and recommendation has display metadata', () => {
-  assert.equal(Object.keys(STATUS_META).length, 5);
+  assert.equal(Object.keys(STATUS_META).length, 6);
+  assert.equal(STATUS_META.FORWARDED_TO_REO.tone, 'emerald');
+  assert.equal(isTerminalStatus('FORWARDED_TO_REO'), true);
   assert.equal(STATUS_META.PENDING_ASSIGNMENT.label, 'Awaiting Evaluators');
   assert.equal(STATUS_META.UNDER_REVIEW.tone, 'blue');
   assert.equal(RECOMMENDATION_META.APPROVAL.label, 'Approval');
@@ -80,4 +82,5 @@ test('nextStepFor gives each audience a plain-words next step', () => {
   assert.equal(nextStepFor('UNDER_REVIEW', 'evaluator'), 'Submit your evaluation for this round.');
   assert.equal(nextStepFor('APPROVED', 'proponent'), 'The panel approved your proposal. RPDU will issue the technical clearance.');
   assert.equal(nextStepFor('REVISION_REQUESTED', 'evaluator'), 'The research team is revising. A new round opens when they upload.');
+  assert.equal(nextStepFor('FORWARDED_TO_REO', 'rpdu'), 'Forwarded to the Research Ethics Office. No further pipeline action.');
 });

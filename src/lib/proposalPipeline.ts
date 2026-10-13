@@ -22,9 +22,10 @@ export const STATUS_META: Record<PipelineStatus, StatusMeta> = {
   REVISION_REQUESTED: { label: 'Revision Requested', description: 'Proponent must upload a revised manuscript', tone: 'amber' },
   APPROVED: { label: 'Approved', description: 'Cleared by the technical review panel', tone: 'emerald' },
   REJECTED: { label: 'Rejected', description: 'Not endorsed by the technical review panel', tone: 'red' },
+  FORWARDED_TO_REO: { label: 'Forwarded to REO', description: 'Technical review complete; forwarded to the Research Ethics Office', tone: 'emerald' },
 };
 
-export const isTerminalStatus = (status: PipelineStatus): boolean => status === 'APPROVED' || status === 'REJECTED';
+export const isTerminalStatus = (status: PipelineStatus): boolean => status === 'APPROVED' || status === 'REJECTED' || status === 'FORWARDED_TO_REO';
 
 // ---- Proposal Assessment Form (WMSU-RPDU-FR-005.00 / FR-006.00) -----------
 // Mirrors backend-wmsu-rdec/src/services/pipelineRules.js; the tests on both sides pin the ids and order.
@@ -138,7 +139,7 @@ const NEXT_STEP: Record<PipelineStatus, Record<PipelineAudience, string>> = {
     proponent: 'Upload your revised manuscript and revision history to start the next round.',
   },
   APPROVED: {
-    rpdu: 'Issue the Certificate of Technical Review from the Letter Desk.',
+    rpdu: 'Complete the gateway checklist, then forward the proposal to the REO.',
     evaluator: 'This proposal has been approved. Thank you for your review.',
     proponent: 'The panel approved your proposal. RPDU will issue the technical clearance.',
   },
@@ -146,6 +147,11 @@ const NEXT_STEP: Record<PipelineStatus, Record<PipelineAudience, string>> = {
     rpdu: 'The panel did not endorse this proposal.',
     evaluator: 'This proposal was not endorsed by the panel.',
     proponent: 'The panel did not endorse this proposal. Contact RPDU for guidance.',
+  },
+  FORWARDED_TO_REO: {
+    rpdu: 'Forwarded to the Research Ethics Office. No further pipeline action.',
+    evaluator: 'Review complete. Thank you.',
+    proponent: 'Your proposal has been forwarded to the Research Ethics Office. RPDU will contact you about the next steps.',
   },
 };
 

@@ -4,7 +4,7 @@ import { DocumentLink } from '../ui/DocumentLink';
 
 export function RevisionTimeline({ proposal }: { proposal: ProponentProposal }) {
   const items = [
-    ...[...proposal.revisions].reverse().map((revision) => ({ key: revision.id, title: `Revision ${revision.revisionNumber}`, at: revision.submittedAt, notes: revision.notes, links: [{ href: revision.revisedFileUrl, label: 'Revised manuscript' }, { href: revision.revisionHistoryFileUrl, label: 'Revision history' }] })),
+    ...[...proposal.revisions].reverse().map((revision) => ({ key: revision.id, title: `Revision ${revision.revisionNumber}`, at: revision.submittedAt, notes: revision.notes, links: [{ href: revision.revisedFileUrl, label: 'Revised manuscript' }, { href: revision.actionSheetFileUrl, label: 'Action sheet' }, { href: revision.revisionHistoryFileUrl, label: 'Revision history' }] })),
     { key: 'original', title: 'Original submission', at: proposal.submittedAt, notes: '', links: [{ href: proposal.manuscriptUrl, label: 'Detailed proposal' }] },
   ];
   return (

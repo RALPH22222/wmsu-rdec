@@ -185,7 +185,7 @@ export interface HybridBudgetAllocation {
 // Detailed Proposal Evaluation Pipeline — shapes returned by /api/pipeline
 // ============================================================================
 
-export type PipelineStatus = 'PENDING_ASSIGNMENT' | 'UNDER_REVIEW' | 'REVISION_REQUESTED' | 'APPROVED' | 'REJECTED';
+export type PipelineStatus = 'PENDING_ASSIGNMENT' | 'UNDER_REVIEW' | 'REVISION_REQUESTED' | 'APPROVED' | 'REJECTED' | 'FORWARDED_TO_REO';
 export type ReviewRecommendation = 'APPROVAL' | 'MINOR_MODIFICATIONS' | 'MAJOR_MODIFICATIONS' | 'DISAPPROVAL';
 export type ChecklistPresence = 'YES' | 'NA';
 export interface ChecklistEntry { present: ChecklistPresence; pageRef: string; comment: string }
@@ -195,13 +195,19 @@ export type Checklist = Record<string, ChecklistEntry>;
 export type ChecklistDraft = Record<string, Partial<ChecklistEntry>>;
 export type ReviewRowStatus = 'PENDING' | 'APPROVED' | 'REVISION_REQUESTED' | 'REJECTED';
 
+/** RPDU's cross-check of a revision against its action sheet (flow 7.6). `checkedBy` is null outside the RPDU view. */
+export interface RevisionCheck { checkedBy: string | null; checkedAt: string; note: string }
+
 export interface PipelineRevision {
   id: string;
   revisionNumber: number;
   revisedFileUrl: string;
+  /** Accomplished Proposal Action Sheet (WMSU-RPDU-FR-007.00); null on revisions uploaded before it was required. */
+  actionSheetFileUrl: string | null;
   revisionHistoryFileUrl: string | null;
   notes: string;
   submittedAt: string;
+  check: RevisionCheck | null;
 }
 
 export interface ReviewSubmission {
@@ -239,6 +245,11 @@ export interface RpduReview {
   submissions: ReviewSubmission[];
 }
 
+/** Flow 7.8 gateway: the five readiness items evaluated by the backend (`canForwardToReo`). */
+export type GatewayItemKey = 'status' | 'panel' | 'files' | 'revisions' | 'certificate';
+export interface GatewayItem { key: GatewayItemKey; label: string; ok: boolean; detail?: string }
+export interface GatewayReadiness { ok: boolean; items: GatewayItem[] }
+
 export interface RpduProposal {
   id: string;
   conceptProposalId: string;
@@ -253,6 +264,9 @@ export interface RpduProposal {
   panel: RpduReview[];
   revisions: PipelineRevision[];
   history: StatusHistoryEntry[];
+  /** Certificate of Technical Review issued from the Letter Desk (a `technical_clearances` row). */
+  clearance: { issuedAt: string } | null;
+  gateway: GatewayReadiness;
 }
 
 export interface PipelineEvaluator {
@@ -261,6 +275,13 @@ export interface PipelineEvaluator {
   email: string;
   department: string;
   activeLoad: number;
+}
+
+/** The caller's pipeline permissions (GET /api/pipeline/viewer). `actsAsHead` is true for ADMIN and the RPDU Head (steps 7.1 and 7.6). */
+export interface PipelineViewer {
+  role: string;
+  isRpduHead: boolean;
+  actsAsHead: boolean;
 }
 
 /** What an evaluator may see. Never carries proponent, department, or concept identifiers. */
@@ -311,6 +332,51 @@ export interface EligibleConcept {
   title: string;
   screenedAt: string | null;
 }
+
+// ============================================================================
+// AIHR and en banc deliberation — shapes returned by /api/aihr (RPDU/Admin) and /api/pipeline/my-proposals (proponent)
+// ============================================================================
+
+export type AihrVerdict = 'PASS' | 'CONDITIONALLY_APPROVED' | 'FAIL';
+export type EnBancOutcome = 'APPROVED_FOR_IMPLEMENTATION' | 'NOT_APPROVED';
+export type AihrStage = 'AWAITING_AIHR' | 'AIHR_FAILED' | 'QUEUED_FOR_EN_BANC' | 'NOT_APPROVED' | 'CLEARED' | 'DETAILED_SUBMITTED';
+
+export interface AihrResult {
+  verdict: AihrVerdict;
+  score: number | null;
+  presentedOn: string | null;
+  remarks: string;
+  scoresheetFileUrl: string;
+  loggedBy: string;
+  loggedAt: string;
+  updatedAt: string;
+}
+
+export interface EnBancDecision {
+  outcome: EnBancOutcome;
+  note: string;
+  deliberatedOn: string | null;
+  decidedBy: string;
+  decidedAt: string;
+}
+
+export interface AihrConcept {
+  id: string;
+  title: string;
+  researchAgenda: string;
+  proposedBudget: number;
+  proponent: { id: string; name: string; department: string | null };
+  screenedAt: string | null;
+  stage: AihrStage;
+  aihr: AihrResult | null;
+  enBanc: EnBancDecision | null;
+  detailedProposal: { id: string; status: PipelineStatus; submittedAt: string } | null;
+  canLogVerdict: boolean;
+  canDeliberate: boolean;
+}
+
+/** A passed concept the proponent cannot submit for yet; `stage` says why. */
+export interface PendingConcept { id: string; title: string; stage: AihrStage; screenedAt: string | null }
 
 export interface TechnicalReviewCertificate {
   id: string;

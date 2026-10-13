@@ -9,6 +9,7 @@ export const AdminLayout: React.FC = () => {
 
   const getPageTitle = () => {
     if (location.pathname.startsWith('/admin/letters')) return 'Official Letters';
+    if (location.pathname.startsWith('/admin/aihr')) return 'AIHR & En Banc Deliberation';
     if (location.pathname.startsWith('/admin/screening')) return 'Preliminary Screening — Concept Proposals';
     if (location.pathname.startsWith('/admin/clearance')) return 'Technical Review Clearance (COTR)';
     if (location.pathname.startsWith('/admin/contracts')) return 'Contracts & Notarization (PSC)';

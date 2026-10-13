@@ -3,7 +3,6 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   FileText,
   FileUp,
-  MailCheck,
   DollarSign,
   FileSignature,
   History,

@@ -19,7 +19,7 @@ interface Step {
 }
 
 function buildSteps(status: PipelineStatus, currentRound: number): Step[] {
-  const decided = status === 'APPROVED' || status === 'REJECTED';
+  const decided = status === 'APPROVED' || status === 'REJECTED' || status === 'FORWARDED_TO_REO';
   const revisionsDone = currentRound - 1;
 
   const reviewState: StepState =
@@ -58,7 +58,9 @@ function buildSteps(status: PipelineStatus, currentRound: number): Step[] {
             : 'Only if the panel requests changes',
       state: revisionState,
     },
-    status === 'APPROVED'
+    status === 'FORWARDED_TO_REO'
+      ? { key: 'decision', label: 'Forwarded to REO', description: 'Technical review cleared and forwarded', state: 'complete', outcome: 'approved' }
+      : status === 'APPROVED'
       ? { key: 'decision', label: 'Approved', description: 'Cleared by the review panel', state: 'complete', outcome: 'approved' }
       : status === 'REJECTED'
         ? { key: 'decision', label: 'Rejected', description: 'Not endorsed by the review panel', state: 'complete', outcome: 'rejected' }

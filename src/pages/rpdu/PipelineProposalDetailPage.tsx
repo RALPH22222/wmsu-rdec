@@ -2,7 +2,8 @@ import type { ReactNode } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import { useRpduProposal } from '../../hooks/useRpduPipeline';
-import { MAX_EVALUATORS_PER_PROPOSAL, RECOMMENDATION_META, nextStepFor } from '../../lib/proposalPipeline';
+import { usePipelineViewer } from '../../hooks/usePipelineViewer';
+import { MAX_EVALUATORS_PER_PROPOSAL, RECOMMENDATION_META, isTerminalStatus, nextStepFor } from '../../lib/proposalPipeline';
 import { formatDate } from '../../lib/format';
 import { StatusBadge } from '../../components/ui/StatusBadge';
 import { PipelineStepper } from '../../components/ui/PipelineStepper';
@@ -12,6 +13,8 @@ import { ChecklistSummary, RecommendationBadge } from '../../components/ui/Check
 import { HistoryList } from '../../components/ui/HistoryList';
 import { ReviewPanelList } from '../../components/rpduComponent/ReviewPanelList';
 import { PanelDots } from '../../components/rpduComponent/PanelDots';
+import { RevisionComparator } from '../../components/rpduComponent/RevisionComparator';
+import { TechnicalReviewGateway } from '../../components/rpduComponent/TechnicalReviewGateway';
 
 interface PipelineProposalDetailPageProps { role?: 'rpdu' | 'admin' }
 
@@ -21,7 +24,8 @@ const Card = ({ title, children }: { title: string; children: ReactNode }) => (
 
 /** Rendered keyed by the route id, so a stale response for a previous id can never write into this proposal. */
 function DetailBody({ id, role }: { id: string | undefined; role: 'rpdu' | 'admin' }) {
-  const { proposal, loading, error, unassign } = useRpduProposal(id);
+  const { proposal, loading, error, unassign, checkRevision, forward } = useRpduProposal(id);
+  const { actsAsHead } = usePipelineViewer();
   const backHref = `/${role}/evaluations`;
 
   if (loading) return <section className="mx-auto max-w-5xl space-y-3" aria-label="Loading proposal"><div className="h-20 animate-pulse rounded-sm bg-slate-100" /><div className="h-40 animate-pulse rounded-sm bg-slate-100" /></section>;
@@ -45,11 +49,19 @@ function DetailBody({ id, role }: { id: string | undefined; role: 'rpdu' | 'admi
         <div className="mt-4 flex flex-wrap gap-2"><DocumentLink href={proposal.manuscriptUrl} label={proposal.manuscriptUrl ? 'Original manuscript' : 'Manuscript'} />{latestRevision && <DocumentLink href={latestRevision.revisedFileUrl} label={`Revision ${latestRevision.revisionNumber}`} muted />}</div>
       </header>
 
+      {(proposal.status === 'APPROVED' || proposal.status === 'FORWARDED_TO_REO') && <TechnicalReviewGateway proposal={proposal} role={role} onForward={forward} />}
+
       <Card title="Review panel">
         <PanelDots count={proposal.panel.length} className="mb-2" />
-        <ReviewPanelList panel={proposal.panel} onRemove={unassign} />
-        {proposal.manuscriptUrl && proposal.panel.length < MAX_EVALUATORS_PER_PROPOSAL && !['APPROVED', 'REJECTED'].includes(proposal.status) && <Link to={backHref} className="mt-3 inline-flex min-h-11 items-center text-xs font-semibold text-[#C8102E]">Assign evaluators from the list →</Link>}
+        <ReviewPanelList panel={proposal.panel} onRemove={unassign} canManage={actsAsHead} />
+        {proposal.manuscriptUrl && proposal.panel.length < MAX_EVALUATORS_PER_PROPOSAL && !isTerminalStatus(proposal.status) && <Link to={backHref} className="mt-3 inline-flex min-h-11 items-center text-xs font-semibold text-[#C8102E]">Assign evaluators from the list →</Link>}
       </Card>
+
+      {proposal.revisions.length > 0 && (
+        <Card title="Revision check">
+          <div id="revision-comparator" className="scroll-mt-20"><RevisionComparator proposal={proposal} onCheck={checkRevision} canCheck={actsAsHead} /></div>
+        </Card>
+      )}
 
       <Card title="Evaluations by round">
         {rounds.length === 0 ? <p className="text-xs text-slate-500">No evaluations submitted yet.</p> : (
@@ -85,7 +97,8 @@ function DetailBody({ id, role }: { id: string | undefined; role: 'rpdu' | 'admi
               <li key={revision.id} className="rounded-sm border border-slate-100 p-3">
                 <p className="text-sm font-semibold text-slate-900">Revision {revision.revisionNumber} <span className="text-xs font-normal text-slate-500">· {formatDate(revision.submittedAt)}</span></p>
                 {revision.notes && <p className="mt-1 whitespace-pre-wrap break-words text-xs text-slate-600">{revision.notes}</p>}
-                <div className="mt-2 flex flex-wrap gap-2"><DocumentLink href={revision.revisedFileUrl} label="Revised manuscript" muted /><DocumentLink href={revision.revisionHistoryFileUrl} label="Revision history" muted /></div>
+                <div className="mt-2 flex flex-wrap gap-2"><DocumentLink href={revision.revisedFileUrl} label="Revised manuscript" muted /><DocumentLink href={revision.actionSheetFileUrl} label="Action sheet" muted /><DocumentLink href={revision.revisionHistoryFileUrl} label="Revision history" muted /></div>
+                {revision.check && <p className="mt-2 text-[11px] font-semibold text-emerald-700">Cross-checked {formatDate(revision.check.checkedAt)}</p>}
               </li>
             ))}
           </ul>

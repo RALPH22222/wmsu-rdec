@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Calendar, CalendarCheck, ClipboardCheck, FileCheck2, LogOut, Mail, User, Users, X } from 'lucide-react';
+import { Calendar, CalendarCheck, ClipboardCheck, FileCheck2, Gavel, LogOut, Mail, User, Users, X } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { formatUserFullName } from '../../utils/userUtils';
@@ -11,6 +11,7 @@ const navItems = [
   { name: 'Call for Proposals', path: '/rpdu', icon: Calendar },
   { name: 'Preliminary Screening', path: '/rpdu/screening', icon: ClipboardCheck },
   { name: 'Screening Results', path: '/rpdu/passed-proposals', icon: FileCheck2 },
+  { name: 'AIHR & En Banc', path: '/rpdu/aihr', icon: Gavel },
   { name: 'Official Letters & Contracts', path: '/rpdu/letters', icon: Mail },
   { name: 'Inception Scheduling', path: '/rpdu/scheduling', icon: CalendarCheck },
   { name: 'Technical Evaluations', path: '/rpdu/evaluations', icon: Users },

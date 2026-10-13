@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useCallForProposals } from '../context/CallForProposalsContext';
-import { assignEvaluatorApi, getPipelineEvaluators, getPipelineProposal, getPipelineProposals, unassignEvaluatorApi } from '../lib/pipelineApi';
+import { assignEvaluatorApi, checkRevisionApi, forwardToReoApi, getPipelineEvaluators, getPipelineProposal, getPipelineProposals, unassignEvaluatorApi } from '../lib/pipelineApi';
 import type { PipelineEvaluator, RpduProposal } from '../types';
 import { useAsyncResource } from './useAsyncResource';
 
@@ -56,6 +56,13 @@ export function useRpduProposal(id: string | undefined) {
   }, [id]);
   const { setData } = resource;
 
+  // After a refused action (e.g. a 409 because another user moved the proposal), re-read it quietly so the
+  // gateway items and revision checks show the server's current state without the page-level skeleton.
+  const reread = useCallback(() => {
+    if (!id) return;
+    getPipelineProposal(id, token).then(setData).catch(() => { /* keep what is shown */ });
+  }, [id, token, setData]);
+
   const unassign = useCallback(async (reviewId: string) => {
     try {
       const proposal = await unassignEvaluatorApi(reviewId, token);
@@ -67,5 +74,32 @@ export function useRpduProposal(id: string | undefined) {
     }
   }, [token, setData, showToast]);
 
-  return { proposal: resource.data, loading: resource.loading, error: resource.error, refresh: resource.refresh, replace: resource.setData, unassign };
+  const checkRevision = useCallback(async (revisionId: string, checked: boolean, note: string) => {
+    if (!id) return;
+    try {
+      const proposal = await checkRevisionApi(id, revisionId, checked, note, token);
+      setData(proposal);
+      const revision = proposal.revisions.find((item) => item.id === revisionId);
+      showToast(checked ? `Revision ${revision?.revisionNumber ?? ''} marked as cross-checked` : `Cross-check removed from revision ${revision?.revisionNumber ?? ''}`);
+    } catch (failure) {
+      showToast(failure instanceof Error ? failure.message : 'Unable to update the cross-check');
+      reread();
+      throw failure;
+    }
+  }, [id, token, setData, showToast, reread]);
+
+  const forward = useCallback(async () => {
+    if (!id) return;
+    try {
+      const proposal = await forwardToReoApi(id, token);
+      setData(proposal);
+      showToast(`${proposal.code} forwarded to the Research Ethics Office`);
+    } catch (failure) {
+      showToast(failure instanceof Error ? failure.message : 'Unable to forward this proposal');
+      reread();
+      throw failure;
+    }
+  }, [id, token, setData, showToast, reread]);
+
+  return { proposal: resource.data, loading: resource.loading, error: resource.error, refresh: resource.refresh, replace: resource.setData, unassign, checkRevision, forward };
 }

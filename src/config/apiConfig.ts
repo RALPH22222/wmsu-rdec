@@ -60,10 +60,20 @@ export const API_ENDPOINTS = {
     PROPOSAL_REVISIONS: (id: string) => `${API_BASE_URL}/pipeline/proposals/${encodeURIComponent(id)}/revisions`,
     REVIEW_BY_ID: (id: string) => `${API_BASE_URL}/pipeline/reviews/${encodeURIComponent(id)}`,
     EVALUATORS: `${API_BASE_URL}/pipeline/evaluators`,
+    VIEWER: `${API_BASE_URL}/pipeline/viewer`,
     MY_REVIEWS: `${API_BASE_URL}/pipeline/my-reviews`,
     MY_REVIEW: (id: string) => `${API_BASE_URL}/pipeline/my-reviews/${encodeURIComponent(id)}`,
     MY_REVIEW_SUBMISSIONS: (id: string) => `${API_BASE_URL}/pipeline/my-reviews/${encodeURIComponent(id)}/submissions`,
     MY_PROPOSALS: `${API_BASE_URL}/pipeline/my-proposals`,
+    REVISION_CHECK: (proposalId: string, revisionId: string) => `${API_BASE_URL}/pipeline/proposals/${encodeURIComponent(proposalId)}/revisions/${encodeURIComponent(revisionId)}/check`,
+    FORWARD: (id: string) => `${API_BASE_URL}/pipeline/proposals/${encodeURIComponent(id)}/forward`,
+  },
+
+  // AIHR verdicts and en banc deliberation (RPDU / Admin)
+  AIHR: {
+    CONCEPTS: `${API_BASE_URL}/aihr/concepts`,
+    VERDICT: (id: string) => `${API_BASE_URL}/aihr/concepts/${encodeURIComponent(id)}/verdict`,
+    DELIBERATION: (id: string) => `${API_BASE_URL}/aihr/concepts/${encodeURIComponent(id)}/deliberation`,
   },
 
   // Admin Role Endpoints (Ready for expansion)

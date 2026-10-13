@@ -44,7 +44,7 @@ function PortalBody({ reviewId }: { reviewId: string | undefined }) {
               <li key={revision.id} className="rounded-sm border border-slate-100 p-3">
                 <p className="text-sm font-semibold text-slate-900">Revision {revision.revisionNumber} <span className="text-xs font-normal text-slate-500">· {formatDate(revision.submittedAt)}</span></p>
                 {revision.notes && <p className="mt-1 whitespace-pre-wrap break-words text-xs text-slate-600">{revision.notes}</p>}
-                <div className="mt-2 flex flex-wrap gap-2"><DocumentLink href={revision.revisedFileUrl} label="Revised manuscript" muted /><DocumentLink href={revision.revisionHistoryFileUrl} label="Revision history" muted /></div>
+                <div className="mt-2 flex flex-wrap gap-2"><DocumentLink href={revision.revisedFileUrl} label="Revised manuscript" muted /><DocumentLink href={revision.actionSheetFileUrl} label="Action sheet" muted /><DocumentLink href={revision.revisionHistoryFileUrl} label="Revision history" muted /></div>
               </li>
             ))}
           </ul>

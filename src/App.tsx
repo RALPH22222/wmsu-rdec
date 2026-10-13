@@ -17,14 +17,13 @@ import { RpduDashboard } from './pages/rpdu/RpduDashboard';
 import { CallFormPage } from './pages/CallFormPage';
 import { PassedProposalsPage } from './pages/rpdu/PassedProposalsPage';
 import { EvaluatorAssignmentPage } from './pages/rpdu/EvaluatorAssignmentPage';
+import { AihrDeliberationPage } from './pages/rpdu/AihrDeliberationPage';
 import ProponentDashboard from './pages/proponents/ProponentDashboard';
 import { ConceptProposalDetailsPage } from './pages/proponents/ConceptProposalDetailsPage';
 import BudgetAllocationPage from './pages/proponents/BudgetAllocationPage';
 import ProfilePage from './pages/proponents/ProfilePage';
 import ProponentDocumentsPage from './pages/proponents/ProponentDocumentsPage';
 import ContractPreviewPage from './pages/proponents/ContractPreviewPage';
-import ScreeningLettersPage from './pages/proponents/ScreeningLettersPage';
-import ProponentContractsPage from './pages/proponents/ProponentContractsPage';
 import { RevisionHistoryPage } from './pages/proponents/RevisionHistoryPage';
 import { DetailedProposalSubmissionPage } from './pages/proponents/DetailedProposalSubmissionPage';
 import { PipelineProposalDetailPage } from './pages/rpdu/PipelineProposalDetailPage';
@@ -130,6 +129,7 @@ export function App() {
                 <Route path="/admin/calls/:callId/edit" element={<CallFormPage role="admin" />} />
                 <Route path="/admin/screening" element={<AdminPreliminaryScreeningPage />} />
                 <Route path="/admin/screening/:proposalId" element={<ScreeningReviewPage role="admin" />} />
+                <Route path="/admin/aihr" element={<AihrDeliberationPage role="admin" />} />
                 <Route path="/admin/letters" element={<AdminLetterDeskPage />} />
                 <Route path="/admin/clearance" element={<Navigate to="/admin/letters?template=WMSU-RPDU-CERT-001.00" replace />} />
                 <Route path="/admin/contracts" element={<Navigate to="/admin/letters?template=WMSU-RPDU-PSC-001.00&tab=contracts" replace />} />
@@ -147,6 +147,7 @@ export function App() {
                 <Route path="/rpdu/screening" element={<PreliminaryScreeningPage role="rpdu" />} />
                 <Route path="/rpdu/screening/:proposalId" element={<ScreeningReviewPage role="rpdu" />} />
                 <Route path="/rpdu/passed-proposals" element={<PassedProposalsPage />} />
+                <Route path="/rpdu/aihr" element={<AihrDeliberationPage role="rpdu" />} />
                 <Route path="/rpdu/letters" element={<LetterDeskPage />} />
                 <Route path="/rpdu/clearance" element={<Navigate to="/rpdu/letters?template=WMSU-RPDU-CERT-001.00" replace />} />
                 <Route path="/rpdu/contracts" element={<Navigate to="/rpdu/letters?template=WMSU-RPDU-PSC-001.00&tab=contracts" replace />} />

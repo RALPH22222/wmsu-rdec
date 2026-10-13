@@ -22,6 +22,7 @@ function FileField({ id, label, hint, file, onChange }: { id: string; label: str
 export function RevisionUploadForm({ proposal, onUpload }: RevisionUploadFormProps) {
   const baseId = useId();
   const [revisedFile, setRevisedFile] = useState<File | null>(null);
+  const [actionSheetFile, setActionSheetFile] = useState<File | null>(null);
   const [historyFile, setHistoryFile] = useState<File | null>(null);
   const [notes, setNotes] = useState('');
   const [showErrors, setShowErrors] = useState(false);
@@ -31,21 +32,23 @@ export function RevisionUploadForm({ proposal, onUpload }: RevisionUploadFormPro
 
   const errors: string[] = [];
   if (!revisedFile) errors.push('Attach the revised manuscript');
+  if (!actionSheetFile) errors.push('Attach the accomplished action sheet');
   if (!historyFile) errors.push('Attach the revision history document');
-  if ([revisedFile, historyFile].some((f) => f && f.size > MAX_UPLOAD_BYTES)) errors.push('Each file must be 15 MB or smaller');
+  if ([revisedFile, actionSheetFile, historyFile].some((f) => f && f.size > MAX_UPLOAD_BYTES)) errors.push('Each file must be 15 MB or smaller');
   if (notes.trim().length > 5000) errors.push('Notes must be at most 5000 characters');
 
   const attempt = () => { setShowErrors(true); if (errors.length === 0) setConfirming(true); };
   const send = async () => {
-    if (!revisedFile || !historyFile) return;
+    if (!revisedFile || !actionSheetFile || !historyFile) return;
     setBusy(true);
-    try { await onUpload(proposal.id, { revisedFile, revisionHistoryFile: historyFile, notes }); setConfirming(false); } catch { /* toast shown by hook */ } finally { setBusy(false); }
+    try { await onUpload(proposal.id, { revisedFile, actionSheetFile, revisionHistoryFile: historyFile, notes }); setConfirming(false); } catch { /* toast shown by hook */ } finally { setBusy(false); }
   };
 
   return (
     <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); attempt(); }} noValidate>
       <FileField id={`${baseId}-revised`} label={`Revised manuscript (Revision ${nextNumber})`} hint="PDF or Word, up to 15 MB" file={revisedFile} onChange={setRevisedFile} />
-      <FileField id={`${baseId}-history`} label="Revision history (accomplished action sheet)" hint="Your point-by-point response to the panel's comments" file={historyFile} onChange={setHistoryFile} />
+      <FileField id={`${baseId}-action-sheet`} label="Accomplished Proposal Action Sheet (WMSU-RPDU-FR-007.00)" hint="Your point-by-point response in the Action Taken column" file={actionSheetFile} onChange={setActionSheetFile} />
+      <FileField id={`${baseId}-history`} label="Revision History (WMSU-RPDU-FR-009.01)" hint="The revision history form issued with the panel's comments" file={historyFile} onChange={setHistoryFile} />
       <div>
         <label htmlFor={`${baseId}-notes`} className="block text-xs font-bold text-slate-700">Notes for the panel <span className="font-normal text-slate-500">optional</span></label>
         <textarea id={`${baseId}-notes`} value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} maxLength={5000} className="mt-1 w-full rounded-sm border border-slate-200 p-3 text-sm focus:border-[#C8102E] focus:outline-none" />
