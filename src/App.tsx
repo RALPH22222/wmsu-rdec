@@ -18,6 +18,7 @@ import { CallFormPage } from './pages/CallFormPage';
 import { PassedProposalsPage } from './pages/rpdu/PassedProposalsPage';
 import { EvaluatorAssignmentPage } from './pages/rpdu/EvaluatorAssignmentPage';
 import ProponentDashboard from './pages/proponents/ProponentDashboard';
+import { ConceptProposalDetailsPage } from './pages/proponents/ConceptProposalDetailsPage';
 import BudgetAllocationPage from './pages/proponents/BudgetAllocationPage';
 import ProfilePage from './pages/proponents/ProfilePage';
 import ProponentDocumentsPage from './pages/proponents/ProponentDocumentsPage';
@@ -100,6 +101,7 @@ export function App() {
               <Route element={<Layout />}>
                 <Route path="/proponent" element={<ProponentDashboard />} />
                 <Route path="/proponent/submit" element={<ProponentDashboard />} />
+                <Route path="/proponent/proposals/:proposalId" element={<ConceptProposalDetailsPage />} />
                 <Route path="/proponent/detailed-proposals" element={<DetailedProposalSubmissionPage />} />
                 <Route path="/proponent/budget" element={<BudgetAllocationPage />} />
                 <Route path="/proponent/documents" element={<ProponentDocumentsPage />} />

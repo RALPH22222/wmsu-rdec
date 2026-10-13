@@ -141,6 +141,7 @@ export interface ConceptProposal {
   failureReasons?: string[];
   sectionComments?: ScreeningSectionComments;
   screenedBy?: string;
+  screenedById?: string;
   screenedAt?: string;
   screenedTimestamp?: string | null;
 }

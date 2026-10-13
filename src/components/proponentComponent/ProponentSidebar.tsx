@@ -34,6 +34,7 @@ export const ProponentSidebar: React.FC<ProponentSidebarProps> = ({
   const isProposalActive =
     location.pathname === '/proponent' ||
     location.pathname === '/proponent/submit' ||
+    location.pathname.startsWith('/proponent/proposals/') ||
     location.pathname === '/dashboard';
   const isBudgetActive = location.pathname === '/proponent/budget';
   const isDetailedProposalActive = location.pathname === '/proponent/detailed-proposals';

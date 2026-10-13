@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { useCallForProposals } from '../../context/CallForProposalsContext';
 import type { ConceptProposal, ScreeningStatus } from '../../types';
+import { ScreeningFeedback } from '../../components/rpduComponent/ScreeningFeedback';
 
 interface PreliminaryScreeningManagerProps {
   role?: 'rpdu' | 'admin';
@@ -76,9 +77,9 @@ export const PreliminaryScreeningManager: React.FC<PreliminaryScreeningManagerPr
     });
   }, [conceptProposals, statusFilter, thematicFilter, collegeFilter, searchQuery]);
 
-  const handleOpenReview = (proposal: ConceptProposal) => {
+  const handleOpenReview = (proposal: ConceptProposal, panel?: 'decision') => {
     navigate(`/${role}/screening/${proposal.id}`, {
-      state: { screeningList: { searchQuery, statusFilter, thematicFilter, collegeFilter, viewMode } },
+      state: { screeningPanel: panel, screeningList: { searchQuery, statusFilter, thematicFilter, collegeFilter, viewMode } },
     });
   };
 
@@ -331,7 +332,7 @@ export const PreliminaryScreeningManager: React.FC<PreliminaryScreeningManagerPr
             return (
               <div
                 key={proposal.id}
-                className={`bg-white rounded-md border p-5 shadow-2xs transition-all hover:shadow-md relative ${isPassed
+                className={`bg-white rounded-md border p-3 sm:p-5 shadow-2xs transition-all hover:shadow-md relative ${isPassed
                   ? 'border-emerald-200'
                   : isFailed
                     ? 'border-red-200'
@@ -397,84 +398,11 @@ export const PreliminaryScreeningManager: React.FC<PreliminaryScreeningManagerPr
                     </div>
 
 
-                    {/* Decision Records / Remarks Preview */}
-                    {isPassed && proposal.screeningRemarks && (
-                      <div className="p-2.5 rounded bg-emerald-50/70 border border-emerald-200 text-xs text-emerald-900 mt-2">
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="font-bold text-[11px] text-emerald-800 uppercase tracking-wider flex items-center gap-1">
-                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                            Clearance Remarks:
-                          </span>
-                          {proposal.screenedBy && (
-                            <span className="text-[10px] text-emerald-700">
-                              Screened by: {proposal.screenedBy} ({proposal.screenedAt})
-                            </span>
-                          )}
-                        </div>
-                        <p className="line-clamp-2">{proposal.screeningRemarks}</p>
-                      </div>
-                    )}
-
-                    {isFailed && (
-                      <div className="p-2.5 rounded bg-red-50/70 border border-red-200 text-xs text-red-900 mt-2 space-y-1">
-                        <div className="flex items-center justify-between">
-                          <span className="font-bold text-[11px] text-red-800 uppercase tracking-wider flex items-center gap-1">
-                            <XCircle className="w-3.5 h-3.5 text-red-600" />
-                            Disqualification Grounds:
-                          </span>
-                          {proposal.screenedBy && (
-                            <span className="text-[10px] text-red-700">
-                              {proposal.screenedBy} ({proposal.screenedAt})
-                            </span>
-                          )}
-                        </div>
-                        {proposal.failureReasons && (
-                          <div className="flex flex-wrap gap-1">
-                            {proposal.failureReasons.map((fr, idx) => (
-                              <span
-                                key={idx}
-                                className="px-2 py-0.5 rounded bg-red-100 text-red-800 text-[10px] font-semibold"
-                              >
-                                &bull; {fr}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-                        {proposal.sectionComments && (
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-1 pt-1 border-t border-red-100 text-[10px]">
-                            {proposal.sectionComments.title && (
-                              <div className="bg-red-100/50 p-1.5 rounded text-red-900">
-                                <strong>Title:</strong> {proposal.sectionComments.title}
-                              </div>
-                            )}
-                            {proposal.sectionComments.rationaleSignificance && (
-                              <div className="bg-red-100/50 p-1.5 rounded text-red-900">
-                                <strong>Rationale:</strong> {proposal.sectionComments.rationaleSignificance}
-                              </div>
-                            )}
-                            {proposal.sectionComments.objectives && (
-                              <div className="bg-red-100/50 p-1.5 rounded text-red-900">
-                                <strong>Objectives:</strong> {proposal.sectionComments.objectives}
-                              </div>
-                            )}
-                            {proposal.sectionComments.estimatedBudget && (
-                              <div className="bg-red-100/50 p-1.5 rounded text-red-900">
-                                <strong>Budget:</strong> {proposal.sectionComments.estimatedBudget}
-                              </div>
-                            )}
-                          </div>
-                        )}
-                        {proposal.screeningRemarks && (
-                          <p className="line-clamp-2 text-slate-700 pt-1 border-t border-red-100">
-                            <strong>Overall Feedback:</strong> {proposal.screeningRemarks}
-                          </p>
-                        )}
-                      </div>
-                    )}
+                    {!isPending && <ScreeningFeedback proposal={proposal} onSaved={refreshConceptProposals} />}
                   </div>
 
                   {/* Right Column: Review actions */}
-                  <div className="flex flex-col sm:flex-row md:flex-col items-stretch md:items-end justify-between gap-2 shrink-0 self-stretch md:self-center border-t md:border-t-0 pt-3 md:pt-0">
+                  <div className="flex flex-col sm:flex-row md:flex-col items-stretch md:items-end justify-between gap-2 shrink-0 self-stretch md:self-start border-t md:border-t-0 pt-3 md:pt-0">
 
                     {/* View Files Button */}
                     <button
@@ -490,7 +418,7 @@ export const PreliminaryScreeningManager: React.FC<PreliminaryScreeningManagerPr
                     {!isPending && (
                       <button
                         type="button"
-                        onClick={() => handleOpenReview(proposal)}
+                        onClick={() => handleOpenReview(proposal, 'decision')}
                         className="text-[11px] font-semibold text-slate-500 hover:text-[#C8102E] transition-colors text-right cursor-pointer"
                       >
                         Change Decision &rarr;
@@ -593,7 +521,7 @@ export const PreliminaryScreeningManager: React.FC<PreliminaryScreeningManagerPr
                           <Eye className="w-3.5 h-3.5" />
                           <span>Review Files</span>
                         </button>
-
+                        {proposal.screeningStatus !== 'pending' && <button type="button" onClick={() => handleOpenReview(proposal, 'decision')} className="px-2.5 py-1 text-xs font-semibold text-slate-500 hover:text-[#C8102E] cursor-pointer">Change Decision &rarr;</button>}
                       </div>
                     </td>
                   </tr>

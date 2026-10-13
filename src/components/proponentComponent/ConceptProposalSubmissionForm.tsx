@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useId } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import {
   FileText,
   Upload,
   CheckCircle2,
   AlertTriangle,
   Clock,
-  Lock,
   Send,
   Trash2,
   Download,
@@ -22,7 +22,7 @@ import {
 } from 'lucide-react';
 import { useCallForProposals } from '../../context/CallForProposalsContext';
 import { useAuth } from '../../context/AuthContext';
-import { checkConceptProposalTitleApi, ConceptProposalTitleExistsError, ConceptProposalSubmissionLockedError, CONCEPT_SUBMISSION_LOCK_MESSAGE } from '../../lib/conceptProposalApi';
+import { checkConceptProposalTitleApi, ConceptProposalTitleExistsError } from '../../lib/conceptProposalApi';
 import type { ConceptProposal } from '../../types';
 
 interface UploadedFile {
@@ -93,24 +93,23 @@ const formatWindowDate = (date: string) => new Date(`${date}T00:00:00+08:00`).to
 });
 
 export const ConceptProposalSubmissionForm: React.FC = () => {
-  const { activeCall, loadingCalls, conceptProposals, submitConceptProposal, showToast } = useCallForProposals();
-  const { user, profile, session, refreshProfile } = useAuth();
+  const navigate = useNavigate();
+  const restoredList = useLocation().state?.proposalList;
+  const { activeCall, loadingCalls, conceptProposals, loadingConceptProposals, screeningError, refreshConceptProposals, submitConceptProposal, showToast } = useCallForProposals();
+  const { user, profile, session } = useAuth();
   const [confirmedCallId, setConfirmedCallId] = useState<string | null>(null);
-  const [deniedProfile, setDeniedProfile] = useState<typeof profile>(null);
-  const submissionLocked = Boolean(user?.id && (profile?.portal_access?.submissionLocked
-    || (deniedProfile && deniedProfile === profile)
-    || conceptProposals.some((proposal) => proposal.proponentId === user.id && proposal.screeningStatus === 'failed')));
-  const canSubmit = Boolean(!submissionLocked && !loadingCalls && activeCall && profile?.is_eligible_to_submit === true);
+  const canSubmit = Boolean(!loadingCalls && activeCall && profile?.is_eligible_to_submit === true);
+  const mySubmissions = conceptProposals.filter((proposal) => proposal.proponentId === user?.id);
 
   const endorsementInputId = useId();
   const conceptDocInputId = useId();
   const titleErrorId = useId();
 
   // Tab View: 'submit' | 'my-submissions'
-  const [activeTab, setActiveTab] = useState<'submit' | 'my-submissions'>('submit');
+  const [activeTab, setActiveTab] = useState<'submit' | 'my-submissions'>('my-submissions');
   useEffect(() => {
-    setActiveTab(canSubmit ? 'submit' : 'my-submissions');
-  }, [canSubmit]);
+    if (!loadingCalls && !canSubmit) setActiveTab('my-submissions');
+  }, [loadingCalls, canSubmit]);
 
   // 1. Research Agenda State
   const [selectedAgenda, setSelectedAgenda] = useState<string>(RESEARCH_AGENDAS[0].name);
@@ -155,22 +154,21 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
   const [submittedProposal, setSubmittedProposal] = useState<ConceptProposal | null>(null);
   const [confirmModalOpen, setConfirmModalOpen] = useState(false);
   const [successModalOpen, setSuccessModalOpen] = useState(false);
-  const [selectedSubmissionDetails, setSelectedSubmissionDetails] = useState<ConceptProposal | null>(null);
 
   // Filter states for submitted proposals
-  const [submissionStatusFilter, setSubmissionStatusFilter] = useState<'all' | 'pending' | 'passed' | 'failed'>('all');
-  const [submissionSearchQuery, setSubmissionSearchQuery] = useState('');
-  const [submissionAgendaFilter, setSubmissionAgendaFilter] = useState<string | 'all'>('all');
+  const [submissionStatusFilter, setSubmissionStatusFilter] = useState<'all' | 'pending' | 'passed' | 'failed'>(['all', 'pending', 'passed', 'failed'].includes(restoredList?.status) ? restoredList.status : 'all');
+  const [submissionSearchQuery, setSubmissionSearchQuery] = useState(typeof restoredList?.search === 'string' ? restoredList.search : '');
+  const [submissionAgendaFilter, setSubmissionAgendaFilter] = useState<string | 'all'>(typeof restoredList?.agenda === 'string' ? restoredList.agenda : 'all');
 
   useEffect(() => {
-    if (selectedSubmissionDetails || confirmModalOpen || successModalOpen) {
+    if (confirmModalOpen || successModalOpen) {
       const originalOverflow = document.body.style.overflow;
       document.body.style.overflow = 'hidden';
       return () => {
         document.body.style.overflow = originalOverflow;
       };
     }
-  }, [selectedSubmissionDetails, confirmModalOpen, successModalOpen]);
+  }, [confirmModalOpen, successModalOpen]);
 
   // Errors
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -282,7 +280,7 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
     if (checkingTitle || submitting) return;
 
     if (!canSubmit || !activeCall) {
-      showToast(submissionLocked ? CONCEPT_SUBMISSION_LOCK_MESSAGE : 'There is no open Call for Proposals accepting submissions.');
+      showToast('There is no open Call for Proposals accepting submissions.');
       return;
     }
 
@@ -302,10 +300,6 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
       setConfirmedCallId(activeCall.id);
       setConfirmModalOpen(true);
     } catch (error) {
-      if (error instanceof ConceptProposalSubmissionLockedError) {
-        setDeniedProfile(profile);
-        void refreshProfile();
-      }
       showToast(error instanceof Error ? error.message : 'Unable to verify your proposal title. Please try again.');
     } finally {
       setCheckingTitle(false);
@@ -316,7 +310,7 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
   const handleConfirmSubmit = async () => {
     if (submitting) return;
     if (!canSubmit || !activeCall || confirmedCallId !== activeCall.id) {
-      showToast(submissionLocked ? CONCEPT_SUBMISSION_LOCK_MESSAGE : 'There is no open Call for Proposals accepting submissions.');
+      showToast('There is no open Call for Proposals accepting submissions.');
       setConfirmModalOpen(false);
       return;
     }
@@ -343,10 +337,6 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
       setEndorsementPdf(null);
     } catch (error) {
       setConfirmModalOpen(false);
-      if (error instanceof ConceptProposalSubmissionLockedError) {
-        setDeniedProfile(profile);
-        void refreshProfile();
-      }
       if (error instanceof ConceptProposalTitleExistsError) {
         setErrors((previous) => ({ ...previous, title: error.message }));
       }
@@ -355,11 +345,6 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
       setSubmitting(false);
     }
   };
-
-  // Proponent's submissions list
-  const mySubmissions = conceptProposals.filter((p) =>
-    p.proponentId === user?.id || p.leadInvestigatorEmail.toLowerCase() === user?.email?.toLowerCase()
-  );
 
   const filteredSubmissions = mySubmissions.filter((item) => {
     const matchesStatus =
@@ -423,16 +408,15 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
         </>}
       </section>
 
-      {submissionLocked && <div role="alert" className="flex items-start gap-3 rounded-sm border border-red-200 bg-red-50 p-4 text-sm text-red-800"><Lock className="mt-0.5 h-4 w-4 shrink-0" /><div><p className="font-semibold">New submissions locked</p><p className="mt-1">{profile?.portal_access?.submissionLockReason || CONCEPT_SUBMISSION_LOCK_MESSAGE}</p></div></div>}
 
       {/* VIEW TABS: Submit New vs Track My Submissions */}
       <div className="flex items-center justify-between border-b border-slate-200">
-        <div className="flex items-center gap-2">
+        <div className="grid w-full grid-cols-2 gap-1 sm:flex sm:w-auto sm:items-center sm:gap-2">
           <button
             type="button"
             onClick={() => setActiveTab('submit')}
             disabled={!canSubmit}
-            className={`flex items-center gap-2 px-4 py-3 text-xs sm:text-sm font-bold border-b-2 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
+            className={`flex min-w-0 items-center gap-2 px-2 py-3 text-xs sm:px-4 sm:text-sm font-bold border-b-2 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
               activeTab === 'submit'
                 ? 'border-[#C8102E] text-[#C8102E]'
                 : 'border-transparent text-slate-500 hover:text-slate-800'
@@ -445,7 +429,7 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
           <button
             type="button"
             onClick={() => setActiveTab('my-submissions')}
-            className={`flex items-center gap-2 px-4 py-3 text-xs sm:text-sm font-bold border-b-2 transition-all cursor-pointer ${
+            className={`flex min-w-0 items-center gap-2 px-2 py-3 text-xs sm:px-4 sm:text-sm font-bold border-b-2 transition-all cursor-pointer ${
               activeTab === 'my-submissions'
                 ? 'border-[#C8102E] text-[#C8102E]'
                 : 'border-transparent text-slate-500 hover:text-slate-800'
@@ -846,10 +830,11 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
                 My Submitted Concept Proposals
               </h2>
               <p className="text-xs text-slate-500 mt-1">
-                Track real-time preliminary screening decisions, compliance reviews, and download endorsement documents.
+                View your preliminary screening status, reviewer comments, and submitted documents.
               </p>
             </div>
 
+            <div className="flex flex-wrap gap-2">
             <button
               type="button"
               onClick={() => setActiveTab('submit')}
@@ -859,6 +844,7 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
               <Plus className="w-4 h-4" />
               <span>Submit Concept Proposal</span>
             </button>
+            </div>
           </div>
 
           {/* Filters & Search Bar (Matching CallForProposalsManager) */}
@@ -879,7 +865,7 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
                 },
                 {
                   id: 'failed',
-                  label: 'Revisions Required',
+                  label: 'Failed Screening',
                   count: mySubmissions.filter((c) => c.screeningStatus === 'failed').length,
                 },
               ].map((tab) => (
@@ -937,7 +923,7 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
 
           {/* Cards List Grid (Full-width Horizontal Cards Matching CallForProposalsManager) */}
           <div className="grid grid-cols-1 gap-4">
-            {filteredSubmissions.length === 0 ? (
+            {loadingConceptProposals ? <div role="status" className="space-y-3 rounded-sm border border-slate-200 bg-white p-5"><span className="sr-only">Loading your submitted proposals</span><div aria-hidden="true" className="space-y-4 motion-safe:animate-pulse"><div className="h-5 w-2/3 rounded bg-slate-100" /><div className="h-4 w-1/2 rounded bg-slate-100" /><div className="h-20 rounded bg-slate-100" /></div></div> : screeningError ? <div role="alert" className="rounded-sm border border-red-200 bg-red-50 p-5 text-sm text-red-800">{screeningError}<button type="button" onClick={() => void refreshConceptProposals()} className="ml-3 font-semibold underline">Try again</button></div> : filteredSubmissions.length === 0 ? (
               <div className="bg-white rounded-sm border border-slate-200 p-12 text-center space-y-3 shadow-xs">
                 <AlertCircle className="w-10 h-10 text-slate-300 mx-auto" />
                 <h4 className="text-base font-bold text-slate-800">No Concept Proposals Found</h4>
@@ -964,7 +950,7 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
                 return (
                   <div
                     key={item.id}
-                    className={`bg-white rounded-sm border transition-all p-5 sm:p-6 shadow-xs hover:shadow-md flex flex-col lg:flex-row lg:items-center justify-between gap-6 ${
+                    className={`bg-white rounded-sm border transition-all p-4 sm:p-6 shadow-xs hover:shadow-md flex flex-col lg:flex-row lg:items-center justify-between gap-6 ${
                       isPassed
                         ? 'border-emerald-300/80 bg-gradient-to-r from-emerald-50/20 via-white to-white'
                         : isFailed
@@ -974,7 +960,7 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
                   >
                     {/* Proposal Details */}
                     <div className="space-y-3 flex-grow min-w-0">
-                      <div className="flex flex-wrap items-center gap-2">
+                      <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2">
                         {/* Status Badge */}
                         {isPending && (
                           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-200">
@@ -991,13 +977,14 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
                         {isFailed && (
                           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-800 border border-rose-200">
                             <AlertTriangle className="w-3.5 h-3.5 text-rose-600" />
-                            Revisions Required
+                            Failed Preliminary Screening
                           </span>
                         )}
+                        <span title={item.callTitle} className="min-w-0 flex-1 basis-40 line-clamp-2 text-xs font-medium leading-5 text-slate-500 [overflow-wrap:anywhere]">{item.callTitle}</span>
                       </div>
 
                       <div>
-                        <h3 className="text-lg font-bold text-slate-900 group-hover:text-[#C8102E] transition-colors leading-snug">
+                        <h3 className="text-lg font-bold text-slate-900 group-hover:text-[#C8102E] transition-colors leading-snug [overflow-wrap:anywhere]">
                           {item.title}
                         </h3>
                         <div className="flex flex-wrap items-center gap-2 mt-1.5">
@@ -1025,51 +1012,20 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
                         </div>
                       </div>
 
-                      {/* Screening remarks preview if available */}
-                      {(item.screeningRemarks || (item.failureReasons && item.failureReasons.length > 0)) && (
-                        <div
-                          className={`p-3 rounded-sm text-xs leading-relaxed border ${
-                            isPassed
-                              ? 'bg-emerald-50/70 border-emerald-200 text-emerald-950'
-                              : 'bg-rose-50/70 border-rose-200 text-rose-950'
-                          }`}
-                        >
-                          <div className="font-bold flex items-center gap-1.5 mb-0.5">
-                            <span>RPDU Screening Verdict {item.screenedBy ? `(${item.screenedBy})` : ''}:</span>
-                          </div>
-                          {item.screeningRemarks && <p className="text-[11px] line-clamp-2">{item.screeningRemarks}</p>}
-                          {item.failureReasons && item.failureReasons.length > 0 && (
-                            <p className="text-[11px] font-semibold mt-1">
-                              Flagged items: {item.failureReasons.join(', ')}
-                            </p>
-                          )}
-                        </div>
-                      )}
                     </div>
 
                     {/* Action Buttons Panel on right (Matching CallForProposalsManager) */}
                     <div className="flex items-center gap-2 shrink-0 border-t lg:border-t-0 pt-3 lg:pt-0 border-slate-100">
                       <button
                         type="button"
-                        onClick={() => setSelectedSubmissionDetails(item)}
+                        onClick={() => navigate(`/proponent/proposals/${encodeURIComponent(item.id)}`, { state: { proposalList: { status: submissionStatusFilter, search: submissionSearchQuery, agenda: submissionAgendaFilter } } })}
                         className="px-4 py-2.5 rounded-sm text-xs font-bold text-slate-700 bg-slate-100 hover:bg-[#C8102E] hover:text-white transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs"
-                        title="View Proposal Details & Documents"
+                        title={isPending ? 'View Proposal Details & Documents' : 'View Screening Feedback & Documents'}
                       >
                         <Eye className="w-3.5 h-3.5" />
-                        <span>View Details</span>
+                        <span>{isPending ? 'View Details' : 'View Feedback'}</span>
                       </button>
 
-                      {isFailed && (
-                        <button
-                          type="button"
-                          onClick={() => setSelectedSubmissionDetails(item)}
-                          className="px-3.5 py-2.5 rounded-sm text-xs font-bold text-red-700 bg-red-50 hover:bg-red-100 border border-red-200 transition-colors flex items-center gap-1.5 cursor-pointer"
-                          title="View Revisions Required"
-                        >
-                          <AlertTriangle className="w-3.5 h-3.5" />
-                          <span>Revisions</span>
-                        </button>
-                      )}
                     </div>
                   </div>
                 );
@@ -1350,388 +1306,6 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
         </div>
       )}
 
-      {/* PROPOSAL DETAILS MODAL (Matching Submitting Proposal Structure & Without ID) */}
-      {selectedSubmissionDetails && (() => {
-        const matchedAgenda = RESEARCH_AGENDAS.find(
-          (a) => a.name === selectedSubmissionDetails.thematicArea
-        );
-
-        const conceptDoc =
-          selectedSubmissionDetails.attachments.find(
-            (att) =>
-              att.category === 'concept_proposal' ||
-              att.name.toLowerCase().includes('concept') ||
-              (!att.category?.includes('endorsement') && !att.name.toLowerCase().includes('endorsement'))
-          ) || selectedSubmissionDetails.attachments[0];
-
-        const endorsementDoc =
-          selectedSubmissionDetails.attachments.find(
-            (att) =>
-              att.category === 'endorsement_pdf' ||
-              att.name.toLowerCase().includes('endorsement')
-          ) ||
-          (selectedSubmissionDetails.attachments.length > 1
-            ? selectedSubmissionDetails.attachments[1]
-            : null);
-
-        const otherDocs = selectedSubmissionDetails.attachments.filter(
-          (att) => att !== conceptDoc && att !== endorsementDoc
-        );
-
-        return (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-3 sm:p-4 overflow-hidden">
-            <div className="bg-white rounded-sm shadow-2xl border border-slate-200 w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden my-auto animate-in fade-in zoom-in-95 duration-150">
-              {/* Clean White Header (Without ID/Code) */}
-              <div className="bg-white px-6 py-4.5 border-b border-slate-200/80 flex items-center justify-between shrink-0">
-                <div className="flex items-center gap-2.5">
-                  <FileText className="w-5 h-5 text-[#C8102E] shrink-0" />
-                  <div>
-                    <h3 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
-                      Concept Proposal Submission Details
-                    </h3>
-                    <p className="text-xs text-slate-500 font-medium">
-                      Submitted {selectedSubmissionDetails.submittedAt} {selectedSubmissionDetails.submittedTime && `at ${selectedSubmissionDetails.submittedTime}`} &bull; {selectedSubmissionDetails.callTitle}
-                    </p>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setSelectedSubmissionDetails(null)}
-                  className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
-                  aria-label="Close Modal"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-
-              {/* Scrollable Modal Body (Matching the 3 Steps of Submitting Proposal) */}
-              <div className="p-6 space-y-6 overflow-y-auto flex-1 text-xs">
-                {/* Screening Status Banner */}
-                {selectedSubmissionDetails.screeningStatus === 'passed' && (
-                  <div className="p-4 rounded-sm bg-emerald-50 border border-emerald-200 text-emerald-950 flex items-start gap-3">
-                    <div className="p-1.5 rounded-full bg-emerald-100 text-emerald-700 shrink-0">
-                      <CheckCircle2 className="w-5 h-5" />
-                    </div>
-                    <div className="space-y-1">
-                      <h4 className="text-xs font-bold uppercase tracking-wider text-emerald-800">
-                        Preliminary Screening Passed &bull; Endorsed for Full Proposal
-                      </h4>
-                      <p className="text-xs text-emerald-900 leading-relaxed">
-                        {selectedSubmissionDetails.screeningRemarks ||
-                          'Your Concept Proposal has passed preliminary compliance screening and is endorsed to proceed to full proposal submission.'}
-                      </p>
-                      {selectedSubmissionDetails.screenedBy && (
-                        <p className="text-[11px] text-emerald-700 pt-0.5">
-                          Verified by: <strong>{selectedSubmissionDetails.screenedBy}</strong> {selectedSubmissionDetails.screenedAt && `on ${selectedSubmissionDetails.screenedAt}`}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {selectedSubmissionDetails.screeningStatus === 'failed' && (
-                  <div className="p-4 rounded-sm bg-rose-50 border border-rose-200 text-rose-950 flex items-start gap-3">
-                    <div className="p-1.5 rounded-full bg-rose-100 text-rose-700 shrink-0">
-                      <AlertTriangle className="w-5 h-5" />
-                    </div>
-                    <div className="space-y-2 flex-1">
-                      <div>
-                        <h4 className="text-xs font-bold uppercase tracking-wider text-rose-800">
-                          Screening Decision: Revisions Required
-                        </h4>
-                        <p className="text-xs text-rose-900 leading-relaxed mt-0.5">
-                          {selectedSubmissionDetails.screeningRemarks ||
-                            'The preliminary screening committee noted deficiencies requiring adjustment before this proposal can proceed.'}
-                        </p>
-                      </div>
-
-                      {selectedSubmissionDetails.failureReasons && selectedSubmissionDetails.failureReasons.length > 0 && (
-                        <div className="bg-white/80 p-3 rounded border border-rose-200 space-y-1">
-                          <span className="font-bold text-[11px] uppercase tracking-wider text-rose-800">
-                            Non-Compliance Reasons:
-                          </span>
-                          <ul className="list-disc pl-4 space-y-0.5 text-xs text-rose-950">
-                            {selectedSubmissionDetails.failureReasons.map((reason, idx) => (
-                              <li key={idx}>{reason}</li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-
-                      {selectedSubmissionDetails.sectionComments && (
-                        <div className="bg-white/80 p-3 rounded border border-rose-200 space-y-1.5">
-                          <span className="font-bold text-[11px] uppercase tracking-wider text-rose-800">
-                            Specific Evaluator Remarks by Section:
-                          </span>
-                          <div className="space-y-1 text-xs text-rose-950 divide-y divide-rose-100">
-                            {selectedSubmissionDetails.sectionComments.title && (
-                              <p className="pt-1">
-                                <strong>Title Revision:</strong> {selectedSubmissionDetails.sectionComments.title}
-                              </p>
-                            )}
-                            {selectedSubmissionDetails.sectionComments.rationaleSignificance && (
-                              <p className="pt-1">
-                                <strong>Rationale &amp; Significance:</strong>{' '}
-                                {selectedSubmissionDetails.sectionComments.rationaleSignificance}
-                              </p>
-                            )}
-                            {selectedSubmissionDetails.sectionComments.objectives && (
-                              <p className="pt-1">
-                                <strong>Objectives:</strong> {selectedSubmissionDetails.sectionComments.objectives}
-                              </p>
-                            )}
-                            {selectedSubmissionDetails.sectionComments.estimatedBudget && (
-                              <p className="pt-1">
-                                <strong>Estimated Budget:</strong>{' '}
-                                {selectedSubmissionDetails.sectionComments.estimatedBudget}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {selectedSubmissionDetails.screeningStatus === 'pending' && (
-                  <div className="p-4 rounded-sm bg-amber-50 border border-amber-200 text-amber-950 flex items-start gap-3">
-                    <div className="p-1.5 rounded-full bg-amber-100 text-amber-700 shrink-0">
-                      <Clock className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <h4 className="text-xs font-bold uppercase tracking-wider text-amber-800">
-                        Under Preliminary Screening
-                      </h4>
-                      <p className="text-xs text-amber-900 leading-relaxed mt-0.5">
-                        Your proposal document and official dean endorsement are currently under preliminary evaluation by the RPDU staff. You will be notified once a screening verdict has been issued.
-                      </p>
-                    </div>
-                  </div>
-                )}
-
-                {/* STEP 1: SELECT RESEARCH AGENDA (Matching Step 1 of Submission Form) */}
-                <div className="space-y-3 bg-white p-4 rounded-sm border border-slate-200">
-                  <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
-                    <div className="flex items-center gap-2">
-                      <span className="w-6 h-6 rounded-full bg-red-50 text-[#C8102E] font-bold text-xs flex items-center justify-center border border-red-100">
-                        1
-                      </span>
-                      <div>
-                        <h4 className="text-xs sm:text-sm font-bold text-slate-900">
-                          Selected Research Agenda
-                        </h4>
-                        <p className="text-[11px] text-slate-500">
-                          Institutional research priority aligned with your proposal.
-                        </p>
-                      </div>
-                    </div>
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider bg-red-100 text-[#C8102E]">
-                      {matchedAgenda?.badge || 'Institutional Priority'}
-                    </span>
-                  </div>
-
-                  <div className="p-3 bg-red-50/20 rounded border border-red-200/80">
-                    <h5 className="text-xs font-bold text-slate-900">
-                      {selectedSubmissionDetails.thematicArea}
-                    </h5>
-                    {matchedAgenda?.desc && (
-                      <p className="text-[11px] text-slate-600 mt-1 leading-relaxed">
-                        {matchedAgenda.desc}
-                      </p>
-                    )}
-                  </div>
-                </div>
-
-                {/* STEP 2: SUBMIT CONCEPT PROPOSAL (TITLE & FILE) (Matching Step 2 of Submission Form) */}
-                <div className="space-y-4 bg-white p-4 rounded-sm border border-slate-200">
-                  <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
-                    <div className="flex items-center gap-2">
-                      <span className="w-6 h-6 rounded-full bg-red-50 text-[#C8102E] font-bold text-xs flex items-center justify-center border border-red-100">
-                        2
-                      </span>
-                      <div>
-                        <h4 className="text-xs sm:text-sm font-bold text-slate-900">
-                          Concept Proposal (Title &amp; Document)
-                        </h4>
-                        <p className="text-[11px] text-slate-500">
-                          Proposal title and completed concept proposal document.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Title */}
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-slate-800">
-                      Concept Proposal Title
-                    </label>
-                    <div className="p-3 bg-slate-50 rounded-sm border border-slate-200">
-                      <h5 className="text-xs sm:text-sm font-bold text-slate-900 leading-snug">
-                        {selectedSubmissionDetails.title}
-                      </h5>
-                    </div>
-                  </div>
-
-                  {/* Attached Concept Proposal Document */}
-                  <div className="space-y-1.5 pt-1">
-                    <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
-                      <FileText className="w-4 h-4 text-[#C8102E]" />
-                      <span>Attached Concept Proposal Document</span>
-                    </label>
-
-                    {conceptDoc ? (
-                      <div className="p-3 bg-slate-50 rounded-sm border border-slate-200 flex items-center justify-between gap-3 shadow-2xs">
-                        <div className="flex items-center gap-3 min-w-0">
-                          <div className="w-9 h-9 rounded bg-slate-100 text-slate-700 border border-slate-200/80 flex items-center justify-center font-bold text-xs shrink-0">
-                            {conceptDoc.type || 'PDF'}
-                          </div>
-                          <div className="min-w-0">
-                            <div className="flex items-center gap-1.5">
-                              <p className="text-xs font-semibold text-slate-900 truncate" title={conceptDoc.name}>
-                                {conceptDoc.name}
-                              </p>
-                              <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0 stroke-[2.5]" />
-                            </div>
-                            <p className="text-[10px] text-slate-500">
-                              {conceptDoc.size} &bull; Uploaded concept proposal document
-                            </p>
-                          </div>
-                        </div>
-
-                        <a
-                          href={conceptDoc.dataUrl || '#'}
-                          download={conceptDoc.name}
-                          onClick={(e) => {
-                            if (!conceptDoc.dataUrl) {
-                              e.preventDefault();
-                              showToast(`Downloading Concept Proposal: ${conceptDoc.name}`);
-                            }
-                          }}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-slate-700 bg-white hover:bg-[#C8102E] hover:text-white rounded border border-slate-200 transition-colors shrink-0"
-                          title={`Download ${conceptDoc.name}`}
-                        >
-                          <Download className="w-3.5 h-3.5" />
-                          <span>Download</span>
-                        </a>
-                      </div>
-                    ) : (
-                      <p className="text-xs text-slate-400 italic">No concept proposal file attached.</p>
-                    )}
-                  </div>
-                </div>
-
-                {/* STEP 3: UPLOAD ENDORSEMENT PDF (Matching Step 3 of Submission Form) */}
-                <div className="space-y-3 bg-white p-4 rounded-sm border border-slate-200">
-                  <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
-                    <div className="flex items-center gap-2">
-                      <span className="w-6 h-6 rounded-full bg-slate-100 text-slate-700 font-bold text-xs flex items-center justify-center border border-slate-200">
-                        3
-                      </span>
-                      <div>
-                        <h4 className="text-xs sm:text-sm font-bold text-slate-900">
-                          College Dean / Chairperson Endorsement Form
-                        </h4>
-                        <p className="text-[11px] text-slate-500">
-                          Official signed endorsement PDF from college administration.
-                        </p>
-                      </div>
-                    </div>
-                    <span className="text-[10px] font-medium px-2 py-0.5 rounded bg-slate-100 text-slate-600 border border-slate-200">
-                      PDF Verified
-                    </span>
-                  </div>
-
-                  {endorsementDoc ? (
-                    <div className="p-3 bg-white rounded-sm border border-slate-200 flex items-center justify-between gap-3 shadow-2xs">
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div className="w-9 h-9 rounded bg-slate-100 text-slate-700 border border-slate-200/80 flex items-center justify-center font-bold text-xs shrink-0">
-                          PDF
-                        </div>
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-1.5">
-                            <p className="text-xs font-semibold text-slate-900 truncate" title={endorsementDoc.name}>
-                              {endorsementDoc.name}
-                            </p>
-                            <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0 stroke-[2.5]" />
-                          </div>
-                          <p className="text-[10px] text-slate-500">
-                            {endorsementDoc.size} &bull; Official Dean Endorsement Form
-                          </p>
-                        </div>
-                      </div>
-
-                      <a
-                        href={endorsementDoc.dataUrl || '#'}
-                        download={endorsementDoc.name}
-                        onClick={(e) => {
-                          if (!endorsementDoc.dataUrl) {
-                            e.preventDefault();
-                            showToast(`Downloading Endorsement Form: ${endorsementDoc.name}`);
-                          }
-                        }}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 bg-white hover:bg-slate-50 rounded border border-slate-200 transition-colors shrink-0"
-                        title={`Download ${endorsementDoc.name}`}
-                      >
-                        <Download className="w-3.5 h-3.5" />
-                        <span>Download</span>
-                      </a>
-                    </div>
-                  ) : (
-                    <p className="text-xs text-slate-400 italic">No endorsement form uploaded.</p>
-                  )}
-
-                  {otherDocs.length > 0 && (
-                    <div className="space-y-2 pt-2 border-t border-slate-100">
-                      <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wider">
-                        Additional Uploaded Documents ({otherDocs.length})
-                      </label>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                        {otherDocs.map((att, idx) => (
-                          <div
-                            key={idx}
-                            className="p-2.5 bg-slate-50 rounded border border-slate-200 flex items-center justify-between gap-2"
-                          >
-                            <div className="min-w-0">
-                              <p className="text-xs font-semibold text-slate-900 truncate">{att.name}</p>
-                              <p className="text-[10px] text-slate-400">{att.size}</p>
-                            </div>
-                            <a
-                              href={att.dataUrl || '#'}
-                              download={att.name}
-                              className="p-1 text-slate-400 hover:text-[#C8102E]"
-                            >
-                              <Download className="w-3.5 h-3.5" />
-                            </a>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-              </div>
-
-              {/* Modal Footer */}
-              <div className="bg-slate-50 px-6 py-4 border-t border-slate-200/80 flex items-center justify-between shrink-0">
-                <span className="text-xs text-slate-500 font-medium">
-                  Western Mindanao State University &bull; RDEC
-                </span>
-
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setSelectedSubmissionDetails(null)}
-                    className="px-4 py-2 text-xs font-bold rounded-sm border border-slate-300 bg-white text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
-                  >
-                    Close
-                  </button>
-
-                </div>
-              </div>
-            </div>
-          </div>
-        );
-      })()}
     </div>
   );
 };

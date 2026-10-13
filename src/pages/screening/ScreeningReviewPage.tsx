@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useLocation, useParams } from 'react-router-dom';
-import { ArrowLeft, CheckCircle2, Download, ExternalLink, FileText, XCircle } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, ChevronDown, Download, ExternalLink, FileText, XCircle } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useCallForProposals } from '../../context/CallForProposalsContext';
 import { getScreeningProposal, resetScreeningProposal, saveScreeningProposal } from '../../lib/screeningApi';
@@ -16,6 +16,7 @@ const dateTime = (value?: string | null) => value ? new Date(value).toLocaleStri
 export function ScreeningReviewPage({ role }: { role: 'rpdu' | 'admin' }) {
   const { proposalId } = useParams();
   const location = useLocation();
+  const openDecision = location.state?.screeningPanel === 'decision';
   const { session } = useAuth();
   const { refreshConceptProposals } = useCallForProposals();
   const accessToken = session?.access_token;
@@ -34,6 +35,7 @@ export function ScreeningReviewPage({ role }: { role: 'rpdu' | 'admin' }) {
   const [failStep, setFailStep] = useState(0);
   const [activeCategory, setActiveCategory] = useState('concept_proposal');
   const [previewLoading, setPreviewLoading] = useState(true);
+  const [activePanel, setActivePanel] = useState<'information' | 'decision'>('information');
   const loadedView = useRef('');
 
   useEffect(() => {
@@ -58,6 +60,7 @@ export function ScreeningReviewPage({ role }: { role: 'rpdu' | 'admin' }) {
           setSectionComments(data.screeningStatus === 'failed' ? feedback.sections : {});
           setFailStep(0);
           setActiveCategory('concept_proposal');
+          setActivePanel(openDecision || data.screeningStatus === 'pending' ? 'decision' : 'information');
         }
         loadedView.current = viewKey;
       } catch (failure) {
@@ -68,7 +71,7 @@ export function ScreeningReviewPage({ role }: { role: 'rpdu' | 'admin' }) {
     };
     void load();
     return () => controller.abort();
-  }, [proposalId, accessToken, userId]);
+  }, [proposalId, accessToken, userId, openDecision]);
 
   const activeFile = proposal?.attachments.find((file) => file.category === activeCategory);
   useEffect(() => { setPreviewLoading(true); }, [activeFile?.dataUrl]);
@@ -107,6 +110,8 @@ export function ScreeningReviewPage({ role }: { role: 'rpdu' | 'admin' }) {
         setSectionComments(feedback.sections);
       }
       await refreshConceptProposals();
+      setActivePanel('information');
+      document.getElementById('screening-information-tab')?.focus();
       setNotice('Screening decision saved.');
     } catch (failure) {
       setError(failure instanceof Error ? failure.message : 'Unable to save the screening decision.');
@@ -129,6 +134,8 @@ export function ScreeningReviewPage({ role }: { role: 'rpdu' | 'admin' }) {
       setFailRemarks('');
       setSectionComments({});
       setFailStep(0);
+      setActivePanel('decision');
+      document.getElementById('screening-decision-tab')?.focus();
       await refreshConceptProposals();
       setNotice('Proposal reset to pending screening.');
     } catch (failure) {
@@ -137,6 +144,10 @@ export function ScreeningReviewPage({ role }: { role: 'rpdu' | 'admin' }) {
   };
 
   const savedFeedback = readScreeningComments(proposal?.screeningRemarks);
+  const savedComments = [
+    { key: 'overall', label: proposal?.screeningStatus === 'failed' ? 'Overall remarks' : 'Pass comments / next steps', text: savedFeedback.overall },
+    ...screeningCommentSections.map(({ key, label }) => ({ key, label, text: savedFeedback.sections[key] || '' })),
+  ].filter(({ text }) => text.trim());
   const passSection = screeningCommentSections[passStep];
   const failSection = screeningCommentSections[failStep];
 
@@ -163,49 +174,85 @@ export function ScreeningReviewPage({ role }: { role: 'rpdu' | 'admin' }) {
                 ['Proponent', proposal.leadInvestigator], ['Email', proposal.leadInvestigatorEmail || 'Not provided'],
                 ['College', proposal.college], ['Department', proposal.department],
                 ['Call window', proposal.callTitle], ['Research agenda', proposal.thematicArea],
-                ['Proposed budget', new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(proposal.budgetRequested)],
                 ['Submitted (Philippine time)', dateTime(proposal.submittedTimestamp)],
               ].map(([label, value]) => <div key={label}><dt className="text-xs font-semibold text-slate-500">{label}</dt><dd className="mt-1 break-words text-slate-800">{value}</dd></div>)}
             </dl>
           </section>
 
-          <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,2fr)_minmax(280px,1fr)]">
-            <section aria-label="Submitted files" className="min-w-0 overflow-hidden rounded-sm border border-slate-200 bg-white">
-              <div className="flex flex-wrap gap-2 border-b border-slate-200 p-3">
+          <div className="grid items-start gap-5 lg:h-[80vh] lg:min-h-[36rem] lg:grid-cols-[minmax(0,2fr)_minmax(280px,1fr)]">
+            <section aria-label="Submitted files" className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-sm border border-slate-200 bg-white lg:h-full">
+              <div className="flex shrink-0 flex-wrap gap-2 border-b border-slate-200 p-3">
                 {[
                   { category: 'concept_proposal', label: 'Concept proposal' },
                   { category: 'endorsement_pdf', label: 'Endorsement form' },
                 ].map((file) => <button type="button" key={file.category} aria-pressed={activeCategory === file.category} onClick={() => setActiveCategory(file.category)} className={`rounded-sm px-3 py-2 text-xs font-semibold ${activeCategory === file.category ? 'bg-[#C8102E] text-white hover:bg-[#A00D26]' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>{file.label}</button>)}
               </div>
               {activeFile?.dataUrl ? <>
-                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 bg-slate-50 px-4 py-3">
+                <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-slate-200 bg-slate-50 px-4 py-3">
                   <div className="flex min-w-0 items-center gap-2"><FileText size={16} className="shrink-0 text-slate-500" /><span className="break-all text-xs font-medium text-slate-700">{activeFile.name}</span><span className="text-xs text-slate-500">{activeFile.type}</span></div>
                   <div className="flex gap-3 text-xs font-semibold text-[#C8102E]">
                     <a href={activeFile.dataUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 hover:underline"><ExternalLink size={13} /> Open file</a>
                     <a href={activeFile.dataUrl} download={activeFile.name} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 hover:underline"><Download size={13} /> Download</a>
                   </div>
                 </div>
-                {activeFile.type.toUpperCase() === 'PDF' ? <div className="relative h-[70vh] min-h-96 bg-slate-50">
+                {activeFile.type.toUpperCase() === 'PDF' ? <div className="relative h-[70vh] min-h-96 bg-slate-50 lg:h-auto lg:min-h-0 lg:flex-1">
                   {previewLoading && <div role="status" className="absolute inset-0 p-6"><span className="sr-only">Loading uploaded file</span><div aria-hidden="true" className="h-full space-y-5 rounded-sm border border-slate-200 bg-white p-6 motion-safe:animate-pulse"><div className="h-5 w-2/3 rounded bg-slate-100" /><div className="h-3 w-full rounded bg-slate-100" /><div className="h-3 w-5/6 rounded bg-slate-100" /><div className="h-3 w-full rounded bg-slate-100" /></div></div>}
                   <iframe key={activeFile.dataUrl} src={activeFile.dataUrl} title={`Uploaded ${activeCategory === 'concept_proposal' ? 'concept proposal' : 'endorsement form'}`} onLoad={() => setPreviewLoading(false)} className={`h-full w-full border-0 ${previewLoading ? 'opacity-0' : ''}`} />
-                </div> : <div className="p-10 text-center text-sm text-slate-500">This {activeFile.type} file can be reviewed using Open file or Download.</div>}
-                <p className="border-t border-slate-200 px-4 py-3 text-xs text-slate-500">If the preview is unavailable, use Open file to review the uploaded document.</p>
-              </> : <div className="p-10 text-center text-sm text-slate-500">No {activeCategory === 'concept_proposal' ? 'concept proposal' : 'endorsement form'} file is available for this submission.</div>}
+                </div> : <div className="p-10 text-center text-sm text-slate-500 lg:flex-1">This {activeFile.type} file can be reviewed using Open file or Download.</div>}
+                <p className="shrink-0 border-t border-slate-200 px-4 py-3 text-xs text-slate-500">If the preview is unavailable, use Open file to review the uploaded document.</p>
+              </> : <div className="p-10 text-center text-sm text-slate-500 lg:flex-1">No {activeCategory === 'concept_proposal' ? 'concept proposal' : 'endorsement form'} file is available for this submission.</div>}
             </section>
 
-            <div className="space-y-5">
-              <section aria-label="Saved screening information" className="rounded-sm border border-slate-200 bg-white p-5">
+            <div className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-sm border border-slate-200 bg-white lg:h-full">
+              <div role="tablist" aria-label="Screening review" className="flex shrink-0 gap-1 border-b border-slate-200 bg-slate-50 p-2" onKeyDown={(event) => {
+                const panels = ['information', 'decision'] as const;
+                const index = panels.indexOf(activePanel);
+                let next: typeof activePanel;
+                if (event.key === 'ArrowRight' || event.key === 'ArrowLeft') next = panels[1 - index];
+                else if (event.key === 'Home') next = panels[0];
+                else if (event.key === 'End') next = panels[1];
+                else return;
+                event.preventDefault();
+                setActivePanel(next);
+                document.getElementById(`screening-${next}-tab`)?.focus();
+              }}>
+                {([
+                  { key: 'information', label: 'Screening information' },
+                  { key: 'decision', label: proposal.screeningStatus === 'pending' ? 'Screening decision' : 'Update decision' },
+                ] as const).map(({ key, label }) => <button key={key} type="button" role="tab" id={`screening-${key}-tab`} aria-controls={`screening-${key}-panel`} aria-selected={activePanel === key} tabIndex={activePanel === key ? 0 : -1} onClick={() => setActivePanel(key)} className={`min-w-0 flex-1 rounded-sm px-2 py-2.5 text-xs font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#C8102E] ${activePanel === key ? 'bg-[#C8102E] text-white' : 'text-slate-600 hover:bg-slate-200'}`}>{label}</button>)}
+              </div>
+              <section id="screening-information-panel" role="tabpanel" aria-labelledby="screening-information-tab" hidden={activePanel !== 'information'} tabIndex={0} className="max-h-[70vh] min-w-0 overflow-y-auto overscroll-contain p-5 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[#C8102E] lg:max-h-none lg:min-h-0 lg:flex-1">
                 <h3 className="font-bold text-slate-900">Preliminary-screening information</h3>
-                {proposal.screeningStatus === 'pending' ? <p className="mt-3 text-sm text-slate-500">No screening decision has been recorded.</p> : <dl className="mt-4 space-y-4 text-sm">
+                {proposal.screeningStatus === 'pending' ? <p className="mt-3 text-sm text-slate-500">No screening decision has been recorded.</p> : <>
+                <dl className="mt-4 space-y-4 text-sm [overflow-wrap:anywhere]">
                   <div><dt className="text-xs font-semibold text-slate-500">Decision</dt><dd className="mt-1 text-slate-800">{proposal.screeningStatus === 'passed' ? 'Pass' : 'Fail'}</dd></div>
-                  <div><dt className="text-xs font-semibold text-slate-500">Reviewed by</dt><dd className="mt-1 text-slate-800">{proposal.screenedBy || 'Not recorded'}</dd></div>
+                  <div><dt className="text-xs font-semibold text-slate-500">Reviewed by</dt><dd className="mt-1 text-slate-800">{userId && proposal.screenedById === userId ? 'You' : proposal.screenedBy || 'Not recorded'}</dd></div>
                   <div><dt className="text-xs font-semibold text-slate-500">Reviewed (Philippine time)</dt><dd className="mt-1 text-slate-800">{dateTime(proposal.screenedTimestamp)}</dd></div>
-                  {screeningCommentSections.filter(({ key }) => savedFeedback.sections[key]).map(({ key, label }) => <div key={key}><dt className="text-xs font-semibold text-slate-500">{label}</dt><dd className="mt-1 whitespace-pre-wrap break-words text-slate-800">{savedFeedback.sections[key]}</dd></div>)}
-                  <div><dt className="text-xs font-semibold text-slate-500">{proposal.screeningStatus === 'failed' ? 'Overall remarks' : 'Pass comments / next steps'}</dt><dd className="mt-1 whitespace-pre-wrap break-words text-slate-800">{savedFeedback.overall || 'No overall remarks recorded.'}</dd></div>
-                </dl>}
+                </dl>
+                <div className="mt-5 border-t border-slate-200 pt-4">
+                  <h4 className="text-sm font-semibold text-slate-800">Comments</h4>
+                  {savedComments.length > 0 ? <>
+                    <p className="mt-1 text-xs leading-5 text-slate-500">Select a section to read the full comment.</p>
+                    <div className="mt-3 divide-y divide-slate-200 overflow-hidden rounded-sm border border-slate-200">
+                      {savedComments.map(({ key, label, text }) => <details key={key} className="group min-w-0">
+                        <summary className="flex cursor-pointer list-none items-start gap-2 bg-slate-50 px-3 py-3 hover:bg-slate-100 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[#C8102E] [&::-webkit-details-marker]:hidden">
+                          <div className="min-w-0 flex-1">
+                            <span className="text-xs font-semibold text-slate-700">{label}</span>
+                            <p className="mt-1 line-clamp-2 text-xs leading-5 text-slate-500 [overflow-wrap:anywhere] group-open:hidden">{text}</p>
+                          </div>
+                          <ChevronDown aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0 text-slate-400 transition-transform group-open:rotate-180" />
+                        </summary>
+                        <div role="region" aria-label={`${label} comment`} tabIndex={0} className="max-h-64 overflow-y-auto overscroll-contain px-3 py-3 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[#C8102E]">
+                          <p className="whitespace-pre-wrap text-sm leading-7 text-slate-700 [overflow-wrap:anywhere]">{text}</p>
+                        </div>
+                      </details>)}
+                    </div>
+                  </> : <p className="mt-2 text-sm text-slate-500">No comments recorded.</p>}
+                </div>
+                </>}
               </section>
 
-              <form onSubmit={save} className="space-y-4 rounded-sm border border-slate-200 bg-white p-5">
+              <form id="screening-decision-panel" role="tabpanel" aria-labelledby="screening-decision-tab" hidden={activePanel !== 'decision'} tabIndex={0} onSubmit={save} className="space-y-4 p-5 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[#C8102E] lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:overscroll-contain">
                 <h3 className="font-bold text-slate-900">{proposal.screeningStatus === 'pending' ? 'Screening decision' : 'Update screening decision'}</h3>
                 <fieldset disabled={saving} className="space-y-4">
                   <legend className="sr-only">Choose a screening decision</legend>
@@ -227,7 +274,7 @@ export function ScreeningReviewPage({ role }: { role: 'rpdu' | 'admin' }) {
                   {decision === 'FAIL' && <div className="space-y-4">
                     <p className="text-xs text-slate-500">Comment on the sections that need revision, or provide overall feedback. At least one comment is required.</p>
                     <p aria-live="polite" className="text-xs font-semibold text-slate-500">Step {failStep + 1} of {screeningCommentSections.length + 1}</p>
-                    <label key={failStep} className="block text-xs font-semibold text-slate-600">{failSection ? failSection.label : 'Overall summary remarks / next steps'}<textarea autoFocus rows={6} maxLength={5000} value={failSection ? sectionComments[failSection.key] || '' : failRemarks} onChange={(event) => failSection ? setSectionComments((previous) => ({ ...previous, [failSection.key]: event.target.value })) : setFailRemarks(event.target.value)} className="mt-2 block w-full rounded-sm border border-slate-200 p-3 text-sm font-normal text-slate-800 focus:border-[#C8102E] focus:outline-none focus:ring-1 focus:ring-[#C8102E]" placeholder={failSection ? `Describe the revisions needed for ${failSection.label.toLowerCase()}.` : 'Summarize the feedback or provide instructions for resubmission.'} /></label>
+                    <label key={failStep} className="block text-xs font-semibold text-slate-600">{failSection ? failSection.label : 'Overall summary remarks / next steps'}<textarea autoFocus={activePanel === 'decision'} rows={6} maxLength={5000} value={failSection ? sectionComments[failSection.key] || '' : failRemarks} onChange={(event) => failSection ? setSectionComments((previous) => ({ ...previous, [failSection.key]: event.target.value })) : setFailRemarks(event.target.value)} className="mt-2 block w-full rounded-sm border border-slate-200 p-3 text-sm font-normal text-slate-800 focus:border-[#C8102E] focus:outline-none focus:ring-1 focus:ring-[#C8102E]" placeholder={failSection ? `Describe the revisions needed for ${failSection.label.toLowerCase()}.` : 'Summarize the feedback or provide instructions for resubmission.'} /></label>
                     <div className="flex items-center justify-between gap-3">
                       <button type="button" disabled={failStep === 0} onClick={() => setFailStep((step) => step - 1)} className="rounded-sm border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-40">Back</button>
                       {failSection && <button type="button" onClick={() => setFailStep((step) => step + 1)} className="rounded-sm bg-slate-900 px-4 py-2 text-xs font-semibold text-white hover:bg-slate-700">Next</button>}

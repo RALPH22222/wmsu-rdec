@@ -1,15 +1,6 @@
 import { API_BASE_URL, API_ENDPOINTS } from '../config/apiConfig';
 import type { ConceptProposal } from '../types';
 
-export const CONCEPT_SUBMISSION_LOCK_MESSAGE = 'New concept proposal submissions are locked because your account has a failed preliminary screening record. You can still view your submissions and screening feedback.';
-
-export class ConceptProposalSubmissionLockedError extends Error {
-  constructor() {
-    super(CONCEPT_SUBMISSION_LOCK_MESSAGE);
-    this.name = 'ConceptProposalSubmissionLockedError';
-  }
-}
-
 export class ConceptProposalTitleExistsError extends Error {
   constructor() {
     super('A concept proposal with this title already exists. Please use a different title.');
@@ -25,9 +16,16 @@ export async function checkConceptProposalTitleApi(title: string, token?: string
     body: JSON.stringify({ title: title.trim() }),
   });
   const result = await response.json();
-  if (result.code === 'PROPOSAL_SUBMISSION_LOCKED') throw new ConceptProposalSubmissionLockedError();
   if (!response.ok || !result.success) throw new Error(result.message || 'Unable to verify your proposal title. Please try again.');
   return result.available === true;
+}
+
+interface ScreeningRecord {
+  decision: string;
+  rejection_reason?: string | null;
+  reviewed_at?: string;
+  reviewed_by?: string;
+  reviewer?: { first_name: string; middle_name?: string; last_name: string; suffix?: string } | null;
 }
 
 interface ProposalRecord {
@@ -43,13 +41,19 @@ interface ProposalRecord {
   endorsement_file_url: string;
   call?: { title: string };
   proponent?: { first_name: string; last_name: string; email: string; departments?: { name: string } };
-  preliminary_screenings?: { decision: string; rejection_reason?: string; reviewed_at?: string }[];
+  preliminary_screenings?: ScreeningRecord[] | ScreeningRecord | null;
 }
 
 function formatProposal(row: ProposalRecord): ConceptProposal {
-  const screening = row.preliminary_screenings?.[0];
+  const screening = Array.isArray(row.preliminary_screenings) ? row.preliminary_screenings[0] : row.preliminary_screenings;
   const department = row.proponent?.departments?.name || 'Unassigned';
   const fileUrl = (url: string) => url ? new URL(url, `${API_BASE_URL.replace(/\/api\/?$/, '')}/`).href : undefined;
+  const attachment = (url: string, category: 'concept_proposal' | 'endorsement_pdf', label: string) => {
+    const dataUrl = fileUrl(url);
+    let name = label;
+    try { name = decodeURIComponent(new URL(dataUrl!).pathname.split('/').pop() || label); } catch { /* Missing file URL. */ }
+    return { name, size: '', type: name.match(/\.(pdf|docx?)$/i)?.[1].toUpperCase() || 'File', dataUrl, category };
+  };
   return {
     id: row.id,
     proponentId: row.proponent_id,
@@ -64,8 +68,11 @@ function formatProposal(row: ProposalRecord): ConceptProposal {
     submittedAt: row.submitted_at.split('T')[0],
     submittedTime: row.submitted_at.split('T')[1]?.slice(0, 5),
     screeningStatus: screening?.decision === 'PASS' ? 'passed' : screening?.decision === 'FAIL' ? 'failed' : 'pending',
-    screeningRemarks: screening?.rejection_reason,
-    screenedAt: screening?.reviewed_at?.split('T')[0],
+    screeningRemarks: screening?.rejection_reason || '',
+    screenedBy: screening?.reviewer ? [screening.reviewer.first_name, screening.reviewer.middle_name, screening.reviewer.last_name, screening.reviewer.suffix].filter(Boolean).join(' ') : undefined,
+    screenedById: screening?.reviewed_by,
+    screenedAt: screening?.reviewed_at ? new Date(screening.reviewed_at).toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' }) : undefined,
+    screenedTimestamp: screening?.reviewed_at,
     budgetRequested: Number(row.proposed_budget || 0),
     thematicArea: row.custom_research_agenda || row.research_agenda,
     durationMonths: 0,
@@ -75,8 +82,8 @@ function formatProposal(row: ProposalRecord): ConceptProposal {
     methodologySummary: '',
     criteriaChecklist: { eligibleProponent: false, withinBudgetCap: false, alignedPriority: false, requiredFormsAttached: Boolean(row.concept_paper_file_url && row.endorsement_file_url) },
     attachments: [
-      { name: 'Concept Proposal', size: '', type: 'PDF', dataUrl: fileUrl(row.concept_paper_file_url), category: 'concept_proposal' },
-      { name: 'Endorsement Form', size: '', type: 'PDF', dataUrl: fileUrl(row.endorsement_file_url), category: 'endorsement_pdf' },
+      attachment(row.concept_paper_file_url, 'concept_proposal', 'Concept Proposal'),
+      attachment(row.endorsement_file_url, 'endorsement_pdf', 'Endorsement Form'),
     ],
   };
 }
@@ -136,7 +143,6 @@ export async function submitConceptProposalApi(
   const result = await response.json();
 
   if (!response.ok || !result.success) {
-    if (result.code === 'PROPOSAL_SUBMISSION_LOCKED') throw new ConceptProposalSubmissionLockedError();
     if (result.code === 'CONCEPT_PROPOSAL_TITLE_EXISTS') throw new ConceptProposalTitleExistsError();
     throw new Error(result.message || 'Failed to submit concept proposal');
   }
@@ -172,7 +178,7 @@ export async function getMyConceptProposalsApi(token?: string) {
 /**
  * Get a specific concept proposal by ID
  */
-export async function getConceptProposalByIdApi(id: string, token?: string) {
+export async function getConceptProposalByIdApi(id: string, token?: string, signal?: AbortSignal) {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
   };
@@ -180,9 +186,10 @@ export async function getConceptProposalByIdApi(id: string, token?: string) {
     headers['Authorization'] = `Bearer ${token}`;
   }
 
-  const response = await fetch(`${API_ENDPOINTS.PROPONENT.CONCEPT_PROPOSALS}/${id}`, {
+  const response = await fetch(`${API_ENDPOINTS.PROPONENT.CONCEPT_PROPOSALS}/${encodeURIComponent(id)}`, {
     method: 'GET',
     headers,
+    signal,
   });
 
   const result = await response.json();
