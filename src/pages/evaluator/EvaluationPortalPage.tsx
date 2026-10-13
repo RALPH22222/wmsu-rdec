@@ -55,7 +55,7 @@ function PortalBody({ reviewId }: { reviewId: string | undefined }) {
         <h3 className="mb-3 text-xs font-bold uppercase tracking-wider text-slate-500">Round {review.currentRound} evaluation</h3>
         {current ? <SubmissionSummary submission={current} />
           : review.canSubmit ? <EvaluationScoringForm key={review.currentRound} review={review} onSubmit={submit} />
-          : <p className="rounded-sm bg-slate-50 p-3 text-sm text-slate-600">Scoring is closed for this round.</p>}
+          : <p className="rounded-sm bg-slate-50 p-3 text-sm text-slate-600">Evaluation is closed for this round.</p>}
       </section>
 
       {earlier.length > 0 && (

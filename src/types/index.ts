@@ -185,7 +185,13 @@ export interface HybridBudgetAllocation {
 // ============================================================================
 
 export type PipelineStatus = 'PENDING_ASSIGNMENT' | 'UNDER_REVIEW' | 'REVISION_REQUESTED' | 'APPROVED' | 'REJECTED';
-export type ReviewRecommendation = 'APPROVE' | 'REVISE' | 'REJECT';
+export type ReviewRecommendation = 'APPROVAL' | 'MINOR_MODIFICATIONS' | 'MAJOR_MODIFICATIONS' | 'DISAPPROVAL';
+export type ChecklistPresence = 'YES' | 'NA';
+export interface ChecklistEntry { present: ChecklistPresence; pageRef: string; comment: string }
+/** Keyed by assessment point id (see lib/proposalPipeline.ts ASSESSMENT_POINTS). */
+export type Checklist = Record<string, ChecklistEntry>;
+/** In-progress form state: any field may still be missing. */
+export type ChecklistDraft = Record<string, Partial<ChecklistEntry>>;
 export type ReviewRowStatus = 'PENDING' | 'APPROVED' | 'REVISION_REQUESTED' | 'REJECTED';
 
 export interface PipelineRevision {
@@ -199,8 +205,7 @@ export interface PipelineRevision {
 
 export interface ReviewSubmission {
   round: number;
-  scores: Record<string, number>;
-  totalScore: number;
+  checklist: Checklist;
   remarks: string;
   recommendation: ReviewRecommendation;
   assessmentFileUrl: string;
@@ -275,8 +280,7 @@ export interface BlindReview {
 export interface ProponentFeedbackEvaluation {
   blindLabel: string;
   recommendation: ReviewRecommendation;
-  totalScore: number;
-  scores: Record<string, number>;
+  checklist: Checklist;
   remarks: string;
   actionSheetUrl: string;
   submittedAt: string;

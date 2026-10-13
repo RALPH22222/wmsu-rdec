@@ -1,8 +1,10 @@
-import type { PipelineStatus, ReviewRecommendation } from '../types/index.ts';
+import type { Checklist, ChecklistDraft, ChecklistPresence, PipelineStatus, ReviewRecommendation } from '../types/index.ts';
 
 export const MAX_EVALUATORS_PER_PROPOSAL = 3;
-export const MIN_REMARKS_LENGTH = 20;
-export const MAX_REMARKS_LENGTH = 5000;
+export const MIN_JUSTIFICATION_LENGTH = 20;
+export const MAX_JUSTIFICATION_LENGTH = 5000;
+export const MAX_PAGE_REF_LENGTH = 100;
+export const MAX_COMMENT_LENGTH = 2000;
 export const MAX_UPLOAD_BYTES = 15 * 1024 * 1024;
 export const ACCEPTED_DOCUMENT_TYPES = '.pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document';
 
@@ -24,51 +26,94 @@ export const STATUS_META: Record<PipelineStatus, StatusMeta> = {
 
 export const isTerminalStatus = (status: PipelineStatus): boolean => status === 'APPROVED' || status === 'REJECTED';
 
-export interface EvaluationCriterion {
-  id: string;
-  label: string;
-  description: string;
-  weight: number;
-}
+// ---- Proposal Assessment Form (WMSU-RPDU-FR-005.00 / FR-006.00) -----------
+// Mirrors backend-wmsu-rdec/src/services/pipelineRules.js; the tests on both sides pin the ids and order.
 
-export const EVALUATION_CRITERIA: EvaluationCriterion[] = [
-  { id: 'relevance', label: 'Relevance & Significance', description: 'Alignment with the WMSU research agenda and regional priorities; contribution to knowledge or practice.', weight: 20 },
-  { id: 'objectives', label: 'Clarity of Objectives', description: 'Objectives are specific, measurable, and logically derived from the problem statement.', weight: 15 },
-  { id: 'methodology', label: 'Scientific Soundness of Methodology', description: 'Design, sampling, instruments, and analysis are appropriate and rigorous.', weight: 25 },
-  { id: 'feasibility', label: 'Feasibility & Timeline', description: 'Work plan is realistic for the proposed duration, team, and facilities.', weight: 15 },
-  { id: 'budget', label: 'Budget Appropriateness', description: 'Line items are justified, within the call ceiling, and proportionate to activities.', weight: 10 },
-  { id: 'outputs', label: 'Expected Outputs & Impact', description: 'Publications, products, people, places, and policy outputs are credible and well-targeted.', weight: 15 },
+export type AssessmentGroupId = 'SCIENTIFIC_DESIGN' | 'SIGNIFICANCE_AND_CONDUCT' | 'FINANCIAL_ASPECT' | 'ETHICAL_CONSIDERATIONS';
+
+export interface AssessmentGroup { id: AssessmentGroupId; label: string }
+export interface AssessmentPoint { id: string; group: AssessmentGroupId; label: string; description: string }
+
+export const ASSESSMENT_GROUPS: AssessmentGroup[] = [
+  { id: 'SCIENTIFIC_DESIGN', label: 'Scientific Design' },
+  { id: 'SIGNIFICANCE_AND_CONDUCT', label: 'Significance and Conduct of Study' },
+  { id: 'FINANCIAL_ASPECT', label: 'Financial Aspect' },
+  { id: 'ETHICAL_CONSIDERATIONS', label: 'Ethical Considerations' },
 ];
 
-export const RECOMMENDATION_META: Record<ReviewRecommendation, { label: string; tone: StatusTone; description: string }> = {
-  APPROVE: { label: 'Approve', tone: 'emerald', description: 'Technically sound; no mandatory revisions.' },
-  REVISE: { label: 'Revise & Resubmit', tone: 'amber', description: 'Acceptable after the action sheet items are addressed.' },
-  REJECT: { label: 'Reject', tone: 'red', description: 'Fundamental flaws; not recommended for funding.' },
+export const ASSESSMENT_POINTS: AssessmentPoint[] = [
+  { id: 'objectives', group: 'SCIENTIFIC_DESIGN', label: 'Objectives', description: 'Review of viability of expected output' },
+  { id: 'literature_review', group: 'SCIENTIFIC_DESIGN', label: 'Literature review', description: 'Review of results of previous studies showing considerable impact of proposed research and availability of literature resources' },
+  { id: 'research_design', group: 'SCIENTIFIC_DESIGN', label: 'Research design', description: 'Review of appropriateness of design in view of objectives' },
+  { id: 'sampling_design', group: 'SCIENTIFIC_DESIGN', label: 'Sampling design', description: 'Review of appropriateness of sampling methods and techniques' },
+  { id: 'sample_size', group: 'SCIENTIFIC_DESIGN', label: 'Sample size', description: 'Review of computation of sample size' },
+  { id: 'statistical_analysis_plan', group: 'SCIENTIFIC_DESIGN', label: 'Statistical analysis plan', description: 'Review of appropriateness of statistical methods to be used and how participant data will be summarized' },
+  { id: 'data_analysis_plan', group: 'SCIENTIFIC_DESIGN', label: 'Data analysis plan', description: 'Review of appropriateness of statistical and non-statistical methods of data analysis' },
+  { id: 'inclusion_criteria', group: 'SCIENTIFIC_DESIGN', label: 'Inclusion criteria', description: 'Review of precision of criteria both for scientific merit and safety concerns; and of equitable selection' },
+  { id: 'exclusion_criteria', group: 'SCIENTIFIC_DESIGN', label: 'Exclusion criteria', description: 'Review of criteria precision both for scientific merit and safety concerns; and of justified exclusion' },
+  { id: 'withdrawal_criteria', group: 'SCIENTIFIC_DESIGN', label: 'Withdrawal criteria', description: 'Review of criteria precision both for scientific merit and safety concerns' },
+  { id: 'significance', group: 'SIGNIFICANCE_AND_CONDUCT', label: 'Significance of proposal', description: 'Review of rationale of research (what is the study for?)' },
+  { id: 'end_users', group: 'SIGNIFICANCE_AND_CONDUCT', label: 'End-users / target beneficiaries', description: 'Review of probable end-users or beneficiaries of research output' },
+  { id: 'expected_output', group: 'SIGNIFICANCE_AND_CONDUCT', label: 'Expected output', description: 'Review of the end-results expected upon completion of study (technology or knowledge) and R&D utilization' },
+  { id: 'duration', group: 'SIGNIFICANCE_AND_CONDUCT', label: 'Duration', description: 'Review of length/extent of activities proposed' },
+  { id: 'study_plan', group: 'SIGNIFICANCE_AND_CONDUCT', label: 'Study plan', description: 'Review of consistency of planned activities with research outputs, expected outputs, available manpower and financial resources' },
+  { id: 'budget_reasonableness', group: 'FINANCIAL_ASPECT', label: 'Budget reasonableness', description: 'Review of proposed total budget and necessity of requested items for purchase or procurement' },
+  { id: 'availability', group: 'FINANCIAL_ASPECT', label: 'Availability', description: 'Review of available financial resources within WMSU-GAA funds or counterpart funds from other sources' },
+  { id: 'ethical_acceptability', group: 'ETHICAL_CONSIDERATIONS', label: 'Ethical acceptability', description: 'Review of merit and ethical acceptability involving human/animal participants' },
+  { id: 'reoc_clearance', group: 'ETHICAL_CONSIDERATIONS', label: 'REOC clearance', description: 'Review of the need to secure REOC clearance prior to implementation' },
+];
+
+export const pointsInGroup = (groupId: AssessmentGroupId): AssessmentPoint[] => ASSESSMENT_POINTS.filter((point) => point.group === groupId);
+
+export const PRESENCE_META: Record<ChecklistPresence, { label: string; tone: StatusTone }> = {
+  YES: { label: 'YES', tone: 'emerald' },
+  NA: { label: 'N/A', tone: 'slate' },
 };
 
-const isValidScore = (value: unknown): value is number => Number.isInteger(value) && (value as number) >= 1 && (value as number) <= 10;
+export const RECOMMENDATION_ORDER: ReviewRecommendation[] = ['APPROVAL', 'MINOR_MODIFICATIONS', 'MAJOR_MODIFICATIONS', 'DISAPPROVAL'];
 
-/** Weighted total out of 100, one decimal. Missing criteria count as 0. */
-export function computeTotalScore(scores: Record<string, number | undefined>): number {
-  const total = EVALUATION_CRITERIA.reduce((sum, criterion) => sum + ((scores[criterion.id] ?? 0) / 10) * criterion.weight, 0);
-  return Math.round(total * 10) / 10;
-}
+export const RECOMMENDATION_META: Record<ReviewRecommendation, { label: string; tone: StatusTone; description: string }> = {
+  APPROVAL: { label: 'Approval', tone: 'emerald', description: 'Technically sound; no mandatory revisions' },
+  MINOR_MODIFICATIONS: { label: 'Minor Modifications', tone: 'amber', description: 'Acceptable after small corrections noted on the action sheet' },
+  MAJOR_MODIFICATIONS: { label: 'Major Modifications', tone: 'amber', description: 'Substantial revision required before it can be endorsed' },
+  DISAPPROVAL: { label: 'Disapproval', tone: 'red', description: 'Fundamental flaws; not recommended for funding' },
+};
+
+const isPresence = (value: unknown): value is ChecklistPresence => value === 'YES' || value === 'NA';
+
+/** Number of assessment points with a valid YES / N/A answer. Unknown ids are ignored. */
+export const answeredCount = (draft: ChecklistDraft): number => ASSESSMENT_POINTS.filter((point) => isPresence(draft[point.id]?.present)).length;
+
+/** Fills missing strings and trims; call only after validateSubmissionDraft returned ok. */
+export const finalizeChecklist = (draft: ChecklistDraft): Checklist => {
+  const out: Checklist = {};
+  for (const point of ASSESSMENT_POINTS) {
+    const entry = draft[point.id];
+    if (!entry || !isPresence(entry.present)) continue;
+    out[point.id] = { present: entry.present, pageRef: entry.present === 'NA' ? '' : (entry.pageRef ?? '').trim(), comment: (entry.comment ?? '').trim() };
+  }
+  return out;
+};
 
 export interface SubmissionDraft {
   recommendation: ReviewRecommendation | null;
-  scores: Record<string, number | undefined>;
-  remarks: string;
+  checklist: ChecklistDraft;
+  justification: string;
   hasAssessmentFile: boolean;
   hasActionSheetFile: boolean;
 }
 
-/** Client-side mirror of the server's validateSubmission; the server re-checks everything. */
+/** Client-side mirror of the server's validateSubmission (same strings, same order); the server re-checks everything. */
 export function validateSubmissionDraft(draft: SubmissionDraft): { ok: boolean; errors: string[] } {
   const errors: string[] = [];
-  if (!draft.recommendation) errors.push('Choose a recommendation');
-  if (EVALUATION_CRITERIA.some((criterion) => !isValidScore(draft.scores[criterion.id]))) errors.push('Score every criterion from 1 to 10');
-  const remarks = draft.remarks.trim();
-  if (remarks.length < MIN_REMARKS_LENGTH || remarks.length > MAX_REMARKS_LENGTH) errors.push('Remarks must be between 20 and 5000 characters');
+  if (!draft.recommendation || !RECOMMENDATION_ORDER.includes(draft.recommendation)) errors.push('Choose a recommended action');
+  const entryOf = (id: string) => draft.checklist[id] ?? {};
+  if (ASSESSMENT_POINTS.some((point) => !isPresence(entryOf(point.id).present))) errors.push('Answer every assessment point (YES or N/A)');
+  if (ASSESSMENT_POINTS.some((point) => entryOf(point.id).present === 'YES' && (entryOf(point.id).pageRef ?? '').trim().length === 0)) errors.push('Give the page and paragraph for every point marked YES');
+  if (ASSESSMENT_POINTS.some((point) => (entryOf(point.id).pageRef ?? '').trim().length > MAX_PAGE_REF_LENGTH)) errors.push('Page references must be at most 100 characters');
+  if (ASSESSMENT_POINTS.some((point) => (entryOf(point.id).comment ?? '').trim().length > MAX_COMMENT_LENGTH)) errors.push('Comments must be at most 2000 characters');
+  const text = draft.justification.trim();
+  if (text.length < MIN_JUSTIFICATION_LENGTH || text.length > MAX_JUSTIFICATION_LENGTH) errors.push('Justification must be between 20 and 5000 characters');
   if (!draft.hasAssessmentFile) errors.push('Attach the assessment form');
   if (!draft.hasActionSheetFile) errors.push('Attach the action sheet');
   return { ok: errors.length === 0, errors };

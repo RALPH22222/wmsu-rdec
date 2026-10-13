@@ -1,6 +1,6 @@
 import { API_ENDPOINTS } from '../config/apiConfig';
 import type {
-  BlindReview, EligibleConcept, PipelineEvaluator, ProponentProposal, ReviewRecommendation, RpduProposal,
+  BlindReview, Checklist, EligibleConcept, PipelineEvaluator, ProponentProposal, ReviewRecommendation, RpduProposal,
 } from '../types';
 
 interface Envelope<T> { success: boolean; data: T; message?: string; warning?: string | null; roundOutcome?: string | null }
@@ -44,8 +44,8 @@ export const getMyReview = async (reviewId: string, token?: string, signal?: Abo
 
 export interface SubmitReviewPayload {
   recommendation: ReviewRecommendation;
-  scores: Record<string, number>;
-  remarks: string;
+  checklist: Checklist;
+  justification: string;
   assessmentFile: File;
   actionSheetFile: File;
 }
@@ -53,8 +53,8 @@ export interface SubmitReviewPayload {
 export const submitReviewApi = async (reviewId: string, payload: SubmitReviewPayload, token?: string): Promise<{ review: BlindReview; roundOutcome: string | null }> => {
   const body = new FormData();
   body.append('recommendation', payload.recommendation);
-  body.append('scores', JSON.stringify(payload.scores));
-  body.append('remarks', payload.remarks);
+  body.append('checklist', JSON.stringify(payload.checklist));
+  body.append('remarks', payload.justification);
   body.append('assessment_file', payload.assessmentFile);
   body.append('action_sheet_file', payload.actionSheetFile);
   const result = await request<BlindReview>(API_ENDPOINTS.PIPELINE.MY_REVIEW_SUBMISSIONS(reviewId), token, { method: 'POST', body });

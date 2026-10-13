@@ -7,9 +7,9 @@ import { formatDate } from '../../lib/format';
 
 const SEAT_STATUS: Record<RpduReview['status'], { label: string; className: string }> = {
   PENDING: { label: 'Pending', className: 'bg-slate-100 text-slate-700' },
-  APPROVED: { label: 'Approve', className: 'bg-emerald-50 text-emerald-700' },
-  REVISION_REQUESTED: { label: 'Revise', className: 'bg-amber-50 text-amber-700' },
-  REJECTED: { label: 'Reject', className: 'bg-red-50 text-red-700' },
+  APPROVED: { label: 'Approval', className: 'bg-emerald-50 text-emerald-700' },
+  REVISION_REQUESTED: { label: 'Modifications', className: 'bg-amber-50 text-amber-700' },
+  REJECTED: { label: 'Disapproval', className: 'bg-red-50 text-red-700' },
 };
 
 interface ReviewPanelListProps { panel: RpduReview[]; onRemove: (reviewId: string) => Promise<void> }

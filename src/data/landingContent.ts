@@ -190,11 +190,11 @@ export const landingContent: LandingContent = {
     },
     {
       title: "Evaluators' Assessment Panel",
-      description: "Once passed by the R&D division, the proposal is forwarded to the evaluators for assessment. Evaluators review the proposal and assign scores based on key aspects such as the title, timeline, and budget to determine feasibility."
+      description: "Once passed by the R&D division, the proposal is forwarded to the evaluators for assessment. Evaluators review the proposal against the Proposal Assessment Form checklist, covering scientific design, significance, budget, and ethics, and give a recommended action."
     },
     {
       title: "Consolidated Review & Endorsement",
-      description: "After receiving all evaluators' scores and feedback, the R&D division reviews and consolidates the results. Based on this evaluation, the R&D may request revisions, reject the submission, or endorse it for funding."
+      description: "After receiving all evaluators' assessments and recommended actions, the R&D division reviews and consolidates the results. Based on this evaluation, the R&D may request revisions, reject the submission, or endorse it for funding."
     },
     {
       title: "RDEC Funding Deliberation",

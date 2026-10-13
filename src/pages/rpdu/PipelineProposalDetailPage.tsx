@@ -8,7 +8,7 @@ import { StatusBadge } from '../../components/ui/StatusBadge';
 import { PipelineStepper } from '../../components/ui/PipelineStepper';
 import { DocumentLink } from '../../components/ui/DocumentLink';
 import { RoundAccordion } from '../../components/ui/RoundAccordion';
-import { ScoreList } from '../../components/ui/ScoreList';
+import { ChecklistSummary, RecommendationBadge } from '../../components/ui/ChecklistSummary';
 import { HistoryList } from '../../components/ui/HistoryList';
 import { ReviewPanelList } from '../../components/rpduComponent/ReviewPanelList';
 import { PanelDots } from '../../components/rpduComponent/PanelDots';
@@ -63,11 +63,12 @@ function DetailBody({ id, role }: { id: string | undefined; role: 'rpdu' | 'admi
                     <article key={seat.id} className="rounded-sm border border-slate-100 p-3">
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <p className="text-sm font-semibold text-slate-900">{seat.evaluatorName} <span className="text-xs font-normal text-slate-500">· {seat.blindLabel}</span></p>
-                        <p className="text-xs"><span className={`rounded-sm px-2 py-0.5 font-bold ${RECOMMENDATION_META[submission.recommendation].tone === 'emerald' ? 'bg-emerald-50 text-emerald-700' : RECOMMENDATION_META[submission.recommendation].tone === 'red' ? 'bg-red-50 text-red-700' : 'bg-amber-50 text-amber-700'}`}>{RECOMMENDATION_META[submission.recommendation].label}</span> <span className="ml-2 font-bold text-slate-900">{submission.totalScore}</span><span className="text-slate-500">/100</span></p>
+                        <RecommendationBadge recommendation={submission.recommendation} />
                       </div>
-                      <div className="mt-3"><ScoreList scores={submission.scores} /></div>
-                      <p className="mt-3 whitespace-pre-wrap break-words text-xs text-slate-700">{submission.remarks}</p>
-                      <div className="mt-3 flex flex-wrap gap-2"><DocumentLink href={submission.assessmentFileUrl} label="Assessment" muted /><DocumentLink href={submission.actionSheetUrl} label="Action sheet" muted /></div>
+                      <div className="mt-3"><ChecklistSummary checklist={submission.checklist} /></div>
+                      <h4 className="mt-3 text-[11px] font-bold uppercase tracking-wider text-slate-500">Justification</h4>
+                      <p className="mt-1 whitespace-pre-wrap break-words text-xs text-slate-700">{submission.remarks}</p>
+                      <div className="mt-3 flex flex-wrap gap-2"><DocumentLink href={submission.assessmentFileUrl} label="Assessment form" muted /><DocumentLink href={submission.actionSheetUrl} label="Action sheet" muted /></div>
                     </article>
                   ))}
                 </RoundAccordion>
