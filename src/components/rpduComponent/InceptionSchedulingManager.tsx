@@ -656,7 +656,7 @@ export const InceptionSchedulingManager: React.FC = () => {
                   }
                 }}
                 disabled={selectableContracts.length === 0}
-                className="w-full bg-slate-50 border border-slate-300 rounded-md p-3 text-sm text-slate-900 focus:outline-none focus:ring-1 focus:ring-[#C8102E] font-medium cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+                className="w-full bg-slate-50 border border-slate-300 rounded-md p-3 pr-10 text-sm text-slate-900 focus:outline-none focus:ring-1 focus:ring-[#C8102E] font-medium cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 <option value="">
                   {selectableContracts.length === 0
@@ -819,7 +819,7 @@ export const InceptionSchedulingManager: React.FC = () => {
                   id="meeting-time"
                   value={formMeetingTime}
                   onChange={(e) => setFormMeetingTime(e.target.value)}
-                  className="w-full bg-white border border-slate-300 rounded-md p-3 text-sm text-slate-900 focus:outline-none focus:ring-1 focus:ring-[#C8102E] font-medium"
+                  className="w-full bg-white border border-slate-300 rounded-md p-3 pr-10 text-sm text-slate-900 focus:outline-none focus:ring-1 focus:ring-[#C8102E] font-medium cursor-pointer"
                   required
                 >
                   {MEETING_TIME_OPTIONS.map((slot) => (
@@ -842,7 +842,7 @@ export const InceptionSchedulingManager: React.FC = () => {
                   id="meeting-venue"
                   value={formVenueSelect}
                   onChange={(e) => setFormVenueSelect(e.target.value)}
-                  className="w-full bg-white border border-slate-300 rounded-md p-3 text-sm text-slate-900 focus:outline-none focus:ring-1 focus:ring-[#C8102E] font-medium"
+                  className="w-full bg-white border border-slate-300 rounded-md p-3 pr-10 text-sm text-slate-900 focus:outline-none focus:ring-1 focus:ring-[#C8102E] font-medium cursor-pointer"
                 >
                   {WMSU_VENUES.map((venue) => (
                     <option key={venue} value={venue}>
@@ -1158,38 +1158,6 @@ export const InceptionSchedulingManager: React.FC = () => {
         </div>
       )}
 
-      {/* Metric Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-        <div className="bg-slate-50/70 p-4 rounded-sm border border-slate-200">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block">Total Meetings</span>
-          <div className="text-2xl font-extrabold text-slate-900 mt-1">{meetings.length}</div>
-          <span className="text-[11px] text-slate-500 mt-0.5 block">Orientation sessions tracked</span>
-        </div>
-
-        <div className="bg-slate-50/70 p-4 rounded-sm border border-slate-200">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block">Scheduled &amp; Upcoming</span>
-          <div className="text-2xl font-extrabold text-amber-900 mt-1">
-            {meetings.filter((m) => m.status === 'scheduled').length}
-          </div>
-          <span className="text-[11px] text-amber-700 font-semibold mt-0.5 block">Awaiting meeting date</span>
-        </div>
-
-        <div className="bg-slate-50/70 p-4 rounded-sm border border-slate-200">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block">SO Forwarded to President</span>
-          <div className="text-2xl font-extrabold text-blue-900 mt-1">
-            {meetings.filter((m) => m.specialOrderStatus === 'forwarded_to_op').length}
-          </div>
-          <span className="text-[11px] text-blue-700 font-semibold mt-0.5 block">Routed to Office of President</span>
-        </div>
-
-        <div className="bg-slate-50/70 p-4 rounded-sm border border-slate-200">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block">Completed Meetings</span>
-          <div className="text-2xl font-extrabold text-emerald-900 mt-1">
-            {meetings.filter((m) => m.status === 'completed').length}
-          </div>
-          <span className="text-[11px] text-emerald-700 font-semibold mt-0.5 block">Project implementation active</span>
-        </div>
-      </div>
 
       {/* Table Section */}
       <div className="bg-white rounded-md border border-slate-200 shadow-xs overflow-hidden">

@@ -341,7 +341,7 @@ export const UploadPscModal: React.FC<UploadPscModalProps> = ({
                 <select
                   value={selectedProposalId}
                   onChange={(e) => handleProposalChange(e.target.value)}
-                  className="w-full px-3 py-2 bg-white border border-slate-200 rounded-sm font-medium focus:outline-none focus:ring-1 focus:ring-[#C8102E]"
+                  className="w-full px-3 py-2 pr-10 bg-white border border-slate-200 rounded-sm font-medium focus:outline-none focus:ring-1 focus:ring-[#C8102E] cursor-pointer"
                 >
                   {eligibleProposals.map((p) => (
                     <option key={p.id} value={p.id}>

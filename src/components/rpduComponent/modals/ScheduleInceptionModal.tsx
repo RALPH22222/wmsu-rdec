@@ -348,7 +348,7 @@ export const ScheduleInceptionModal: React.FC<ScheduleInceptionModalProps> = ({
                   value={selectedContractId}
                   onChange={(e) => handleContractChange(e.target.value)}
                   disabled={!!initialData}
-                  className="w-full px-3 py-2 bg-white border border-slate-300 rounded-sm font-semibold text-slate-900 focus:outline-none focus:ring-1 focus:ring-[#C8102E] disabled:bg-slate-100 disabled:text-slate-600"
+                  className="w-full px-3 py-2 pr-10 bg-white border border-slate-300 rounded-sm font-semibold text-slate-900 focus:outline-none focus:ring-1 focus:ring-[#C8102E] disabled:bg-slate-100 disabled:text-slate-600 cursor-pointer"
                 >
                   <option value="">-- Select Notarized PSC / Project --</option>
                   {availableContracts.map((c) => (
@@ -558,7 +558,7 @@ export const ScheduleInceptionModal: React.FC<ScheduleInceptionModalProps> = ({
                 <select
                   value={specialOrderStatus}
                   onChange={(e) => setSpecialOrderStatus(e.target.value as 'pending_request' | 'forwarded_to_op')}
-                  className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-sm text-xs font-bold focus:outline-none focus:ring-1 focus:ring-[#C8102E]"
+                  className="w-full px-2.5 py-1.5 pr-8 bg-white border border-slate-200 rounded-sm text-xs font-bold focus:outline-none focus:ring-1 focus:ring-[#C8102E] cursor-pointer"
                 >
                   <option value="pending_request">Request Prepared</option>
                   <option value="forwarded_to_op">Forwarded to Office of the President</option>
@@ -581,7 +581,7 @@ export const ScheduleInceptionModal: React.FC<ScheduleInceptionModalProps> = ({
                 <select
                   value={meetingStatus}
                   onChange={(e) => setMeetingStatus(e.target.value as InceptionMeetingStatus)}
-                  className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-sm text-xs font-bold focus:outline-none focus:ring-1 focus:ring-[#C8102E]"
+                  className="w-full px-2.5 py-1.5 pr-8 bg-white border border-slate-200 rounded-sm text-xs font-bold focus:outline-none focus:ring-1 focus:ring-[#C8102E] cursor-pointer"
                 >
                   <option value="scheduled">Scheduled</option>
                   <option value="completed">Completed</option>

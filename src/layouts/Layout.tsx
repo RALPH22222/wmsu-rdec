@@ -11,8 +11,16 @@ export default function Layout() {
     if (location.pathname === '/proponent/profile') return 'Institutional Profile & Affiliation';
     if (location.pathname === '/proponent/detailed-proposals') return 'Detailed Proposal Submission Hub';
     if (location.pathname === '/proponent/budget') return 'Line-Item Budget Allocation';
-    if (location.pathname === '/proponent/letters') return 'Screening Result Letters';
-    if (location.pathname === '/proponent/contracts') return 'Clearance & Contracts';
+    if (
+      location.pathname === '/proponent/documents' ||
+      location.pathname === '/proponent/letters' ||
+      location.pathname === '/proponent/contracts'
+    ) {
+      return 'Documents';
+    }
+    if (location.pathname.includes('/contract-preview') || location.pathname.includes('/preview')) {
+      return 'Contract Preview';
+    }
     if (location.pathname === '/proponent/revisions') return 'Technical Review Feedback & Revision History';
     return 'Concept Proposal Submission';
   };

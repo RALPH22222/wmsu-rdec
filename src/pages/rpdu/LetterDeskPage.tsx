@@ -636,7 +636,7 @@ export function LetterDeskPage() {
               </label>
               <select
                 id="letter-proposal"
-                className="w-full rounded-md border border-slate-300 bg-white p-3.5 text-sm text-slate-900 font-medium focus:border-[#C8102E] focus:outline-hidden transition-colors"
+                className="w-full rounded-md border border-slate-300 bg-white p-3.5 pr-10 text-sm text-slate-900 font-medium focus:border-[#C8102E] focus:outline-hidden transition-colors cursor-pointer"
                 value={conceptId}
                 onChange={(event) => {
                   setConceptId(event.target.value);
@@ -690,7 +690,7 @@ export function LetterDeskPage() {
                 </label>
                 <select
                   id="letter-reviewer"
-                  className="w-full rounded-md border border-slate-300 bg-white p-3.5 text-sm text-slate-900 font-medium focus:border-[#C8102E] focus:outline-hidden"
+                  className="w-full rounded-md border border-slate-300 bg-white p-3.5 pr-10 text-sm text-slate-900 font-medium focus:border-[#C8102E] focus:outline-hidden cursor-pointer"
                   value={reviewId}
                   onChange={(event) => {
                     setReviewId(event.target.value);

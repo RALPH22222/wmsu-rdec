@@ -37,8 +37,10 @@ export const ProponentSidebar: React.FC<ProponentSidebarProps> = ({
     location.pathname === '/dashboard';
   const isBudgetActive = location.pathname === '/proponent/budget';
   const isDetailedProposalActive = location.pathname === '/proponent/detailed-proposals';
-  const isLettersActive = location.pathname === '/proponent/letters';
-  const isContractsActive = location.pathname === '/proponent/contracts';
+  const isDocumentsActive =
+    location.pathname.startsWith('/proponent/documents') ||
+    location.pathname.startsWith('/proponent/contracts') ||
+    location.pathname === '/proponent/letters';
   const isRevisionsActive = location.pathname === '/proponent/revisions';
   const isProfileActive = location.pathname === '/proponent/profile';
 
@@ -156,29 +158,16 @@ export const ProponentSidebar: React.FC<ProponentSidebarProps> = ({
                 </Link>
 
                 <Link
-                  to="/proponent/letters"
+                  to="/proponent/documents"
                   onClick={onCloseMobile}
                   className={`w-full flex items-center gap-3.5 px-4 py-3 text-sm font-semibold rounded-sm text-left transition-colors border ${
-                    isLettersActive
+                    isDocumentsActive
                       ? 'bg-[#C8102E] text-white shadow-xs border-[#C8102E]'
                       : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50 border-transparent'
                   }`}
                 >
-                  <MailCheck className={`w-5 h-5 shrink-0 ${isLettersActive ? 'text-white' : 'text-slate-400'}`} />
-                  <span className="truncate">Screening Letters</span>
-                </Link>
-
-                <Link
-                  to="/proponent/contracts"
-                  onClick={onCloseMobile}
-                  className={`w-full flex items-center gap-3.5 px-4 py-3 text-sm font-semibold rounded-sm text-left transition-colors border ${
-                    isContractsActive
-                      ? 'bg-[#C8102E] text-white shadow-xs border-[#C8102E]'
-                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50 border-transparent'
-                  }`}
-                >
-                  <FileSignature className={`w-5 h-5 shrink-0 ${isContractsActive ? 'text-white' : 'text-slate-400'}`} />
-                  <span className="truncate">Clearance &amp; Contracts</span>
+                  <FileSignature className={`w-5 h-5 shrink-0 ${isDocumentsActive ? 'text-white' : 'text-slate-400'}`} />
+                  <span className="truncate">Documents</span>
                 </Link>
 
                 <Link

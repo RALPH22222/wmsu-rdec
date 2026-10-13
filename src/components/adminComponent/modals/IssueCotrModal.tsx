@@ -208,7 +208,7 @@ export const IssueCotrModal: React.FC<IssueCotrModalProps> = ({
             <select
               value={selectedProposalId}
               onChange={(e) => handleProposalChange(e.target.value)}
-              className="w-full px-3 py-2 bg-white border border-slate-300 rounded-sm font-medium focus:outline-none focus:ring-1 focus:ring-[#C8102E]"
+              className="w-full px-3 py-2 pr-10 bg-white border border-slate-300 rounded-sm font-medium focus:outline-none focus:ring-1 focus:ring-[#C8102E] cursor-pointer"
             >
               {proposals.map((p) => (
                 <option key={p.id} value={p.id}>

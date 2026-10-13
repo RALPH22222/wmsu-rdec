@@ -20,6 +20,8 @@ import { EvaluatorAssignmentPage } from './pages/rpdu/EvaluatorAssignmentPage';
 import ProponentDashboard from './pages/proponents/ProponentDashboard';
 import BudgetAllocationPage from './pages/proponents/BudgetAllocationPage';
 import ProfilePage from './pages/proponents/ProfilePage';
+import ProponentDocumentsPage from './pages/proponents/ProponentDocumentsPage';
+import ContractPreviewPage from './pages/proponents/ContractPreviewPage';
 import ScreeningLettersPage from './pages/proponents/ScreeningLettersPage';
 import ProponentContractsPage from './pages/proponents/ProponentContractsPage';
 import { RevisionHistoryPage } from './pages/proponents/RevisionHistoryPage';
@@ -100,8 +102,11 @@ export function App() {
                 <Route path="/proponent/submit" element={<ProponentDashboard />} />
                 <Route path="/proponent/detailed-proposals" element={<DetailedProposalSubmissionPage />} />
                 <Route path="/proponent/budget" element={<BudgetAllocationPage />} />
-                <Route path="/proponent/letters" element={<ScreeningLettersPage />} />
-                <Route path="/proponent/contracts" element={<ProponentContractsPage />} />
+                <Route path="/proponent/documents" element={<ProponentDocumentsPage />} />
+                <Route path="/proponent/documents/contract-preview/:conceptId" element={<ContractPreviewPage />} />
+                <Route path="/proponent/letters" element={<ProponentDocumentsPage />} />
+                <Route path="/proponent/contracts" element={<ProponentDocumentsPage />} />
+                <Route path="/proponent/contracts/:conceptId/preview" element={<ContractPreviewPage />} />
                 <Route path="/proponent/revisions" element={<RevisionHistoryPage />} />
                 <Route path="/proponent/profile" element={<ProfilePage />} />
                 <Route path="/dashboard" element={<ProponentDashboard />} />
