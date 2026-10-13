@@ -25,6 +25,8 @@ export interface UserProfileData {
     role: string | null;
     accessibleCallIds: string[];
     submissionCallId: string | null;
+    submissionLocked?: boolean;
+    submissionLockReason?: string | null;
   };
   departments?: UserDepartment | null;
 }

@@ -5,6 +5,7 @@ import {
   CheckCircle2,
   AlertTriangle,
   Clock,
+  Lock,
   Send,
   Trash2,
   Download,
@@ -21,7 +22,7 @@ import {
 } from 'lucide-react';
 import { useCallForProposals } from '../../context/CallForProposalsContext';
 import { useAuth } from '../../context/AuthContext';
-import { checkConceptProposalTitleApi, ConceptProposalTitleExistsError } from '../../lib/conceptProposalApi';
+import { checkConceptProposalTitleApi, ConceptProposalTitleExistsError, ConceptProposalSubmissionLockedError, CONCEPT_SUBMISSION_LOCK_MESSAGE } from '../../lib/conceptProposalApi';
 import type { ConceptProposal } from '../../types';
 
 interface UploadedFile {
@@ -93,9 +94,13 @@ const formatWindowDate = (date: string) => new Date(`${date}T00:00:00+08:00`).to
 
 export const ConceptProposalSubmissionForm: React.FC = () => {
   const { activeCall, loadingCalls, conceptProposals, submitConceptProposal, showToast } = useCallForProposals();
-  const { user, profile, session } = useAuth();
+  const { user, profile, session, refreshProfile } = useAuth();
   const [confirmedCallId, setConfirmedCallId] = useState<string | null>(null);
-  const canSubmit = Boolean(!loadingCalls && activeCall && profile?.is_eligible_to_submit === true);
+  const [deniedProfile, setDeniedProfile] = useState<typeof profile>(null);
+  const submissionLocked = Boolean(user?.id && (profile?.portal_access?.submissionLocked
+    || (deniedProfile && deniedProfile === profile)
+    || conceptProposals.some((proposal) => proposal.proponentId === user.id && proposal.screeningStatus === 'failed')));
+  const canSubmit = Boolean(!submissionLocked && !loadingCalls && activeCall && profile?.is_eligible_to_submit === true);
 
   const endorsementInputId = useId();
   const conceptDocInputId = useId();
@@ -187,7 +192,7 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
     const file = files[0];
 
     if (category === 'endorsement_pdf') {
-      if (!file.name.toLowerCase().endsWith('.pdf') && file.type !== 'application/pdf') {
+      if (!file.name.toLowerCase().endsWith('.pdf') || file.type !== 'application/pdf') {
         setErrors((prev) => ({
           ...prev,
           endorsement: 'The Dean Endorsement Form must be in PDF format.',
@@ -277,7 +282,7 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
     if (checkingTitle || submitting) return;
 
     if (!canSubmit || !activeCall) {
-      showToast('There is no open Call for Proposals accepting submissions.');
+      showToast(submissionLocked ? CONCEPT_SUBMISSION_LOCK_MESSAGE : 'There is no open Call for Proposals accepting submissions.');
       return;
     }
 
@@ -297,6 +302,10 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
       setConfirmedCallId(activeCall.id);
       setConfirmModalOpen(true);
     } catch (error) {
+      if (error instanceof ConceptProposalSubmissionLockedError) {
+        setDeniedProfile(profile);
+        void refreshProfile();
+      }
       showToast(error instanceof Error ? error.message : 'Unable to verify your proposal title. Please try again.');
     } finally {
       setCheckingTitle(false);
@@ -307,7 +316,7 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
   const handleConfirmSubmit = async () => {
     if (submitting) return;
     if (!canSubmit || !activeCall || confirmedCallId !== activeCall.id) {
-      showToast('There is no open Call for Proposals accepting submissions.');
+      showToast(submissionLocked ? CONCEPT_SUBMISSION_LOCK_MESSAGE : 'There is no open Call for Proposals accepting submissions.');
       setConfirmModalOpen(false);
       return;
     }
@@ -334,6 +343,10 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
       setEndorsementPdf(null);
     } catch (error) {
       setConfirmModalOpen(false);
+      if (error instanceof ConceptProposalSubmissionLockedError) {
+        setDeniedProfile(profile);
+        void refreshProfile();
+      }
       if (error instanceof ConceptProposalTitleExistsError) {
         setErrors((previous) => ({ ...previous, title: error.message }));
       }
@@ -409,6 +422,8 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
           <p className="mt-2 text-xs text-slate-600">New submissions are currently closed. Your existing submissions remain available in My Submissions.</p>
         </>}
       </section>
+
+      {submissionLocked && <div role="alert" className="flex items-start gap-3 rounded-sm border border-red-200 bg-red-50 p-4 text-sm text-red-800"><Lock className="mt-0.5 h-4 w-4 shrink-0" /><div><p className="font-semibold">New submissions locked</p><p className="mt-1">{profile?.portal_access?.submissionLockReason || CONCEPT_SUBMISSION_LOCK_MESSAGE}</p></div></div>}
 
       {/* VIEW TABS: Submit New vs Track My Submissions */}
       <div className="flex items-center justify-between border-b border-slate-200">
@@ -1711,19 +1726,6 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
                     Close
                   </button>
 
-                  {selectedSubmissionDetails.screeningStatus === 'failed' && canSubmit && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSelectedSubmissionDetails(null);
-                        setActiveTab('submit');
-                      }}
-                      className="px-4 py-2 text-xs font-bold rounded-sm bg-[#C8102E] text-white hover:bg-[#a00c24] transition-colors cursor-pointer shadow-xs flex items-center gap-1.5"
-                    >
-                      <Send className="w-3.5 h-3.5" />
-                      <span>Revise &amp; Resubmit</span>
-                    </button>
-                  )}
                 </div>
               </div>
             </div>

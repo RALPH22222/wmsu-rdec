@@ -1,6 +1,15 @@
 import { API_BASE_URL, API_ENDPOINTS } from '../config/apiConfig';
 import type { ConceptProposal } from '../types';
 
+export const CONCEPT_SUBMISSION_LOCK_MESSAGE = 'New concept proposal submissions are locked because your account has a failed preliminary screening record. You can still view your submissions and screening feedback.';
+
+export class ConceptProposalSubmissionLockedError extends Error {
+  constructor() {
+    super(CONCEPT_SUBMISSION_LOCK_MESSAGE);
+    this.name = 'ConceptProposalSubmissionLockedError';
+  }
+}
+
 export class ConceptProposalTitleExistsError extends Error {
   constructor() {
     super('A concept proposal with this title already exists. Please use a different title.');
@@ -16,6 +25,7 @@ export async function checkConceptProposalTitleApi(title: string, token?: string
     body: JSON.stringify({ title: title.trim() }),
   });
   const result = await response.json();
+  if (result.code === 'PROPOSAL_SUBMISSION_LOCKED') throw new ConceptProposalSubmissionLockedError();
   if (!response.ok || !result.success) throw new Error(result.message || 'Unable to verify your proposal title. Please try again.');
   return result.available === true;
 }
@@ -80,7 +90,6 @@ export interface ConceptProposalPayload {
   conceptPaperFile?: File | null;
   endorsementFile?: File | null;
   conceptPaperFileUrl?: string;
-  endorsementFileUrl?: string;
 }
 
 /**
@@ -111,8 +120,6 @@ export async function submitConceptProposalApi(
 
   if (payload.endorsementFile) {
     formData.append('endorsement_file', payload.endorsementFile);
-  } else if (payload.endorsementFileUrl) {
-    formData.append('endorsement_file_url', payload.endorsementFileUrl);
   }
 
   const headers: Record<string, string> = {};
@@ -129,6 +136,7 @@ export async function submitConceptProposalApi(
   const result = await response.json();
 
   if (!response.ok || !result.success) {
+    if (result.code === 'PROPOSAL_SUBMISSION_LOCKED') throw new ConceptProposalSubmissionLockedError();
     if (result.code === 'CONCEPT_PROPOSAL_TITLE_EXISTS') throw new ConceptProposalTitleExistsError();
     throw new Error(result.message || 'Failed to submit concept proposal');
   }
