@@ -175,12 +175,12 @@ export const CallForProposalsManager: React.FC = () => {
               key={tab}
               onClick={() => setActiveTab(tab)}
               className={`px-3.5 py-2 rounded-sm text-xs font-bold transition-all cursor-pointer shrink-0 ${activeTab === tab
-                ? 'bg-slate-900 text-white shadow-xs'
+                ? 'bg-[#C8102E] text-white shadow-xs'
                 : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
                 }`}
             >
               {tab === 'all' ? 'All Calls' : tab}
-              <span className="ml-1.5 px-1.5 py-0.5 rounded-sm text-[10px] bg-slate-200 text-slate-700 font-extrabold group-hover:bg-slate-300">
+              <span className={`ml-1.5 px-1.5 py-0.5 rounded-sm text-[10px] font-extrabold ${activeTab === tab ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-700'}`}>
                 {tab === 'all'
                   ? calls.length
                   : calls.filter((c) => {
