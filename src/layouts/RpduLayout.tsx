@@ -8,7 +8,9 @@ export const RpduLayout: React.FC = () => {
   const location = useLocation();
 
   const getPageTitle = () => {
+    if (location.pathname.startsWith('/rpdu/archive') || location.pathname.startsWith('/rpdu/issued-documents')) return 'Issued Documents & Contracts Archive';
     if (location.pathname.startsWith('/rpdu/letters')) return 'Official Letters';
+    if (location.pathname.startsWith('/rpdu/memos') || location.pathname.startsWith('/rpdu/aihr-memos')) return 'Official Memoranda Desk';
     if (location.pathname.startsWith('/rpdu/aihr')) return 'AIHR & En Banc Deliberation';
     if (location.pathname.startsWith('/rpdu/screening')) return 'Preliminary Screening — Concept Proposals';
     if (location.pathname.startsWith('/rpdu/clearance')) return 'Technical Review Clearance (COTR)';

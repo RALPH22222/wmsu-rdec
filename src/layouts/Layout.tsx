@@ -12,6 +12,7 @@ export default function Layout() {
     if (location.pathname === '/proponent/profile') return 'Institutional Profile & Affiliation';
     if (location.pathname === '/proponent/detailed-proposals') return 'Detailed Proposal Submission Hub';
     if (location.pathname === '/proponent/budget') return 'Line-Item Budget Allocation';
+    if (location.pathname.startsWith('/proponent/memos')) return 'Official Memoranda Desk';
     if (
       location.pathname === '/proponent/documents' ||
       location.pathname === '/proponent/letters' ||

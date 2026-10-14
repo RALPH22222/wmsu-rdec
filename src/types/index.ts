@@ -564,3 +564,30 @@ export interface InceptionMeeting {
   updatedAt: string;
 }
 
+// ============================================================================
+// Agency In-House Review (AIHR) Memoranda — Step 4.1
+// ============================================================================
+
+export interface Memo {
+  id: string;
+  memoNumber: string;
+  memoType: string;
+  memoSubject?: string;
+  title: string;
+  subject: string;
+  description?: string;
+  fileUrl: string;
+  fileName: string;
+  fileSize?: number;
+  fileType?: string;
+  conceptProposalId?: string;
+  projectTitle?: string;
+  proponentName?: string;
+  proponentDepartment?: string;
+  dateIssued: string;
+  issuedBy: string;
+  uploadedBy?: string;
+  createdAt: string;
+  updatedAt?: string;
+}
+

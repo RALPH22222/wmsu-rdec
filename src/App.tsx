@@ -17,9 +17,11 @@ import { RpduDashboard } from './pages/rpdu/RpduDashboard';
 import { CallFormPage } from './pages/CallFormPage';
 import { EvaluatorAssignmentPage } from './pages/rpdu/EvaluatorAssignmentPage';
 import { AihrDeliberationPage } from './pages/rpdu/AihrDeliberationPage';
+import { MemoPage } from './pages/rpdu/MemoPage';
 import ProponentDashboard from './pages/proponents/ProponentDashboard';
 import { ConceptProposalDetailsPage } from './pages/proponents/ConceptProposalDetailsPage';
 import BudgetAllocationPage from './pages/proponents/BudgetAllocationPage';
+import { ProponentMemosPage } from './pages/proponents/ProponentMemosPage';
 import ProfilePage from './pages/proponents/ProfilePage';
 import ProponentDocumentsPage from './pages/proponents/ProponentDocumentsPage';
 import ContractPreviewPage from './pages/proponents/ContractPreviewPage';
@@ -35,6 +37,8 @@ import { ScreeningReviewPage } from './pages/screening/ScreeningReviewPage';
 import { ScreeningDispatchPage } from './pages/screening/ScreeningDispatchPage';
 import { InceptionSchedulingPage } from './pages/rpdu/InceptionSchedulingPage';
 import { LetterDeskPage } from './pages/rpdu/LetterDeskPage';
+import { DocumentArchivePage } from './pages/rpdu/DocumentArchivePage';
+import { AdminDocumentArchivePage } from './pages/admin/AdminDocumentArchivePage';
 import Login from './pages/auth/Login';
 import Register from './pages/auth/Register';
 import { Toast } from './components/Toast';
@@ -103,6 +107,7 @@ export function App() {
                 <Route path="/proponent/proposals/:proposalId" element={<ConceptProposalDetailsPage />} />
                 <Route path="/proponent/detailed-proposals" element={<DetailedProposalSubmissionPage />} />
                 <Route path="/proponent/budget" element={<BudgetAllocationPage />} />
+                <Route path="/proponent/memos" element={<ProponentMemosPage />} />
                 <Route path="/proponent/documents" element={<ProponentDocumentsPage />} />
                 <Route path="/proponent/documents/contract-preview/:conceptId" element={<ContractPreviewPage />} />
                 <Route path="/proponent/letters" element={<ProponentDocumentsPage />} />
@@ -131,16 +136,19 @@ export function App() {
                 <Route path="/admin/screening/consolidation" element={<PreliminaryScreeningPage role="admin" view="consolidation" />} />
                 <Route path="/admin/screening/:proposalId" element={<ScreeningReviewPage role="admin" />} />
                 <Route path="/admin/aihr" element={<AihrDeliberationPage role="admin" />} />
+                <Route path="/admin/memos" element={<MemoPage role="admin" />} />
                 <Route path="/admin/letters">
                   <Route index element={<AdminLetterDeskPage />} />
                   <Route path="screening-results" element={<ScreeningDispatchPage role="admin" />} />
                 </Route>
-                <Route path="/admin/clearance" element={<Navigate to="/admin/letters?template=WMSU-RPDU-CERT-001.00" replace />} />
-                <Route path="/admin/contracts" element={<Navigate to="/admin/letters?template=WMSU-RPDU-PSC-001.00&tab=contracts" replace />} />
+                <Route path="/admin/archive" element={<AdminDocumentArchivePage />} />
+                <Route path="/admin/issued-documents" element={<Navigate to="/admin/archive" replace />} />
+                <Route path="/admin/clearance" element={<Navigate to="/admin/archive?filter=CERTIFICATE" replace />} />
+                <Route path="/admin/contracts" element={<Navigate to="/admin/archive?filter=CONTRACT" replace />} />
                 <Route path="/admin/scheduling" element={<AdminInceptionSchedulingPage />} />
                 <Route path="/admin/evaluations" element={<EvaluatorAssignmentPage role="admin" />} />
                 <Route path="/admin/evaluations/:id" element={<PipelineProposalDetailPage role="admin" />} />
-                <Route path="/admin/notarization" element={<Navigate to="/admin/letters?template=WMSU-RPDU-PSC-001.00&tab=contracts" replace />} />
+                <Route path="/admin/notarization" element={<Navigate to="/admin/archive?filter=CONTRACT" replace />} />
               </Route>
 
               {/* Dedicated RPDU Layout */}
@@ -153,16 +161,19 @@ export function App() {
                 <Route path="/rpdu/screening/:proposalId" element={<ScreeningReviewPage role="rpdu" />} />
                 <Route path="/rpdu/passed-proposals" element={<Navigate to="/rpdu/screening" replace />} />
                 <Route path="/rpdu/aihr" element={<AihrDeliberationPage role="rpdu" />} />
+                <Route path="/rpdu/memos" element={<MemoPage role="rpdu" />} />
                 <Route path="/rpdu/letters">
                   <Route index element={<LetterDeskPage />} />
                   <Route path="screening-results" element={<ScreeningDispatchPage role="rpdu" />} />
                 </Route>
-                <Route path="/rpdu/clearance" element={<Navigate to="/rpdu/letters?template=WMSU-RPDU-CERT-001.00" replace />} />
-                <Route path="/rpdu/contracts" element={<Navigate to="/rpdu/letters?template=WMSU-RPDU-PSC-001.00&tab=contracts" replace />} />
+                <Route path="/rpdu/archive" element={<DocumentArchivePage role="rpdu" />} />
+                <Route path="/rpdu/issued-documents" element={<Navigate to="/rpdu/archive" replace />} />
+                <Route path="/rpdu/clearance" element={<Navigate to="/rpdu/archive?filter=CERTIFICATE" replace />} />
+                <Route path="/rpdu/contracts" element={<Navigate to="/rpdu/archive?filter=CONTRACT" replace />} />
                 <Route path="/rpdu/scheduling" element={<InceptionSchedulingPage />} />
                 <Route path="/rpdu/evaluations" element={<EvaluatorAssignmentPage role="rpdu" />} />
                 <Route path="/rpdu/evaluations/:id" element={<PipelineProposalDetailPage role="rpdu" />} />
-                <Route path="/rpdu/notarization" element={<Navigate to="/rpdu/letters?template=WMSU-RPDU-PSC-001.00&tab=contracts" replace />} />
+                <Route path="/rpdu/notarization" element={<Navigate to="/rpdu/archive?filter=CONTRACT" replace />} />
               </Route>
             </Route>
 

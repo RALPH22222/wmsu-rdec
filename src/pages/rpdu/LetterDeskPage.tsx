@@ -1,14 +1,11 @@
 import { useEffect, useRef, useState, useMemo } from 'react';
 import {
+  Archive,
   ArrowLeft,
   ArrowRight,
   Check,
   FileText,
-  Printer,
-  Search,
-  X,
-  CheckCircle2,
-  Clock
+  Printer
 } from 'lucide-react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
@@ -85,21 +82,6 @@ type Preview = {
   attachments: Attachment[];
 };
 
-type IssuedDocument = {
-  id: string;
-  concept_proposal_id?: string;
-  issued_at: string;
-  template_code: string;
-  letter_date?: string;
-  is_notarized?: boolean;
-  template_variables: {
-    title: string;
-    recipientName: string;
-    attachments?: Attachment[];
-    contractData?: Partial<ContractData>;
-  };
-};
-
 const SCREENING: Template = 'WMSU-RPDU-LET-001.01';
 const INVITATION: Template = 'WMSU-RPDU-LET-003.00';
 const CERTIFICATE: Template = 'WMSU-RPDU-CERT-001.00';
@@ -111,10 +93,8 @@ const STAGES = ['Document', 'Recipient & Details', 'Signatories', 'Review & Issu
 
 export function LetterDeskPage() {
   const previewFrame = useRef<HTMLIFrameElement>(null);
-  const archiveFrame = useRef<HTMLIFrameElement>(null);
   const [searchParams] = useSearchParams();
   const requestedProposal = useRef(searchParams.get('proposal'));
-  const requestedIssued = useRef(searchParams.get('issued'));
 
   const { session, profile, loadingProfile } = useAuth();
   const [sources, setSources] = useState<Source[]>([]);
@@ -156,21 +136,9 @@ export function LetterDeskPage() {
     secondParty: '',
   });
 
-  // Preview & Archive State
+  // Preview & Issued State
   const [preview, setPreview] = useState<Preview | null>(null);
   const [newlyIssuedId, setNewlyIssuedId] = useState<string | null>(null);
-  const [issuedDocs, setIssuedDocs] = useState<IssuedDocument[]>([]);
-  const [archivedHtml, setArchivedHtml] = useState('');
-  const archivedPdfUrl = (() => {
-    if (!/^(https?:\/\/|\/uploads\/)/i.test(archivedHtml)) return '';
-    try { return new URL(archivedHtml, new URL(API_BASE_URL).origin).href; }
-    catch { return ''; }
-  })();
-  const [selectedIssuedDoc, setSelectedIssuedDoc] = useState<IssuedDocument | null>(null);
-
-  // Filter & Search for Issued Documents
-  const [archiveFilter, setArchiveFilter] = useState<'ALL' | 'CERTIFICATE' | 'CONTRACT' | 'LETTERS'>('ALL');
-  const [archiveSearch, setArchiveSearch] = useState('');
 
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -255,35 +223,7 @@ export function LetterDeskPage() {
     };
   }, [roleAllowed, loadingProfile, session?.access_token]);
 
-  // Load all issued documents
-  const loadIssued = async () => {
-    if (!roleAllowed || !session?.access_token) return;
-    try {
-      const data = await api<IssuedDocument[]>('/issued');
-      setIssuedDocs(data);
-    } catch (cause) {
-      console.warn('Could not load issued documents from server:', cause);
-    }
-  };
 
-  useEffect(() => {
-    if (!roleAllowed || !session?.access_token) return;
-    const controller = new AbortController();
-    const read = async <T,>(path: string): Promise<T> => {
-      const response = await fetch(`${API_BASE_URL}/letters${path}`, { signal: controller.signal, headers: { Authorization: `Bearer ${session.access_token}` } });
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.message || 'Could not load issued documents.');
-      return result.data as T;
-    };
-    const requestedId = requestedIssued.current;
-    Promise.all([read<IssuedDocument[]>('/issued'), requestedId ? read<{ rendered_html: string; template_variables: IssuedDocument['template_variables'] }>(`/issued/${requestedId}`) : Promise.resolve(null)])
-      .then(([documents, document]) => {
-        if (controller.signal.aborted) return;
-        setIssuedDocs(documents);
-        if (document) { setArchivedHtml(document.rendered_html); setSelectedIssuedDoc(documents.find(item => item.id === requestedId) || null); }
-      }).catch(cause => { if (!controller.signal.aborted) setError(cause instanceof Error ? cause.message : 'Could not load issued documents.'); });
-    return () => controller.abort();
-  }, [roleAllowed, session?.access_token]);
 
   useEffect(() => {
     if (!isContractTemplate(template) || !conceptId || !session?.access_token) return;
@@ -368,48 +308,13 @@ export function LetterDeskPage() {
         contractData: contractContext?.contractData,
       });
       setNewlyIssuedId(record.id);
-      await loadIssued();
       setSources(await api<Source[]>('/sources'));
     } catch (cause) {
-      setError(`${cause instanceof Error ? cause.message : 'Could not issue the document.'} Check issued list below before retrying.`);
+      setError(cause instanceof Error ? cause.message : 'Could not issue the document.');
     } finally {
       setBusy(false);
     }
   };
-
-  const openIssuedDocument = async (id: string) => {
-    setBusy(true);
-    setError('');
-    try {
-      const doc = await api<{ id: string; rendered_html: string; template_variables: IssuedDocument['template_variables'] }>(`/issued/${id}`);
-      setArchivedHtml(doc.rendered_html);
-      const found = issuedDocs.find((i) => i.id === id);
-      setSelectedIssuedDoc(found || null);
-      window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Could not open the issued document.');
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  // Filtered Issued Documents for Archive List
-  const filteredIssuedDocs = useMemo(() => {
-    return issuedDocs.filter((doc) => {
-      const isDocPsc = isContractTemplate(doc.template_code);
-      if (archiveFilter === 'CERTIFICATE' && doc.template_code !== CERTIFICATE) return false;
-      if (archiveFilter === 'CONTRACT' && !isDocPsc) return false;
-      if (archiveFilter === 'LETTERS' && (doc.template_code === CERTIFICATE || isDocPsc)) return false;
-
-      if (!archiveSearch.trim()) return true;
-      const q = archiveSearch.toLowerCase();
-      const title = doc.template_variables?.title?.toLowerCase() || '';
-      const name = doc.template_variables?.recipientName?.toLowerCase() || '';
-      const code = doc.template_code?.toLowerCase() || '';
-      const contractNum = doc.template_variables?.contractData?.contractNumber?.toLowerCase() || '';
-      return title.includes(q) || name.includes(q) || code.includes(q) || contractNum.includes(q);
-    });
-  }, [issuedDocs, archiveFilter, archiveSearch]);
 
   if (loadingProfile || (roleAllowed && loading)) {
     return (
@@ -435,7 +340,13 @@ export function LetterDeskPage() {
         <p className="mt-2 text-sm leading-6 text-slate-600">
           Prepare, review, sign, and issue technical review clearances (COTR), institutional research agreements (PSC), and official screening letters all in one place—without complicated pop-up windows.
         </p>
-        <Link to={`/${profile?.role === 'ADMIN' ? 'admin' : 'rpdu'}/letters/screening-results`} className="mt-3 inline-flex min-h-11 items-center rounded-sm bg-[#C8102E] px-4 text-sm font-semibold text-white hover:bg-[#A00D26]">Send screening results</Link>
+        <div className="mt-3 flex flex-wrap items-center gap-2.5">
+          <Link to={`/${profile?.role === 'ADMIN' ? 'admin' : 'rpdu'}/letters/screening-results`} className="inline-flex min-h-11 items-center rounded-sm bg-[#C8102E] px-4 text-sm font-semibold text-white hover:bg-[#A00D26]">Send screening results</Link>
+          <Link to={`/${profile?.role === 'ADMIN' ? 'admin' : 'rpdu'}/archive`} className="inline-flex min-h-11 items-center gap-2 rounded-sm border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 hover:bg-slate-50 shadow-2xs">
+            <Archive size={16} className="text-slate-500" />
+            View Document Archive
+          </Link>
+        </div>
       </header>
 
       {/* Workflow Navigation */}
@@ -678,10 +589,31 @@ export function LetterDeskPage() {
             )}
 
             {isContractTemplate(template) && contextLoading && <p role="status" className="text-sm text-slate-600">Checking existing PSC…</p>}
-            {isContractTemplate(template) && contractContext?.existingContract && <div role="status" className="border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-              <p>{contractContext.existingContract.status === 'DRAFT' ? 'A PSC draft already exists. Continue this draft using the next step; its existing record will be issued.' : 'A PSC has already been issued for this proposal. Another PSC cannot be generated.'}</p>
-              <button type="button" onClick={() => contractContext.existingContract!.status === 'DRAFT' ? setStage(3) : openIssuedDocument(contractContext.existingContract!.id)} className="mt-2 font-semibold underline">{contractContext.existingContract.status === 'DRAFT' ? 'Continue existing draft' : 'Open existing PSC'}</button>
-            </div>}
+            {isContractTemplate(template) && contractContext?.existingContract && (
+              <div role="status" className="border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 rounded-md">
+                <p>
+                  {contractContext.existingContract.status === 'DRAFT'
+                    ? 'A PSC draft already exists. Continue this draft using the next step; its existing record will be issued.'
+                    : 'A PSC has already been issued for this proposal. Another PSC cannot be generated.'}
+                </p>
+                {contractContext.existingContract.status === 'DRAFT' ? (
+                  <button
+                    type="button"
+                    onClick={() => setStage(3)}
+                    className="mt-2 inline-block font-semibold underline cursor-pointer"
+                  >
+                    Continue existing draft
+                  </button>
+                ) : (
+                  <Link
+                    to={`/${profile?.role === 'ADMIN' ? 'admin' : 'rpdu'}/archive?issued=${encodeURIComponent(contractContext.existingContract.id)}`}
+                    className="mt-2 inline-block font-semibold underline cursor-pointer"
+                  >
+                    Open existing PSC in Archive
+                  </Link>
+                )}
+              </div>
+            )}
 
             {/* Reviewer picker for invitation letters */}
             {selectedSource && template === INVITATION && (
@@ -1023,301 +955,33 @@ export function LetterDeskPage() {
                         : 'Official letter successfully issued!'}
                     </div>
                     <div className="text-xs text-emerald-800 mt-0.5">
-                      Archived in permanent university records under {isContractTemplate(template) ? 'professional_service_contracts' : 'official_letters'}. You can view or re-print it in the desk archive below at any time.
+                      Archived in permanent university records under {isContractTemplate(template) ? 'professional_service_contracts' : 'official_letters'}. You can view or print it in the Issued Documents Archive.
                     </div>
                   </div>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setStage(1);
-                    clearDraft();
-                  }}
-                  className="px-4 py-2 bg-white text-emerald-800 border border-emerald-300 hover:bg-emerald-100/50 rounded-md text-xs font-bold transition-colors cursor-pointer"
-                >
-                  Prepare Another Document
-                </button>
+                <div className="flex items-center gap-2">
+                  <Link
+                    to={`/${profile?.role === 'ADMIN' ? 'admin' : 'rpdu'}/archive?issued=${encodeURIComponent(newlyIssuedId)}`}
+                    className="px-4 py-2 bg-emerald-800 text-white hover:bg-emerald-900 rounded-md text-xs font-bold transition-colors cursor-pointer inline-flex items-center gap-1.5"
+                  >
+                    <Archive size={14} />
+                    View in Archive
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setStage(1);
+                      clearDraft();
+                    }}
+                    className="px-4 py-2 bg-white text-emerald-800 border border-emerald-300 hover:bg-emerald-100/50 rounded-md text-xs font-bold transition-colors cursor-pointer"
+                  >
+                    Prepare Another Document
+                  </button>
+                </div>
               </div>
             )}
             {newlyIssuedId && template === SCREENING && <Link to={`/${profile?.role === 'ADMIN' ? 'admin' : 'rpdu'}/letters/screening-results?letter=${encodeURIComponent(newlyIssuedId)}`} className="inline-flex min-h-11 items-center rounded-sm bg-[#C8102E] px-4 text-sm font-semibold text-white hover:bg-[#A00D26]">Preview &amp; send to proponent</Link>}
           </div>
-        )}
-      </section>
-
-      {/* SECTION: ISSUED OFFICIAL DOCUMENTS & ARCHIVES (IN-PAGE DESK) */}
-      <section className="space-y-6 pt-4" aria-labelledby="issued-documents-title">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-4">
-          <div>
-            <h2 id="issued-documents-title" className="text-2xl font-extrabold text-slate-900">
-              Issued Documents &amp; Contracts Archive
-            </h2>
-            <p className="mt-1 text-xs text-slate-500">
-              Instant in-page search and printable views of all issued certificates, contracts, and screening letters.
-            </p>
-          </div>
-
-          {/* Filter Pills */}
-          <div className="flex flex-wrap items-center gap-1.5 bg-slate-100 p-1 rounded-lg text-xs font-semibold">
-            <button
-              type="button"
-              onClick={() => setArchiveFilter('ALL')}
-              className={`px-3 py-1.5 rounded-md transition-colors cursor-pointer ${
-                archiveFilter === 'ALL' ? 'bg-white text-slate-900 shadow-2xs font-bold' : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              All ({issuedDocs.length})
-            </button>
-            <button
-              type="button"
-              onClick={() => setArchiveFilter('CERTIFICATE')}
-              className={`px-3 py-1.5 rounded-md transition-colors cursor-pointer ${
-                archiveFilter === 'CERTIFICATE' ? 'bg-white text-emerald-800 shadow-2xs font-bold' : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              COTR Clearances
-            </button>
-            <button
-              type="button"
-              onClick={() => setArchiveFilter('CONTRACT')}
-              className={`px-3 py-1.5 rounded-md transition-colors cursor-pointer ${
-                archiveFilter === 'CONTRACT' ? 'bg-white text-indigo-800 shadow-2xs font-bold' : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              Contracts (PSC)
-            </button>
-            <button
-              type="button"
-              onClick={() => setArchiveFilter('LETTERS')}
-              className={`px-3 py-1.5 rounded-md transition-colors cursor-pointer ${
-                archiveFilter === 'LETTERS' ? 'bg-white text-[#C8102E] shadow-2xs font-bold' : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              Letters
-            </button>
-          </div>
-        </div>
-
-        {/* Search input */}
-        <div className="relative max-w-md">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-          <input
-            type="text"
-            placeholder="Search by proposal title, recipient, or contract ref..."
-            value={archiveSearch}
-            onChange={(e) => setArchiveSearch(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 rounded-md border border-slate-200 bg-white text-xs text-slate-900 placeholder:text-slate-400 focus:border-[#C8102E] focus:outline-hidden"
-          />
-        </div>
-
-        {/* List / Table of Issued Documents */}
-        {filteredIssuedDocs.length === 0 ? (
-          <div className="rounded-lg border border-dashed border-slate-200 bg-white p-12 text-center text-slate-500">
-            <FileText className="w-8 h-8 mx-auto mb-2 text-slate-300 stroke-1" />
-            <p className="font-semibold text-slate-700">No issued records match your criteria.</p>
-            <p className="text-xs text-slate-400 mt-0.5">Use the form above to prepare and issue a document.</p>
-          </div>
-        ) : archiveFilter === 'CONTRACT' ? (
-          /* ISSUED CONTRACTS TABLE */
-          <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white shadow-2xs">
-            <table className="w-full text-left text-xs border-collapse">
-              <thead>
-                <tr className="border-b border-slate-200 bg-slate-50/80 text-[11px] font-bold uppercase tracking-wider text-slate-600">
-                  <th className="py-3 px-4">Contract Ref &amp; Date</th>
-                  <th className="py-3 px-4">Research Project Title</th>
-                  <th className="py-3 px-4">Study Leader</th>
-                  <th className="py-3 px-4 text-center">Notarization Status</th>
-                  <th className="py-3 px-4 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {filteredIssuedDocs.map((item) => {
-                  const formattedDate = new Date(item.issued_at).toLocaleDateString('en-PH', {
-                    timeZone: 'Asia/Manila',
-                    year: 'numeric',
-                    month: 'short',
-                    day: 'numeric',
-                  });
-                  const contractNo = item.template_variables?.contractData?.contractNumber || `PSC-${item.id.slice(0, 8).toUpperCase()}`;
-                  const isNotarized = Boolean(item.is_notarized);
-
-                  return (
-                    <tr key={item.id} className="hover:bg-slate-50/70 transition-colors">
-                      <td className="py-3.5 px-4 whitespace-nowrap">
-                        <span className="font-bold text-slate-900 block">{contractNo}</span>
-                        <span className="text-[11px] text-slate-400 font-medium">Issued {formattedDate}</span>
-                      </td>
-                      <td className="py-3.5 px-4 min-w-[200px] max-w-[340px]">
-                        <span className="font-bold text-slate-900 line-clamp-2 leading-snug">
-                          {item.template_variables?.title || 'Institutional Research Project'}
-                        </span>
-                      </td>
-                      <td className="py-3.5 px-4 whitespace-nowrap">
-                        <span className="font-semibold text-slate-800 block">
-                          {item.template_variables?.recipientName || 'Study Leader'}
-                        </span>
-                        <span className="text-[11px] text-slate-500">Study Leader</span>
-                      </td>
-                      <td className="py-3.5 px-4 text-center whitespace-nowrap">
-                        {isNotarized ? (
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
-                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                            Notarized Copy Submitted
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-slate-100 text-slate-700 border border-slate-200">
-                            <Clock className="w-3.5 h-3.5 text-slate-500 shrink-0" />
-                            Awaiting Notarized Submission
-                          </span>
-                        )}
-                      </td>
-                      <td className="py-3.5 px-4 text-right whitespace-nowrap">
-                        <button
-                          type="button"
-                          disabled={busy}
-                          onClick={() => openIssuedDocument(item.id)}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-[#C8102E] hover:text-[#A00D26] hover:bg-red-50/60 rounded-md transition-colors cursor-pointer"
-                        >
-                          <Printer className="w-3.5 h-3.5" /> View &amp; Print Document
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {filteredIssuedDocs.map((item) => {
-              const isPsc = isContractTemplate(item.template_code);
-              const isCotr = item.template_code === CERTIFICATE;
-              const formattedDate = new Date(item.issued_at).toLocaleDateString('en-PH', {
-                timeZone: 'Asia/Manila',
-                year: 'numeric',
-                month: 'short',
-                day: 'numeric',
-              });
-
-              return (
-                <div
-                  key={item.id}
-                  className="rounded-lg border border-slate-200 bg-white p-5 hover:border-slate-300 shadow-2xs hover:shadow-xs transition-all flex flex-col justify-between"
-                >
-                  <div>
-                    <div className="flex items-center justify-between gap-2 mb-2 flex-wrap">
-                      <div className="flex items-center gap-1.5">
-                        <span
-                          className={`inline-flex items-center px-2.5 py-0.5 rounded-sm text-[10px] font-bold border ${
-                            isPsc
-                              ? 'bg-indigo-50 text-indigo-800 border-indigo-200'
-                              : isCotr
-                              ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
-                              : 'bg-red-50 text-red-800 border-red-200'
-                          }`}
-                        >
-                          {isPsc ? 'Contract (PSC)' : isCotr ? 'Certificate (COTR)' : 'Official Letter'}
-                        </span>
-                        {isPsc && (
-                          <span
-                            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border ${
-                              item.is_notarized
-                                ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
-                                : 'bg-slate-100 text-slate-700 border-slate-200'
-                            }`}
-                          >
-                            {item.is_notarized ? (
-                              <>
-                                <CheckCircle2 className="w-3 h-3 text-emerald-600" /> Notarized Copy Submitted
-                              </>
-                            ) : (
-                              <>
-                                <Clock className="w-3 h-3 text-slate-500" /> Awaiting Notarized Copy
-                              </>
-                            )}
-                          </span>
-                        )}
-                      </div>
-                      <span className="text-[11px] text-slate-400 font-medium">Issued {formattedDate}</span>
-                    </div>
-
-                    <h3 className="text-sm font-bold text-slate-900 line-clamp-2 leading-snug">
-                      {item.template_variables?.title || 'Research Proposal'}
-                    </h3>
-
-                    <p className="mt-1 text-xs text-slate-600">
-                      <span className="font-semibold text-slate-700">Recipient / Study Leader:</span>{' '}
-                      {item.template_variables?.recipientName || 'Faculty Researcher'}
-                    </p>
-                  </div>
-
-                  <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
-                    <button
-                      type="button"
-                      disabled={busy}
-                      onClick={() => openIssuedDocument(item.id)}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-[#C8102E] hover:text-[#A00D26] hover:bg-red-50/60 rounded-md transition-colors cursor-pointer"
-                    >
-                      <Printer className="w-3.5 h-3.5" /> View &amp; Print Document
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-
-        {/* IN-PAGE DOCUMENT VIEWER (Displays directly on page, NO MODAL) */}
-        {archivedHtml && (
-          <section className="mt-8 rounded-lg border-2 border-slate-300 bg-white p-6 shadow-md space-y-4" aria-label="Archived document viewer">
-            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-4">
-              <div>
-                <h3 className="text-lg font-bold text-slate-900">
-                  {selectedIssuedDoc?.template_variables?.title || 'Archived Official Document'}
-                </h3>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  Template: {selectedIssuedDoc?.template_code} · {selectedIssuedDoc?.template_variables?.recipientName}
-                </p>
-              </div>
-
-              <div className="flex items-center gap-2">
-                {archivedPdfUrl ? <a href={archivedPdfUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 rounded-md bg-[#C8102E] hover:bg-[#A00D26] px-4 py-2 text-xs font-bold text-white"><Printer size={14} />Open submitted PDF</a> :
-                <button
-                  type="button"
-                  onClick={() => archiveFrame.current?.contentWindow?.print()}
-                  className="inline-flex items-center gap-1.5 rounded-md bg-[#C8102E] hover:bg-[#A00D26] px-4 py-2 text-xs font-bold text-white shadow-xs transition-colors cursor-pointer"
-                >
-                  <Printer size={14} /> Print / Save PDF
-                </button>}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setArchivedHtml('');
-                    setSelectedIssuedDoc(null);
-                  }}
-                  className="inline-flex items-center gap-1 rounded-md border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer"
-                >
-                  <X size={14} /> Close Preview
-                </button>
-              </div>
-            </div>
-
-            {archivedPdfUrl ? (
-              <iframe
-                ref={archiveFrame}
-                title="Archived notarized document"
-                src={archivedPdfUrl}
-                className="h-[750px] w-full rounded-sm bg-white border border-slate-200 shadow-sm"
-              />
-            ) : (
-              <iframe
-                ref={archiveFrame}
-                title="Archived official document"
-                sandbox="allow-modals allow-same-origin allow-popups"
-                srcDoc={archivedHtml}
-                className="h-[750px] w-full rounded-sm bg-white border border-slate-200 shadow-sm"
-              />
-            )}
-          </section>
         )}
       </section>
     </div>

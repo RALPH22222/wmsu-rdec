@@ -8,7 +8,8 @@ import {
   History,
   X,
   User as UserIcon,
-  LogOut
+  LogOut,
+  ScrollText,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { formatUserFullName } from '../../utils/userUtils';
@@ -37,6 +38,7 @@ export const ProponentSidebar: React.FC<ProponentSidebarProps> = ({
     location.pathname === '/dashboard';
   const isBudgetActive = location.pathname === '/proponent/budget';
   const isDetailedProposalActive = location.pathname === '/proponent/detailed-proposals';
+  const isMemosActive = location.pathname.startsWith('/proponent/memos');
   const isDocumentsActive =
     location.pathname.startsWith('/proponent/documents') ||
     location.pathname.startsWith('/proponent/contracts') ||
@@ -155,6 +157,19 @@ export const ProponentSidebar: React.FC<ProponentSidebarProps> = ({
                 >
                   <DollarSign className={`w-5 h-5 shrink-0 ${isBudgetActive ? 'text-white' : 'text-slate-400'}`} />
                   <span className="truncate">Budget Allocation</span>
+                </Link>
+
+                <Link
+                  to="/proponent/memos"
+                  onClick={onCloseMobile}
+                  className={`w-full flex items-center gap-3.5 px-4 py-3 text-sm font-semibold rounded-sm text-left transition-colors border ${
+                    isMemosActive
+                      ? 'bg-[#C8102E] text-white shadow-xs border-[#C8102E]'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50 border-transparent'
+                  }`}
+                >
+                  <ScrollText className={`w-5 h-5 shrink-0 ${isMemosActive ? 'text-white' : 'text-slate-400'}`} />
+                  <span className="truncate">Memorandums</span>
                 </Link>
 
                 <Link

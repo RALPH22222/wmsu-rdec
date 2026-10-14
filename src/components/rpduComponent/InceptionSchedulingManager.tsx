@@ -18,8 +18,8 @@ import {
   XCircle,
   Eye,
   Layers,
-  CheckSquare,
-  Square,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import type { InceptionMeeting, ProfessionalServiceContract, InceptionMeetingStatus, InceptionProjectItem } from '../../types';
 import { INITIAL_CONTRACTS } from './ContractsNotarizationManager';
@@ -200,6 +200,16 @@ export const InceptionSchedulingManager: React.FC = () => {
 
   // Form State - Selected Projects (Supports joint meetings with multiple projects)
   const [formSelectedProjects, setFormSelectedProjects] = useState<InceptionProjectItem[]>([]);
+  const [selectedProjectsPage, setSelectedProjectsPage] = useState(1);
+  const PROJECTS_PER_PAGE = 3;
+
+  const totalProjectPages = Math.max(1, Math.ceil(formSelectedProjects.length / PROJECTS_PER_PAGE));
+  const currentProjectsPage = Math.min(selectedProjectsPage, totalProjectPages);
+  const projectStartIndex = (currentProjectsPage - 1) * PROJECTS_PER_PAGE;
+  const paginatedSelectedProjects = useMemo(() => {
+    return formSelectedProjects.slice(projectStartIndex, projectStartIndex + PROJECTS_PER_PAGE);
+  }, [formSelectedProjects, projectStartIndex]);
+
   const [formMeetingTitle, setFormMeetingTitle] = useState('');
   const [formMeetingDate, setFormMeetingDate] = useState(() => {
     const d = new Date();
@@ -236,23 +246,6 @@ export const InceptionSchedulingManager: React.FC = () => {
     };
   };
 
-  const handleAddProject = (contractId: string) => {
-    if (!contractId) return;
-    const c = selectableContracts.find((item) => item.id === contractId);
-    if (!c) return;
-    if (formSelectedProjects.some((p) => p.contractId === c.id || (p.contractNumber && p.contractNumber === c.contractNumber))) {
-      return;
-    }
-    const item = convertContractToProjectItem(c);
-    const updated = [...formSelectedProjects, item];
-    setFormSelectedProjects(updated);
-    if (updated.length === 1) {
-      setFormMeetingTitle(`Inception Meeting: ${item.projectTitle}`);
-    } else {
-      setFormMeetingTitle(`Joint Inception Meeting (${updated.length} Projects)`);
-    }
-  };
-
   const handleRemoveProject = (index: number) => {
     const updated = formSelectedProjects.filter((_, idx) => idx !== index);
     setFormSelectedProjects(updated);
@@ -263,9 +256,33 @@ export const InceptionSchedulingManager: React.FC = () => {
     } else {
       setFormMeetingTitle('');
     }
+    const newTotal = Math.max(1, Math.ceil(updated.length / PROJECTS_PER_PAGE));
+    if (selectedProjectsPage > newTotal) {
+      setSelectedProjectsPage(newTotal);
+    }
   };
 
-  const handleSelectAll = () => {
+  // Automatically select all projects ready for inception meeting when form opens
+  useEffect(() => {
+    if (viewMode === 'form' && !editingMeeting && formSelectedProjects.length === 0 && selectableContracts.length > 0) {
+      const allItems = selectableContracts.map(convertContractToProjectItem);
+      setFormSelectedProjects(allItems);
+      if (allItems.length === 1) {
+        setFormMeetingTitle(`Inception Meeting: ${allItems[0].projectTitle}`);
+      } else if (allItems.length > 1) {
+        setFormMeetingTitle(`Joint Inception Meeting (${allItems.length} Projects)`);
+      }
+    }
+  }, [viewMode, editingMeeting, selectableContracts]);
+
+  const openCreateForm = () => {
+    setEditingMeeting(null);
+    setFormError(null);
+    setFormPrepareSoRequest(true);
+    setFormVenueSelect(WMSU_VENUES[0]);
+    setFormCustomVenue('');
+
+    // Automatically select all projects ready for inception meeting
     const allItems = selectableContracts.map(convertContractToProjectItem);
     setFormSelectedProjects(allItems);
     if (allItems.length === 1) {
@@ -275,23 +292,6 @@ export const InceptionSchedulingManager: React.FC = () => {
     } else {
       setFormMeetingTitle('');
     }
-  };
-
-  const handleDeselectAll = () => {
-    setFormSelectedProjects([]);
-    setFormMeetingTitle('');
-  };
-
-  const openCreateForm = () => {
-    setEditingMeeting(null);
-    setFormError(null);
-    setFormPrepareSoRequest(true);
-    setFormVenueSelect(WMSU_VENUES[0]);
-    setFormCustomVenue('');
-
-    // Nothing selected by default when creating a new meeting
-    setFormSelectedProjects([]);
-    setFormMeetingTitle('');
 
     const d = new Date();
     d.setDate(d.getDate() + 7);
@@ -301,12 +301,14 @@ export const InceptionSchedulingManager: React.FC = () => {
     setFormCompletedDate('');
     setFormSpecialOrderStatus('pending_request');
     setFormSpecialOrderNumber('');
+    setSelectedProjectsPage(1);
     setViewMode('form');
   };
 
   const openEditForm = (meeting: InceptionMeeting) => {
     setEditingMeeting(meeting);
     setFormError(null);
+    setSelectedProjectsPage(1);
 
     const loadedProjects: InceptionProjectItem[] =
       Array.isArray(meeting.projects) && meeting.projects.length > 0
@@ -588,130 +590,21 @@ export const InceptionSchedulingManager: React.FC = () => {
                   Research Projects
                 </h2>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  Select one or more research contracts to combine into this joint kickoff orientation session.
+                  All approved research projects ready for kickoff orientation are automatically selected for this session.
                 </p>
               </div>
-              <div className="flex items-center gap-2 self-start sm:self-auto shrink-0">
-                {formSelectedProjects.length > 1 && (
-                  <span className="text-[11px] font-semibold text-slate-800 bg-slate-100 px-2.5 py-1 rounded-sm border border-slate-200 flex items-center gap-1">
-                    <Layers className="w-3 h-3 text-slate-600" /> Joint Session ({formSelectedProjects.length} Projects)
-                  </span>
-                )}
-                {selectableContracts.length > 0 && (
-                  formSelectedProjects.length < selectableContracts.length ? (
-                    <button
-                      type="button"
-                      onClick={handleSelectAll}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-sm border border-slate-300 bg-white hover:bg-slate-50 text-slate-800 transition-colors cursor-pointer shadow-2xs"
-                    >
-                      <CheckSquare className="w-3.5 h-3.5 text-[#C8102E]" />
-                      Select All ({selectableContracts.length})
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={handleDeselectAll}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-sm border border-slate-300 bg-white hover:bg-slate-50 text-slate-600 transition-colors cursor-pointer shadow-2xs"
-                    >
-                      <Square className="w-3.5 h-3.5 text-slate-400" />
-                      Deselect All
-                    </button>
-                  )
-                )}
-              </div>
-            </div>
-
-            {selectableContracts.length === 0 && (
-              <div className="p-3 bg-slate-50 border border-slate-200 rounded-md text-xs text-slate-600 flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                <span>All approved research projects have already been scheduled for inception meetings.</span>
-              </div>
-            )}
-
-            <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider" htmlFor="contract-selector">
-                  {formSelectedProjects.length === 0
-                    ? 'Select Research Contract *'
-                    : 'Add Another Project to This Session'}
-                </label>
-                {selectableContracts.length > 0 && formSelectedProjects.length < selectableContracts.length && (
-                  <button
-                    type="button"
-                    onClick={handleSelectAll}
-                    className="text-xs text-[#C8102E] hover:underline font-semibold cursor-pointer"
-                  >
-                    Select all {selectableContracts.length} available
-                  </button>
-                )}
-              </div>
-              <select
-                id="contract-selector"
-                value=""
-                onChange={(e) => {
-                  if (e.target.value === '__SELECT_ALL__') {
-                    handleSelectAll();
-                  } else if (e.target.value) {
-                    handleAddProject(e.target.value);
-                  }
-                }}
-                disabled={selectableContracts.length === 0}
-                className="w-full bg-slate-50 border border-slate-300 rounded-md p-3 pr-10 text-sm text-slate-900 focus:outline-none focus:ring-1 focus:ring-[#C8102E] font-medium cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
-              >
-                <option value="">
-                  {selectableContracts.length === 0
-                    ? 'No contracts available (all projects already scheduled)'
-                    : formSelectedProjects.length === 0
-                    ? '-- Select a contract to schedule --'
-                    : selectableContracts.filter(
-                        (c) =>
-                          !formSelectedProjects.some(
-                            (p) =>
-                              p.contractId === c.id ||
-                              (p.contractNumber && p.contractNumber === c.contractNumber)
-                          )
-                      ).length > 0
-                    ? '+ Select another project to add to this joint meeting...'
-                    : 'All available contracts have been included in this session'}
-                </option>
-                {selectableContracts.length > 1 &&
-                  formSelectedProjects.length < selectableContracts.length && (
-                    <option value="__SELECT_ALL__" className="font-bold text-[#C8102E]">
-                      ★ Select All Available Projects ({selectableContracts.length})
-                    </option>
-                  )}
-                {selectableContracts
-                  .filter(
-                    (c) =>
-                      !formSelectedProjects.some(
-                        (p) =>
-                          p.contractId === c.id ||
-                          (p.contractNumber && p.contractNumber === c.contractNumber)
-                      )
-                  )
-                  .map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.contractNumber} &bull; {c.projectTitle} &mdash; {c.studyLeaderName || c.proponentName || 'Study Leader'}
-                    </option>
-                  ))}
-              </select>
+              {formSelectedProjects.length > 1 && (
+                <span className="text-[11px] font-semibold text-slate-800 bg-slate-100 px-2.5 py-1 rounded-sm border border-slate-200 flex items-center gap-1 self-start sm:self-auto shrink-0">
+                  <Layers className="w-3 h-3 text-slate-600" /> Joint Session ({formSelectedProjects.length} Projects)
+                </span>
+              )}
             </div>
 
             {formSelectedProjects.length === 0 ? (
-              <div className="p-6 bg-slate-50 border border-dashed border-slate-300 rounded-md text-center space-y-2.5">
-                <p className="text-xs text-slate-600 font-medium">
-                  Nothing selected yet. Choose a project from the dropdown above or click &ldquo;Select All&rdquo;.
-                </p>
-                {selectableContracts.length > 0 && (
-                  <button
-                    type="button"
-                    onClick={handleSelectAll}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-300 hover:border-slate-400 text-xs font-semibold text-slate-800 rounded-md shadow-2xs cursor-pointer transition-colors"
-                  >
-                    <CheckSquare className="w-3.5 h-3.5 text-[#C8102E]" />
-                    Select All Available Projects ({selectableContracts.length})
-                  </button>
-                )}
+              <div className="p-6 bg-slate-50 border border-dashed border-slate-300 rounded-md text-center text-xs text-slate-500 space-y-1">
+                <CheckCircle2 className="w-5 h-5 text-slate-400 mx-auto mb-1.5" />
+                <p className="font-semibold text-slate-700">No projects currently ready for inception scheduling.</p>
+                <p className="text-slate-400">All approved research projects have already been scheduled or are awaiting notarized contracts.</p>
               </div>
             ) : (
               <div className="space-y-2 pt-1">
@@ -735,49 +628,87 @@ export const InceptionSchedulingManager: React.FC = () => {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100">
-                        {formSelectedProjects.map((project, idx) => (
-                          <tr key={project.contractId || project.proposalCode || idx} className="hover:bg-slate-50/80 transition-colors">
-                            <td className="py-2.5 px-3 text-center font-bold text-slate-400">
-                              {idx + 1}
-                            </td>
-                            <td className="py-2.5 px-3 align-middle whitespace-nowrap">
-                              <span className="font-mono font-bold text-slate-800 block text-xs">
-                                {project.contractNumber || 'N/A'}
-                              </span>
-                              <span className="font-mono text-[10px] text-slate-400 block mt-0.5">
-                                {project.proposalCode || 'N/A'}
-                              </span>
-                            </td>
-                            <td className="py-2.5 px-3 align-middle">
-                              <span className="font-bold text-slate-900 block text-xs leading-snug line-clamp-2" title={project.projectTitle}>
-                                {project.projectTitle}
-                              </span>
-                            </td>
-                            <td className="py-2.5 px-3 align-middle whitespace-nowrap">
-                              <span className="font-semibold text-slate-800 block text-xs">
-                                {project.leadInvestigator || 'N/A'}
-                              </span>
-                              {project.studyLeaderCollege && (
-                                <span className="text-[10px] text-slate-500 block truncate max-w-44 mt-0.5" title={project.studyLeaderCollege}>
-                                  {project.studyLeaderCollege}
+                        {paginatedSelectedProjects.map((project, idx) => {
+                          const actualIndex = projectStartIndex + idx;
+                          return (
+                            <tr key={project.contractId || project.proposalCode || actualIndex} className="hover:bg-slate-50/80 transition-colors">
+                              <td className="py-2.5 px-3 text-center font-bold text-slate-400">
+                                {actualIndex + 1}
+                              </td>
+                              <td className="py-2.5 px-3 align-middle whitespace-nowrap">
+                                <span className="font-mono font-bold text-slate-800 block text-xs">
+                                  {project.contractNumber || 'N/A'}
                                 </span>
-                              )}
-                            </td>
-                            <td className="py-2.5 px-3 align-middle text-right whitespace-nowrap">
-                              <button
-                                type="button"
-                                onClick={() => handleRemoveProject(idx)}
-                                className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-sm cursor-pointer transition-colors inline-flex items-center justify-center"
-                                title="Remove project from joint meeting"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
+                                <span className="font-mono text-[10px] text-slate-400 block mt-0.5">
+                                  {project.proposalCode || 'N/A'}
+                                </span>
+                              </td>
+                              <td className="py-2.5 px-3 align-middle">
+                                <span className="font-bold text-slate-900 block text-xs leading-snug line-clamp-2" title={project.projectTitle}>
+                                  {project.projectTitle}
+                                </span>
+                              </td>
+                              <td className="py-2.5 px-3 align-middle whitespace-nowrap">
+                                <span className="font-semibold text-slate-800 block text-xs">
+                                  {project.leadInvestigator || 'N/A'}
+                                </span>
+                                {project.studyLeaderCollege && (
+                                  <span className="text-[10px] text-slate-500 block truncate max-w-44 mt-0.5" title={project.studyLeaderCollege}>
+                                    {project.studyLeaderCollege}
+                                  </span>
+                                )}
+                              </td>
+                              <td className="py-2.5 px-3 align-middle text-right whitespace-nowrap">
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveProject(actualIndex)}
+                                  className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-sm cursor-pointer transition-colors inline-flex items-center justify-center"
+                                  title="Remove project from joint meeting"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>
+
+                  {totalProjectPages > 1 && (
+                    <div className="flex items-center justify-between border-t border-slate-200 bg-slate-50/80 px-3.5 py-2 text-xs">
+                      <span className="text-slate-500 font-medium">
+                        Showing <strong className="text-slate-800">{projectStartIndex + 1}</strong> to{' '}
+                        <strong className="text-slate-800">
+                          {Math.min(projectStartIndex + PROJECTS_PER_PAGE, formSelectedProjects.length)}
+                        </strong>{' '}
+                        of <strong className="text-slate-800">{formSelectedProjects.length}</strong>
+                      </span>
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          disabled={currentProjectsPage <= 1}
+                          onClick={() => setSelectedProjectsPage((p) => Math.max(1, p - 1))}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-sm border border-slate-300 bg-white text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shadow-2xs transition-colors"
+                        >
+                          <ChevronLeft className="w-3.5 h-3.5" />
+                          Previous
+                        </button>
+                        <span className="px-2 text-slate-600 font-semibold text-xs">
+                          {currentProjectsPage} / {totalProjectPages}
+                        </span>
+                        <button
+                          type="button"
+                          disabled={currentProjectsPage >= totalProjectPages}
+                          onClick={() => setSelectedProjectsPage((p) => Math.min(totalProjectPages, p + 1))}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-sm border border-slate-300 bg-white text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shadow-2xs transition-colors"
+                        >
+                          Next
+                          <ChevronRight className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
