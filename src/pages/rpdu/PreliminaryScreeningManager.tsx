@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
+  ClipboardCheck,
   Search,
   CheckCircle2,
   XCircle,
@@ -20,10 +21,12 @@ import { ProposalConsolidation } from '../../components/rpduComponent/ProposalCo
 
 interface PreliminaryScreeningManagerProps {
   role?: 'rpdu' | 'admin';
+  view?: 'proposals' | 'consolidation';
 }
 
 export const PreliminaryScreeningManager: React.FC<PreliminaryScreeningManagerProps> = ({
   role = 'rpdu',
+  view = 'proposals',
 }) => {
   const {
     conceptProposals,
@@ -62,7 +65,9 @@ export const PreliminaryScreeningManager: React.FC<PreliminaryScreeningManagerPr
   // Filtered Proposals
   const filteredProposals = useMemo(() => {
     return conceptProposals.filter((p) => {
-      const matchesStatus = statusFilter === 'all' || p.screeningStatus === statusFilter;
+      const matchesStatus = view === 'consolidation'
+        ? p.screeningStatus === 'passed'
+        : statusFilter === 'all' || p.screeningStatus === statusFilter;
       const matchesThematic = thematicFilter === 'all' || p.thematicArea === thematicFilter;
       const matchesCollege = collegeFilter === 'all' || p.college === collegeFilter;
       const q = searchQuery.toLowerCase().trim();
@@ -76,108 +81,38 @@ export const PreliminaryScreeningManager: React.FC<PreliminaryScreeningManagerPr
 
       return matchesStatus && matchesThematic && matchesCollege && matchesSearch;
     });
-  }, [conceptProposals, statusFilter, thematicFilter, collegeFilter, searchQuery]);
+  }, [conceptProposals, statusFilter, thematicFilter, collegeFilter, searchQuery, view]);
+
+  const screeningList = { searchQuery, statusFilter, thematicFilter, collegeFilter, viewMode };
+
+  const handleSummaryFilter = (status: 'all' | ScreeningStatus) => {
+    setStatusFilter(status);
+    if (view === 'consolidation') {
+      navigate(`/${role}/screening`, { state: { screeningList: { ...screeningList, statusFilter: status } } });
+    }
+  };
 
   const handleOpenReview = (proposal: ConceptProposal, panel?: 'decision') => {
     navigate(`/${role}/screening/${proposal.id}`, {
-      state: { screeningPanel: panel, screeningList: { searchQuery, statusFilter, thematicFilter, collegeFilter, viewMode } },
+      state: { screeningPanel: panel, screeningList },
     });
   };
 
-  if (loadingConceptProposals) return (
-    <div role="status" aria-label="Loading screening information">
-      <span className="sr-only">Loading screening information</span>
-      <div aria-hidden="true" className="space-y-5 motion-safe:animate-pulse">
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">{Array.from({ length: 4 }, (_, index) => <div key={index} className="h-24 rounded-sm border border-slate-200 bg-white p-4"><div className="h-3 w-2/3 rounded bg-slate-100" /><div className="mt-4 h-6 w-10 rounded bg-slate-100" /></div>)}</div>
-        <div className="h-24 rounded-sm border border-slate-200 bg-white" />
-        {Array.from({ length: 3 }, (_, index) => <div key={index} className="space-y-3 rounded-sm border border-slate-200 bg-white p-5"><div className="h-4 w-2/3 rounded bg-slate-100" /><div className="h-3 w-1/3 rounded bg-slate-100" /></div>)}
-      </div>
-    </div>
-  );
-  if (screeningError) return <div role="alert" className="rounded-sm border border-red-200 bg-red-50 p-5 text-sm text-red-800">{screeningError}<button type="button" onClick={() => void refreshConceptProposals()} className="ml-3 font-semibold underline">Try again</button></div>;
+  const handleProposalClick = (event: React.MouseEvent<HTMLElement>, proposal: ConceptProposal) => {
+    const target = event.target;
+    if (!(target instanceof Element) || !event.currentTarget.contains(target)
+      || target.closest('a, button, input, select, textarea, label, summary, [data-screening-feedback]')) return;
+    handleOpenReview(proposal);
+  };
 
-  return (
-    <div className="space-y-6">
-
-      {/* Metric Counters */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-        {/* Total Submissions */}
-        <div
-          onClick={() => setStatusFilter('all')}
-          className="p-3.5 bg-white hover:bg-slate-50/50 rounded-sm border border-slate-200/90 shadow-2xs transition-colors flex flex-col justify-between cursor-pointer"
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
-              Total Submissions
-            </span>
-            <FileText className="w-3.5 h-3.5 text-slate-400" />
-          </div>
-          <div className="mt-2">
-            <span className="text-2xl font-black text-slate-900 tracking-tight block">{stats.total}</span>
-            <span className="text-[11px] text-slate-500 font-medium mt-0.5 block">Faculty Concept Proposals</span>
-          </div>
-        </div>
-
-        {/* Pending Preliminary Screening */}
-        <div
-          onClick={() => setStatusFilter('pending')}
-          className="p-3.5 bg-white hover:bg-slate-50/50 rounded-sm border border-slate-200/90 shadow-2xs transition-colors flex flex-col justify-between cursor-pointer"
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
-              Awaiting Screening
-            </span>
-            <Clock className="w-3.5 h-3.5 text-slate-400" />
-          </div>
-          <div className="mt-2">
-            <span className="text-2xl font-black text-slate-900 tracking-tight block">{stats.pending}</span>
-            <span className="text-[11px] text-slate-500 font-medium mt-0.5 block">Requires RPDU Action</span>
-          </div>
-        </div>
-
-        {/* Passed (Qualified) */}
-        <div
-          onClick={() => setStatusFilter('passed')}
-          className="p-3.5 bg-white hover:bg-slate-50/50 rounded-sm border border-slate-200/90 shadow-2xs transition-colors flex flex-col justify-between cursor-pointer"
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
-              Passed Screening
-            </span>
-            <CheckCircle2 className="w-3.5 h-3.5 text-slate-400" />
-          </div>
-          <div className="mt-2">
-            <span className="text-2xl font-black text-slate-900 tracking-tight block">{stats.passed}</span>
-            <span className="text-[11px] text-slate-500 font-medium mt-0.5 block">
-              Endorsed ({stats.passRate}% pass rate)
-            </span>
-          </div>
-        </div>
-
-        {/* Failed (Disqualified) */}
-        <div
-          onClick={() => setStatusFilter('failed')}
-          className="p-3.5 bg-white hover:bg-slate-50/50 rounded-sm border border-slate-200/90 shadow-2xs transition-colors flex flex-col justify-between cursor-pointer"
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
-              Returned / Ineligible
-            </span>
-            <XCircle className="w-3.5 h-3.5 text-slate-400" />
-          </div>
-          <div className="mt-2">
-            <span className="text-2xl font-black text-slate-900 tracking-tight block">{stats.failed}</span>
-            <span className="text-[11px] text-slate-500 font-medium mt-0.5 block">With Evaluation Notes</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Filter and Search Bar */}
-      <div className="bg-white p-4 rounded-md border border-slate-200 shadow-2xs space-y-3.5">
+  const screeningFilters = (
+    <div className={view === 'consolidation' ? 'space-y-3.5 border-b border-slate-200 pb-4' : 'bg-white p-4 rounded-md border border-slate-200 shadow-2xs space-y-3.5'}>
         <div className="flex flex-col lg:flex-row gap-3 items-stretch lg:items-center justify-between">
 
           {/* Status Tabs */}
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 lg:pb-0 scrollbar-none">
+          {view === 'consolidation' ? (
+            <p className="flex items-center gap-2 text-sm font-semibold text-emerald-700"><CheckCircle2 className="h-4 w-4 shrink-0" />Passed preliminary screening only</p>
+          ) : <div className="flex items-center gap-1.5 overflow-x-auto pb-1 lg:pb-0 scrollbar-none">
             <button
               type="button"
               onClick={() => setStatusFilter('all')}
@@ -233,7 +168,7 @@ export const PreliminaryScreeningManager: React.FC<PreliminaryScreeningManagerPr
                 {stats.failed}
               </span>
             </button>
-          </div>
+          </div>}
 
           {/* Right Controls: Search, View Mode */}
           <div className="flex flex-wrap items-center gap-2.5">
@@ -250,7 +185,7 @@ export const PreliminaryScreeningManager: React.FC<PreliminaryScreeningManagerPr
             </div>
 
             {/* View Mode Toggle */}
-            <div className="flex items-center bg-slate-100 p-0.5 rounded border border-slate-200">
+            {view === 'proposals' && <div className="flex items-center bg-slate-100 p-0.5 rounded border border-slate-200">
               <button
                 type="button"
                 onClick={() => setViewMode('cards')}
@@ -269,7 +204,7 @@ export const PreliminaryScreeningManager: React.FC<PreliminaryScreeningManagerPr
               >
                 <TableIcon className="w-4 h-4" />
               </button>
-            </div>
+            </div>}
           </div>
         </div>
 
@@ -305,11 +240,11 @@ export const PreliminaryScreeningManager: React.FC<PreliminaryScreeningManagerPr
             ))}
           </select>
 
-          {(statusFilter !== 'all' || thematicFilter !== 'all' || collegeFilter !== 'all' || searchQuery) && (
+          {((view === 'proposals' && statusFilter !== 'all') || thematicFilter !== 'all' || collegeFilter !== 'all' || searchQuery) && (
             <button
               type="button"
               onClick={() => {
-                setStatusFilter('all');
+                if (view === 'proposals') setStatusFilter('all');
                 setThematicFilter('all');
                 setCollegeFilter('all');
                 setSearchQuery('');
@@ -321,10 +256,125 @@ export const PreliminaryScreeningManager: React.FC<PreliminaryScreeningManagerPr
           )}
         </div>
       </div>
+  );
+
+  if (loadingConceptProposals) return (
+    <div role="status" aria-label="Loading screening information">
+      <span className="sr-only">Loading screening information</span>
+      <div aria-hidden="true" className="space-y-5 motion-safe:animate-pulse">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">{Array.from({ length: 4 }, (_, index) => <div key={index} className="h-24 rounded-sm border border-slate-200 bg-white p-4"><div className="h-3 w-2/3 rounded bg-slate-100" /><div className="mt-4 h-6 w-10 rounded bg-slate-100" /></div>)}</div>
+        <div className="h-24 rounded-sm border border-slate-200 bg-white" />
+        {Array.from({ length: 3 }, (_, index) => <div key={index} className="space-y-3 rounded-sm border border-slate-200 bg-white p-5"><div className="h-4 w-2/3 rounded bg-slate-100" /><div className="h-3 w-1/3 rounded bg-slate-100" /></div>)}
+      </div>
+    </div>
+  );
+  if (screeningError) return <div role="alert" className="rounded-sm border border-red-200 bg-red-50 p-5 text-sm text-red-800">{screeningError}<button type="button" onClick={() => void refreshConceptProposals()} className="ml-3 font-semibold underline">Try again</button></div>;
+
+  return (
+    <div className="space-y-6">
+      {/* Metric Counters */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+        {/* Total Submissions */}
+        <div
+          onClick={() => handleSummaryFilter('all')}
+          className="p-3.5 bg-white hover:bg-slate-50/50 rounded-sm border border-slate-200/90 shadow-2xs transition-colors flex flex-col justify-between cursor-pointer"
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+              Total Submissions
+            </span>
+            <FileText className="w-3.5 h-3.5 text-slate-400" />
+          </div>
+          <div className="mt-2">
+            <span className="text-2xl font-black text-slate-900 tracking-tight block">{stats.total}</span>
+            <span className="text-[11px] text-slate-500 font-medium mt-0.5 block">Faculty Concept Proposals</span>
+          </div>
+        </div>
+
+        {/* Pending Preliminary Screening */}
+        <div
+          onClick={() => handleSummaryFilter('pending')}
+          className="p-3.5 bg-white hover:bg-slate-50/50 rounded-sm border border-slate-200/90 shadow-2xs transition-colors flex flex-col justify-between cursor-pointer"
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+              Awaiting Screening
+            </span>
+            <Clock className="w-3.5 h-3.5 text-slate-400" />
+          </div>
+          <div className="mt-2">
+            <span className="text-2xl font-black text-slate-900 tracking-tight block">{stats.pending}</span>
+            <span className="text-[11px] text-slate-500 font-medium mt-0.5 block">Requires RPDU Action</span>
+          </div>
+        </div>
+
+        {/* Passed (Qualified) */}
+        <div
+          onClick={() => handleSummaryFilter('passed')}
+          className="p-3.5 bg-white hover:bg-slate-50/50 rounded-sm border border-slate-200/90 shadow-2xs transition-colors flex flex-col justify-between cursor-pointer"
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+              Passed Screening
+            </span>
+            <CheckCircle2 className="w-3.5 h-3.5 text-slate-400" />
+          </div>
+          <div className="mt-2">
+            <span className="text-2xl font-black text-slate-900 tracking-tight block">{stats.passed}</span>
+            <span className="text-[11px] text-slate-500 font-medium mt-0.5 block">
+              Endorsed ({stats.passRate}% pass rate)
+            </span>
+          </div>
+        </div>
+
+        {/* Failed (Disqualified) */}
+        <div
+          onClick={() => handleSummaryFilter('failed')}
+          className="p-3.5 bg-white hover:bg-slate-50/50 rounded-sm border border-slate-200/90 shadow-2xs transition-colors flex flex-col justify-between cursor-pointer"
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+              Returned / Ineligible
+            </span>
+            <XCircle className="w-3.5 h-3.5 text-slate-400" />
+          </div>
+          <div className="mt-2">
+            <span className="text-2xl font-black text-slate-900 tracking-tight block">{stats.failed}</span>
+            <span className="text-[11px] text-slate-500 font-medium mt-0.5 block">With Evaluation Notes</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="border-b border-slate-200">
+        <nav aria-label="Preliminary screening sections" className="flex space-x-6 overflow-x-auto sm:space-x-8">
+          <Link
+            to={`/${role}/screening`}
+            state={{ screeningList }}
+            aria-current={view === 'proposals' ? 'page' : undefined}
+            className={`flex shrink-0 items-center gap-2 whitespace-nowrap border-b-2 px-1 py-3.5 text-xs font-bold transition-colors focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[#C8102E] sm:text-sm ${view === 'proposals' ? 'border-[#C8102E] text-[#C8102E]' : 'border-transparent text-slate-500 hover:text-slate-800'}`}
+          >
+            <ClipboardCheck className="h-4 w-4" />
+            <span>Preliminary Screening</span>
+            <span className="ml-1 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-600">{stats.total}</span>
+          </Link>
+          <Link
+            to={`/${role}/screening/consolidation`}
+            state={{ screeningList }}
+            aria-current={view === 'consolidation' ? 'page' : undefined}
+            className={`flex shrink-0 items-center gap-2 whitespace-nowrap border-b-2 px-1 py-3.5 text-xs font-bold transition-colors focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[#C8102E] sm:text-sm ${view === 'consolidation' ? 'border-[#C8102E] text-[#C8102E]' : 'border-transparent text-slate-500 hover:text-slate-800'}`}
+          >
+            <TableIcon className="h-4 w-4" />
+            <span>Consolidation by Agenda and Budget</span>
+            <span aria-label={`${stats.passed} passed proposals`} className="ml-1 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-600">{stats.passed}</span>
+          </Link>
+        </nav>
+      </div>
+
+      {view === 'consolidation' ? <ProposalConsolidation proposals={filteredProposals}>{screeningFilters}</ProposalConsolidation> : screeningFilters}
 
       {/* Main Proposals Presentation: Card View */}
-      <ProposalConsolidation proposals={filteredProposals} />
-      {viewMode === 'cards' && (
+
+      {view === 'proposals' && viewMode === 'cards' && (
         <div className="grid grid-cols-1 gap-4">
           {filteredProposals.map((proposal) => {
             const isPassed = proposal.screeningStatus === 'passed';
@@ -334,7 +384,8 @@ export const PreliminaryScreeningManager: React.FC<PreliminaryScreeningManagerPr
             return (
               <div
                 key={proposal.id}
-                className={`bg-white rounded-md border p-3 sm:p-5 shadow-2xs transition-all hover:shadow-md relative ${isPassed
+                onClick={(event) => handleProposalClick(event, proposal)}
+                className={`group bg-white rounded-md border p-3 sm:p-5 shadow-2xs transition-all hover:shadow-md relative cursor-pointer focus-within:ring-2 focus-within:ring-[#C8102E]/30 ${isPassed
                   ? 'border-emerald-200'
                   : isFailed
                     ? 'border-red-200'
@@ -374,11 +425,10 @@ export const PreliminaryScreeningManager: React.FC<PreliminaryScreeningManagerPr
                     </div>
 
                     {/* Proposal Title */}
-                    <h3
-                      onClick={() => handleOpenReview(proposal)}
-                      className="text-base font-extrabold text-slate-900 leading-snug cursor-pointer hover:text-[#C8102E] transition-colors"
-                    >
-                      {proposal.title}
+                    <h3 className="text-base font-extrabold text-slate-900 leading-snug group-hover:text-[#C8102E] transition-colors">
+                      <Link to={`/${role}/screening/${proposal.id}`} state={{ screeningList }} className="rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#C8102E]">
+                        {proposal.title}
+                      </Link>
                     </h3>
 
                     {/* Meta Info: Proponent, College, Submission Date */}
@@ -400,7 +450,7 @@ export const PreliminaryScreeningManager: React.FC<PreliminaryScreeningManagerPr
                     </div>
 
 
-                    {!isPending && <ScreeningFeedback proposal={proposal} onSaved={refreshConceptProposals} />}
+                    {!isPending && <div data-screening-feedback className="cursor-auto"><ScreeningFeedback proposal={proposal} onSaved={refreshConceptProposals} /></div>}
                   </div>
 
                   {/* Right Column: Review actions */}
@@ -435,7 +485,7 @@ export const PreliminaryScreeningManager: React.FC<PreliminaryScreeningManagerPr
       )}
 
       {/* Main Proposals Presentation: Compact Table View */}
-      {viewMode === 'table' && (
+      {view === 'proposals' && viewMode === 'table' && (
         <div className="bg-white rounded-md border border-slate-200 overflow-x-auto shadow-2xs">
           <table className="w-full text-left text-xs">
             <thead className="bg-slate-50 text-slate-600 uppercase font-bold text-[10px] border-b border-slate-200 tracking-wider">
@@ -454,7 +504,7 @@ export const PreliminaryScreeningManager: React.FC<PreliminaryScreeningManagerPr
                 const isFailed = proposal.screeningStatus === 'failed';
 
                 return (
-                  <tr key={proposal.id} className="hover:bg-slate-50/80 transition-colors">
+                  <tr key={proposal.id} onClick={(event) => handleProposalClick(event, proposal)} className="group cursor-pointer hover:bg-slate-50/80 focus-within:bg-slate-50/80 transition-colors">
                     {/* 1. Name of the Proponent */}
                     <td className="p-3.5 whitespace-nowrap">
                       <div>
@@ -466,12 +516,13 @@ export const PreliminaryScreeningManager: React.FC<PreliminaryScreeningManagerPr
 
                     {/* 2. Title */}
                     <td className="p-3.5 max-w-md">
-                      <p
-                        onClick={() => handleOpenReview(proposal)}
-                        className="font-bold text-slate-900 hover:text-[#C8102E] cursor-pointer text-xs leading-snug line-clamp-2"
+                      <Link
+                        to={`/${role}/screening/${proposal.id}`}
+                        state={{ screeningList }}
+                        className="font-bold text-slate-900 group-hover:text-[#C8102E] text-xs leading-snug line-clamp-2 rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#C8102E]"
                       >
                         {proposal.title}
-                      </p>
+                      </Link>
                     </td>
 
 
@@ -536,7 +587,7 @@ export const PreliminaryScreeningManager: React.FC<PreliminaryScreeningManagerPr
       )}
 
       {/* Empty State */}
-      {filteredProposals.length === 0 && (
+      {view === 'proposals' && filteredProposals.length === 0 && (
         <div className="bg-white p-12 text-center rounded-md border border-slate-200">
           <FileText className="w-12 h-12 text-slate-300 mx-auto mb-3" />
           <h4 className="text-base font-bold text-slate-800">No Concept Proposals Found</h4>
