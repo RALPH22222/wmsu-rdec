@@ -129,6 +129,7 @@ export function App() {
                 <Route path="/admin/calls/new" element={<CallFormPage role="admin" mode="create" />} />
                 <Route path="/admin/calls/:callId/edit" element={<CallFormPage role="admin" />} />
                 <Route path="/admin/screening" element={<AdminPreliminaryScreeningPage />} />
+                <Route path="/admin/screening/consolidation" element={<PreliminaryScreeningPage role="admin" view="consolidation" />} />
                 <Route path="/admin/screening/:proposalId" element={<ScreeningReviewPage role="admin" />} />
                 <Route path="/admin/aihr" element={<AihrDeliberationPage role="admin" />} />
                 <Route path="/admin/letters">
@@ -149,6 +150,7 @@ export function App() {
                 <Route path="/rpdu/calls/new" element={<CallFormPage role="rpdu" mode="create" />} />
                 <Route path="/rpdu/calls/:callId/edit" element={<CallFormPage role="rpdu" />} />
                 <Route path="/rpdu/screening" element={<PreliminaryScreeningPage role="rpdu" />} />
+                <Route path="/rpdu/screening/consolidation" element={<PreliminaryScreeningPage role="rpdu" view="consolidation" />} />
                 <Route path="/rpdu/screening/:proposalId" element={<ScreeningReviewPage role="rpdu" />} />
                 <Route path="/rpdu/passed-proposals" element={<PassedProposalsPage />} />
                 <Route path="/rpdu/aihr" element={<AihrDeliberationPage role="rpdu" />} />

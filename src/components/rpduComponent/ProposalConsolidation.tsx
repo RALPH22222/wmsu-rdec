@@ -1,10 +1,10 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import type { ConceptProposal } from '../../types';
 import { consolidateProposals, consolidationCsv } from '../../lib/proposalConsolidation';
 import { formatCurrency } from '../../lib/format';
 import { DocumentLink } from '../ui/DocumentLink';
 
-export function ProposalConsolidation({ proposals }: { proposals: ConceptProposal[] }) {
+export function ProposalConsolidation({ proposals, children }: { proposals: ConceptProposal[]; children?: ReactNode }) {
   const [minimum, setMinimum] = useState('');
   const [maximum, setMaximum] = useState('');
   const [callId, setCallId] = useState('all');
@@ -19,7 +19,8 @@ export function ProposalConsolidation({ proposals }: { proposals: ConceptProposa
   };
   return <section className="space-y-4 rounded-sm border border-slate-200 bg-white p-5" aria-labelledby="consolidation-title">
     <h2 id="consolidation-title" className="text-base font-bold text-slate-900">Consolidation by agenda and budget</h2>
-    <p className="text-sm text-slate-600">Uses the screening filters above. Select Passed to compile approved proposals and track detailed submissions before AIHR.</p>
+    <p className="text-sm text-slate-600">Includes only proposals that passed preliminary screening. Filter by agenda, college, call, or budget to compile proposals and track detailed submissions before AIHR.</p>
+    {children}
     <div className="flex flex-wrap items-end gap-3">
       <label className="text-sm text-slate-700">Call for proposals<select value={callId} onChange={(e) => setCallId(e.target.value)} className="mt-1 block min-h-11 max-w-full rounded-sm border border-slate-300 px-3"><option value="all">All calls</option>{calls.map(([id, title]) => <option key={id} value={id}>{title}</option>)}</select></label>
       <label className="text-sm text-slate-700">Minimum budget (PHP)<input type="number" min="0" step="0.01" value={minimum} onChange={(e) => setMinimum(e.target.value)} className="mt-1 block min-h-11 w-44 rounded-sm border border-slate-300 px-3" /></label>
