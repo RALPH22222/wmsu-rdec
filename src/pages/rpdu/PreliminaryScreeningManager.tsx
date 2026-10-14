@@ -110,19 +110,17 @@ export const PreliminaryScreeningManager: React.FC<PreliminaryScreeningManagerPr
         <div className="flex flex-col lg:flex-row gap-3 items-stretch lg:items-center justify-between">
 
           {/* Status Tabs */}
-          {view === 'consolidation' ? (
-            <p className="flex items-center gap-2 text-sm font-semibold text-emerald-700"><CheckCircle2 className="h-4 w-4 shrink-0" />Passed preliminary screening only</p>
-          ) : <div className="flex items-center gap-1.5 overflow-x-auto pb-1 lg:pb-0 scrollbar-none">
+          {view === 'proposals' && <div className="flex items-center gap-1.5 overflow-x-auto pb-1 lg:pb-0 scrollbar-none">
             <button
               type="button"
               onClick={() => setStatusFilter('all')}
               className={`px-3 py-1.5 rounded-sm text-xs font-bold transition-all cursor-pointer shrink-0 ${statusFilter === 'all'
-                ? 'bg-slate-900 text-white shadow-xs'
+                ? 'bg-[#C8102E] text-white shadow-xs'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
                 }`}
             >
               All Proposals
-              <span className={`ml-1.5 px-1.5 py-0.5 rounded-sm text-[10px] font-extrabold ${statusFilter === 'all' ? 'bg-slate-800 text-slate-200' : 'bg-slate-200 text-slate-700'}`}>
+              <span className={`ml-1.5 px-1.5 py-0.5 rounded-sm text-[10px] font-extrabold ${statusFilter === 'all' ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-700'}`}>
                 {stats.total}
               </span>
             </button>
@@ -130,13 +128,13 @@ export const PreliminaryScreeningManager: React.FC<PreliminaryScreeningManagerPr
               type="button"
               onClick={() => setStatusFilter('pending')}
               className={`px-3 py-1.5 rounded-sm text-xs font-bold transition-all cursor-pointer shrink-0 flex items-center gap-1.5 ${statusFilter === 'pending'
-                ? 'bg-slate-900 text-white shadow-xs'
+                ? 'bg-[#C8102E] text-white shadow-xs'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
                 }`}
             >
-              <Clock className="w-3.5 h-3.5 text-slate-400" />
+              <Clock className={`w-3.5 h-3.5 ${statusFilter === 'pending' ? 'text-white/80' : 'text-slate-400'}`} />
               <span>Pending Review</span>
-              <span className={`ml-1 px-1.5 py-0.5 rounded-sm text-[10px] font-extrabold ${statusFilter === 'pending' ? 'bg-slate-800 text-slate-200' : 'bg-slate-200 text-slate-700'}`}>
+              <span className={`ml-1 px-1.5 py-0.5 rounded-sm text-[10px] font-extrabold ${statusFilter === 'pending' ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-700'}`}>
                 {stats.pending}
               </span>
             </button>
@@ -144,13 +142,13 @@ export const PreliminaryScreeningManager: React.FC<PreliminaryScreeningManagerPr
               type="button"
               onClick={() => setStatusFilter('passed')}
               className={`px-3 py-1.5 rounded-sm text-xs font-bold transition-all cursor-pointer shrink-0 flex items-center gap-1.5 ${statusFilter === 'passed'
-                ? 'bg-slate-900 text-white shadow-xs'
+                ? 'bg-[#C8102E] text-white shadow-xs'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
                 }`}
             >
-              <CheckCircle2 className="w-3.5 h-3.5 text-slate-400" />
+              <CheckCircle2 className={`w-3.5 h-3.5 ${statusFilter === 'passed' ? 'text-white/80' : 'text-slate-400'}`} />
               <span>Passed</span>
-              <span className={`ml-1 px-1.5 py-0.5 rounded-sm text-[10px] font-extrabold ${statusFilter === 'passed' ? 'bg-slate-800 text-slate-200' : 'bg-slate-200 text-slate-700'}`}>
+              <span className={`ml-1 px-1.5 py-0.5 rounded-sm text-[10px] font-extrabold ${statusFilter === 'passed' ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-700'}`}>
                 {stats.passed}
               </span>
             </button>
@@ -158,13 +156,13 @@ export const PreliminaryScreeningManager: React.FC<PreliminaryScreeningManagerPr
               type="button"
               onClick={() => setStatusFilter('failed')}
               className={`px-3 py-1.5 rounded-sm text-xs font-bold transition-all cursor-pointer shrink-0 flex items-center gap-1.5 ${statusFilter === 'failed'
-                ? 'bg-slate-900 text-white shadow-xs'
+                ? 'bg-[#C8102E] text-white shadow-xs'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
                 }`}
             >
-              <XCircle className="w-3.5 h-3.5 text-slate-400" />
+              <XCircle className={`w-3.5 h-3.5 ${statusFilter === 'failed' ? 'text-white/80' : 'text-slate-400'}`} />
               <span>Failed</span>
-              <span className={`ml-1 px-1.5 py-0.5 rounded-sm text-[10px] font-extrabold ${statusFilter === 'failed' ? 'bg-slate-800 text-slate-200' : 'bg-slate-200 text-slate-700'}`}>
+              <span className={`ml-1 px-1.5 py-0.5 rounded-sm text-[10px] font-extrabold ${statusFilter === 'failed' ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-700'}`}>
                 {stats.failed}
               </span>
             </button>
