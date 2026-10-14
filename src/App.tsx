@@ -33,6 +33,7 @@ import { EvaluatorLettersPage } from './pages/evaluator/EvaluatorLettersPage';
 import { EvaluationPortalPage } from './pages/evaluator/EvaluationPortalPage';
 import { PreliminaryScreeningPage } from './pages/screening/PreliminaryScreeningPage';
 import { ScreeningReviewPage } from './pages/screening/ScreeningReviewPage';
+import { ScreeningDispatchPage } from './pages/screening/ScreeningDispatchPage';
 import { InceptionSchedulingPage } from './pages/rpdu/InceptionSchedulingPage';
 import { LetterDeskPage } from './pages/rpdu/LetterDeskPage';
 import Login from './pages/auth/Login';
@@ -130,7 +131,10 @@ export function App() {
                 <Route path="/admin/screening" element={<AdminPreliminaryScreeningPage />} />
                 <Route path="/admin/screening/:proposalId" element={<ScreeningReviewPage role="admin" />} />
                 <Route path="/admin/aihr" element={<AihrDeliberationPage role="admin" />} />
-                <Route path="/admin/letters" element={<AdminLetterDeskPage />} />
+                <Route path="/admin/letters">
+                  <Route index element={<AdminLetterDeskPage />} />
+                  <Route path="screening-results" element={<ScreeningDispatchPage role="admin" />} />
+                </Route>
                 <Route path="/admin/clearance" element={<Navigate to="/admin/letters?template=WMSU-RPDU-CERT-001.00" replace />} />
                 <Route path="/admin/contracts" element={<Navigate to="/admin/letters?template=WMSU-RPDU-PSC-001.00&tab=contracts" replace />} />
                 <Route path="/admin/scheduling" element={<AdminInceptionSchedulingPage />} />
@@ -148,7 +152,10 @@ export function App() {
                 <Route path="/rpdu/screening/:proposalId" element={<ScreeningReviewPage role="rpdu" />} />
                 <Route path="/rpdu/passed-proposals" element={<PassedProposalsPage />} />
                 <Route path="/rpdu/aihr" element={<AihrDeliberationPage role="rpdu" />} />
-                <Route path="/rpdu/letters" element={<LetterDeskPage />} />
+                <Route path="/rpdu/letters">
+                  <Route index element={<LetterDeskPage />} />
+                  <Route path="screening-results" element={<ScreeningDispatchPage role="rpdu" />} />
+                </Route>
                 <Route path="/rpdu/clearance" element={<Navigate to="/rpdu/letters?template=WMSU-RPDU-CERT-001.00" replace />} />
                 <Route path="/rpdu/contracts" element={<Navigate to="/rpdu/letters?template=WMSU-RPDU-PSC-001.00&tab=contracts" replace />} />
                 <Route path="/rpdu/scheduling" element={<InceptionSchedulingPage />} />

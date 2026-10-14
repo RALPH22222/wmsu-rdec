@@ -10,7 +10,7 @@ import {
   CheckCircle2,
   Clock
 } from 'lucide-react';
-import { useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { API_BASE_URL } from '../../config/apiConfig';
 import { SignatureField } from '../../components/rpduComponent/SignatureField';
@@ -435,6 +435,7 @@ export function LetterDeskPage() {
         <p className="mt-2 text-sm leading-6 text-slate-600">
           Prepare, review, sign, and issue technical review clearances (COTR), institutional research agreements (PSC), and official screening letters all in one place—without complicated pop-up windows.
         </p>
+        <Link to={`/${profile?.role === 'ADMIN' ? 'admin' : 'rpdu'}/letters/screening-results`} className="mt-3 inline-flex min-h-11 items-center rounded-sm bg-[#C8102E] px-4 text-sm font-semibold text-white hover:bg-[#A00D26]">Send screening results</Link>
       </header>
 
       {/* Workflow Navigation */}
@@ -1038,6 +1039,7 @@ export function LetterDeskPage() {
                 </button>
               </div>
             )}
+            {newlyIssuedId && template === SCREENING && <Link to={`/${profile?.role === 'ADMIN' ? 'admin' : 'rpdu'}/letters/screening-results?letter=${encodeURIComponent(newlyIssuedId)}`} className="inline-flex min-h-11 items-center rounded-sm bg-[#C8102E] px-4 text-sm font-semibold text-white hover:bg-[#A00D26]">Preview &amp; send to proponent</Link>}
           </div>
         )}
       </section>
