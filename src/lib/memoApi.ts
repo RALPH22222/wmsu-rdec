@@ -22,6 +22,13 @@ export async function getMemos(token?: string | null): Promise<Memo[]> {
   return json.data || [];
 }
 
+export async function getMemoById(id: string, token?: string | null): Promise<Memo | null> {
+  const res = await fetch(`${API_BASE_URL}/memos/${id}`, { headers: authHeader(token) });
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(json.message || 'Failed to retrieve memorandum.');
+  return json.data || null;
+}
+
 export async function getMemoRecipients(token?: string | null): Promise<RecipientOptions> {
   const res = await fetch(`${API_BASE_URL}/memos/recipients`, { headers: authHeader(token) });
   const json = await res.json().catch(() => ({}));

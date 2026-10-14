@@ -25,6 +25,8 @@ import { ProponentMemosPage } from './pages/proponents/ProponentMemosPage';
 import ProfilePage from './pages/proponents/ProfilePage';
 import ProponentDocumentsPage from './pages/proponents/ProponentDocumentsPage';
 import ContractPreviewPage from './pages/proponents/ContractPreviewPage';
+import { LetterPreviewPage } from './pages/proponents/LetterPreviewPage';
+import { MemoPreviewPage } from './pages/proponents/MemoPreviewPage';
 import { RevisionHistoryPage } from './pages/proponents/RevisionHistoryPage';
 import { DetailedProposalSubmissionPage } from './pages/proponents/DetailedProposalSubmissionPage';
 import { PipelineProposalDetailPage } from './pages/rpdu/PipelineProposalDetailPage';
@@ -108,9 +110,13 @@ export function App() {
                 <Route path="/proponent/detailed-proposals" element={<DetailedProposalSubmissionPage />} />
                 <Route path="/proponent/budget" element={<BudgetAllocationPage />} />
                 <Route path="/proponent/memos" element={<ProponentMemosPage />} />
+                <Route path="/proponent/memos/preview/:memoId" element={<MemoPreviewPage />} />
+                <Route path="/proponent/memos/:memoId/preview" element={<MemoPreviewPage />} />
                 <Route path="/proponent/documents" element={<ProponentDocumentsPage />} />
+                <Route path="/proponent/documents/letter-preview/:letterId" element={<LetterPreviewPage />} />
                 <Route path="/proponent/documents/contract-preview/:conceptId" element={<ContractPreviewPage />} />
                 <Route path="/proponent/letters" element={<ProponentDocumentsPage />} />
+                <Route path="/proponent/letters/:letterId/preview" element={<LetterPreviewPage />} />
                 <Route path="/proponent/contracts" element={<ProponentDocumentsPage />} />
                 <Route path="/proponent/contracts/:conceptId/preview" element={<ContractPreviewPage />} />
                 <Route path="/proponent/revisions" element={<RevisionHistoryPage />} />

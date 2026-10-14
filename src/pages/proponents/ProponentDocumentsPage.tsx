@@ -1,12 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   MailCheck,
   FileCheck,
   FileSignature,
   Download,
   Upload,
-  Printer,
   CheckCircle2,
   Clock,
   ExternalLink,
@@ -56,8 +55,6 @@ export default function ProponentDocumentsPage() {
   const { session } = useAuth();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const location = useLocation();
-  const frameRef = useRef<HTMLIFrameElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [loading, setLoading] = useState(true);
@@ -73,7 +70,6 @@ export default function ProponentDocumentsPage() {
   const [selectedType, setSelectedType] = useState<'LETTER' | 'COTR' | 'PSC' | null>(null);
   const [selectedId, setSelectedId] = useState<string>('');
   const [previewHtml, setPreviewHtml] = useState<string>('');
-  const [generating, setGenerating] = useState(false);
   const [downloading, setDownloading] = useState(false);
 
   // Contract parameters form state
@@ -123,11 +119,9 @@ export default function ProponentDocumentsPage() {
         const loadedProposals: ProposalContractItem[] = contractsData.data || [];
         setProposals(loadedProposals);
 
-        // Restore active selected contract when returning from preview
-        const targetPscId =
-          searchParams.get('id') ||
-          (location.state as { selectedId?: string })?.selectedId ||
-          sessionStorage.getItem('last_selected_psc_id');
+        // Restore active selected contract only when explicitly requested via URL params
+        const urlType = searchParams.get('type');
+        const targetPscId = urlType === 'PSC' ? searchParams.get('id') : null;
 
         if (targetPscId) {
           const matched = loadedProposals.find((p) => p.conceptId === targetPscId);
@@ -166,44 +160,16 @@ export default function ProponentDocumentsPage() {
     fetchData();
   }, [session?.access_token]);
 
-  const selectLetter = async (letter: OfficialLetterItem) => {
-    setSelectedType('LETTER');
-    setSelectedId(letter.id);
-    setPreviewHtml('');
-    setGenerating(true);
-    setError('');
-    try {
-      const res = await fetch(`${API_BASE_URL}/letters/mine/${letter.id}`, {
-        headers: { Authorization: `Bearer ${session?.access_token}` },
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || 'Could not load screening letter.');
-      setPreviewHtml(data.data.rendered_html);
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Error loading letter.');
-    } finally {
-      setGenerating(false);
-    }
+  const selectLetter = (letter: OfficialLetterItem) => {
+    navigate(`/proponent/documents/letter-preview/${letter.id}`, {
+      state: { letter },
+    });
   };
 
-  const selectClearance = async (clearance: OfficialLetterItem) => {
-    setSelectedType('COTR');
-    setSelectedId(clearance.id);
-    setPreviewHtml('');
-    setGenerating(true);
-    setError('');
-    try {
-      const res = await fetch(`${API_BASE_URL}/letters/mine/${clearance.id}`, {
-        headers: { Authorization: `Bearer ${session?.access_token}` },
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || 'Could not load clearance letter.');
-      setPreviewHtml(data.data.rendered_html);
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Error loading clearance.');
-    } finally {
-      setGenerating(false);
-    }
+  const selectClearance = (clearance: OfficialLetterItem) => {
+    navigate(`/proponent/documents/letter-preview/${clearance.id}`, {
+      state: { letter: clearance },
+    });
   };
 
   const selectPscProposal = (proposal: ProposalContractItem) => {
@@ -254,6 +220,13 @@ export default function ProponentDocumentsPage() {
       next.delete('id');
       return next;
     }, { replace: true });
+  };
+
+  const handleFilterChange = (newFilter: 'ALL' | 'LETTERS' | 'COTR' | 'PSC') => {
+    setFilter(newFilter);
+    if (newFilter !== 'PSC') {
+      handleCloseSelectedContract();
+    }
   };
 
   const handleViewContractPreview = () => {
@@ -392,7 +365,7 @@ export default function ProponentDocumentsPage() {
             <div className="inline-flex rounded-lg border border-slate-200 p-1 bg-slate-50 text-xs font-semibold">
               <button
                 type="button"
-                onClick={() => setFilter('ALL')}
+                onClick={() => handleFilterChange('ALL')}
                 className={`px-3 py-1.5 rounded-md transition-colors cursor-pointer ${
                   filter === 'ALL' ? 'bg-[#C8102E] text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
                 }`}
@@ -401,7 +374,7 @@ export default function ProponentDocumentsPage() {
               </button>
               <button
                 type="button"
-                onClick={() => setFilter('LETTERS')}
+                onClick={() => handleFilterChange('LETTERS')}
                 className={`px-3 py-1.5 rounded-md transition-colors cursor-pointer ${
                   filter === 'LETTERS' ? 'bg-[#C8102E] text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
                 }`}
@@ -410,7 +383,7 @@ export default function ProponentDocumentsPage() {
               </button>
               <button
                 type="button"
-                onClick={() => setFilter('COTR')}
+                onClick={() => handleFilterChange('COTR')}
                 className={`px-3 py-1.5 rounded-md transition-colors cursor-pointer ${
                   filter === 'COTR' ? 'bg-[#C8102E] text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
                 }`}
@@ -419,7 +392,7 @@ export default function ProponentDocumentsPage() {
               </button>
               <button
                 type="button"
-                onClick={() => setFilter('PSC')}
+                onClick={() => handleFilterChange('PSC')}
                 className={`px-3 py-1.5 rounded-md transition-colors cursor-pointer ${
                   filter === 'PSC' ? 'bg-[#C8102E] text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
                 }`}
@@ -564,110 +537,12 @@ export default function ProponentDocumentsPage() {
           </div>
         )}
 
-        {/* Loading Preview */}
-        {generating && (
-          <div className="mt-6 pt-5 border-t border-slate-200 flex items-center justify-center py-12 bg-white rounded-lg border border-dashed border-slate-200">
-            <div className="flex items-center gap-2.5 text-sm font-medium text-slate-600">
-              <div className="h-4 w-4 animate-spin rounded-full border-2 border-[#C8102E] border-t-transparent" />
-              <span>Loading document preview...</span>
-            </div>
-          </div>
-        )}
 
-        {/* ========================================================================= */}
-        {/* EXPANDED VIEW: SCREENING RESULT LETTER */}
-        {/* ========================================================================= */}
-        {selectedType === 'LETTER' && previewHtml && (
-          <div className="mt-6 pt-5 border-t border-slate-200 space-y-3">
-            <div className="flex items-center justify-between">
-              <p className="text-sm font-semibold text-slate-900">Official Screening Result Letter</p>
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => frameRef.current?.contentWindow?.print()}
-                  className="inline-flex items-center gap-1.5 bg-slate-100 px-3.5 py-2 text-xs font-bold text-slate-800 hover:bg-slate-200 rounded cursor-pointer"
-                >
-                  <Printer size={14} />
-                  Print
-                </button>
-                <button
-                  type="button"
-                  onClick={handleDownloadPdf}
-                  disabled={downloading}
-                  className="inline-flex items-center gap-2 bg-[#C8102E] px-4 py-2 text-xs font-bold text-white hover:bg-red-800 rounded cursor-pointer disabled:opacity-50"
-                >
-                  <Download size={14} className={downloading ? 'animate-bounce' : ''} />
-                  {downloading ? 'Downloading...' : 'Download PDF'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { setSelectedType(null); setSelectedId(''); setPreviewHtml(''); }}
-                  aria-label="Close letter"
-                  className="bg-neutral-100 p-2 text-slate-700 hover:bg-slate-200 rounded cursor-pointer"
-                >
-                  <X size={16} />
-                </button>
-              </div>
-            </div>
-            <iframe
-              ref={frameRef}
-              title="Official Screening Result Letter"
-              sandbox="allow-modals allow-same-origin"
-              srcDoc={previewHtml}
-              className="h-[750px] w-full bg-white shadow-sm border border-slate-200 rounded"
-            />
-          </div>
-        )}
-
-        {/* ========================================================================= */}
-        {/* EXPANDED VIEW: CLEARANCE (COTR) */}
-        {/* ========================================================================= */}
-        {selectedType === 'COTR' && previewHtml && (
-          <div className="mt-6 pt-5 border-t border-slate-200 space-y-3">
-            <div className="flex items-center justify-between">
-              <p className="text-sm font-semibold text-slate-900">Certificate of Technical Review (COTR)</p>
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => frameRef.current?.contentWindow?.print()}
-                  className="inline-flex items-center gap-1.5 bg-slate-100 px-3.5 py-2 text-xs font-bold text-slate-800 hover:bg-slate-200 rounded cursor-pointer"
-                >
-                  <Printer size={14} />
-                  Print
-                </button>
-                <button
-                  type="button"
-                  onClick={handleDownloadPdf}
-                  disabled={downloading}
-                  className="inline-flex items-center gap-2 bg-[#C8102E] px-4 py-2 text-xs font-bold text-white hover:bg-red-800 rounded cursor-pointer disabled:opacity-50"
-                >
-                  <Download size={14} className={downloading ? 'animate-bounce' : ''} />
-                  {downloading ? 'Downloading...' : 'Download PDF'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { setSelectedType(null); setSelectedId(''); setPreviewHtml(''); }}
-                  aria-label="Close certificate"
-                  className="bg-neutral-100 p-2 text-slate-700 hover:bg-slate-200 rounded cursor-pointer"
-                >
-                  <X size={16} />
-                </button>
-              </div>
-            </div>
-            <iframe
-              ref={frameRef}
-              title="Issued Clearance Certificate"
-              sandbox="allow-modals allow-same-origin"
-              srcDoc={previewHtml}
-              className="h-[750px] w-full bg-white shadow-sm border border-slate-200 rounded"
-            />
-          </div>
-        )}
 
         {/* ========================================================================= */}
         {/* EXPANDED VIEW: PROFESSIONAL SERVICE CONTRACT (PSC) */}
         {/* ========================================================================= */}
-        {selectedType === 'PSC' && selectedProposal && (
+        {(filter === 'ALL' || filter === 'PSC') && selectedType === 'PSC' && selectedProposal && (
           <div className="mt-6 pt-5 border-t border-slate-200 space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-50 p-4 rounded-lg border border-slate-200">
               <div>
