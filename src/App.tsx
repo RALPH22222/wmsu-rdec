@@ -15,7 +15,6 @@ import { AdminInceptionSchedulingPage } from './pages/admin/AdminInceptionSchedu
 import { AdminLetterDeskPage } from './pages/admin/AdminLetterDeskPage';
 import { RpduDashboard } from './pages/rpdu/RpduDashboard';
 import { CallFormPage } from './pages/CallFormPage';
-import { PassedProposalsPage } from './pages/rpdu/PassedProposalsPage';
 import { EvaluatorAssignmentPage } from './pages/rpdu/EvaluatorAssignmentPage';
 import { AihrDeliberationPage } from './pages/rpdu/AihrDeliberationPage';
 import ProponentDashboard from './pages/proponents/ProponentDashboard';
@@ -150,7 +149,7 @@ export function App() {
                 <Route path="/rpdu/calls/:callId/edit" element={<CallFormPage role="rpdu" />} />
                 <Route path="/rpdu/screening" element={<PreliminaryScreeningPage role="rpdu" />} />
                 <Route path="/rpdu/screening/:proposalId" element={<ScreeningReviewPage role="rpdu" />} />
-                <Route path="/rpdu/passed-proposals" element={<PassedProposalsPage />} />
+                <Route path="/rpdu/passed-proposals" element={<Navigate to="/rpdu/screening" replace />} />
                 <Route path="/rpdu/aihr" element={<AihrDeliberationPage role="rpdu" />} />
                 <Route path="/rpdu/letters">
                   <Route index element={<LetterDeskPage />} />
