@@ -10,9 +10,11 @@
  * All other services and components should import their API URLs from here.
  */
 
-// Base API URL: Uses environment variable if set, otherwise defaults to local Express backend
+// An explicit override wins; Vite development uses localhost and production builds use Render.
 export const API_BASE_URL: string =
-  import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+  import.meta.env.VITE_API_URL || (import.meta.env.DEV
+    ? 'http://localhost:3000/api'
+    : 'https://backend-wmsu-rdec.onrender.com/api');
 
 // Registry of all API endpoints across the application
 export const API_ENDPOINTS = {
