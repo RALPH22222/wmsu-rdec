@@ -16,6 +16,7 @@ import {
 import { useCallForProposals } from '../../context/CallForProposalsContext';
 import type { ConceptProposal, ScreeningStatus } from '../../types';
 import { ScreeningFeedback } from '../../components/rpduComponent/ScreeningFeedback';
+import { ProposalConsolidation } from '../../components/rpduComponent/ProposalConsolidation';
 
 interface PreliminaryScreeningManagerProps {
   role?: 'rpdu' | 'admin';
@@ -322,6 +323,7 @@ export const PreliminaryScreeningManager: React.FC<PreliminaryScreeningManagerPr
       </div>
 
       {/* Main Proposals Presentation: Card View */}
+      <ProposalConsolidation proposals={filteredProposals} />
       {viewMode === 'cards' && (
         <div className="grid grid-cols-1 gap-4">
           {filteredProposals.map((proposal) => {

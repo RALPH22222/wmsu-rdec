@@ -28,7 +28,7 @@ export function useMyPipelineProposals() {
     try {
       const proposal = await submitDetailedProposalApi(conceptId, file, token);
       upsert(proposal, conceptId);
-      showToast(`Detailed proposal submitted — ${proposal.code} is awaiting evaluators`);
+      showToast(`Detailed proposal submitted — ${proposal.code} has been received by RPDU`);
       return proposal;
     } catch (failure) {
       showToast(failure instanceof Error ? failure.message : 'Unable to submit the detailed proposal');

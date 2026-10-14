@@ -140,6 +140,8 @@ export interface ConceptProposal {
   screeningRemarks?: string;
   failureReasons?: string[];
   sectionComments?: ScreeningSectionComments;
+  reviewDetails?: ScreeningReviewDetails | null;
+  detailedProposal?: { fileUrl: string; submittedAt: string } | null;
   screenedBy?: string;
   screenedById?: string;
   screenedAt?: string;
@@ -250,7 +252,17 @@ export type GatewayItemKey = 'status' | 'panel' | 'files' | 'revisions' | 'certi
 export interface GatewayItem { key: GatewayItemKey; label: string; ok: boolean; detail?: string }
 export interface GatewayReadiness { ok: boolean; items: GatewayItem[] }
 
+export interface ScreeningReviewDetails {
+  rpduHead: string;
+  rdecDirector: string;
+  associateDirector: string;
+  deanEndorsed: boolean;
+  rcEndorsed: boolean;
+}
+
 export interface RpduProposal {
+  technicalReviewReady: boolean;
+  preReviewStage?: AihrStage | null;
   id: string;
   conceptProposalId: string;
   code: string;
@@ -314,6 +326,8 @@ export interface ProponentRoundFeedback {
 }
 
 export interface ProponentProposal {
+  technicalReviewReady: boolean;
+  preReviewStage?: AihrStage | null;
   id: string;
   code: string;
   title: string;
@@ -339,7 +353,7 @@ export interface EligibleConcept {
 
 export type AihrVerdict = 'PASS' | 'CONDITIONALLY_APPROVED' | 'FAIL';
 export type EnBancOutcome = 'APPROVED_FOR_IMPLEMENTATION' | 'NOT_APPROVED';
-export type AihrStage = 'AWAITING_AIHR' | 'AIHR_FAILED' | 'QUEUED_FOR_EN_BANC' | 'NOT_APPROVED' | 'CLEARED' | 'DETAILED_SUBMITTED';
+export type AihrStage = 'AWAITING_DETAILED' | 'AWAITING_AIHR' | 'AIHR_FAILED' | 'QUEUED_FOR_EN_BANC' | 'NOT_APPROVED' | 'CLEARED' | 'DETAILED_SUBMITTED';
 
 export interface AihrResult {
   verdict: AihrVerdict;
@@ -370,7 +384,7 @@ export interface AihrConcept {
   stage: AihrStage;
   aihr: AihrResult | null;
   enBanc: EnBancDecision | null;
-  detailedProposal: { id: string; status: PipelineStatus; submittedAt: string } | null;
+  detailedProposal: { id: string; status: PipelineStatus; submittedAt: string; fileUrl: string } | null;
   canLogVerdict: boolean;
   canDeliberate: boolean;
 }

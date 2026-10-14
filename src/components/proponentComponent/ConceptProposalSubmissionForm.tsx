@@ -193,7 +193,7 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
       if (!file.name.toLowerCase().endsWith('.pdf') || file.type !== 'application/pdf') {
         setErrors((prev) => ({
           ...prev,
-          endorsement: 'The Dean Endorsement Form must be in PDF format.',
+          endorsement: 'The Dean and Research Coordinator Endorsement Form must be in PDF format.',
         }));
         return;
       }
@@ -267,7 +267,7 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
     }
 
     if (!endorsementPdf) {
-      errs.endorsement = 'Please upload your official College Dean Endorsement PDF (max 15MB).';
+      errs.endorsement = 'Please upload your official College Dean and Research Coordinator Endorsement PDF (max 15MB).';
     }
 
     setErrors(errs);
@@ -706,7 +706,7 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
                     Upload Endorsement PDF
                   </h3>
                   <p className="text-xs text-slate-500">
-                    Official College Dean or Department Chairperson endorsement form in PDF format.
+                    Upload the endorsement form (WMSU-RDEC-FR-001.00) with both College Dean and Research Coordinator endorsements in one PDF.
                   </p>
                 </div>
               </div>
@@ -719,7 +719,7 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
               <label className="text-xs font-bold text-slate-800 flex items-center justify-between">
                 <span className="flex items-center gap-1.5">
                   <FileCheck className="w-4 h-4 text-slate-500" />
-                  <span>College Dean / Dept Chairperson Endorsement PDF</span>
+                  <span>College Dean and Research Coordinator Endorsement PDF</span>
                   <span className="text-red-500">*</span>
                 </span>
                 <span className="text-[10px] text-slate-400 font-medium">
@@ -793,7 +793,7 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
                     <Upload className="w-4 h-4" />
                   </div>
                   <p className="text-xs font-semibold text-slate-800">
-                    Click to browse or drag &amp; drop Dean Endorsement Form
+                    Click to browse or drag &amp; drop Dean and Research Coordinator Endorsement Form
                   </p>
                   <p className="text-[10px] text-slate-500 mt-1">
                     Accepts official signed PDF file up to 15 MB.
@@ -1250,7 +1250,7 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
                     Successfully Queued for Preliminary Screening
                   </h4>
                   <p className="text-emerald-800 text-[11px] mt-0.5 leading-relaxed">
-                    Your proposal and dean endorsement document have been securely logged in the WMSU RDEC database.
+                    Your proposal and Dean and Research Coordinator endorsement document have been securely logged in the WMSU RDEC database.
                   </p>
                 </div>
               </div>

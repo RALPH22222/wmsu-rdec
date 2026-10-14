@@ -1,5 +1,5 @@
 import { API_BASE_URL, API_ENDPOINTS } from '../config/apiConfig';
-import type { ConceptProposal } from '../types';
+import type { ConceptProposal, ScreeningReviewDetails } from '../types';
 
 const normalizeProposal = (proposal: ConceptProposal): ConceptProposal => ({
   ...proposal,
@@ -30,9 +30,9 @@ export async function getScreeningProposal(id: string, token?: string, signal?: 
   return normalizeProposal(await request(token, `/${encodeURIComponent(id)}`, { signal }));
 }
 
-export async function saveScreeningProposal(id: string, decision: 'PASS' | 'FAIL', remarks: string, token?: string): Promise<ConceptProposal> {
+export async function saveScreeningProposal(id: string, decision: 'PASS' | 'FAIL', remarks: string, token?: string, reviewDetails?: ScreeningReviewDetails): Promise<ConceptProposal> {
   return normalizeProposal(await request(token, `/${encodeURIComponent(id)}`, {
-    method: 'PUT', body: JSON.stringify({ decision, remarks }),
+    method: 'PUT', body: JSON.stringify({ decision, remarks, reviewDetails }),
   }));
 }
 

@@ -86,6 +86,7 @@ export function AihrConceptRow({ concept, role, onLogVerdict, onDeliberate }: Ai
 
       {detailedProposal && (
         <div className="mt-3 border-t border-slate-100 pt-3">
+          <DocumentLink href={detailedProposal.fileUrl} label="Detailed proposal manuscript" />
           <Link to={`/${role}/evaluations/${detailedProposal.id}`} className="inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-[#C8102E] hover:text-[#A00D26]">
             Open detailed proposal <ArrowUpRight className="h-3.5 w-3.5" />
           </Link>

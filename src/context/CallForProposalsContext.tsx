@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
-import type { CallForProposals, UserProfile, UserRole, ProposalItem, ConceptProposal, ConceptProposalCriteria, ScreeningSectionComments } from '../types';
+import type { CallForProposals, UserProfile, UserRole, ProposalItem, ConceptProposal } from '../types';
 import { MOCK_USERS, MOCK_PROPOSALS } from '../data/mockData';
 import { API_ENDPOINTS } from '../config/apiConfig';
 import {
@@ -34,10 +34,7 @@ interface CallForProposalsContextType {
   reopenCall: (id: string, newStartDate: string, newEndDate: string) => Promise<void>;
   confirmCallOpening: (id: string) => Promise<void>;
   deleteCall: (id: string) => Promise<void>;
-  passConceptProposal: (id: string, remarks?: string, criteria?: ConceptProposalCriteria) => void;
-  failConceptProposal: (id: string, reasons: string[], remarks: string, criteria?: ConceptProposalCriteria, sectionComments?: ScreeningSectionComments) => void;
   resetScreeningStatus: (id: string) => void;
-  bulkPassConceptProposals: (ids: string[]) => void;
   submitConceptProposal: (proposal: ConceptProposalPayload) => Promise<ConceptProposal>;
   toastMessage: string | null;
   showToast: (msg: string) => void;
@@ -245,44 +242,11 @@ export const CallForProposalsProvider: React.FC<{ children: React.ReactNode }> =
     }
   };
 
-  const saveScreeningDecision = async (id: string, decision: 'PASS' | 'FAIL', remarks?: string) => {
-    await screeningRequest(session?.access_token, `/${id}`, { method: 'PUT', body: JSON.stringify({ decision, remarks }) });
-    await loadConceptProposals(session?.access_token);
-  };
-
-  const passConceptProposal = (id: string, remarks?: string, _criteria?: ConceptProposalCriteria) => {
-    void saveScreeningDecision(id, 'PASS', remarks)
-      .then(() => showToast(`Concept Proposal "${id}" PASSED Preliminary Screening.`))
-      .catch((error) => showToast(`Failed to save screening decision: ${error.message}`));
-  };
-
-  const failConceptProposal = (
-    id: string,
-    reasons: string[],
-    remarks: string,
-    _criteria?: ConceptProposalCriteria,
-    _sectionComments?: ScreeningSectionComments
-  ) => {
-    const detail = [remarks, ...reasons].filter(Boolean).join(' — ');
-    void saveScreeningDecision(id, 'FAIL', detail)
-      .then(() => showToast(`Concept Proposal "${id}" marked as FAILED in Preliminary Screening.`))
-      .catch((error) => showToast(`Failed to save screening decision: ${error.message}`));
-  };
-
   const resetScreeningStatus = (id: string) => {
     void screeningRequest(session?.access_token, `/${id}`, { method: 'DELETE' })
       .then(() => loadConceptProposals(session?.access_token))
       .then(() => showToast(`Reset screening status for "${id}" to Pending.`))
       .catch((error) => showToast(`Failed to reset screening decision: ${error.message}`));
-  };
-
-  const bulkPassConceptProposals = (ids: string[]) => {
-    void Promise.all(ids.map((id) => screeningRequest(session?.access_token, `/${id}`, {
-      method: 'PUT', body: JSON.stringify({ decision: 'PASS', remarks: 'PASSED via batch preliminary clearance.' }),
-    })))
-      .then(() => loadConceptProposals(session?.access_token))
-      .then(() => showToast(`${ids.length} Concept Proposals successfully approved with PASS.`))
-      .catch((error) => showToast(`Failed to save screening decisions: ${error.message}`));
   };
 
   const submitConceptProposal = async (proposalData: ConceptProposalPayload): Promise<ConceptProposal> => {
@@ -314,10 +278,7 @@ export const CallForProposalsProvider: React.FC<{ children: React.ReactNode }> =
         reopenCall,
         confirmCallOpening,
         deleteCall,
-        passConceptProposal,
-        failConceptProposal,
         resetScreeningStatus,
-        bulkPassConceptProposals,
         submitConceptProposal,
         toastMessage,
         showToast,

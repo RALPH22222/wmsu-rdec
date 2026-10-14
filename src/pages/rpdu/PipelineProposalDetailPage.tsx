@@ -1,3 +1,4 @@
+import { stageExplanation } from '../../lib/aihrMeta';
 import type { ReactNode } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
@@ -5,7 +6,7 @@ import { useRpduProposal } from '../../hooks/useRpduPipeline';
 import { usePipelineViewer } from '../../hooks/usePipelineViewer';
 import { MAX_EVALUATORS_PER_PROPOSAL, RECOMMENDATION_META, isTerminalStatus, nextStepFor } from '../../lib/proposalPipeline';
 import { formatDate } from '../../lib/format';
-import { StatusBadge } from '../../components/ui/StatusBadge';
+import { ProposalStatusBadge } from '../../components/ui/ProposalStatusBadge';
 import { PipelineStepper } from '../../components/ui/PipelineStepper';
 import { DocumentLink } from '../../components/ui/DocumentLink';
 import { RoundAccordion } from '../../components/ui/RoundAccordion';
@@ -41,11 +42,11 @@ function DetailBody({ id, role }: { id: string | undefined; role: 'rpdu' | 'admi
       <Link to={backHref} className="inline-flex min-h-11 items-center gap-1 text-xs font-semibold text-slate-600 hover:text-slate-900"><ArrowLeft className="h-4 w-4" />All evaluations</Link>
 
       <header className="rounded-sm border border-slate-200 bg-white p-4 shadow-xs sm:p-5">
-        <div className="flex flex-wrap items-center gap-2"><span className="font-mono text-[11px] font-bold text-slate-500">{proposal.code}</span><StatusBadge status={proposal.status} size="md" /><span className="text-xs text-slate-500">Round {proposal.currentRound}</span></div>
+        <div className="flex flex-wrap items-center gap-2"><span className="font-mono text-[11px] font-bold text-slate-500">{proposal.code}</span><ProposalStatusBadge proposal={proposal} size="md" /><span className="text-xs text-slate-500">Round {proposal.currentRound}</span></div>
         <h2 className="mt-2 break-words font-brand text-lg font-bold text-slate-900">{proposal.title}</h2>
         <p className="mt-1 text-xs text-slate-500">{proposal.proponent.name} · {proposal.proponent.department || 'No department'} · Submitted {formatDate(proposal.submittedAt)}</p>
-        <p className="mt-3 rounded-sm bg-slate-50 p-3 text-xs text-slate-700">{nextStepFor(proposal.status, 'rpdu')}</p>
-        <div className="mt-4"><PipelineStepper status={proposal.status} currentRound={proposal.currentRound} compact /></div>
+        <p className="mt-3 rounded-sm bg-slate-50 p-3 text-xs text-slate-700">{proposal.preReviewStage ? stageExplanation(proposal.preReviewStage) : nextStepFor(proposal.status, 'rpdu')}</p>
+        {!proposal.preReviewStage && <div className="mt-4"><PipelineStepper status={proposal.status} currentRound={proposal.currentRound} compact /></div>}
         <div className="mt-4 flex flex-wrap gap-2"><DocumentLink href={proposal.manuscriptUrl} label={proposal.manuscriptUrl ? 'Original manuscript' : 'Manuscript'} />{latestRevision && <DocumentLink href={latestRevision.revisedFileUrl} label={`Revision ${latestRevision.revisionNumber}`} muted />}</div>
       </header>
 
@@ -54,7 +55,7 @@ function DetailBody({ id, role }: { id: string | undefined; role: 'rpdu' | 'admi
       <Card title="Review panel">
         <PanelDots count={proposal.panel.length} className="mb-2" />
         <ReviewPanelList panel={proposal.panel} onRemove={unassign} canManage={actsAsHead} />
-        {proposal.manuscriptUrl && proposal.panel.length < MAX_EVALUATORS_PER_PROPOSAL && !isTerminalStatus(proposal.status) && <Link to={backHref} className="mt-3 inline-flex min-h-11 items-center text-xs font-semibold text-[#C8102E]">Assign evaluators from the list →</Link>}
+        {proposal.technicalReviewReady && proposal.manuscriptUrl && proposal.panel.length < MAX_EVALUATORS_PER_PROPOSAL && !isTerminalStatus(proposal.status) && <Link to={backHref} className="mt-3 inline-flex min-h-11 items-center text-xs font-semibold text-[#C8102E]">Assign evaluators from the list →</Link>}
       </Card>
 
       {proposal.revisions.length > 0 && (

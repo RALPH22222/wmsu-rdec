@@ -17,6 +17,7 @@ type Tab = 'results' | 'enbanc';
 interface StageCard { label: string; stages: AihrStage[]; tone: StatusTone; icon: LucideIcon }
 
 const STAGE_CARDS: StageCard[] = [
+  { label: 'Awaiting detailed proposal', stages: ['AWAITING_DETAILED'], tone: 'amber', icon: ClipboardList },
   { label: 'Awaiting verdict', stages: ['AWAITING_AIHR'], tone: 'slate', icon: ClipboardList },
   { label: 'Queued for en banc', stages: ['QUEUED_FOR_EN_BANC'], tone: 'amber', icon: Gavel },
   { label: 'Cleared', stages: ['CLEARED', 'DETAILED_SUBMITTED'], tone: 'emerald', icon: CheckCircle2 },

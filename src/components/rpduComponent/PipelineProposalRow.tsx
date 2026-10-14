@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { UserPlus } from 'lucide-react';
 import type { RpduProposal } from '../../types';
-import { StatusBadge } from '../ui/StatusBadge';
+import { ProposalStatusBadge } from '../ui/ProposalStatusBadge';
 import { PanelDots } from './PanelDots';
 import { MAX_EVALUATORS_PER_PROPOSAL, isTerminalStatus } from '../../lib/proposalPipeline';
 import { formatDate } from '../../lib/format';
@@ -17,6 +17,7 @@ interface PipelineProposalRowProps {
 
 /** Why the Assign button is disabled, or null when assignment is allowed. Mirrors the server's first two rules. Not exported: react-refresh/only-export-components. */
 const assignBlockedReason = (proposal: RpduProposal, canAssign: boolean): string | null => {
+  if (!proposal.technicalReviewReady) return 'Awaiting AIHR and any required en banc clearance';
   if (!proposal.manuscriptUrl) return 'Detailed proposal not yet submitted';
   if (isTerminalStatus(proposal.status)) return 'Assignment is closed';
   if (proposal.panel.length >= MAX_EVALUATORS_PER_PROPOSAL) return 'Maximum of 3 evaluators already assigned';
@@ -31,7 +32,7 @@ export function PipelineProposalRow({ proposal, detailHref, onAssign, canAssign 
       <div className="min-w-0">
         <div className="flex flex-wrap items-center gap-2">
           <span className="font-mono text-[11px] font-bold text-slate-500">{proposal.code}</span>
-          <StatusBadge status={proposal.status} />
+          <ProposalStatusBadge proposal={proposal} />
           {proposal.currentRound > 1 && <span className="text-[11px] font-semibold text-slate-500">Round {proposal.currentRound}</span>}
         </div>
         <h3 className="mt-1 break-words text-sm font-bold text-slate-900 leading-snug">{proposal.title}</h3>

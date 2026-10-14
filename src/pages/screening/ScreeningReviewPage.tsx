@@ -5,7 +5,11 @@ import { useAuth } from '../../context/AuthContext';
 import { useCallForProposals } from '../../context/CallForProposalsContext';
 import { getScreeningProposal, resetScreeningProposal, saveScreeningProposal } from '../../lib/screeningApi';
 import { formatScreeningComments, readScreeningComments, screeningCommentSections } from '../../lib/screeningComments';
-import type { ConceptProposal, ScreeningSectionComments } from '../../types';
+import type { ConceptProposal, ScreeningSectionComments, ScreeningReviewDetails } from '../../types';
+import { ScreeningLetterWorkflow } from '../../components/rpduComponent/ScreeningLetterWorkflow';
+
+const emptyReview: ScreeningReviewDetails = { rpduHead: '', rdecDirector: '', associateDirector: '', deanEndorsed: false, rcEndorsed: false };
+const participants = [{ key: 'rpduHead', label: 'RPDU Head' }, { key: 'rdecDirector', label: 'RDEC Director' }, { key: 'associateDirector', label: 'Associate Director' }] as const;
 
 const DEFAULT_PASS_COMMENT = 'Congratulations! Your concept proposal has passed the preliminary screening. You may now proceed with your detailed proposal submission.';
 
@@ -27,6 +31,7 @@ export function ScreeningReviewPage({ role }: { role: 'rpdu' | 'admin' }) {
   const [notice, setNotice] = useState('');
   const [saving, setSaving] = useState(false);
   const [decision, setDecision] = useState<'PASS' | 'FAIL' | ''>('');
+  const [reviewDetails, setReviewDetails] = useState<ScreeningReviewDetails>(emptyReview);
   const [passRemarks, setPassRemarks] = useState(DEFAULT_PASS_COMMENT);
   const [passSectionComments, setPassSectionComments] = useState<ScreeningSectionComments>({});
   const [passStep, setPassStep] = useState(0);
@@ -34,7 +39,7 @@ export function ScreeningReviewPage({ role }: { role: 'rpdu' | 'admin' }) {
   const [sectionComments, setSectionComments] = useState<ScreeningSectionComments>({});
   const [failStep, setFailStep] = useState(0);
   const [activeCategory, setActiveCategory] = useState('concept_proposal');
-  const [previewLoading, setPreviewLoading] = useState(true);
+  const [previewedFile, setPreviewedFile] = useState('');
   const [activePanel, setActivePanel] = useState<'information' | 'decision'>('information');
   const loadedView = useRef('');
 
@@ -51,6 +56,7 @@ export function ScreeningReviewPage({ role }: { role: 'rpdu' | 'admin' }) {
         if (controller.signal.aborted) return;
         setProposal(data);
         if (initialize) {
+          setReviewDetails(data.reviewDetails || emptyReview);
           setDecision(data.screeningStatus === 'passed' ? 'PASS' : data.screeningStatus === 'failed' ? 'FAIL' : '');
           const feedback = readScreeningComments(data.screeningRemarks);
           setPassRemarks(data.screeningStatus === 'passed' ? feedback.overall : DEFAULT_PASS_COMMENT);
@@ -74,7 +80,7 @@ export function ScreeningReviewPage({ role }: { role: 'rpdu' | 'admin' }) {
   }, [proposalId, accessToken, userId, openDecision]);
 
   const activeFile = proposal?.attachments.find((file) => file.category === activeCategory);
-  useEffect(() => { setPreviewLoading(true); }, [activeFile?.dataUrl]);
+  const previewLoading = activeFile?.dataUrl !== previewedFile;
 
   const save = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -98,7 +104,7 @@ export function ScreeningReviewPage({ role }: { role: 'rpdu' | 'admin' }) {
     setError('');
     setNotice('');
     try {
-      const saved = await saveScreeningProposal(proposal.id, decision, remarks.trim(), accessToken);
+      const saved = await saveScreeningProposal(proposal.id, decision, remarks.trim(), accessToken, reviewDetails);
       setProposal(saved);
       const feedback = readScreeningComments(saved.screeningRemarks);
       if (decision === 'PASS') {
@@ -111,8 +117,12 @@ export function ScreeningReviewPage({ role }: { role: 'rpdu' | 'admin' }) {
       }
       await refreshConceptProposals();
       setActivePanel('information');
-      document.getElementById('screening-information-tab')?.focus();
-      setNotice('Screening decision saved.');
+      setNotice('Screening decision saved. Prepare and send the result letter below.');
+      requestAnimationFrame(() => {
+        const workflow = document.getElementById('screening-letter-workflow');
+        workflow?.focus();
+        workflow?.scrollIntoView({ block: 'start' });
+      });
     } catch (failure) {
       setError(failure instanceof Error ? failure.message : 'Unable to save the screening decision.');
     } finally { setSaving(false); }
@@ -128,6 +138,7 @@ export function ScreeningReviewPage({ role }: { role: 'rpdu' | 'admin' }) {
       const saved = await getScreeningProposal(proposal.id, accessToken);
       setProposal(saved);
       setDecision('');
+      setReviewDetails(emptyReview);
       setPassRemarks(DEFAULT_PASS_COMMENT);
       setPassSectionComments({});
       setPassStep(0);
@@ -197,7 +208,7 @@ export function ScreeningReviewPage({ role }: { role: 'rpdu' | 'admin' }) {
                 </div>
                 {activeFile.type.toUpperCase() === 'PDF' ? <div className="relative h-[70vh] min-h-96 bg-slate-50 lg:h-auto lg:min-h-0 lg:flex-1">
                   {previewLoading && <div role="status" className="absolute inset-0 p-6"><span className="sr-only">Loading uploaded file</span><div aria-hidden="true" className="h-full space-y-5 rounded-sm border border-slate-200 bg-white p-6 motion-safe:animate-pulse"><div className="h-5 w-2/3 rounded bg-slate-100" /><div className="h-3 w-full rounded bg-slate-100" /><div className="h-3 w-5/6 rounded bg-slate-100" /><div className="h-3 w-full rounded bg-slate-100" /></div></div>}
-                  <iframe key={activeFile.dataUrl} src={activeFile.dataUrl} title={`Uploaded ${activeCategory === 'concept_proposal' ? 'concept proposal' : 'endorsement form'}`} onLoad={() => setPreviewLoading(false)} className={`h-full w-full border-0 ${previewLoading ? 'opacity-0' : ''}`} />
+                  <iframe key={activeFile.dataUrl} src={activeFile.dataUrl} title={`Uploaded ${activeCategory === 'concept_proposal' ? 'concept proposal' : 'endorsement form'}`} onLoad={() => setPreviewedFile(activeFile.dataUrl || '')} className={`h-full w-full border-0 ${previewLoading ? 'opacity-0' : ''}`} />
                 </div> : <div className="p-10 text-center text-sm text-slate-500 lg:flex-1">This {activeFile.type} file can be reviewed using Open file or Download.</div>}
                 <p className="shrink-0 border-t border-slate-200 px-4 py-3 text-xs text-slate-500">If the preview is unavailable, use Open file to review the uploaded document.</p>
               </> : <div className="p-10 text-center text-sm text-slate-500 lg:flex-1">No {activeCategory === 'concept_proposal' ? 'concept proposal' : 'endorsement form'} file is available for this submission.</div>}
@@ -223,6 +234,12 @@ export function ScreeningReviewPage({ role }: { role: 'rpdu' | 'admin' }) {
               </div>
               <section id="screening-information-panel" role="tabpanel" aria-labelledby="screening-information-tab" hidden={activePanel !== 'information'} tabIndex={0} className="max-h-[70vh] min-w-0 overflow-y-auto overscroll-contain p-5 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[#C8102E] lg:max-h-none lg:min-h-0 lg:flex-1">
                 <h3 className="font-bold text-slate-900">Preliminary-screening information</h3>
+                {proposal.screeningStatus !== 'pending' && <div className="mt-4 space-y-2 text-sm text-slate-700">
+                  <h4 className="font-semibold">Screening participants and endorsements</h4>
+                  {participants.map(({ key, label }) => <p key={key}>{label}: {proposal.reviewDetails?.[key] || 'Not recorded'}</p>)}
+                  <p>Dean endorsement: {proposal.reviewDetails?.deanEndorsed ? 'Verified' : 'Not verified'}</p>
+                  <p>Research Coordinator endorsement: {proposal.reviewDetails?.rcEndorsed ? 'Verified' : 'Not verified'}</p>
+                </div>}
                 {proposal.screeningStatus === 'pending' ? <p className="mt-3 text-sm text-slate-500">No screening decision has been recorded.</p> : <>
                 <dl className="mt-4 space-y-4 text-sm [overflow-wrap:anywhere]">
                   <div><dt className="text-xs font-semibold text-slate-500">Decision</dt><dd className="mt-1 text-slate-800">{proposal.screeningStatus === 'passed' ? 'Pass' : 'Fail'}</dd></div>
@@ -256,6 +273,14 @@ export function ScreeningReviewPage({ role }: { role: 'rpdu' | 'admin' }) {
                 <h3 className="font-bold text-slate-900">{proposal.screeningStatus === 'pending' ? 'Screening decision' : 'Update screening decision'}</h3>
                 <fieldset disabled={saving} className="space-y-4">
                   <legend className="sr-only">Choose a screening decision</legend>
+                  <div className="space-y-3">
+                    <h4 className="text-sm font-semibold text-slate-800">Screening participants</h4>
+                    <p className="text-xs leading-5 text-slate-600">Record the officials who conducted screening. Your account is recorded separately as the person saving this result.</p>
+                    {participants.map(({ key, label }) => <label key={key} className="block text-xs font-semibold text-slate-700">{label}<input required maxLength={200} value={reviewDetails[key]} onChange={(event) => setReviewDetails((previous) => ({ ...previous, [key]: event.target.value }))} className="mt-1 block min-h-11 w-full rounded-sm border border-slate-300 px-3 text-sm font-normal" /></label>)}
+                    <h4 className="pt-2 text-sm font-semibold text-slate-800">Endorsement verification</h4>
+                    <p className="text-xs leading-5 text-slate-600">Check the uploaded endorsement form. Both endorsements are required for PASS.</p>
+                    {([{ key: 'deanEndorsed', label: 'College Dean endorsement verified' }, { key: 'rcEndorsed', label: 'Research Coordinator endorsement verified' }] as const).map(({ key, label }) => <label key={key} className="flex min-h-11 items-center gap-2 text-sm text-slate-700"><input type="checkbox" required={decision === 'PASS'} checked={reviewDetails[key]} onChange={(event) => setReviewDetails((previous) => ({ ...previous, [key]: event.target.checked }))} />{label}</label>)}
+                  </div>
                   <div className="grid grid-cols-2 gap-2">
                     {(['PASS', 'FAIL'] as const).map((value) => <label key={value} className={`flex cursor-pointer items-center gap-2 rounded-sm border p-3 text-sm font-semibold ${decision === value ? 'border-slate-700 bg-slate-50 text-slate-900' : 'border-slate-200 text-slate-600'}`}><input type="radio" name="screening-decision" value={value} required checked={decision === value} onChange={() => setDecision(value)} />{value === 'PASS' ? <CheckCircle2 size={16} /> : <XCircle size={16} />}{value === 'PASS' ? 'Pass' : 'Fail'}</label>)}
                   </div>
@@ -280,12 +305,13 @@ export function ScreeningReviewPage({ role }: { role: 'rpdu' | 'admin' }) {
                       {failSection && <button type="button" onClick={() => setFailStep((step) => step + 1)} className="rounded-sm bg-slate-900 px-4 py-2 text-xs font-semibold text-white hover:bg-slate-700">Next</button>}
                     </div>
                   </div>}
-                  {(decision !== 'FAIL' || !failSection) && <button type="submit" disabled={!decision} className="w-full rounded-sm bg-[#C8102E] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#A00D26] disabled:opacity-50">{saving ? 'Saving decision…' : 'Save decision'}</button>}
+                  {(decision !== 'FAIL' || !failSection) && <button type="submit" disabled={!decision} className="w-full rounded-sm bg-[#C8102E] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#A00D26] disabled:opacity-50">{saving ? 'Saving decision…' : 'Save decision & prepare letter'}</button>}
                   {proposal.screeningStatus !== 'pending' && <button type="button" onClick={() => void reset()} className="w-full text-xs font-semibold text-slate-500 hover:text-slate-800">Reset to pending</button>}
                 </fieldset>
               </form>
             </div>
           </div>
+          {proposal.screeningStatus !== 'pending' && <ScreeningLetterWorkflow key={`${proposal.id}:${proposal.screenedTimestamp}`} proposal={proposal} token={accessToken} />}
         </>
       ) : null}
     </div>

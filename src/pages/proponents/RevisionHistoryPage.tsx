@@ -1,10 +1,11 @@
+import { stageExplanation } from '../../lib/aihrMeta';
 import { useState, type ReactNode } from 'react';
 import { FileSearch } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useMyPipelineProposals } from '../../hooks/useMyPipelineProposals';
 import { nextStepFor } from '../../lib/proposalPipeline';
 import { formatDate } from '../../lib/format';
-import { StatusBadge } from '../../components/ui/StatusBadge';
+import { ProposalStatusBadge } from '../../components/ui/ProposalStatusBadge';
 import { PipelineStepper } from '../../components/ui/PipelineStepper';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { HistoryList } from '../../components/ui/HistoryList';
@@ -31,7 +32,7 @@ export function RevisionHistoryPage() {
       </header>
       {error && <p role="alert" className="flex flex-col gap-2 rounded-sm border border-red-200 bg-red-50 p-4 text-sm text-red-800 sm:flex-row sm:items-center sm:justify-between">{error}<button type="button" onClick={refresh} className="min-h-11 rounded-sm border border-red-300 px-3 text-xs font-semibold">Retry</button></p>}
 
-      {eligibleConcepts.length > 0 && <p className="rounded-sm border border-amber-200 bg-amber-50 p-4 text-sm text-slate-700">{eligibleConcepts.length} {eligibleConcepts.length === 1 ? 'concept proposal is' : 'concept proposals are'} ready for detailed proposal submission. <Link to="/proponent/detailed-proposals" className="font-semibold text-[#C8102E] underline">Open the submission hub</Link>.</p>}
+      {eligibleConcepts.length > 0 && <p className="rounded-sm border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">{eligibleConcepts.length} {eligibleConcepts.length === 1 ? 'concept proposal is' : 'concept proposals are'} ready for detailed proposal submission. <Link to="/proponent/detailed-proposals" className="font-semibold text-[#C8102E] underline">Open the submission hub</Link>.</p>}
 
       {proposals.length === 0 ? (
         !error && <EmptyState icon={FileSearch} title="No detailed proposals yet" description="Submit your detailed proposal in the submission hub after preliminary screening. Evaluator feedback and requested revisions will appear here." />
@@ -46,7 +47,7 @@ export function RevisionHistoryPage() {
                     <button type="button" onClick={() => setSelectedId(item.id)} aria-pressed={active} className={`min-h-11 w-full rounded-sm border p-3 text-left ${active ? 'border-[#C8102E] bg-white ring-2 ring-[#C8102E]/20' : 'border-slate-200 bg-white hover:border-slate-300'}`}>
                       <span className="block font-mono text-[11px] font-bold text-slate-500">{item.code}</span>
                       <span className="mt-0.5 block truncate text-sm font-semibold text-slate-900">{item.title}</span>
-                      <span className="mt-1 block"><StatusBadge status={item.status} /></span>
+                      <span className="mt-1 block"><ProposalStatusBadge proposal={item} /></span>
                     </button>
                   </li>
                 );
@@ -57,10 +58,10 @@ export function RevisionHistoryPage() {
           {selected && (
             <div key={selected.id} className="min-w-0 space-y-4">
               <header className="rounded-sm border border-slate-200 bg-white p-4 shadow-xs sm:p-5">
-                <div className="flex flex-wrap items-center gap-2"><span className="font-mono text-[11px] font-bold text-slate-500">{selected.code}</span><StatusBadge status={selected.status} size="md" /><span className="text-xs text-slate-500">Round {selected.currentRound} · Submitted {formatDate(selected.submittedAt)}</span></div>
+                <div className="flex flex-wrap items-center gap-2"><span className="font-mono text-[11px] font-bold text-slate-500">{selected.code}</span><ProposalStatusBadge proposal={selected} size="md" /><span className="text-xs text-slate-500">Round {selected.currentRound} · Submitted {formatDate(selected.submittedAt)}</span></div>
                 <h2 className="mt-2 break-words font-brand text-lg font-bold text-slate-900">{selected.title}</h2>
-                <p className="mt-3 rounded-sm bg-slate-50 p-3 text-xs text-slate-700">{nextStepFor(selected.status, 'proponent')}</p>
-                <div className="mt-4"><PipelineStepper status={selected.status} currentRound={selected.currentRound} compact /></div>
+                <p className="mt-3 rounded-sm bg-slate-50 p-3 text-xs text-slate-700">{selected.preReviewStage ? stageExplanation(selected.preReviewStage) : nextStepFor(selected.status, 'proponent')}</p>
+                {!selected.preReviewStage && <div className="mt-4"><PipelineStepper status={selected.status} currentRound={selected.currentRound} compact /></div>}
               </header>
 
               <Card title="Evaluator feedback">

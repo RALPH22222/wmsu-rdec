@@ -21,11 +21,11 @@ export function EvaluatorAssignmentPage({ role = 'rpdu' }: EvaluatorAssignmentPa
 
   const visible = useMemo(() => {
     const needle = query.trim().toLowerCase();
-    return proposals.filter((item) => (status === 'ALL' || item.status === status)
+    return proposals.filter((item) => (status === 'ALL' || (item.status === status && (status !== 'PENDING_ASSIGNMENT' || item.technicalReviewReady)))
       && (!needle || item.title.toLowerCase().includes(needle) || item.code.toLowerCase().includes(needle) || item.proponent.name.toLowerCase().includes(needle)));
   }, [proposals, query, status]);
 
-  const awaiting = proposals.filter((item) => item.status === 'PENDING_ASSIGNMENT').length;
+  const awaiting = proposals.filter((item) => item.status === 'PENDING_ASSIGNMENT' && item.technicalReviewReady).length;
   const current = assigning && actsAsHead ? proposals.find((item) => item.id === assigning.id) ?? null : null;
 
   return (

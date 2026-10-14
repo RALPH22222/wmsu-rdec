@@ -34,7 +34,7 @@ export function DetailedProposalSubmissionPage() {
     <section className="mx-auto max-w-5xl space-y-5">
       <header>
         <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">Detailed Proposal Submission Hub</h1>
-        <p className="mt-2 text-sm text-slate-600">Submit your detailed research proposal once your concept has passed preliminary screening and the Agency In-House Review.</p>
+        <p className="mt-2 text-sm text-slate-600">Submit your detailed research proposal once your concept has passed preliminary screening. Submit before the Agency In-House Review.</p>
       </header>
 
       <section aria-labelledby="detailed-template-title" className="rounded-sm border border-slate-200 bg-white p-5">
@@ -63,7 +63,7 @@ export function DetailedProposalSubmissionPage() {
               {eligibleConcepts.map((concept) => <SubmitDetailedProposalCard key={concept.id} concept={concept} onSubmit={submitDetailedProposal} />)}
             </section>
           ) : (
-            <EmptyState icon={FileCheck2} title={submitted.length ? 'All eligible detailed proposals have been submitted' : 'No concept proposals ready for this step'} description={submitted.length ? 'Follow evaluator feedback and upload requested revisions in Evaluation & Revisions.' : waiting.length > 0 ? 'Your passed concepts are listed below while RPDU completes the AIHR and en banc steps.' : 'Your concept proposal will appear here once it passes preliminary screening and the Agency In-House Review.'} action={<Link to={submitted.length ? '/proponent/revisions' : '/proponent'} className="inline-flex min-h-11 items-center gap-2 text-xs font-semibold text-[#C8102E]">{submitted.length ? 'Evaluation & Revisions' : 'View concept proposals'}<ArrowRight className="h-4 w-4" /></Link>} />
+            <EmptyState icon={FileCheck2} title={submitted.length ? 'All eligible detailed proposals have been submitted' : 'No concept proposals ready for this step'} description={submitted.length ? 'RPDU will consolidate your detailed proposal for AIHR. Technical review follows clearance.' : waiting.length > 0 ? 'Your passed concepts are listed below while RPDU completes the AIHR and en banc steps.' : 'Your concept proposal will appear here once it passes preliminary screening.'} action={<Link to={submitted.length ? '/proponent/revisions' : '/proponent'} className="inline-flex min-h-11 items-center gap-2 text-xs font-semibold text-[#C8102E]">{submitted.length ? 'Evaluation & Revisions' : 'View concept proposals'}<ArrowRight className="h-4 w-4" /></Link>} />
           )}
 
           {waiting.length > 0 && <ConceptStageList titleId="pending-concepts-title" title="Waiting on RPDU" concepts={waiting} />}

@@ -9,6 +9,7 @@ type DispatchLetter = {
   id: string; proposalId: string; title: string; decision: 'PASS' | 'FAIL'; recipientName: string; recipientEmail: string;
   issuedAt: string; portalSentAt: string | null; emailStatus: 'not_sent' | 'sending' | 'sent' | 'failed' | 'unknown';
   emailSentAt: string | null; emailTo: string; emailError: string; version: string | null;
+  approvalRequired: boolean; approvedAt: string | null;
 };
 type DispatchList = { emailAvailable: boolean; letters: DispatchLetter[] };
 type Preview = { html: string; digest: string; recipientName: string; recipientEmail: string };
@@ -37,11 +38,12 @@ export function ScreeningDispatchPage({ role }: { role: 'rpdu' | 'admin' }) {
   const preview = useAsyncResource((signal, token) => selected ? request<Preview>(token, `/${encodeURIComponent(selected.id)}`, { signal }) : Promise.resolve(null), [selected?.id, selected?.version, user?.id]);
   const visible = list.data?.letters.filter((letter) => `${letter.title} ${letter.recipientName} ${letter.recipientEmail}`.toLowerCase().includes(search.toLowerCase())) || [];
   const uncertain = selected?.emailStatus === 'sending' || selected?.emailStatus === 'unknown';
+  const held = selected?.approvalRequired && !selected.approvedAt;
   const alreadySent = selected && (channel === 'portal' ? Boolean(selected.portalSentAt) : channel === 'email' ? selected.emailStatus === 'sent' : Boolean(selected.portalSentAt) && selected.emailStatus === 'sent');
   const unavailableEmail = channel !== 'portal' && !list.data?.emailAvailable;
 
   const send = async () => {
-    if (!selected || !preview.data || !confirmed || busy || uncertain || alreadySent || unavailableEmail) return;
+    if (!selected || !preview.data || !confirmed || busy || uncertain || held || alreadySent || unavailableEmail) return;
     setBusy(true); setError(''); setNotice('');
     try {
       const sent = await request<DispatchLetter>(session?.access_token || '', `/${encodeURIComponent(selected.id)}`, { method: 'POST', body: JSON.stringify({ channel, digest: preview.data.digest }) });
@@ -80,12 +82,13 @@ export function ScreeningDispatchPage({ role }: { role: 'rpdu' | 'admin' }) {
               : preview.data && <>
                 <div className="flex flex-wrap gap-x-8 gap-y-3 rounded-sm bg-slate-50 p-4 text-sm"><div><p className="text-xs text-slate-500">Recipient</p><p className="mt-1 font-semibold text-slate-800">{preview.data.recipientName}</p><p className="text-slate-600 [overflow-wrap:anywhere]">{preview.data.recipientEmail || 'No email on record'}</p></div><div className="text-xs leading-6 text-slate-600"><p>Portal: {selected.portalSentAt ? dateTime(selected.portalSentAt) : 'Not sent'}</p><p>Email: {emailLabel[selected.emailStatus]}{selected.emailSentAt ? ` · ${dateTime(selected.emailSentAt)}` : ''}</p>{selected.emailTo && <p>Last email recipient: {selected.emailTo}</p>}</div></div>
                 {selected.emailError && <p className="text-sm text-red-700">{selected.emailError}</p>}
+                {held && <p className="text-sm text-amber-800">Held for approval/signature. <Link to={`/${role}/screening/${selected.proposalId}#screening-letter-workflow`} className="font-semibold underline">Open screening review to record approval.</Link></p>}
                 <iframe title="Issued screening result letter" sandbox="allow-same-origin allow-modals" srcDoc={preview.data.html} className="h-[65vh] min-h-80 w-full rounded-sm border border-slate-200 bg-white" />
                 <fieldset disabled={busy} className="min-w-0 space-y-4 border-t border-slate-200 pt-4">
                   <label className="block text-xs font-semibold text-slate-600">Send through<select value={channel} onChange={(event) => { setChannel(event.target.value as typeof channel); setConfirmed(false); }} className="mt-2 block min-h-11 w-full rounded-sm border border-slate-200 bg-white px-3 text-base sm:max-w-xs sm:text-sm"><option value="portal">Proponent portal</option><option value="email" disabled={!list.data?.emailAvailable}>Email (SMTP)</option><option value="both" disabled={!list.data?.emailAvailable}>Portal and email</option></select></label>
                   <label className="flex min-h-11 items-start gap-3 text-sm leading-6 text-slate-700"><input type="checkbox" checked={confirmed} onChange={(event) => setConfirmed(event.target.checked)} className="mt-1 h-4 w-4 shrink-0 accent-[#C8102E]" />I reviewed the letter and confirmed the correct proponent and recipient address.</label>
                   {uncertain && <p className="text-sm text-red-700">Check the email provider’s delivery log before another dispatch. This email may already have been sent.</p>}
-                  <button type="button" onClick={() => void send()} disabled={busy || !confirmed || uncertain || Boolean(alreadySent) || unavailableEmail} className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-sm bg-[#C8102E] px-5 text-sm font-semibold text-white hover:bg-[#A00D26] disabled:bg-slate-200 disabled:text-slate-500 sm:w-auto"><Send size={16} />{busy ? 'Sending…' : alreadySent ? 'Already sent' : selected.emailStatus === 'failed' && channel !== 'portal' ? 'Retry screening email' : 'Send screening result'}</button>
+                  <button type="button" onClick={() => void send()} disabled={busy || !confirmed || uncertain || held || Boolean(alreadySent) || unavailableEmail} className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-sm bg-[#C8102E] px-5 text-sm font-semibold text-white hover:bg-[#A00D26] disabled:bg-slate-200 disabled:text-slate-500 sm:w-auto"><Send size={16} />{busy ? 'Sending…' : alreadySent ? 'Already sent' : selected.emailStatus === 'failed' && channel !== 'portal' ? 'Retry screening email' : 'Send screening result'}</button>
                 </fieldset>
               </>}
           </section>}
