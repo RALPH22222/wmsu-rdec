@@ -263,6 +263,18 @@ VITE_SUPABASE_ANON_KEY=your-supabase-anon-key
 
 ---
 
+### Deploying to Vercel
+
+Use the directory containing this `package.json` as the Vercel project root, select
+the **Vite** framework preset, and use `npm run build` with output directory `dist`.
+Set `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` in Vercel's environment variables.
+Optionally set `VITE_API_URL` to your backend URL including `/api`; when omitted,
+production uses `https://backend-wmsu-rdec.onrender.com/api`.
+
+The included `vercel.json` serves `index.html` for client routes so direct links and
+refreshes on paths such as `/login` work. Redeploy after changing configuration or
+environment variables.
+
 ## The Development Team
 
 This system was designed, built, and tested by **5 Computer Science students** for the **Software Engineering** subject at **Western Mindanao State University**:
