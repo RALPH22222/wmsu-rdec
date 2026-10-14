@@ -166,44 +166,44 @@ export const SubmissionPeriodPortal: React.FC<SubmissionPeriodPortalProps> = ({ 
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 motion-safe:animate-pulse">
             <div className="grid gap-8 sm:gap-10 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)] lg:gap-x-16">
               <div className="min-w-0 space-y-6 lg:py-4">
-                <div className="h-5 w-48 rounded bg-slate-200" />
+                <div className="h-5 w-48 rounded-none bg-slate-200" />
                 <div className="space-y-3">
-                  <div className="h-10 w-full rounded bg-slate-200" />
-                  <div className="h-10 w-3/4 rounded bg-slate-200" />
+                  <div className="h-10 w-full rounded-none bg-slate-200" />
+                  <div className="h-10 w-3/4 rounded-none bg-slate-200" />
                 </div>
                 <div className="space-y-3">
-                  <div className="h-4 w-full rounded bg-slate-200" />
-                  <div className="h-4 w-5/6 rounded bg-slate-200" />
-                  <div className="h-4 w-2/3 rounded bg-slate-200" />
+                  <div className="h-4 w-full rounded-none bg-slate-200" />
+                  <div className="h-4 w-5/6 rounded-none bg-slate-200" />
+                  <div className="h-4 w-2/3 rounded-none bg-slate-200" />
                 </div>
                 <div className="flex flex-wrap gap-3 pt-2">
-                  <div className="h-12 w-40 rounded-lg bg-slate-200" />
-                  <div className="h-12 w-56 rounded-lg bg-slate-200" />
+                  <div className="h-12 w-40 rounded-none bg-slate-200" />
+                  <div className="h-12 w-56 rounded-none bg-slate-200" />
                 </div>
               </div>
-              <div className="min-w-0 rounded-sm border border-slate-200 bg-white p-5 sm:p-7">
+              <div className="min-w-0 rounded-none border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
                 <div className="flex justify-between gap-4">
-                  <div className="h-5 w-40 rounded bg-slate-100" />
-                  <div className="h-6 w-16 rounded-full bg-slate-100" />
+                  <div className="h-5 w-40 rounded-none bg-slate-100" />
+                  <div className="h-6 w-16 rounded-none bg-slate-100" />
                 </div>
                 <div className="mt-6 space-y-5 border-t border-slate-100 pt-6">
-                  <div className="h-16 rounded-lg bg-slate-100" />
-                  <div className="h-24 rounded-xl bg-slate-100" />
-                  <div className="h-16 rounded-xl bg-slate-100" />
+                  <div className="h-16 rounded-none bg-slate-100" />
+                  <div className="h-24 rounded-none bg-slate-100" />
+                  <div className="h-16 rounded-none bg-slate-100" />
                 </div>
               </div>
             </div>
             <div className="mt-6 flex flex-wrap gap-2">
-              <div className="h-9 w-40 rounded-lg bg-slate-200" />
-              <div className="h-9 w-48 rounded-lg bg-slate-200" />
-              <div className="h-9 w-32 rounded-lg bg-slate-200" />
+              <div className="h-9 w-40 rounded-none bg-slate-200" />
+              <div className="h-9 w-48 rounded-none bg-slate-200" />
+              <div className="h-9 w-32 rounded-none bg-slate-200" />
             </div>
           </div>
         </div>
         <div aria-hidden="true" className="max-w-7xl mx-auto px-4 py-16 sm:px-6 lg:px-8 motion-safe:animate-pulse">
-          <div className="mx-auto mb-10 h-8 w-60 rounded bg-slate-100" />
+          <div className="mx-auto mb-10 h-8 w-60 rounded-none bg-slate-100" />
           <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-            {[0, 1, 2, 3].map((item) => <div key={item} className="h-56 rounded-sm border border-slate-200 bg-slate-50" />)}
+            {[0, 1, 2, 3].map((item) => <div key={item} className="h-56 rounded-none border border-slate-200 bg-slate-50" />)}
           </div>
         </div>
       </div>
@@ -237,7 +237,7 @@ export const SubmissionPeriodPortal: React.FC<SubmissionPeriodPortalProps> = ({ 
                   type="button"
                   onClick={onSignInClick}
                   disabled={!isOpen}
-                  className="inline-flex min-h-12 items-center justify-center gap-2 rounded-lg bg-[#C8102E] px-5 py-3 text-sm font-semibold text-white transition-colors enabled:hover:bg-[#A00D26] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#C8102E] cursor-pointer disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-600"
+                  className="inline-flex min-h-12 items-center justify-center gap-2 rounded-none bg-[#C8102E] px-5 py-3 text-sm font-semibold text-white transition-colors enabled:hover:bg-[#A00D26] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#C8102E] cursor-pointer disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-600"
                 >
                   {loadingCalls ? 'Loading call…' : isOpen ? 'Submit Proposal' : 'Submissions closed'}
                   {isClosed ? <LockKeyhole className="h-4 w-4" /> : <ArrowRight className="h-4 w-4" />}
@@ -245,7 +245,7 @@ export const SubmissionPeriodPortal: React.FC<SubmissionPeriodPortalProps> = ({ 
                 <a
                   href="/DOST_Form_No.1b.docx"
                   download
-                  className="inline-flex min-h-12 items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#C8102E]"
+                  className="inline-flex min-h-12 items-center justify-center gap-2 rounded-none border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#C8102E]"
                 >
                   <Download className="h-4 w-4" /> Download Proposal Template
                 </a>
@@ -255,12 +255,15 @@ export const SubmissionPeriodPortal: React.FC<SubmissionPeriodPortalProps> = ({ 
               </a>
             </div>
 
-            <aside aria-label="Submission details" className={`lg:col-start-2 lg:row-start-1 lg:row-span-2 min-w-0 rounded-sm border bg-white p-5 shadow-sm sm:p-7 ${isClosed ? 'border-red-200' : 'border-slate-200'}`}>
+            <aside aria-label="Submission details" className="lg:col-start-2 lg:row-start-1 lg:row-span-2 min-w-0 rounded-none border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
               <div className="flex flex-wrap items-center justify-between gap-3">
-                <h2 className="flex items-center gap-2 text-base font-semibold text-slate-900">
-                  <Calendar className="h-5 w-5 text-[#C8102E]" /> {isClosed ? 'Submission window' : 'Submission schedule'}
+                <h2 className="flex items-center gap-3 text-base font-semibold text-slate-900">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-none bg-red-50 text-[#C8102E]">
+                    <Calendar aria-hidden="true" className="h-5 w-5" />
+                  </span>
+                  {isClosed ? 'Submission window' : 'Submission schedule'}
                 </h2>
-                  <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold ${isOpen ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : isClosed ? 'border-red-200 bg-red-50 text-[#A00D26]' : 'border-slate-200 bg-slate-50 text-slate-600'}`}>
+                  <span className={`inline-flex items-center gap-1.5 rounded-none border px-2.5 py-1 text-xs font-semibold ${isOpen ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : isClosed ? 'border-red-200 bg-red-50 text-[#A00D26]' : 'border-slate-200 bg-slate-50 text-slate-600'}`}>
                     <span aria-hidden="true" className={`h-1.5 w-1.5 rounded-full ${isOpen ? 'bg-emerald-600' : isClosed ? 'bg-[#C8102E]' : 'bg-slate-500'}`} />
                     {loadingCalls ? 'LOADING' : isOpen ? 'OPEN' : isClosed ? 'CLOSED' : 'NO OPEN CALL'}
                   </span>
@@ -268,12 +271,12 @@ export const SubmissionPeriodPortal: React.FC<SubmissionPeriodPortalProps> = ({ 
 
               {!loadingCalls && isClosed && targetCall && (
                 <div role="status" className="mt-6">
-                  <div className="flex items-start gap-3 rounded-xl bg-red-50 p-4">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-[#A00D26]">
+                  <div className="flex items-start gap-3 rounded-none border border-slate-200 bg-slate-50 p-4">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-none bg-white text-[#A00D26]">
                       <LockKeyhole aria-hidden="true" className="h-5 w-5" />
                     </div>
                     <div>
-                      <h3 className="text-xl font-semibold tracking-tight text-[#A00D26]">{targetCall?.scheduledOpen ? 'Scheduled to reopen' : 'Officially closed'}</h3>
+                      <h3 className="text-base font-semibold text-[#A00D26]">{targetCall?.scheduledOpen ? 'Scheduled to reopen' : 'Officially closed'}</h3>
                       <p className="mt-1 text-sm leading-6 text-slate-700">{targetCall?.scheduledOpen ? `Submissions remain closed until ${formattedStartDate}.` : 'This call is no longer accepting proposals.'}</p>
                     </div>
                   </div>
@@ -286,30 +289,30 @@ export const SubmissionPeriodPortal: React.FC<SubmissionPeriodPortalProps> = ({ 
                 </div>
               )}
 
-              <dl className={`mt-6 border-t border-slate-200 pt-6 ${isClosed ? 'grid gap-4 sm:grid-cols-2' : 'space-y-5'}`}>
+              <dl className="mt-6 space-y-5 border-t border-slate-100 pt-5">
                 <div>
-                  <dt className="text-sm text-slate-600">{targetCall?.scheduledOpen ? 'Next opening' : isClosed ? 'Opened on' : 'Submissions open'}</dt>
-                  <dd className={`mt-1 font-semibold tracking-tight ${isClosed ? 'text-sm leading-6 text-slate-700' : 'text-xl text-slate-900'}`}>
-                    <time dateTime={targetCall?.startDate}>{formattedStartDate}</time>
+                  <dt className="text-xs font-semibold uppercase tracking-wider text-slate-500">{targetCall?.scheduledOpen ? 'Next opening' : isClosed ? 'Opened on' : 'Submissions open'}</dt>
+                  <dd className="mt-2 break-words text-base font-semibold leading-snug text-slate-800">
+                    <time dateTime={targetCall?.startDate}>{formattedStartDate || 'To be announced'}</time>
                   </dd>
                 </div>
-                <div className={isClosed ? '' : 'rounded-xl border border-red-100 bg-red-50/50 p-4'}>
-                  <dt className={`text-sm ${isClosed ? 'text-slate-600' : 'font-medium text-[#A00D26]'}`}>{isClosed ? 'Scheduled deadline' : 'Submission deadline'}</dt>
-                  <dd className={`mt-1 font-semibold tracking-tight ${isClosed ? 'text-sm leading-6 text-slate-700' : 'text-xl text-[#A00D26]'}`}>
-                    <time dateTime={targetCall?.endDate}>{formattedEndDate}</time>
+                <div className={`rounded-none border p-4 sm:p-5 ${isOpen ? 'border-red-100 bg-red-50/70' : 'border-slate-200 bg-slate-50'}`}>
+                  <dt className={`text-[11px] font-semibold uppercase tracking-wider ${isOpen ? 'text-[#A00D26]' : 'text-slate-500'}`}>{isClosed ? 'Scheduled deadline' : 'Submission deadline'}</dt>
+                  <dd className={`mt-2 break-words text-base font-semibold leading-snug tracking-tight ${isOpen ? 'text-[#A00D26]' : 'text-slate-800'}`}>
+                    <time dateTime={targetCall?.endDate}>{formattedEndDate || 'To be announced'}</time>
                   </dd>
                 </div>
               </dl>
 
-              {memoDetails && <div className="mt-6 border-t border-slate-200 pt-5">
+              {memoDetails && <div className="mt-6 border-t border-slate-100 pt-5">
                 <h3 className="mb-3 text-sm font-semibold text-slate-800">Official memorandum</h3>
                 <a
                   href={memoDetails?.dataUrl || '#'}
                   onClick={handleOpenMemo}
-                  className="group flex items-start gap-3 rounded-xl border border-slate-200 p-3 transition-colors hover:border-slate-300 hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#C8102E]"
+                  className="group flex items-start gap-3 rounded-none border border-slate-200 p-3 transition-colors hover:border-red-200 hover:bg-red-50/40 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#C8102E]"
                 >
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-slate-100">
-                    <FileText className="h-5 w-5 text-slate-600" />
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-none bg-slate-100 text-slate-600">
+                    <FileText aria-hidden="true" className="h-5 w-5" />
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="break-words text-sm font-medium leading-6 text-slate-800 group-hover:text-[#C8102E]">{memoFileName}</p>
@@ -318,6 +321,17 @@ export const SubmissionPeriodPortal: React.FC<SubmissionPeriodPortalProps> = ({ 
                   <ExternalLink aria-hidden="true" className="mt-2 h-4 w-4 shrink-0 text-slate-500" />
                 </a>
               </div>}
+
+              <div className="mt-6 flex items-center gap-3 border-t border-slate-100 pt-5">
+                <div className="flex shrink-0 items-center gap-2">
+                  <img src="/WMSU.png" alt="WMSU logo" width={40} height={40} className="h-10 w-10 object-contain" />
+                  <img src="/RDEC-WMSU.png" alt="RDEC logo" width={40} height={40} className="h-10 w-10 object-contain" />
+                </div>
+                <div className="min-w-0 border-l border-slate-200 pl-3">
+                  <p className="text-xs font-semibold text-slate-700">WMSU RDEC</p>
+                  <p className="mt-0.5 text-xs leading-5 text-slate-500">Research Development &amp; Extension Center</p>
+                </div>
+              </div>
             </aside>
 
             {focusTopicPills.length > 0 && (
@@ -338,7 +352,7 @@ export const SubmissionPeriodPortal: React.FC<SubmissionPeriodPortalProps> = ({ 
                 </div>
                 <div id="call-focus-topics" className="flex flex-wrap gap-2">
                   {(showAllTopics ? focusTopicPills : focusTopicPills.slice(0, 6)).map((pill, idx) => (
-                    <span key={idx} className="max-w-full break-words rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm leading-relaxed text-slate-600">
+                    <span key={idx} className="max-w-full break-words rounded-none border border-slate-200 bg-white px-3 py-1.5 text-sm leading-relaxed text-slate-600">
                       {pill}
                     </span>
                   ))}
@@ -357,7 +371,7 @@ export const SubmissionPeriodPortal: React.FC<SubmissionPeriodPortalProps> = ({ 
             <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
               Priority Research Areas
             </h2>
-            <div className="w-12 h-1 bg-[#C8102E] rounded-sm mx-auto mt-1.5 mb-3" />
+            <div className="w-12 h-1 bg-[#C8102E] rounded-none mx-auto mt-1.5 mb-3" />
             <p className="text-base font-normal text-slate-600 mt-2 leading-relaxed">
               Proposals directly aligned with these key thematic domains are given priority evaluation for {callYear} grant allocation.
             </p>
@@ -367,7 +381,7 @@ export const SubmissionPeriodPortal: React.FC<SubmissionPeriodPortalProps> = ({ 
               <button
                 type="button"
                 onClick={() => setSelectedCategory('all')}
-                className={`min-h-11 px-4 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
+                className={`min-h-11 px-4 py-2 rounded-none text-sm font-medium transition-colors cursor-pointer ${
                   selectedCategory === 'all'
                     ? 'bg-slate-900 text-white shadow-xs'
                     : 'bg-white text-slate-600 border border-slate-200 hover:border-slate-300'
@@ -380,7 +394,7 @@ export const SubmissionPeriodPortal: React.FC<SubmissionPeriodPortalProps> = ({ 
                   key={area.id}
                   type="button"
                   onClick={() => setSelectedCategory(area.id)}
-                  className={`min-h-11 px-4 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
+                  className={`min-h-11 px-4 py-2 rounded-none text-sm font-medium transition-colors cursor-pointer ${
                     selectedCategory === area.id
                       ? 'bg-[#C8102E] text-white shadow-xs'
                       : 'bg-white text-slate-600 border border-slate-200 hover:border-slate-300'
@@ -397,14 +411,14 @@ export const SubmissionPeriodPortal: React.FC<SubmissionPeriodPortalProps> = ({ 
             {filteredAreas.map((area) => (
               <div
                 key={area.id}
-                className="bg-white rounded-sm p-5 border border-slate-200 hover:border-slate-300 transition-colors flex flex-col justify-between"
+                className="bg-white rounded-none p-5 border border-slate-200 hover:border-slate-300 transition-colors flex flex-col justify-between"
               >
                 <div>
                   <div className="flex items-center justify-between mb-4">
-                    <div className="w-10 h-10 rounded-sm bg-red-50/70 border border-red-100 flex items-center justify-center">
+                    <div className="w-10 h-10 rounded-none bg-red-50/70 border border-red-100 flex items-center justify-center">
                       {area.icon}
                     </div>
-                    <span className="text-xs font-semibold text-slate-600 bg-slate-50 px-2 py-0.5 rounded-sm border border-slate-100">
+                    <span className="text-xs font-semibold text-slate-600 bg-slate-50 px-2 py-0.5 rounded-none border border-slate-100">
                       {area.topics.length} topics
                     </span>
                   </div>
@@ -423,7 +437,7 @@ export const SubmissionPeriodPortal: React.FC<SubmissionPeriodPortalProps> = ({ 
                     {area.topics.map((topic, idx) => (
                       <span
                         key={idx}
-                        className="inline-block text-sm font-medium px-2.5 py-1 rounded-sm bg-slate-50 text-slate-700 border border-slate-100 hover:bg-red-50 hover:text-[#C8102E] hover:border-red-100 transition-colors"
+                        className="inline-block text-sm font-medium px-2.5 py-1 rounded-none bg-slate-50 text-slate-700 border border-slate-100 hover:bg-red-50 hover:text-[#C8102E] hover:border-red-100 transition-colors"
                       >
                         {topic}
                       </span>
@@ -443,7 +457,7 @@ export const SubmissionPeriodPortal: React.FC<SubmissionPeriodPortalProps> = ({ 
             <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
               Simple 3-Step Submission Process
             </h2>
-            <div className="w-12 h-1 bg-[#C8102E] rounded-sm mx-auto mt-1.5 mb-3" />
+            <div className="w-12 h-1 bg-[#C8102E] rounded-none mx-auto mt-1.5 mb-3" />
             <p className="text-base font-normal text-slate-600 mt-2">
               Everything you need to successfully submit your research project proposal.
             </p>
@@ -454,7 +468,7 @@ export const SubmissionPeriodPortal: React.FC<SubmissionPeriodPortalProps> = ({ 
               return (
                 <div
                   key={idx}
-                  className="bg-white rounded-sm p-6 border border-slate-200 flex flex-col justify-between"
+                  className="bg-white rounded-none p-6 border border-slate-200 flex flex-col justify-between"
                 >
                   <div>
                     <div className="flex items-center justify-between mb-4">
@@ -512,7 +526,7 @@ export const SubmissionPeriodPortal: React.FC<SubmissionPeriodPortalProps> = ({ 
       {/* TEMPLATES & DOWNLOADS SECTION */}
       <section id="templates" className="scroll-mt-24 py-16 bg-white border-t border-slate-200">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="bg-white rounded-sm p-6 sm:p-8 border border-slate-200 flex flex-col md:flex-row items-center justify-between gap-6">
+          <div className="bg-white rounded-none p-6 sm:p-8 border border-slate-200 flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="space-y-2 text-center md:text-left">
               <h3 className="text-lg sm:text-xl font-bold text-slate-900 flex items-center justify-center md:justify-start gap-2">
                 <FileText className="w-5 h-5 text-[#C8102E]" />
@@ -527,7 +541,7 @@ export const SubmissionPeriodPortal: React.FC<SubmissionPeriodPortalProps> = ({ 
               <a
                 href="/DOST_Form_No.1b.docx"
                 download
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-sm font-semibold text-xs sm:text-sm text-white bg-[#C8102E] hover:bg-[#A00D26] shadow-xs hover:shadow transition-all"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-none font-semibold text-xs sm:text-sm text-white bg-[#C8102E] hover:bg-[#A00D26] shadow-xs hover:shadow transition-all"
               >
                 <Download className="w-4 h-4" />
                 <span>Download Word (.docx)</span>
@@ -536,7 +550,7 @@ export const SubmissionPeriodPortal: React.FC<SubmissionPeriodPortalProps> = ({ 
                 href="/DOST_Form_No.1b.pdf"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-sm font-medium text-xs sm:text-sm text-slate-700 bg-slate-50 hover:bg-slate-100 border border-slate-200 transition-colors"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-none font-medium text-xs sm:text-sm text-slate-700 bg-slate-50 hover:bg-slate-100 border border-slate-200 transition-colors"
               >
                 <span>View PDF Guide</span>
                 <ExternalLink className="w-3.5 h-3.5 text-slate-400" />
@@ -549,7 +563,7 @@ export const SubmissionPeriodPortal: React.FC<SubmissionPeriodPortalProps> = ({ 
       {/* QUICK ASSISTANCE BANNER */}
       <section className="py-12 bg-white border-t border-slate-100">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="rounded-sm bg-slate-900 text-white p-6 sm:p-8 flex flex-col md:flex-row items-center justify-between gap-6">
+          <div className="rounded-none bg-slate-900 text-white p-6 sm:p-8 flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="space-y-1.5 text-center md:text-left">
               <span className="text-xs uppercase tracking-wider text-red-400 font-semibold">
                 RPDU Help &amp; Consultation
@@ -565,7 +579,7 @@ export const SubmissionPeriodPortal: React.FC<SubmissionPeriodPortalProps> = ({ 
             <div className="flex flex-col sm:flex-row items-center gap-3 shrink-0">
               <a
                 href="mailto:rpdu@wmsu.edu.ph"
-                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-sm bg-white/10 hover:bg-white/20 border border-white/15 text-xs sm:text-sm font-medium transition-colors"
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-none bg-white/10 hover:bg-white/20 border border-white/15 text-xs sm:text-sm font-medium transition-colors"
               >
                 <Mail className="w-4 h-4 text-red-400" />
                 <span>rpdu@wmsu.edu.ph</span>
@@ -573,7 +587,7 @@ export const SubmissionPeriodPortal: React.FC<SubmissionPeriodPortalProps> = ({ 
               <button
                 type="button"
                 onClick={onSignInClick}
-                className="group inline-flex items-center gap-2 px-5 py-2.5 rounded-sm bg-[#C8102E] hover:bg-[#A00D26] text-xs sm:text-sm font-semibold transition-colors cursor-pointer"
+                className="group inline-flex items-center gap-2 px-5 py-2.5 rounded-none bg-[#C8102E] hover:bg-[#A00D26] text-xs sm:text-sm font-semibold transition-colors cursor-pointer"
               >
                 <span>Sign In to Portal</span>
                 <ArrowRight className="w-4 h-4 transition-transform duration-300 ease-out group-hover:translate-x-1.5" />
