@@ -8,6 +8,9 @@ export const RpduLayout: React.FC = () => {
   const location = useLocation();
 
   const getPageTitle = () => {
+    if (location.pathname.startsWith('/rpdu/archive/preview') || location.pathname.includes('/archive/') && location.pathname.includes('/preview')) {
+      return 'Official Document Preview';
+    }
     if (location.pathname.startsWith('/rpdu/archive') || location.pathname.startsWith('/rpdu/issued-documents')) return 'Issued Documents & Contracts Archive';
     if (location.pathname.startsWith('/rpdu/letters')) return 'Official Letters';
     if (location.pathname.startsWith('/rpdu/memos') || location.pathname.startsWith('/rpdu/aihr-memos')) return 'Official Memoranda Desk';
@@ -20,6 +23,8 @@ export const RpduLayout: React.FC = () => {
     if (location.pathname.startsWith('/rpdu/evaluators')) return 'Evaluators Panel';
     if (/^\/rpdu\/evaluations\/.+/.test(location.pathname)) return 'Proposal Review Panel';
     if (location.pathname.startsWith('/rpdu/evaluations')) return 'Technical Evaluations';
+    if (/^\/rpdu\/budgets\/.+/.test(location.pathname)) return 'Line-Item Budget Review Workspace';
+    if (location.pathname.startsWith('/rpdu/budgets')) return 'Budget Allocations Review Desk';
     if (location.pathname.startsWith('/rpdu/grants')) return 'Approved Institutional Grants';
     return 'Call for Proposals & Grants Management';
   };

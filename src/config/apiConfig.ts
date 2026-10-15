@@ -28,12 +28,13 @@ export const API_ENDPOINTS = {
   PROPONENT: {
     PROFILE: `${API_BASE_URL}/profile`,
     CONCEPT_PROPOSALS: `${API_BASE_URL}/proponent/concept-proposals`,
-    // BUDGET_ALLOCATIONS: `${API_BASE_URL}/proponent/budget-allocations`,
+    BUDGET_ALLOCATIONS: `${API_BASE_URL}/proponent/budget-allocations`,
   },
 
   // RPDU Role Endpoints (Ready for expansion)
   RPDU: {
     SCREENING: `${API_BASE_URL}/screening/proposals`,
+    BUDGET_ALLOCATIONS: `${API_BASE_URL}/rpdu/budget-allocations`,
   },
 
   // Call for Proposals Endpoints

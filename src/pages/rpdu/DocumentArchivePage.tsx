@@ -1,16 +1,15 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Archive,
   CheckCircle2,
   Clock,
-  ExternalLink,
   FileText,
   Plus,
   Printer,
   Search,
   X,
 } from 'lucide-react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { API_BASE_URL } from '../../config/apiConfig';
 import { useAuth } from '../../context/AuthContext';
 
@@ -69,13 +68,13 @@ export interface DocumentArchivePageProps {
 }
 
 export function DocumentArchivePage({ role = 'rpdu' }: DocumentArchivePageProps) {
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { session, profile, loadingProfile } = useAuth();
   const roleAllowed = profile?.role === 'RPDU' || profile?.role === 'ADMIN';
 
   const [issuedDocs, setIssuedDocs] = useState<IssuedDocument[]>([]);
   const [loading, setLoading] = useState(true);
-  const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
   // Initial filter from query params
@@ -89,21 +88,6 @@ export function DocumentArchivePage({ role = 'rpdu' }: DocumentArchivePageProps)
 
   const [archiveFilter, setArchiveFilter] = useState<'ALL' | 'CERTIFICATE' | 'CONTRACT' | 'LETTERS'>(initialFilter);
   const [archiveSearch, setArchiveSearch] = useState('');
-
-  // In-page preview state
-  const [selectedIssuedDoc, setSelectedIssuedDoc] = useState<IssuedDocument | null>(null);
-  const [archivedHtml, setArchivedHtml] = useState('');
-  const archiveFrame = useRef<HTMLIFrameElement>(null);
-  const viewerSectionRef = useRef<HTMLElement>(null);
-
-  const archivedPdfUrl = useMemo(() => {
-    if (!/^(https?:\/\/|\/uploads\/)/i.test(archivedHtml)) return '';
-    try {
-      return new URL(archivedHtml, new URL(API_BASE_URL).origin).href;
-    } catch {
-      return '';
-    }
-  }, [archivedHtml]);
 
   // Load issued documents
   const fetchIssuedDocs = async (showLoading = true) => {
@@ -119,13 +103,10 @@ export function DocumentArchivePage({ role = 'rpdu' }: DocumentArchivePageProps)
       if (!response.ok) throw new Error(result.message || 'Could not load issued documents.');
       setIssuedDocs(result.data || []);
 
-      // If an initial issued ID was requested in URL, open it
+      // If an initial issued ID was requested in URL, navigate to preview
       const requestedId = searchParams.get('issued');
       if (requestedId) {
-        const found = (result.data || []).find((item: IssuedDocument) => item.id === requestedId);
-        if (found) {
-          await openIssuedDocument(found.id, result.data);
-        }
+        navigate(`/${role}/archive/preview/${requestedId}`);
       }
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Could not load issued documents.');
@@ -138,34 +119,8 @@ export function DocumentArchivePage({ role = 'rpdu' }: DocumentArchivePageProps)
     fetchIssuedDocs();
   }, [roleAllowed, session?.access_token]);
 
-  const openIssuedDocument = async (id: string, docsList = issuedDocs) => {
-    if (!session?.access_token) return;
-    setBusy(true);
-    setError('');
-    try {
-      const response = await fetch(`${API_BASE_URL}/letters/issued/${id}`, {
-        headers: { Authorization: `Bearer ${session.access_token}` },
-      });
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.message || 'Could not open the issued document.');
-
-      setArchivedHtml(result.data.rendered_html);
-      const found = docsList.find((i) => i.id === id);
-      setSelectedIssuedDoc(found || null);
-
-      setTimeout(() => {
-        viewerSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }, 100);
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Could not open the issued document.');
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const closeViewer = () => {
-    setArchivedHtml('');
-    setSelectedIssuedDoc(null);
+  const handleOpenPreview = (item: IssuedDocument) => {
+    navigate(`/${role}/archive/preview/${item.id}`, { state: { doc: item } });
   };
 
   // Filter tab change helper
@@ -392,14 +347,10 @@ export function DocumentArchivePage({ role = 'rpdu' }: DocumentArchivePageProps)
               month: 'short',
               day: 'numeric',
             });
-            const isSelected = selectedIssuedDoc?.id === item.id;
-
             return (
               <div
                 key={item.id}
-                className={`rounded-md border bg-white p-5 shadow-2xs hover:shadow-xs transition-all flex flex-col justify-between ${
-                  isSelected ? 'border-brand ring-1 ring-brand/40 bg-red-50/20' : 'border-slate-200 hover:border-slate-300'
-                }`}
+                className="rounded-md border bg-white p-5 shadow-2xs hover:shadow-xs transition-all flex flex-col justify-between border-slate-200 hover:border-slate-300"
               >
                 <div>
                   <div className="flex items-center justify-between gap-2 mb-2 flex-wrap">
@@ -438,7 +389,10 @@ export function DocumentArchivePage({ role = 'rpdu' }: DocumentArchivePageProps)
                     <span className="text-[11px] text-slate-400 font-medium">Issued {formattedDate}</span>
                   </div>
 
-                  <h3 className="text-sm font-bold text-slate-900 line-clamp-2 leading-snug">
+                  <h3
+                    onClick={() => handleOpenPreview(item)}
+                    className="text-sm font-bold text-slate-900 line-clamp-2 leading-snug cursor-pointer hover:text-[#C8102E] transition-colors"
+                  >
                     {item.template_variables?.title || 'Research Proposal'}
                   </h3>
 
@@ -451,9 +405,8 @@ export function DocumentArchivePage({ role = 'rpdu' }: DocumentArchivePageProps)
                 <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
                   <button
                     type="button"
-                    disabled={busy}
-                    onClick={() => openIssuedDocument(item.id)}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-[#C8102E] hover:text-[#A00D26] hover:bg-red-50/60 rounded-md transition-colors cursor-pointer disabled:opacity-50"
+                    onClick={() => handleOpenPreview(item)}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-[#C8102E] hover:text-[#A00D26] hover:bg-red-50/60 rounded-md transition-colors cursor-pointer"
                   >
                     <Printer className="w-3.5 h-3.5" /> View &amp; Print Document
                   </button>
@@ -462,79 +415,6 @@ export function DocumentArchivePage({ role = 'rpdu' }: DocumentArchivePageProps)
             );
           })}
         </div>
-      )}
-
-      {/* In-Page Document Viewer */}
-      {archivedHtml && (
-        <section
-          ref={viewerSectionRef}
-          className="mt-8 rounded-md border-2 border-slate-300 bg-white p-6 shadow-md space-y-4 transition-all"
-          aria-label="Archived document viewer"
-        >
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-4">
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Archived Document Preview</span>
-                <span className="text-xs text-slate-300">·</span>
-                <span className="text-xs font-mono font-medium text-slate-600">{selectedIssuedDoc?.template_code}</span>
-              </div>
-              <h3 className="text-lg font-extrabold text-slate-900 mt-0.5">
-                {selectedIssuedDoc?.template_variables?.title || 'Archived Official Document'}
-              </h3>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Recipient / Study Leader: <strong className="text-slate-700">{selectedIssuedDoc?.template_variables?.recipientName}</strong>
-              </p>
-            </div>
-
-            <div className="flex items-center gap-2">
-              {archivedPdfUrl && (
-                <a
-                  href={archivedPdfUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-slate-700 bg-slate-50 hover:bg-slate-100 rounded-md border border-slate-200 transition-colors"
-                >
-                  <ExternalLink className="w-3.5 h-3.5" /> Open in New Tab
-                </a>
-              )}
-              <button
-                type="button"
-                onClick={() => archiveFrame.current?.contentWindow?.print()}
-                className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-white bg-[#C8102E] hover:bg-[#A00D26] rounded-md transition-colors shadow-2xs cursor-pointer"
-              >
-                <Printer className="w-3.5 h-3.5" /> Print Document
-              </button>
-              <button
-                type="button"
-                onClick={closeViewer}
-                title="Close Viewer"
-                aria-label="Close Viewer"
-                className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-md transition-colors cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-
-          <div className="rounded-md overflow-hidden border border-slate-200 bg-slate-50">
-            {archivedPdfUrl ? (
-              <iframe
-                ref={archiveFrame}
-                title="Archived notarized document"
-                src={archivedPdfUrl}
-                className="w-full min-h-[750px] bg-white"
-              />
-            ) : (
-              <iframe
-                ref={archiveFrame}
-                title="Archived official document"
-                sandbox="allow-modals allow-same-origin allow-scripts allow-popups"
-                srcDoc={archivedHtml}
-                className="w-full min-h-[750px] bg-white"
-              />
-            )}
-          </div>
-        </section>
       )}
     </div>
   );

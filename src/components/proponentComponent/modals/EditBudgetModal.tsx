@@ -39,8 +39,8 @@ export const EditBudgetModal: React.FC<EditBudgetModalProps> = ({
     if (item) {
       setCategory(item.category);
       setDescription(item.description);
-      setQuantity(item.quantity);
-      setUnitCost(item.unitCost);
+      setQuantity(item.quantity ?? 1);
+      setUnitCost(item.unitCost ?? 0);
       setJustification(item.justification || '');
       setError(null);
     }

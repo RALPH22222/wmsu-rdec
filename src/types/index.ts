@@ -161,10 +161,47 @@ export interface BudgetLineItem {
   id: string;
   category: BudgetCategory;
   description: string;
-  quantity: number;
-  unitCost: number;
+  quantity?: number;
+  unitCost?: number;
   totalCost: number;
   justification?: string;
+  classType?: 'PS' | 'MOOE' | 'EO';
+  subclass?: string;
+  year1Amount?: number;
+  year2Amount?: number;
+  isStandard?: boolean;
+}
+
+export interface LibLineItem {
+  id: string;
+  classType: 'PS' | 'MOOE' | 'EO';
+  subclass?: string;
+  description: string;
+  year1: number;
+  year2: number;
+  total: number;
+  isStandard?: boolean;
+  remarks?: string;
+}
+
+export interface LibMetadata {
+  title?: string;
+  projectDuration: string;
+  studyLeader: string;
+  coResearchers: string | string[];
+  projectStaff: string;
+  implementingDepartment: string;
+}
+
+export interface LibSignatories {
+  studyLeader: string;
+  studyLeaderTitle: string;
+  directorForResearch: string;
+  directorForResearchTitle: string;
+  vpResearchExtension: string;
+  vpResearchExtensionTitle: string;
+  universityPresident: string;
+  universityPresidentTitle: string;
 }
 
 export interface HybridBudgetAllocation {
@@ -174,6 +211,9 @@ export interface HybridBudgetAllocation {
   proposalTitle?: string;
   totalLineItemAmount: number;
   lineItems: BudgetLineItem[];
+  libItems?: LibLineItem[];
+  metadata?: LibMetadata;
+  signatories?: LibSignatories;
   pdfFile?: {
     name: string;
     size: number;
@@ -182,6 +222,30 @@ export interface HybridBudgetAllocation {
   } | null;
   status: 'draft' | 'submitted';
   updatedAt: string;
+}
+
+export interface RpduBudgetAllocationItem {
+  id: string;
+  allocationId: string;
+  detailedProposalId: string;
+  conceptProposalId?: string | null;
+  proposalCode: string;
+  proposalTitle: string;
+  callBudgetCap: number;
+  proponentId?: string | null;
+  proponentName: string;
+  proponentEmail: string;
+  proponentDepartment: string;
+  totalApprovedAmount: number;
+  isApproved: boolean;
+  reviewStatus: 'PENDING' | 'APPROVED' | 'REJECTED';
+  reviewRemarks?: string;
+  reviewedAt?: string | null;
+  reviewerName?: string | null;
+  budgetPdfUrl?: string | null;
+  createdAt: string;
+  libItems: LibLineItem[];
+  metadata: LibMetadata;
 }
 
 // ============================================================================

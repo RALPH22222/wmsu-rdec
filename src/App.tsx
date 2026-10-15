@@ -40,7 +40,10 @@ import { ScreeningDispatchPage } from './pages/screening/ScreeningDispatchPage';
 import { InceptionSchedulingPage } from './pages/rpdu/InceptionSchedulingPage';
 import { LetterDeskPage } from './pages/rpdu/LetterDeskPage';
 import { DocumentArchivePage } from './pages/rpdu/DocumentArchivePage';
+import { ArchivedDocumentPreviewPage } from './pages/rpdu/ArchivedDocumentPreviewPage';
 import { AdminDocumentArchivePage } from './pages/admin/AdminDocumentArchivePage';
+import { RpduBudgetAllocationPage } from './pages/rpdu/RpduBudgetAllocationPage';
+import { RpduBudgetAllocationReviewPage } from './pages/rpdu/RpduBudgetAllocationReviewPage';
 import Login from './pages/auth/Login';
 import Register from './pages/auth/Register';
 import { Toast } from './components/Toast';
@@ -148,6 +151,8 @@ export function App() {
                   <Route path="screening-results" element={<ScreeningDispatchPage role="admin" />} />
                 </Route>
                 <Route path="/admin/archive" element={<AdminDocumentArchivePage />} />
+                <Route path="/admin/archive/preview/:id" element={<ArchivedDocumentPreviewPage role="admin" />} />
+                <Route path="/admin/archive/:id/preview" element={<ArchivedDocumentPreviewPage role="admin" />} />
                 <Route path="/admin/issued-documents" element={<Navigate to="/admin/archive" replace />} />
                 <Route path="/admin/clearance" element={<Navigate to="/admin/archive?filter=CERTIFICATE" replace />} />
                 <Route path="/admin/contracts" element={<Navigate to="/admin/archive?filter=CONTRACT" replace />} />
@@ -173,12 +178,16 @@ export function App() {
                   <Route path="screening-results" element={<ScreeningDispatchPage role="rpdu" />} />
                 </Route>
                 <Route path="/rpdu/archive" element={<DocumentArchivePage role="rpdu" />} />
+                <Route path="/rpdu/archive/preview/:id" element={<ArchivedDocumentPreviewPage role="rpdu" />} />
+                <Route path="/rpdu/archive/:id/preview" element={<ArchivedDocumentPreviewPage role="rpdu" />} />
                 <Route path="/rpdu/issued-documents" element={<Navigate to="/rpdu/archive" replace />} />
                 <Route path="/rpdu/clearance" element={<Navigate to="/rpdu/archive?filter=CERTIFICATE" replace />} />
                 <Route path="/rpdu/contracts" element={<Navigate to="/rpdu/archive?filter=CONTRACT" replace />} />
                 <Route path="/rpdu/scheduling" element={<InceptionSchedulingPage />} />
                 <Route path="/rpdu/evaluations" element={<EvaluatorAssignmentPage role="rpdu" />} />
                 <Route path="/rpdu/evaluations/:id" element={<PipelineProposalDetailPage role="rpdu" />} />
+                <Route path="/rpdu/budgets" element={<RpduBudgetAllocationPage />} />
+                <Route path="/rpdu/budgets/:allocationId" element={<RpduBudgetAllocationReviewPage />} />
                 <Route path="/rpdu/notarization" element={<Navigate to="/rpdu/archive?filter=CONTRACT" replace />} />
               </Route>
             </Route>
