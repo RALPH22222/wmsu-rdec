@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Search, Calendar, Lock, Edit3, Trash2, CheckCircle2, AlertCircle, FilePlus, FileText, ExternalLink, Clock } from 'lucide-react';
+import { Plus, Search, Calendar, Lock, Edit3, Trash2, CheckCircle2, AlertCircle, FileText, ExternalLink, Clock } from 'lucide-react';
 import { useCallForProposals } from '../../context/CallForProposalsContext';
 import { useAuth } from '../../context/AuthContext';
 import type { CallForProposals, CallStatus } from '../../types';
@@ -35,11 +35,13 @@ export const CallForProposalsManager: React.FC = () => {
     const d = new Date(dateStr);
     if (isNaN(d.getTime())) return dateStr;
     const dateFormatted = d.toLocaleDateString('en-US', {
+      timeZone: 'Asia/Manila',
       month: 'short',
       day: 'numeric',
       year: 'numeric',
     });
     const timeFormatted = d.toLocaleTimeString('en-US', {
+      timeZone: 'Asia/Manila',
       hour: 'numeric',
       minute: '2-digit',
       hour12: true,
@@ -117,23 +119,20 @@ export const CallForProposalsManager: React.FC = () => {
       case 'OPEN':
       case 'ACTIVE':
         return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-none text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
             OPEN
           </span>
         );
       case 'DRAFT':
         return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-800 border border-blue-200">
-            <FilePlus className="w-3 h-3 text-blue-600" />
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-none text-xs font-bold bg-blue-100 text-blue-800 border border-blue-200">
             DRAFT
           </span>
         );
       case 'CLOSED':
       default:
         return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-slate-200 text-slate-700 border border-slate-300">
-            <Lock className="w-3 h-3 text-slate-500" />
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-none text-xs font-bold bg-slate-200 text-slate-700 border border-slate-300">
             CLOSED
           </span>
         );
@@ -348,6 +347,14 @@ export const CallForProposalsManager: React.FC = () => {
                         <Clock className="w-3.5 h-3.5 text-slate-400" />
                         <span>
                           Created: <span className="font-medium text-slate-700">{formatCreationDateTime(call.createdAt)}</span>
+                        </span>
+                      </div>
+                    )}
+                    {call.lastEditedAt && (
+                      <div className="flex items-center gap-1.5 text-slate-500">
+                        <Edit3 className="w-3.5 h-3.5 shrink-0 text-slate-400" />
+                        <span>
+                          Last edited: <time dateTime={call.lastEditedAt} title="Philippine time" className="font-medium text-slate-700">{formatCreationDateTime(call.lastEditedAt)}</time>
                         </span>
                       </div>
                     )}

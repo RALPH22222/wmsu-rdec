@@ -63,6 +63,7 @@ export interface CallForProposals {
   creator?: CallCreator;
   createdAt: string;
   updatedAt: string;
+  lastEditedAt?: string | null;
 }
 
 export interface ProposalItem {

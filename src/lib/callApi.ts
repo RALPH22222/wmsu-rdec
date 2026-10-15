@@ -74,7 +74,8 @@ export const mapDbRowToCall = (row: any): CallForProposals => {
     })(),
     creator: row.creator || undefined,
     createdAt: row.created_at || row.createdAt || new Date().toISOString(),
-    updatedAt: row.created_at || row.updatedAt || new Date().toISOString(),
+    updatedAt: row.updated_at || row.updatedAt || row.created_at || row.createdAt || new Date().toISOString(),
+    lastEditedAt: row.lastEditedAt || row.updated_at || null,
   });
 };
 

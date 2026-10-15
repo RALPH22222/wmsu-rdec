@@ -399,17 +399,13 @@ export const PreliminaryScreeningManager: React.FC<PreliminaryScreeningManagerPr
                     <div className="flex flex-wrap items-center gap-2">
                       {/* Status Badge */}
                       <span
-                        className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full capitalize flex items-center gap-1.5 ${isPassed
+                        className={`text-[11px] font-bold px-2.5 py-0.5 rounded-none capitalize ${isPassed
                           ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                           : isFailed
                             ? 'bg-red-50 text-red-700 border border-red-200'
                             : 'bg-amber-50 text-amber-700 border border-amber-200'
                           }`}
                       >
-                        <span
-                          className={`w-1.5 h-1.5 rounded-full ${isPassed ? 'bg-emerald-500' : isFailed ? 'bg-red-500' : 'bg-amber-500 animate-pulse'
-                            }`}
-                        />
                         {isPending
                           ? 'Pending Screening'
                           : isPassed
@@ -541,17 +537,13 @@ export const PreliminaryScreeningManager: React.FC<PreliminaryScreeningManagerPr
                     {/* 5. Status */}
                     <td className="p-3.5 whitespace-nowrap">
                       <span
-                        className={`text-[11px] font-bold px-2.5 py-1 rounded-full capitalize inline-flex items-center gap-1.5 ${isPassed
+                        className={`text-[11px] font-bold px-2.5 py-1 rounded-none capitalize inline-flex ${isPassed
                           ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                           : isFailed
                             ? 'bg-red-50 text-red-700 border border-red-200'
                             : 'bg-amber-50 text-amber-700 border border-amber-200'
                           }`}
                       >
-                        <span
-                          className={`w-1.5 h-1.5 rounded-full ${isPassed ? 'bg-emerald-500' : isFailed ? 'bg-red-500' : 'bg-amber-500 animate-pulse'
-                            }`}
-                        />
                         {proposal.screeningStatus === 'pending'
                           ? 'Pending'
                           : proposal.screeningStatus === 'passed'

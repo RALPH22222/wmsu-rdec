@@ -178,7 +178,7 @@ export function ScreeningReviewPage({ role }: { role: 'rpdu' | 'admin' }) {
       ) : proposal ? (
         <>
           <section className="rounded-sm border border-slate-200 bg-white p-5 sm:p-6" aria-label="Proposal information">
-            <div className="mb-3 flex flex-wrap items-center gap-3"><span className={`rounded-full px-2.5 py-1 text-xs font-bold ${proposal.screeningStatus === 'passed' ? 'bg-emerald-50 text-emerald-700' : proposal.screeningStatus === 'failed' ? 'bg-red-50 text-red-700' : 'bg-amber-50 text-amber-800'}`}>{proposal.screeningStatus === 'pending' ? 'Pending screening' : proposal.screeningStatus === 'passed' ? 'Passed screening' : 'Failed screening'}</span></div>
+            <div className="mb-3 flex flex-wrap items-center gap-3"><span className={`rounded-none border px-2.5 py-1 text-xs font-bold ${proposal.screeningStatus === 'passed' ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : proposal.screeningStatus === 'failed' ? 'border-red-200 bg-red-50 text-red-700' : 'border-amber-200 bg-amber-50 text-amber-800'}`}>{proposal.screeningStatus === 'pending' ? 'Pending screening' : proposal.screeningStatus === 'passed' ? 'Passed screening' : 'Failed screening'}</span></div>
             <h2 className="text-lg font-bold text-slate-900 sm:text-xl">{proposal.title}</h2>
             <dl className="mt-5 grid gap-x-6 gap-y-4 text-sm sm:grid-cols-2 lg:grid-cols-3">
               {[

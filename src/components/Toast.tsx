@@ -5,7 +5,7 @@ interface ToastProps {
 
 export function Toast({ message, onClose }: ToastProps) {
   return (
-    <div className="fixed top-20 right-6 z-50 bg-gray-900 text-white px-5 py-3.5 rounded-2xl shadow-2xl flex items-center gap-3 border border-gray-700 animate-fade-in-down">
+    <div className="fixed top-20 right-6 z-50 flex items-center gap-3 rounded-sm border border-red-200 bg-white px-5 py-3.5 text-slate-800 shadow-lg animate-fade-in-down">
       <div className="w-8 h-8 rounded-xl bg-[#C8102E] flex items-center justify-center text-white shrink-0">
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path
@@ -17,13 +17,13 @@ export function Toast({ message, onClose }: ToastProps) {
         </svg>
       </div>
       <div>
-        <p className="text-sm font-bold">Portal Notification</p>
-        <p className="text-xs text-gray-300">{message}</p>
+        <p className="text-sm font-bold text-[#C8102E]">Portal Notification</p>
+        <p className="text-xs text-slate-600">{message}</p>
       </div>
       <button
         type="button"
         onClick={onClose}
-        className="ml-2 text-gray-400 hover:text-white cursor-pointer"
+        className="ml-2 text-slate-400 hover:text-[#C8102E] cursor-pointer"
       >
         ✕
       </button>
