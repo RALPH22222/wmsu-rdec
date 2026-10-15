@@ -1,17 +1,14 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import {
   ArrowLeft,
   CheckCircle2,
   AlertTriangle,
   Clock,
-  Download,
   FileText,
   User,
-  Users,
   Building,
   Calendar,
-  Send,
   ExternalLink,
   ShieldCheck,
   RefreshCw,
@@ -22,7 +19,6 @@ import type { RpduBudgetAllocationItem } from '../../types';
 
 export const RpduBudgetAllocationReviewPage: React.FC = () => {
   const { allocationId } = useParams<{ allocationId: string }>();
-  const navigate = useNavigate();
   const { session } = useAuth();
 
   const [allocation, setAllocation] = useState<RpduBudgetAllocationItem | null>(null);
@@ -234,20 +230,25 @@ export const RpduBudgetAllocationReviewPage: React.FC = () => {
               </div>
             </div>
 
-            {allocation.metadata.coResearchers && allocation.metadata.coResearchers.length > 0 && (
+            {allocation.metadata.coResearchers && (
               <div className="pt-2 border-t border-slate-100 text-xs">
                 <span className="text-[10px] uppercase font-bold text-slate-400 block mb-1">
                   Co-Researchers:
                 </span>
                 <div className="flex flex-wrap gap-1.5">
-                  {allocation.metadata.coResearchers.map((c, i) => (
-                    <span
-                      key={i}
-                      className="px-2 py-0.5 bg-slate-100 text-slate-700 rounded text-[11px] font-medium border border-slate-200"
-                    >
-                      {c}
-                    </span>
-                  ))}
+                  {(Array.isArray(allocation.metadata.coResearchers)
+                    ? allocation.metadata.coResearchers
+                    : [allocation.metadata.coResearchers]
+                  )
+                    .filter((name: string) => typeof name === 'string' && name.trim().length > 0)
+                    .map((c: string, i: number) => (
+                      <span
+                        key={i}
+                        className="px-2 py-0.5 bg-slate-100 text-slate-700 rounded text-[11px] font-medium border border-slate-200"
+                      >
+                        {c}
+                      </span>
+                    ))}
                 </div>
               </div>
             )}
