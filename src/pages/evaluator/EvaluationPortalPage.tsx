@@ -1,8 +1,8 @@
 import type { ReactNode } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, EyeOff } from 'lucide-react';
 import { useMyReview } from '../../hooks/useMyReviews';
-import { nextStepFor } from '../../lib/proposalPipeline';
+import { isTerminalStatus, nextStepFor } from '../../lib/proposalPipeline';
 import { formatDate } from '../../lib/format';
 import { StatusBadge } from '../../components/ui/StatusBadge';
 import { PipelineStepper } from '../../components/ui/PipelineStepper';
@@ -11,6 +11,8 @@ import { RoundAccordion } from '../../components/ui/RoundAccordion';
 import { HistoryList } from '../../components/ui/HistoryList';
 import { EvaluationScoringForm } from '../../components/evaluatorComponent/EvaluationScoringForm';
 import { SubmissionSummary } from '../../components/evaluatorComponent/SubmissionSummary';
+import { InvitationCard } from '../../components/evaluatorComponent/InvitationCard';
+import type { InvitationResponse } from '../../lib/pipelineApi';
 
 const Card = ({ title, children }: { title: string; children: ReactNode }) => (
   <section className="rounded-sm border border-slate-200 bg-white p-4 shadow-xs sm:p-5"><h3 className="mb-3 text-xs font-bold uppercase tracking-wider text-slate-500">{title}</h3>{children}</section>
@@ -23,13 +25,25 @@ export function EvaluationPortalPage() {
 }
 
 function PortalBody({ reviewId }: { reviewId: string | undefined }) {
-  const { review, loading, error, submit } = useMyReview(reviewId);
+  const { review, loading, error, submit, respond } = useMyReview(reviewId);
+  const navigate = useNavigate();
+
+  // A refusal frees the seat, so the review no longer exists for this evaluator.
+  const handleRespond = async (body: InvitationResponse) => {
+    const result = await respond(body);
+    if (result.declined) navigate('/evaluator/reviews');
+    return result;
+  };
 
   if (loading) return <section className="mx-auto max-w-5xl space-y-3" aria-label="Loading review"><div className="h-20 animate-pulse rounded-sm bg-slate-100" /><div className="h-40 animate-pulse rounded-sm bg-slate-100" /></section>;
   if (error || !review) return <section className="mx-auto max-w-5xl space-y-3"><Link to="/evaluator/reviews" className="inline-flex min-h-11 items-center gap-1 text-xs font-semibold text-slate-600"><ArrowLeft className="h-4 w-4" />Back</Link><p role="alert" className="rounded-sm border border-red-200 bg-red-50 p-4 text-sm text-red-800">{error || 'Review not found.'}</p></section>;
 
   const current = review.submissions.find((s) => s.round === review.currentRound);
   const earlier = review.submissions.filter((s) => s.round !== review.currentRound).sort((a, b) => b.round - a.round);
+  const { canRespond, acceptedAt } = review.invitation;
+  const nextStep = canRespond && review.proposalStatus === 'UNDER_REVIEW'
+    ? 'Accept the invitation, then submit your evaluation for this round.'
+    : nextStepFor(review.proposalStatus, 'evaluator');
   const latestRevision = review.revisions.length > 0 ? review.revisions.reduce((a, b) => (b.revisionNumber > a.revisionNumber ? b : a)) : null;
 
   return (
@@ -40,14 +54,19 @@ function PortalBody({ reviewId }: { reviewId: string | undefined }) {
         <div className="flex flex-wrap items-center gap-2"><span className="font-mono text-[11px] font-bold text-slate-500">{review.code}</span><StatusBadge status={review.proposalStatus} size="md" /><span className="text-xs text-slate-500">Round {review.currentRound} · You are {review.blindLabel}</span></div>
         <h2 className="mt-2 break-words font-brand text-lg font-bold text-slate-900">{review.title}</h2>
         <p className="mt-1 flex items-start gap-2 text-xs text-slate-500"><EyeOff className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />Identities are withheld both ways: you see the research team only by code, and they see you only as Evaluator A, B or C.</p>
-        <p className="mt-3 rounded-sm bg-slate-50 p-3 text-xs text-slate-700">{nextStepFor(review.proposalStatus, 'evaluator')}</p>
+        <p className="mt-3 rounded-sm bg-slate-50 p-3 text-xs text-slate-700">{nextStep}</p>
         <div className="mt-4"><PipelineStepper status={review.proposalStatus} currentRound={review.currentRound} compact /></div>
         <div className="mt-4 flex flex-wrap gap-2"><DocumentLink href={review.manuscriptUrl} label={review.manuscriptUrl ? 'Original manuscript' : 'Manuscript'} />{latestRevision && <DocumentLink href={latestRevision.revisedFileUrl} label={`Revision ${latestRevision.revisionNumber}`} muted />}</div>
+        {acceptedAt && <p className="mt-2 text-xs text-slate-500">Invitation accepted {formatDate(acceptedAt)}</p>}
       </header>
+
+      {canRespond && <InvitationCard review={review} onRespond={handleRespond} />}
 
       <Card title={`Round ${review.currentRound} evaluation`}>
         {current ? <SubmissionSummary submission={current} />
+          : canRespond ? <p className="rounded-sm bg-amber-50 p-3 text-sm text-amber-800">Accept the invitation above to open the evaluation form.</p>
           : review.canSubmit ? <EvaluationScoringForm key={review.currentRound} review={review} onSubmit={submit} />
+          : acceptedAt && !isTerminalStatus(review.proposalStatus) ? <p className="rounded-sm bg-slate-50 p-3 text-sm text-slate-600">The evaluation form opens when the review panel is complete and the round starts.</p>
           : <p className="rounded-sm bg-slate-50 p-3 text-sm text-slate-600">Evaluation is closed for this round.</p>}
       </Card>
 

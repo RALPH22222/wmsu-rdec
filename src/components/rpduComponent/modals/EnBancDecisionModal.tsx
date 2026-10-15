@@ -87,6 +87,7 @@ function DecisionForm({ concept, isOpen, onClose, onSubmit, onWithdraw }: EnBanc
                   <span className="min-w-0">
                     <span className="block text-sm font-semibold text-slate-900">{meta.label}</span>
                     <span id={`${ids}-${value}-description`} className="block text-xs text-slate-600">{meta.description}</span>
+                    {value === 'APPROVED_FOR_IMPLEMENTATION' && <span className="mt-1 block text-xs text-slate-500">The proponent is notified automatically: a notice letter in their portal, and an email when mail is configured.</span>}
                   </span>
                 </label>
               );

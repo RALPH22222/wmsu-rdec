@@ -12,13 +12,15 @@ import { HistoryList } from '../../components/ui/HistoryList';
 import { RoundFeedbackAccordion } from '../../components/proponentComponent/RoundFeedbackAccordion';
 import { RevisionUploadForm } from '../../components/proponentComponent/RevisionUploadForm';
 import { RevisionTimeline } from '../../components/proponentComponent/RevisionTimeline';
+import { ActionSheetStrip } from '../../components/proponentComponent/ActionSheetStrip';
+import { ClarificationThread } from '../../components/ui/ClarificationThread';
 
 const Card = ({ title, children }: { title: string; children: ReactNode }) => (
   <section className="rounded-sm border border-slate-200 bg-white p-4 shadow-xs sm:p-5"><h3 className="mb-3 text-xs font-bold uppercase tracking-wider text-slate-500">{title}</h3>{children}</section>
 );
 
 export function RevisionHistoryPage() {
-  const { proposals, eligibleConcepts, loading, error, refresh, uploadRevision } = useMyPipelineProposals();
+  const { proposals, eligibleConcepts, loading, error, refresh, uploadRevision, clarify } = useMyPipelineProposals();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const selected = proposals.find((item) => item.id === selectedId) ?? proposals[0] ?? null;
 
@@ -65,9 +67,16 @@ export function RevisionHistoryPage() {
               </header>
 
               <Card title="Evaluator feedback">
+                <ActionSheetStrip proposal={selected} />
                 {selected.feedback.length === 0 ? <p className="text-xs text-slate-500">Feedback is released when a review round closes.</p>
                   : <div className="space-y-3">{[...selected.feedback].reverse().map((round, index) => <RoundFeedbackAccordion key={round.round} feedback={round} defaultOpen={index === 0} />)}</div>}
               </Card>
+
+              {(selected.clarifications.length > 0 || selected.canClarify) && (
+                <Card title="Clarifications with RPDU">
+                  <ClarificationThread messages={selected.clarifications} currentRound={selected.currentRound} canPost={selected.canClarify} viewer="PROPONENT" onPost={async (round, body) => { await clarify(selected.id, round, body); }} />
+                </Card>
+              )}
 
               {selected.canUploadRevision && <Card title="Upload revision"><RevisionUploadForm key={selected.currentRound} proposal={selected} onUpload={uploadRevision} /></Card>}
 

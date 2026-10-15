@@ -93,7 +93,7 @@ export function AihrDeliberationPage({ role = 'rpdu' }: AihrDeliberationPageProp
         </p>
       </header>
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
         {STAGE_CARDS.map((card) => (
           <StatCard key={card.label} label={card.label} value={loading ? '—' : counts(card.stages)} icon={card.icon} tone={card.tone} onClick={() => toggleFilter(card.stages)} active={tab === 'results' && stageFilter === card.stages} />
         ))}

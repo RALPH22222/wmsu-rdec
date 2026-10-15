@@ -20,8 +20,13 @@ export const logVerdictApi = async (conceptId: string, payload: VerdictPayload, 
 
 export interface DeliberationPayload { outcome: EnBancOutcome; note: string; deliberatedOn: string }
 
-export const recordDecisionApi = async (conceptId: string, payload: DeliberationPayload, token?: string): Promise<AihrConcept> =>
-  (await request<AihrConcept>(API_ENDPOINTS.AIHR.DELIBERATION(conceptId), token, { method: 'PUT', body: JSON.stringify({ outcome: payload.outcome, note: payload.note.trim(), deliberatedOn: payload.deliberatedOn || null }) })).data;
+/** `warning` reports the en banc notice delivery (portal only, email failed, or an earlier email that cannot be recalled). */
+export const recordDecisionApi = async (conceptId: string, payload: DeliberationPayload, token?: string): Promise<{ concept: AihrConcept; warning: string | null }> => {
+  const result = await request<AihrConcept>(API_ENDPOINTS.AIHR.DELIBERATION(conceptId), token, { method: 'PUT', body: JSON.stringify({ outcome: payload.outcome, note: payload.note.trim(), deliberatedOn: payload.deliberatedOn || null }) });
+  return { concept: result.data, warning: result.warning ?? null };
+};
 
-export const withdrawDecisionApi = async (conceptId: string, token?: string): Promise<AihrConcept> =>
-  (await request<AihrConcept>(API_ENDPOINTS.AIHR.DELIBERATION(conceptId), token, { method: 'DELETE' })).data;
+export const withdrawDecisionApi = async (conceptId: string, token?: string): Promise<{ concept: AihrConcept; warning: string | null }> => {
+  const result = await request<AihrConcept>(API_ENDPOINTS.AIHR.DELIBERATION(conceptId), token, { method: 'DELETE' });
+  return { concept: result.data, warning: result.warning ?? null };
+};

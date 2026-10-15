@@ -1,6 +1,6 @@
 import { API_ENDPOINTS } from '../config/apiConfig';
 import type {
-  BlindReview, Checklist, EligibleConcept, PendingConcept, PipelineEvaluator, ProponentProposal, ReviewRecommendation, RpduProposal,
+  ActionSheetPoints, BlindReview, Checklist, DeclineReason, EligibleConcept, PendingConcept, PipelineEvaluator, ProponentProposal, ReviewRecommendation, RpduProposal,
 } from '../types';
 import { request } from './apiRequest';
 
@@ -29,6 +29,15 @@ export const checkRevisionApi = async (proposalId: string, revisionId: string, c
 export const forwardToReoApi = async (proposalId: string, token?: string): Promise<RpduProposal> =>
   (await request<RpduProposal>(API_ENDPOINTS.PIPELINE.FORWARD(proposalId), token, { method: 'POST' })).data;
 
+export interface ActionSheetInput { points: ActionSheetPoints; otherComments: string }
+
+/** Flow 7.3: generates (or regenerates) the round's Proposal Action Sheet .docx from the consolidated comments. */
+export const buildActionSheetApi = async (proposalId: string, round: number, input: ActionSheetInput, token?: string): Promise<RpduProposal> =>
+  (await request<RpduProposal>(API_ENDPOINTS.PIPELINE.ACTION_SHEET(proposalId, round), token, { method: 'PUT', body: JSON.stringify(input) })).data;
+
+export const postClarificationApi = async (proposalId: string, round: number, body: string, token?: string): Promise<RpduProposal> =>
+  (await request<RpduProposal>(API_ENDPOINTS.PIPELINE.CLARIFICATIONS(proposalId), token, { method: 'POST', body: JSON.stringify({ round, body: body.trim() }) })).data;
+
 // ---- Evaluator ------------------------------------------------------------
 
 export const getMyReviews = async (token?: string, signal?: AbortSignal): Promise<BlindReview[]> =>
@@ -36,6 +45,14 @@ export const getMyReviews = async (token?: string, signal?: AbortSignal): Promis
 
 export const getMyReview = async (reviewId: string, token?: string, signal?: AbortSignal): Promise<BlindReview> =>
   (await request<BlindReview>(API_ENDPOINTS.PIPELINE.MY_REVIEW(reviewId), token, {}, signal)).data;
+
+export type InvitationResponse = { accept: true; declaration: true } | { accept: false; reason: DeclineReason; note: string };
+
+/** Flow 7.1: accept returns the updated review; decline frees the seat, so the review no longer exists. */
+export const respondToInvitationApi = async (reviewId: string, response: InvitationResponse, token?: string): Promise<{ declined: true } | { declined: false; review: BlindReview }> => {
+  const result = await request<BlindReview | { declined: true }>(API_ENDPOINTS.PIPELINE.MY_REVIEW_RESPONSE(reviewId), token, { method: 'POST', body: JSON.stringify(response) });
+  return 'declined' in result.data && result.data.declined ? { declined: true } : { declined: false, review: result.data as BlindReview };
+};
 
 export interface SubmitReviewPayload {
   recommendation: ReviewRecommendation;
@@ -80,3 +97,6 @@ export const uploadRevisionApi = async (proposalId: string, payload: UploadRevis
   if (payload.notes.trim()) body.append('notes', payload.notes.trim());
   return (await request<ProponentProposal>(API_ENDPOINTS.PIPELINE.PROPOSAL_REVISIONS(proposalId), token, { method: 'POST', body })).data;
 };
+
+export const postMyClarificationApi = async (proposalId: string, round: number, body: string, token?: string): Promise<ProponentProposal> =>
+  (await request<ProponentProposal>(API_ENDPOINTS.PIPELINE.MY_PROPOSAL_CLARIFICATIONS(proposalId), token, { method: 'POST', body: JSON.stringify({ round, body: body.trim() }) })).data;

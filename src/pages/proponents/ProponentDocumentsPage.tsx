@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { API_BASE_URL } from '../../config/apiConfig';
 import { useAuth } from '../../context/AuthContext';
+import { EN_BANC_NOTICE_CODE } from '../../lib/aihrMeta';
 
 interface ContractData {
   contractNumber: string;
@@ -41,6 +42,8 @@ interface ProposalContractItem {
     submittedAt: string | null;
   } | null;
 }
+
+const EN_BANC_NOTICE_LABEL = 'Notice of Approval for Implementation (en banc)';
 
 interface OfficialLetterItem {
   id: string;
@@ -97,21 +100,23 @@ export default function ProponentDocumentsPage() {
     setError('');
     try {
       const headers = { Authorization: `Bearer ${session.access_token}` };
-      const [lettersRes, clearancesRes, contractsRes] = await Promise.all([
+      const [lettersRes, clearancesRes, contractsRes, noticesRes] = await Promise.all([
         fetch(`${API_BASE_URL}/letters/mine?templateCode=WMSU-RPDU-LET-001.01`, { headers }),
         fetch(`${API_BASE_URL}/letters/mine?templateCode=WMSU-RPDU-CERT-001.00`, { headers }),
         fetch(`${API_BASE_URL}/letters/mine/contracts`, { headers }),
+        fetch(`${API_BASE_URL}/letters/mine?templateCode=${EN_BANC_NOTICE_CODE}`, { headers }),
       ]);
 
-      const [lettersData, clearancesData, contractsData] = await Promise.all([
+      const [lettersData, clearancesData, contractsData, noticesData] = await Promise.all([
         lettersRes.json().catch(() => ({})),
         clearancesRes.json().catch(() => ({})),
         contractsRes.json().catch(() => ({})),
+        noticesRes.json().catch(() => ({})),
       ]);
 
-      if (lettersRes.ok && lettersData.data) {
-        setLetters(lettersData.data || []);
-      }
+      const screeningLetters: OfficialLetterItem[] = lettersRes.ok && lettersData.data ? lettersData.data : [];
+      const enBancNotices: OfficialLetterItem[] = noticesRes.ok && noticesData.data ? noticesData.data : [];
+      setLetters([...enBancNotices, ...screeningLetters].sort((a, b) => (Date.parse(b.issued_at) || 0) - (Date.parse(a.issued_at) || 0)));
       if (clearancesRes.ok && clearancesData.data) {
         setClearances(clearancesData.data || []);
       }
@@ -441,10 +446,10 @@ export default function ProponentDocumentsPage() {
                       <MailCheck className="h-5 w-5 shrink-0 text-[#C8102E]" />
                       <span className="min-w-0">
                         <span className="block truncate text-sm font-semibold">
-                          {item.template_variables?.title || 'Screening Result Letter'}
+                          {item.template_variables?.title || (item.template_code === EN_BANC_NOTICE_CODE ? EN_BANC_NOTICE_LABEL : 'Screening Result Letter')}
                         </span>
                         <span className="mt-0.5 block text-xs text-slate-500">
-                          {item.template_code} · Screening Result Letter
+                          {item.template_code} · {item.template_code === EN_BANC_NOTICE_CODE ? EN_BANC_NOTICE_LABEL : 'Screening Result Letter'}
                         </span>
                       </span>
                     </span>

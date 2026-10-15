@@ -244,9 +244,32 @@ export interface RpduReview {
   assessmentFileUrl: string | null;
   actionSheetUrl: string | null;
   assignedAt: string;
+  /** When the evaluator accepted the invitation (flow 7.1); null while awaiting their response. */
+  acceptedAt: string | null;
   canRemove: boolean;
   submissions: ReviewSubmission[];
 }
+
+// ---- Flow 7.1 invitation response, 7.3 Action Sheet, 7.4–7.5 clarifications --------------------
+
+export type DeclineReason = 'CONFLICT_OF_INTEREST' | 'UNAVAILABLE' | 'OUTSIDE_EXPERTISE' | 'OTHER';
+/** An evaluator who declined the invitation; the seat was freed. RPDU view only. */
+export interface ReviewDecline { id: string; evaluatorId: string; evaluatorName: string; reason: DeclineReason; note: string; declinedAt: string }
+/** The evaluator's own invitation state. `letterId` is the issued WMSU-RPDU-LET-003.00 letter, when any. */
+export interface InvitationState { acceptedAt: string | null; canRespond: boolean; letterId: string | null }
+/** Consolidated comment per assessment point id (see ASSESSMENT_POINTS); '' when nothing was noted. */
+export type ActionSheetPoints = Record<string, string>;
+export interface ActionSheetSeed { round: number; points: ActionSheetPoints; otherComments: string }
+/** A generated Proposal Action Sheet (WMSU-RPDU-FR-007.00) for one round. RPDU view. */
+export interface ActionSheet { round: number; points: ActionSheetPoints; otherComments: string; fileUrl: string; preparedBy: string; preparedAt: string; updatedAt: string }
+/** The proponent's view of a generated action sheet: the document is the deliverable. */
+export interface ProponentActionSheet { round: number; fileUrl: string; preparedAt: string }
+export type ClarificationAuthor = 'PROPONENT' | 'RPDU';
+/** One message in the proponent↔RPDU clarification thread of a round. `authorName` is present in the RPDU view only. */
+export interface ClarificationMessage { id: string; round: number; authorRole: ClarificationAuthor; authorName?: string; body: string; createdAt: string }
+export type NoticeEmailStatus = 'not_sent' | 'sent' | 'failed';
+/** The system-issued en banc notice letter (template code EN_BANC_NOTICE) for an approved concept. */
+export interface EnBancNotice { letterId: string; issuedAt: string; emailStatus: NoticeEmailStatus }
 
 /** Flow 7.8 gateway: the five readiness items evaluated by the backend (`canForwardToReo`). */
 export type GatewayItemKey = 'status' | 'panel' | 'files' | 'revisions' | 'certificate';
@@ -275,11 +298,22 @@ export interface RpduProposal {
   manuscriptUrl: string | null;
   proponent: { id: string; name: string; department: string };
   panel: RpduReview[];
+  /** Evaluators who declined the invitation (their seats were freed). */
+  declines: ReviewDecline[];
   revisions: PipelineRevision[];
   history: StatusHistoryEntry[];
   /** Certificate of Technical Review issued from the Letter Desk (a `technical_clearances` row). */
   clearance: { issuedAt: string } | null;
   gateway: GatewayReadiness;
+  /** Generated Proposal Action Sheets, one per round, oldest first. */
+  actionSheets: ActionSheet[];
+  /** Pre-filled consolidation of the current round's evaluations; null unless `canBuildActionSheet`. */
+  actionSheetSeed: ActionSheetSeed | null;
+  canBuildActionSheet: boolean;
+  clarifications: ClarificationMessage[];
+  canClarify: boolean;
+  /** Proponent messages in the current round not yet answered by RPDU. */
+  awaitingReply: number;
 }
 
 export interface PipelineEvaluator {
@@ -303,6 +337,7 @@ export interface BlindReview {
   revisions: PipelineRevision[];
   submissions: ReviewSubmission[];
   history: { status: PipelineStatus; round: number; changedAt: string }[];
+  invitation: InvitationState;
 }
 
 export interface ProponentFeedbackEvaluation {
@@ -333,12 +368,17 @@ export interface ProponentProposal {
   revisions: PipelineRevision[];
   feedback: ProponentRoundFeedback[];
   history: StatusHistoryEntry[];
+  actionSheets: ProponentActionSheet[];
+  clarifications: ClarificationMessage[];
+  canClarify: boolean;
 }
 
 export interface EligibleConcept {
   id: string;
   title: string;
   screenedAt: string | null;
+  /** The en banc notice letter issued to this proponent, when the concept was approved en banc. */
+  noticeLetterId: string | null;
 }
 
 // ============================================================================
@@ -366,6 +406,8 @@ export interface EnBancDecision {
   deliberatedOn: string | null;
   decidedBy: string;
   decidedAt: string;
+  /** Present once an APPROVED_FOR_IMPLEMENTATION decision has issued the notice letter. */
+  notice: EnBancNotice | null;
 }
 
 export interface AihrConcept {

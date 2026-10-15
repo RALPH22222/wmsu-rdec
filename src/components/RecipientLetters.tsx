@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { FileText, Printer, X } from 'lucide-react';
 import { API_BASE_URL } from '../config/apiConfig';
 import { useAuth } from '../context/AuthContext';
+import type { EN_BANC_NOTICE_CODE } from '../lib/aihrMeta';
 
 type Letter = {
   id: string;
@@ -13,7 +14,7 @@ type Letter = {
 };
 
 type Props = {
-  templateCode: 'WMSU-RPDU-LET-001.01' | 'WMSU-RPDU-LET-003.00';
+  templateCode: 'WMSU-RPDU-LET-001.01' | 'WMSU-RPDU-LET-003.00' | typeof EN_BANC_NOTICE_CODE;
   heading: string;
   description: string;
   emptyText: string;

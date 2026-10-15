@@ -35,7 +35,7 @@ export function ReviewPanelList({ panel, onRemove }: ReviewPanelListProps) {
           <li key={seat.id} className="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="min-w-0">
               <p className="text-sm font-semibold text-slate-900">{seat.evaluatorName} <span className="text-xs font-normal text-slate-500">· {seat.blindLabel}</span></p>
-              <p className="text-xs text-slate-500">{seat.department || 'No department'} · Assigned {formatDate(seat.assignedAt)}</p>
+              <p className="flex flex-wrap items-center gap-x-1 gap-y-1 text-xs text-slate-500"><span>{seat.department || 'No department'} · Assigned {formatDate(seat.assignedAt)}</span>{seat.acceptedAt ? <span>· Accepted {formatDate(seat.acceptedAt)}</span> : <span className="rounded-sm bg-amber-50 px-2 py-0.5 text-[11px] font-bold text-amber-700">Awaiting response</span>}</p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <span className={`rounded-sm px-2 py-1 text-[11px] font-bold ${SEAT_STATUS[seat.status].className}`}>{SEAT_STATUS[seat.status].label}</span>

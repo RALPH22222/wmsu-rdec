@@ -33,9 +33,9 @@ export function useAihrConcepts() {
 
   const recordDecision = useCallback(async (conceptId: string, payload: DeliberationPayload) => {
     try {
-      const concept = await recordDecisionApi(conceptId, payload, token);
+      const { concept, warning } = await recordDecisionApi(conceptId, payload, token);
       setData((prev) => (prev ? replaceIn(prev, concept) : prev));
-      showToast(`En banc decision recorded — ${OUTCOME_META[payload.outcome].label}`);
+      showToast(warning ? `En banc decision recorded — ${OUTCOME_META[payload.outcome].label}. ${warning}` : `En banc decision recorded — ${OUTCOME_META[payload.outcome].label}`);
       return concept;
     } catch (failure) {
       showToast(messageOf(failure, 'Unable to record the en banc decision'));
@@ -45,9 +45,9 @@ export function useAihrConcepts() {
 
   const withdrawDecision = useCallback(async (conceptId: string) => {
     try {
-      const concept = await withdrawDecisionApi(conceptId, token);
+      const { concept, warning } = await withdrawDecisionApi(conceptId, token);
       setData((prev) => (prev ? replaceIn(prev, concept) : prev));
-      showToast('En banc decision withdrawn');
+      showToast(warning ? `En banc decision withdrawn. ${warning}` : 'En banc decision withdrawn');
       return concept;
     } catch (failure) {
       showToast(messageOf(failure, 'Unable to withdraw the en banc decision'));

@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useCallForProposals } from '../context/CallForProposalsContext';
-import { getMyPipelineProposals, submitDetailedProposalApi, uploadRevisionApi, type MyPipelineProposals, type UploadRevisionPayload } from '../lib/pipelineApi';
+import { getMyPipelineProposals, postMyClarificationApi, submitDetailedProposalApi, uploadRevisionApi, type MyPipelineProposals, type UploadRevisionPayload } from '../lib/pipelineApi';
 import type { ProponentProposal } from '../types';
 import { useAsyncResource } from './useAsyncResource';
 
@@ -49,5 +49,17 @@ export function useMyPipelineProposals() {
     }
   }, [token, upsert, showToast]);
 
-  return { proposals: resource.data?.proposals ?? [], eligibleConcepts: resource.data?.eligibleConcepts ?? [], pendingConcepts: resource.data?.pendingConcepts ?? [], loading: resource.loading, error: resource.error, refresh: resource.refresh, submitDetailedProposal, uploadRevision };
+  const clarify = useCallback(async (proposalId: string, round: number, body: string) => {
+    try {
+      const proposal = await postMyClarificationApi(proposalId, round, body, token);
+      upsert(proposal);
+      showToast('Question sent to RPDU');
+      return proposal;
+    } catch (failure) {
+      showToast(failure instanceof Error ? failure.message : 'Unable to send the question');
+      throw failure;
+    }
+  }, [token, upsert, showToast]);
+
+  return { proposals: resource.data?.proposals ?? [], eligibleConcepts: resource.data?.eligibleConcepts ?? [], pendingConcepts: resource.data?.pendingConcepts ?? [], loading: resource.loading, error: resource.error, refresh: resource.refresh, submitDetailedProposal, uploadRevision, clarify };
 }

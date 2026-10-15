@@ -20,11 +20,11 @@ export function EvaluatorReviewsPage() {
             {reviews.map((review) => (
               <li key={review.id} className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
                 <div className="min-w-0">
-                  <div className="flex flex-wrap items-center gap-2"><span className="font-mono text-[11px] font-bold text-slate-500">{review.code}</span><StatusBadge status={review.proposalStatus} /><span className="text-[11px] font-semibold text-slate-500">Round {review.currentRound} · You are {review.blindLabel}</span></div>
+                  <div className="flex flex-wrap items-center gap-2"><span className="font-mono text-[11px] font-bold text-slate-500">{review.code}</span><StatusBadge status={review.proposalStatus} />{review.invitation.canRespond && <span className="rounded-sm bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-800">Awaiting your response</span>}<span className="text-[11px] font-semibold text-slate-500">Round {review.currentRound} · You are {review.blindLabel}</span></div>
                   <h3 className="mt-1 break-words text-sm font-bold text-slate-900 leading-snug">{review.title}</h3>
                 </div>
-                <Link to={`/evaluator/reviews/${review.id}`} className={`inline-flex min-h-11 items-center justify-center rounded-sm px-4 text-sm font-semibold sm:shrink-0 ${review.canSubmit ? 'bg-[#C8102E] text-white hover:bg-[#A00D26]' : 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50'}`}>
-                  {review.canSubmit ? 'Evaluate' : 'View'}
+                <Link to={`/evaluator/reviews/${review.id}`} className={`inline-flex min-h-11 items-center justify-center rounded-sm px-4 text-sm font-semibold sm:shrink-0 ${review.canSubmit || review.invitation.canRespond ? 'bg-[#C8102E] text-white hover:bg-[#A00D26]' : 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50'}`}>
+                  {review.invitation.canRespond ? 'Respond' : review.canSubmit ? 'Evaluate' : 'View'}
                 </Link>
               </li>
             ))}

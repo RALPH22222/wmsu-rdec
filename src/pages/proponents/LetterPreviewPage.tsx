@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { API_BASE_URL } from '../../config/apiConfig';
 import { useAuth } from '../../context/AuthContext';
+import { EN_BANC_NOTICE_CODE } from '../../lib/aihrMeta';
 
 interface LetterItemData {
   id: string;
@@ -77,17 +78,22 @@ export function LetterPreviewPage() {
 
   const isCotr = letterData?.template_code === 'WMSU-RPDU-CERT-001.00';
   const isScreeningLetter = letterData?.template_code === 'WMSU-RPDU-LET-001.01';
+  const isEnBancNotice = letterData?.template_code === EN_BANC_NOTICE_CODE;
 
   const docTypeName = isCotr
     ? 'Certificate of Technical Review (COTR)'
     : isScreeningLetter
     ? 'Official Screening Result Letter'
+    : isEnBancNotice
+    ? 'Notice of Approval for Implementation'
     : 'Official Document';
 
   const docIcon = isCotr ? (
     <FileCheck size={14} className="text-emerald-700" />
   ) : isScreeningLetter ? (
     <MailCheck size={14} className="text-[#C8102E]" />
+  ) : isEnBancNotice ? (
+    <MailCheck size={14} className="text-emerald-700" />
   ) : (
     <FileText size={14} className="text-slate-600" />
   );
@@ -101,6 +107,8 @@ export function LetterPreviewPage() {
         ? 'Certificate-of-Technical-Review.pdf'
         : isScreeningLetter
         ? 'Screening-Result-Letter.pdf'
+        : isEnBancNotice
+        ? 'Notice-of-Approval-for-Implementation.pdf'
         : 'Official-Document.pdf';
 
       const res = await fetch(`${API_BASE_URL}/letters/download-pdf`, {

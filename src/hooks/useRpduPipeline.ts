@@ -1,7 +1,8 @@
 import { useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useCallForProposals } from '../context/CallForProposalsContext';
-import { assignEvaluatorApi, checkRevisionApi, forwardToReoApi, getPipelineEvaluators, getPipelineProposal, getPipelineProposals, unassignEvaluatorApi } from '../lib/pipelineApi';
+import { assignEvaluatorApi, buildActionSheetApi, checkRevisionApi, forwardToReoApi, getPipelineEvaluators, getPipelineProposal, getPipelineProposals, postClarificationApi, unassignEvaluatorApi } from '../lib/pipelineApi';
+import type { ActionSheetInput } from '../lib/pipelineApi';
 import type { PipelineEvaluator, RpduProposal } from '../types';
 import { useAsyncResource } from './useAsyncResource';
 
@@ -101,5 +102,31 @@ export function useRpduProposal(id: string | undefined) {
     }
   }, [id, token, setData, showToast, reread]);
 
-  return { proposal: resource.data, loading: resource.loading, error: resource.error, refresh: resource.refresh, replace: resource.setData, unassign, checkRevision, forward };
+  const buildActionSheet = useCallback(async (round: number, input: ActionSheetInput) => {
+    if (!id) return;
+    try {
+      const proposal = await buildActionSheetApi(id, round, input, token);
+      setData(proposal);
+      showToast(`Action sheet for round ${round} generated`);
+    } catch (failure) {
+      showToast(failure instanceof Error ? failure.message : 'Unable to generate the action sheet');
+      reread();
+      throw failure;
+    }
+  }, [id, token, setData, showToast, reread]);
+
+  const clarify = useCallback(async (round: number, body: string) => {
+    if (!id) return;
+    try {
+      const proposal = await postClarificationApi(id, round, body, token);
+      setData(proposal);
+      showToast('Reply posted');
+    } catch (failure) {
+      showToast(failure instanceof Error ? failure.message : 'Unable to post the reply');
+      reread();
+      throw failure;
+    }
+  }, [id, token, setData, showToast, reread]);
+
+  return { proposal: resource.data, loading: resource.loading, error: resource.error, refresh: resource.refresh, replace: resource.setData, unassign, checkRevision, forward, buildActionSheet, clarify };
 }

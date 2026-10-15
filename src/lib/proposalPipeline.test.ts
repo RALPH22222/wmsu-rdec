@@ -1,8 +1,11 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  ACTION_SHEET_NUMBERING,
   ASSESSMENT_GROUPS,
   ASSESSMENT_POINTS,
+  DECLINE_REASON_META,
+  DECLINE_REASON_ORDER,
   MAX_EVALUATORS_PER_PROPOSAL,
   RECOMMENDATION_META,
   RECOMMENDATION_ORDER,
@@ -83,4 +86,19 @@ test('nextStepFor gives each audience a plain-words next step', () => {
   assert.equal(nextStepFor('APPROVED', 'proponent'), 'The panel approved your proposal. RPDU will issue the technical clearance.');
   assert.equal(nextStepFor('REVISION_REQUESTED', 'evaluator'), 'The research team is revising. A new round opens when they upload.');
   assert.equal(nextStepFor('FORWARDED_TO_REO', 'rpdu'), 'Forwarded to the Research Ethics Office. No further pipeline action.');
+});
+
+test('ACTION_SHEET_NUMBERING covers every assessment point once, in form order', () => {
+  const numbers = ASSESSMENT_POINTS.map((point) => ACTION_SHEET_NUMBERING[point.id]);
+  assert.ok(numbers.every((value) => typeof value === 'string' && /^\d\.\d{1,2} /.test(value)));
+  assert.equal(new Set(numbers).size, ASSESSMENT_POINTS.length);
+  assert.equal(Object.keys(ACTION_SHEET_NUMBERING).length, ASSESSMENT_POINTS.length);
+  assert.equal(numbers[0], '1.1 Title/Objectives');
+  assert.equal(numbers[numbers.length - 1], '4.2 REOC Clearance');
+});
+
+test('DECLINE_REASON_META has a label for every reason, conflict of interest first', () => {
+  assert.equal(DECLINE_REASON_ORDER[0], 'CONFLICT_OF_INTEREST');
+  assert.ok(DECLINE_REASON_ORDER.every((reason) => DECLINE_REASON_META[reason].label.length > 0));
+  assert.equal(new Set(DECLINE_REASON_ORDER).size, 4);
 });

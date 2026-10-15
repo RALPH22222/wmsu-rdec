@@ -1,4 +1,4 @@
-import type { Checklist, ChecklistDraft, ChecklistPresence, PipelineStatus, ReviewRecommendation } from '../types/index.ts';
+import type { Checklist, ChecklistDraft, ChecklistPresence, DeclineReason, PipelineStatus, ReviewRecommendation } from '../types/index.ts';
 
 export const MAX_EVALUATORS_PER_PROPOSAL = 3;
 export const MIN_JUSTIFICATION_LENGTH = 20;
@@ -7,6 +7,10 @@ export const MAX_PAGE_REF_LENGTH = 100;
 export const MAX_COMMENT_LENGTH = 2000;
 export const MAX_UPLOAD_BYTES = 15 * 1024 * 1024;
 export const ACCEPTED_DOCUMENT_TYPES = '.pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+export const MAX_CLARIFICATION_LENGTH = 2000;
+export const MAX_DECLINE_NOTE_LENGTH = 2000;
+export const MAX_ACTION_SHEET_COMMENT_LENGTH = 7000;
+export const MAX_OTHER_COMMENTS_LENGTH = 5000;
 
 export type StatusTone = 'slate' | 'blue' | 'amber' | 'emerald' | 'red';
 
@@ -156,3 +160,36 @@ const NEXT_STEP: Record<PipelineStatus, Record<PipelineAudience, string>> = {
 };
 
 export const nextStepFor = (status: PipelineStatus, audience: PipelineAudience): string => NEXT_STEP[status][audience];
+
+// ---- Flow 7.1 invitation response and 7.3 Proposal Action Sheet (WMSU-RPDU-FR-007.00) ----
+
+export const DECLINE_REASON_META: Record<DeclineReason, { label: string }> = {
+  CONFLICT_OF_INTEREST: { label: 'Conflict of interest' },
+  UNAVAILABLE: { label: 'Not available within the review period' },
+  OUTSIDE_EXPERTISE: { label: 'Outside my area of expertise' },
+  OTHER: { label: 'Other' },
+};
+export const DECLINE_REASON_ORDER: DeclineReason[] = ['CONFLICT_OF_INTEREST', 'UNAVAILABLE', 'OUTSIDE_EXPERTISE', 'OTHER'];
+
+/** FR-007.00 row numbering per assessment point id, in form order (the form's wording where it differs from the PAF). */
+export const ACTION_SHEET_NUMBERING: Record<string, string> = {
+  objectives: '1.1 Title/Objectives',
+  literature_review: '1.2 Literature review',
+  research_design: '1.3 Research design',
+  sampling_design: '1.4 Sampling design',
+  sample_size: '1.5 Sample plan',
+  statistical_analysis_plan: '1.6 Statistical analysis plan',
+  data_analysis_plan: '1.7 Data analysis plan',
+  inclusion_criteria: '1.8 Inclusion criteria',
+  exclusion_criteria: '1.9 Exclusion criteria',
+  withdrawal_criteria: '1.10 Withdrawal criteria',
+  significance: '2.1 Significance of proposal',
+  end_users: '2.2 End-users / Target beneficiaries',
+  expected_output: '2.3 Expected output',
+  duration: '2.4 Duration',
+  study_plan: '2.5 Study plan',
+  budget_reasonableness: '3.1 Budget reasonableness',
+  availability: '3.2 Availability',
+  ethical_acceptability: '4.1 Ethical acceptability',
+  reoc_clearance: '4.2 REOC Clearance',
+};

@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import { ArrowUpRight, ClipboardPen, Gavel } from 'lucide-react';
 import type { AihrConcept } from '../../types';
 import type { StatusTone } from '../../lib/proposalPipeline';
-import { OUTCOME_META, STAGE_META, VERDICT_META, stageExplanation } from '../../lib/aihrMeta';
+import { NOTICE_EMAIL_META, OUTCOME_META, STAGE_META, VERDICT_META, stageExplanation } from '../../lib/aihrMeta';
 import { formatCurrency, formatDate } from '../../lib/format';
 import { DocumentLink } from '../ui/DocumentLink';
 import { TONE_CLASSES } from '../ui/toneClasses';
@@ -81,6 +81,12 @@ export function AihrConceptRow({ concept, role, onLogVerdict, onDeliberate }: Ai
             Decided by {enBanc.decidedBy} · {formatDate(enBanc.decidedAt)}
             {enBanc.deliberatedOn && <> · Deliberated {formatDate(enBanc.deliberatedOn)}</>}
           </p>
+          {enBanc.notice && (
+            <p className="flex flex-wrap items-center gap-2 text-xs text-slate-600">
+              Notice of approval issued {formatDate(enBanc.notice.issuedAt)}
+              <Chip tone={NOTICE_EMAIL_META[enBanc.notice.emailStatus].tone} label={NOTICE_EMAIL_META[enBanc.notice.emailStatus].label} />
+            </p>
+          )}
         </div>
       )}
 

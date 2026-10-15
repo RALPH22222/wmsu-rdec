@@ -68,6 +68,10 @@ export const API_ENDPOINTS = {
     MY_PROPOSALS: `${API_BASE_URL}/pipeline/my-proposals`,
     REVISION_CHECK: (proposalId: string, revisionId: string) => `${API_BASE_URL}/pipeline/proposals/${encodeURIComponent(proposalId)}/revisions/${encodeURIComponent(revisionId)}/check`,
     FORWARD: (id: string) => `${API_BASE_URL}/pipeline/proposals/${encodeURIComponent(id)}/forward`,
+    MY_REVIEW_RESPONSE: (id: string) => `${API_BASE_URL}/pipeline/my-reviews/${encodeURIComponent(id)}/response`,
+    ACTION_SHEET: (proposalId: string, round: number) => `${API_BASE_URL}/pipeline/proposals/${encodeURIComponent(proposalId)}/action-sheets/${encodeURIComponent(String(round))}`,
+    CLARIFICATIONS: (proposalId: string) => `${API_BASE_URL}/pipeline/proposals/${encodeURIComponent(proposalId)}/clarifications`,
+    MY_PROPOSAL_CLARIFICATIONS: (proposalId: string) => `${API_BASE_URL}/pipeline/my-proposals/${encodeURIComponent(proposalId)}/clarifications`,
   },
 
   // AIHR verdicts and en banc deliberation (RPDU / Admin)

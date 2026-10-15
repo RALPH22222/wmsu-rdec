@@ -48,7 +48,7 @@ export function RevisionUploadForm({ proposal, onUpload }: RevisionUploadFormPro
     <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); attempt(); }} noValidate>
       <FileField id={`${baseId}-revised`} label={`Revised manuscript (Revision ${nextNumber})`} hint="PDF or Word, up to 15 MB" file={revisedFile} onChange={setRevisedFile} />
       <FileField id={`${baseId}-action-sheet`} label="Accomplished Proposal Action Sheet (WMSU-RPDU-FR-007.00)" hint="Your point-by-point response in the Action Taken column" file={actionSheetFile} onChange={setActionSheetFile} />
-      <FileField id={`${baseId}-history`} label="Revision History (WMSU-RPDU-FR-009.01)" hint="The revision history form issued with the panel's comments" file={historyFile} onChange={setHistoryFile} />
+      <FileField id={`${baseId}-history`} label="Revision History (WMSU-RPDU-FR-009.01)" hint="Version log of your manuscript (Version No., Date, Remarks)" file={historyFile} onChange={setHistoryFile} />
       <div>
         <label htmlFor={`${baseId}-notes`} className="block text-xs font-bold text-slate-700">Notes for the panel <span className="font-normal text-slate-500">optional</span></label>
         <textarea id={`${baseId}-notes`} value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} maxLength={5000} className="mt-1 w-full rounded-sm border border-slate-200 p-3 text-sm focus:border-[#C8102E] focus:outline-none" />
