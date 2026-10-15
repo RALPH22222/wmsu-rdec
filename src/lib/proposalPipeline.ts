@@ -18,7 +18,7 @@ export interface StatusMeta {
 
 export const STATUS_META: Record<PipelineStatus, StatusMeta> = {
   PENDING_ASSIGNMENT: { label: 'Awaiting Evaluators', description: 'Fewer than three evaluators assigned', tone: 'slate' },
-  UNDER_REVIEW: { label: 'Under Review', description: 'Double-blind technical evaluation in progress', tone: 'blue' },
+  UNDER_REVIEW: { label: 'Under Review', description: 'Technical review in progress', tone: 'blue' },
   REVISION_REQUESTED: { label: 'Revision Requested', description: 'Proponent must upload a revised manuscript', tone: 'amber' },
   APPROVED: { label: 'Approved', description: 'Cleared by the technical review panel', tone: 'emerald' },
   REJECTED: { label: 'Rejected', description: 'Not endorsed by the technical review panel', tone: 'red' },

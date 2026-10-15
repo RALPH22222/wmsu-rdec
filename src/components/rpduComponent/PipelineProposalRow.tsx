@@ -5,28 +5,24 @@ import { ProposalStatusBadge } from '../ui/ProposalStatusBadge';
 import { PanelDots } from './PanelDots';
 import { MAX_EVALUATORS_PER_PROPOSAL, isTerminalStatus } from '../../lib/proposalPipeline';
 import { formatDate } from '../../lib/format';
-import { HEAD_ONLY_ASSIGN } from '../../lib/headOnly';
 
 interface PipelineProposalRowProps {
   proposal: RpduProposal;
   detailHref: string;
   onAssign: (proposal: RpduProposal) => void;
-  /** Step 7.1 belongs to the RPDU Head (or ADMIN). */
-  canAssign: boolean;
 }
 
 /** Why the Assign button is disabled, or null when assignment is allowed. Mirrors the server's first two rules. Not exported: react-refresh/only-export-components. */
-const assignBlockedReason = (proposal: RpduProposal, canAssign: boolean): string | null => {
+const assignBlockedReason = (proposal: RpduProposal): string | null => {
   if (!proposal.technicalReviewReady) return 'Awaiting AIHR and any required en banc clearance';
   if (!proposal.manuscriptUrl) return 'Detailed proposal not yet submitted';
   if (isTerminalStatus(proposal.status)) return 'Assignment is closed';
   if (proposal.panel.length >= MAX_EVALUATORS_PER_PROPOSAL) return 'Maximum of 3 evaluators already assigned';
-  if (!canAssign) return HEAD_ONLY_ASSIGN;
   return null;
 };
 
-export function PipelineProposalRow({ proposal, detailHref, onAssign, canAssign }: PipelineProposalRowProps) {
-  const blocked = assignBlockedReason(proposal, canAssign);
+export function PipelineProposalRow({ proposal, detailHref, onAssign }: PipelineProposalRowProps) {
+  const blocked = assignBlockedReason(proposal);
   return (
     <li className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
       <div className="min-w-0">

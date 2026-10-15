@@ -290,13 +290,6 @@ export interface PipelineEvaluator {
   activeLoad: number;
 }
 
-/** The caller's pipeline permissions (GET /api/pipeline/viewer). `actsAsHead` is true for ADMIN and the RPDU Head (steps 7.1 and 7.6). */
-export interface PipelineViewer {
-  role: string;
-  isRpduHead: boolean;
-  actsAsHead: boolean;
-}
-
 /** What an evaluator may see. Never carries proponent, department, or concept identifiers. */
 export interface BlindReview {
   id: string;

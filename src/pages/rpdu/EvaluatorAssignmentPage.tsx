@@ -2,7 +2,6 @@ import { useMemo, useState } from 'react';
 import { ClipboardList, Search } from 'lucide-react';
 import type { PipelineStatus, RpduProposal } from '../../types';
 import { useRpduPipeline } from '../../hooks/useRpduPipeline';
-import { usePipelineViewer } from '../../hooks/usePipelineViewer';
 import { STATUS_META } from '../../lib/proposalPipeline';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { PipelineProposalRow } from '../../components/rpduComponent/PipelineProposalRow';
@@ -14,7 +13,6 @@ const STATUS_ORDER: PipelineStatus[] = ['PENDING_ASSIGNMENT', 'UNDER_REVIEW', 'R
 
 export function EvaluatorAssignmentPage({ role = 'rpdu' }: EvaluatorAssignmentPageProps) {
   const { proposals, evaluators, loading, error, refresh, assign } = useRpduPipeline();
-  const { actsAsHead } = usePipelineViewer();
   const [query, setQuery] = useState('');
   const [status, setStatus] = useState<PipelineStatus | 'ALL'>('ALL');
   const [assigning, setAssigning] = useState<RpduProposal | null>(null);
@@ -26,7 +24,7 @@ export function EvaluatorAssignmentPage({ role = 'rpdu' }: EvaluatorAssignmentPa
   }, [proposals, query, status]);
 
   const awaiting = proposals.filter((item) => item.status === 'PENDING_ASSIGNMENT' && item.technicalReviewReady).length;
-  const current = assigning && actsAsHead ? proposals.find((item) => item.id === assigning.id) ?? null : null;
+  const current = assigning ? proposals.find((item) => item.id === assigning.id) ?? null : null;
 
   return (
     <section className="mx-auto max-w-5xl space-y-4" aria-labelledby="evaluations-title">
@@ -61,7 +59,7 @@ export function EvaluatorAssignmentPage({ role = 'rpdu' }: EvaluatorAssignmentPa
       ) : (
         <ul className="divide-y divide-slate-100 rounded-sm border border-slate-200 bg-white shadow-xs">
           {visible.map((proposal) => (
-            <PipelineProposalRow key={proposal.id} proposal={proposal} detailHref={`/${role}/evaluations/${proposal.id}`} onAssign={setAssigning} canAssign={actsAsHead} />
+            <PipelineProposalRow key={proposal.id} proposal={proposal} detailHref={`/${role}/evaluations/${proposal.id}`} onAssign={setAssigning} />
           ))}
         </ul>
       )}

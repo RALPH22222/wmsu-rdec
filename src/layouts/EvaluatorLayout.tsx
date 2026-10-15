@@ -6,8 +6,8 @@ import { EvaluatorSidebar } from '../components/evaluatorComponent/EvaluatorSide
 export function EvaluatorLayout() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const { pathname } = useLocation();
-  const title = pathname === '/evaluator/reviews' ? 'Assigned Technical Reviews'
-    : pathname.startsWith('/evaluator/reviews/') ? 'Double-Blind Evaluation'
+  const title = pathname === '/evaluator/reviews' ? 'Technical Reviews'
+    : pathname.startsWith('/evaluator/reviews/') ? 'Technical Review Assessment'
     : pathname === '/evaluator/letters' ? 'Invitation Letters'
       : pathname === '/evaluator/profile' ? 'Institutional Profile & Affiliation'
         : 'Evaluator Dashboard';

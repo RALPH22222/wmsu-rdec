@@ -41,10 +41,10 @@ function buildSteps(status: PipelineStatus, currentRound: number): Step[] {
       label: currentRound > 1 ? `Technical Review · Round ${currentRound}` : 'Technical Review',
       description:
         reviewState === 'active'
-          ? 'Double-blind evaluation in progress'
+          ? 'Technical review in progress'
           : reviewState === 'complete'
             ? 'Evaluations received'
-            : 'Double-blind evaluation',
+            : 'Technical review',
       state: reviewState,
     },
     {

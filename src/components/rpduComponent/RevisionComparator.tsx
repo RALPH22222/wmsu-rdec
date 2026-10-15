@@ -5,13 +5,10 @@ import { groupFeedbackByPoint } from '../../lib/feedbackByPoint';
 import { formatDate, formatDateTime } from '../../lib/format';
 import { DocumentViewer } from '../ui/DocumentViewer';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
-import { HEAD_ONLY_CHECK } from '../../lib/headOnly';
 
 interface RevisionComparatorProps {
   proposal: RpduProposal;
   onCheck: (revisionId: string, checked: boolean, note: string) => Promise<unknown>;
-  /** Step 7.6 belongs to the RPDU Head (or ADMIN); staff see the comparator read-only. */
-  canCheck: boolean;
 }
 
 type Pane = 'manuscript' | 'panel';
@@ -48,7 +45,7 @@ function moveTab<T>(event: KeyboardEvent<HTMLElement>, keys: T[], current: T, se
 }
 
 /** RPDU's side-by-side check of a revision: revised manuscript vs. action sheet, revision history and the panel's comments. */
-export function RevisionComparator({ proposal, onCheck, canCheck }: RevisionComparatorProps) {
+export function RevisionComparator({ proposal, onCheck }: RevisionComparatorProps) {
   const baseId = useId();
   const revisions = [...proposal.revisions].sort((a, b) => b.revisionNumber - a.revisionNumber);
   const [selectedId, setSelectedId] = useState(revisions[0]?.id);
@@ -65,10 +62,8 @@ export function RevisionComparator({ proposal, onCheck, canCheck }: RevisionComp
   const round = selected.revisionNumber;
   const locked = proposal.status === 'REJECTED' || proposal.status === 'FORWARDED_TO_REO';
   const lockHintId = `${baseId}-lock`;
-  const headHintId = `${baseId}-head`;
-  // The closed-proposal lock takes precedence over the Head-only hint.
-  const checkDisabled = locked || !canCheck;
-  const checkHintId = locked ? lockHintId : !canCheck ? headHintId : undefined;
+  const checkDisabled = locked;
+  const checkHintId = locked ? lockHintId : undefined;
 
   const evaluations: ProponentFeedbackEvaluation[] = proposal.panel.flatMap((seat) =>
     seat.submissions.filter((s) => s.round === round).map((s) => ({
@@ -135,7 +130,6 @@ export function RevisionComparator({ proposal, onCheck, canCheck }: RevisionComp
           </div>
         )}
         {locked && <p id={lockHintId} className="flex items-center gap-1.5 text-xs text-slate-500"><Lock className="h-3.5 w-3.5" />Revision checks are locked once the proposal is closed</p>}
-        {!locked && !canCheck && <p id={headHintId} className="flex items-center gap-1.5 text-xs text-slate-500"><Lock className="h-3.5 w-3.5 shrink-0" />{HEAD_ONLY_CHECK}</p>}
 
         <div role="group" className="grid grid-cols-2 gap-2 lg:hidden" aria-label="Choose a pane">
           {([['manuscript', 'Manuscript'], ['panel', 'Panel documents']] as const).map(([key, label]) => (

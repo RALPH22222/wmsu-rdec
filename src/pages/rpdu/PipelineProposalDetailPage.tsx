@@ -3,7 +3,6 @@ import type { ReactNode } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import { useRpduProposal } from '../../hooks/useRpduPipeline';
-import { usePipelineViewer } from '../../hooks/usePipelineViewer';
 import { MAX_EVALUATORS_PER_PROPOSAL, RECOMMENDATION_META, isTerminalStatus, nextStepFor } from '../../lib/proposalPipeline';
 import { formatDate } from '../../lib/format';
 import { ProposalStatusBadge } from '../../components/ui/ProposalStatusBadge';
@@ -26,7 +25,6 @@ const Card = ({ title, children }: { title: string; children: ReactNode }) => (
 /** Rendered keyed by the route id, so a stale response for a previous id can never write into this proposal. */
 function DetailBody({ id, role }: { id: string | undefined; role: 'rpdu' | 'admin' }) {
   const { proposal, loading, error, unassign, checkRevision, forward } = useRpduProposal(id);
-  const { actsAsHead } = usePipelineViewer();
   const backHref = `/${role}/evaluations`;
 
   if (loading) return <section className="mx-auto max-w-5xl space-y-3" aria-label="Loading proposal"><div className="h-20 animate-pulse rounded-sm bg-slate-100" /><div className="h-40 animate-pulse rounded-sm bg-slate-100" /></section>;
@@ -54,13 +52,13 @@ function DetailBody({ id, role }: { id: string | undefined; role: 'rpdu' | 'admi
 
       <Card title="Review panel">
         <PanelDots count={proposal.panel.length} className="mb-2" />
-        <ReviewPanelList panel={proposal.panel} onRemove={unassign} canManage={actsAsHead} />
+        <ReviewPanelList panel={proposal.panel} onRemove={unassign} />
         {proposal.technicalReviewReady && proposal.manuscriptUrl && proposal.panel.length < MAX_EVALUATORS_PER_PROPOSAL && !isTerminalStatus(proposal.status) && <Link to={backHref} className="mt-3 inline-flex min-h-11 items-center text-xs font-semibold text-[#C8102E]">Assign evaluators from the list →</Link>}
       </Card>
 
       {proposal.revisions.length > 0 && (
         <Card title="Revision check">
-          <div id="revision-comparator" className="scroll-mt-20"><RevisionComparator proposal={proposal} onCheck={checkRevision} canCheck={actsAsHead} /></div>
+          <div id="revision-comparator" className="scroll-mt-20"><RevisionComparator proposal={proposal} onCheck={checkRevision} /></div>
         </Card>
       )}
 

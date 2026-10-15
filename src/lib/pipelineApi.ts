@@ -1,6 +1,6 @@
 import { API_ENDPOINTS } from '../config/apiConfig';
 import type {
-  BlindReview, Checklist, EligibleConcept, PendingConcept, PipelineEvaluator, PipelineViewer, ProponentProposal, ReviewRecommendation, RpduProposal,
+  BlindReview, Checklist, EligibleConcept, PendingConcept, PipelineEvaluator, ProponentProposal, ReviewRecommendation, RpduProposal,
 } from '../types';
 import { request } from './apiRequest';
 
@@ -14,9 +14,6 @@ export const getPipelineProposal = async (id: string, token?: string, signal?: A
 
 export const getPipelineEvaluators = async (token?: string, signal?: AbortSignal): Promise<PipelineEvaluator[]> =>
   (await request<PipelineEvaluator[]>(API_ENDPOINTS.PIPELINE.EVALUATORS, token, {}, signal)).data;
-
-export const getPipelineViewer = async (token?: string, signal?: AbortSignal): Promise<PipelineViewer> =>
-  (await request<PipelineViewer>(API_ENDPOINTS.PIPELINE.VIEWER, token, {}, signal)).data;
 
 export const assignEvaluatorApi = async (proposalId: string, evaluatorId: string, token?: string): Promise<{ proposal: RpduProposal; warning: string | null }> => {
   const result = await request<RpduProposal>(API_ENDPOINTS.PIPELINE.PROPOSAL_REVIEWS(proposalId), token, { method: 'POST', body: JSON.stringify({ evaluatorId }) });

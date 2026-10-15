@@ -9,7 +9,7 @@ export function EvaluatorReviewsPage() {
   return (
     <section className="mx-auto max-w-4xl space-y-4" aria-labelledby="assigned-reviews-title">
       <header>
-        <h2 id="assigned-reviews-title" className="font-brand text-lg font-bold text-slate-900">Assigned technical reviews</h2>
+        <h2 id="assigned-reviews-title" className="font-brand text-lg font-bold text-slate-900">Technical reviews</h2>
         <p className="text-xs text-slate-500">Proposals are shown without the research team's identity. You are identified to the research team only by your seat letter.</p>
       </header>
       {error && <p role="alert" className="flex flex-col gap-2 rounded-sm border border-red-200 bg-red-50 p-4 text-sm text-red-800 sm:flex-row sm:items-center sm:justify-between">{error}<button type="button" onClick={refresh} className="min-h-11 rounded-sm border border-red-300 px-3 text-xs font-semibold">Retry</button></p>}
