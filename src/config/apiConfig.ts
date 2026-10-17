@@ -53,6 +53,8 @@ export const API_ENDPOINTS = {
     BY_ID: (id: string) => `${API_BASE_URL}/scheduling/meetings/${id}`,
     STATUS: (id: string) => `${API_BASE_URL}/scheduling/meetings/${id}/status`,
     SPECIAL_ORDER: (id: string) => `${API_BASE_URL}/scheduling/meetings/${id}/special-order`,
+    ROSTER: (id: string) => `${API_BASE_URL}/scheduling/meetings/${id}/roster`,
+    MINUTES: (id: string) => `${API_BASE_URL}/scheduling/meetings/${id}/minutes`,
   },
 
   // Detailed proposal evaluation pipeline

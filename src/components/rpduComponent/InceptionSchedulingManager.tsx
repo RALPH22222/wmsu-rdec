@@ -20,9 +20,9 @@ import {
   Layers,
   ChevronLeft,
   ChevronRight,
+  ClipboardCheck,
 } from 'lucide-react';
 import type { InceptionMeeting, ProfessionalServiceContract, InceptionMeetingStatus, InceptionProjectItem } from '../../types';
-import { INITIAL_CONTRACTS } from './ContractsNotarizationManager';
 import { useAuth } from '../../context/AuthContext';
 import {
   getInceptionMeetings,
@@ -32,7 +32,10 @@ import {
   updateInceptionStatus,
   updateSpecialOrderStatus,
   deleteInceptionMeeting,
+  buildDefaultRollCall,
+  summarizeRollCall,
 } from '../../lib/inceptionApi';
+import { InceptionRosterMinutesWorkspace } from './InceptionRosterMinutesWorkspace';
 
 const WMSU_VENUES = [
   'RDEC Conference Room, 2nd Floor URC Bldg.',
@@ -70,18 +73,21 @@ export const InceptionSchedulingManager: React.FC = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
 
-  // Meetings State
+  // Meetings State (no mock seed data; filters out any legacy inc-seed-1 from localStorage)
   const [meetings, setMeetings] = useState<InceptionMeeting[]>(() => {
     const saved = localStorage.getItem('wmsu_inception_meetings');
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed)) {
-          return parsed.map((m: InceptionMeeting) => ({
-            ...m,
-            meetingType: 'in_person' as const,
-            specialOrderStatus: m.specialOrderStatus === 'so_issued' ? 'forwarded_to_op' : m.specialOrderStatus,
-          }));
+          return parsed
+            .filter((m: InceptionMeeting) => m.id !== 'inc-seed-1' && !String(m.id).startsWith('inc-seed-'))
+            .map((m: InceptionMeeting) => ({
+              ...m,
+              meetingType: 'in_person' as const,
+              specialOrderStatus: m.specialOrderStatus === 'so_issued' ? 'forwarded_to_op' : m.specialOrderStatus,
+              rollCall: buildDefaultRollCall(m),
+            }));
         }
       } catch {
         return [];
@@ -90,19 +96,8 @@ export const InceptionSchedulingManager: React.FC = () => {
     return [];
   });
 
-  // Contracts for selecting projects
-  const [contracts, setContracts] = useState<ProfessionalServiceContract[]>(() => {
-    const saved = localStorage.getItem('wmsu_professional_service_contracts');
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) return parsed;
-      } catch {
-        return INITIAL_CONTRACTS;
-      }
-    }
-    return INITIAL_CONTRACTS;
-  });
+  // Contracts for selecting projects (fetched from backend)
+  const [contracts, setContracts] = useState<ProfessionalServiceContract[]>([]);
 
   // Active meeting for viewing/editing
   const [selectedMeeting, setSelectedMeeting] = useState<InceptionMeeting | null>(null);
@@ -115,7 +110,6 @@ export const InceptionSchedulingManager: React.FC = () => {
     const scheduledTitles = new Set<string>();
 
     meetings.forEach((m) => {
-      // If we are currently editing a meeting, do NOT treat its own projects as already scheduled elsewhere
       if (editingMeeting && m.id === editingMeeting.id) return;
       if (m.status === 'cancelled') return;
 
@@ -150,8 +144,7 @@ export const InceptionSchedulingManager: React.FC = () => {
   };
 
   const availableContracts = useMemo(() => {
-    const base = contracts.length > 0 ? contracts : INITIAL_CONTRACTS;
-    return base.filter((c) => !isContractAlreadyScheduled(c));
+    return contracts.filter((c) => !isContractAlreadyScheduled(c));
   }, [contracts, alreadyScheduledIdentifiers]);
 
   const eligibleContracts = useMemo(() => {
@@ -350,6 +343,19 @@ export const InceptionSchedulingManager: React.FC = () => {
     setViewMode('form');
   };
 
+  const handleWorkspaceMeetingUpdated = (updated: InceptionMeeting) => {
+    setSelectedMeeting(updated);
+    setMeetings((prev) => {
+      const idx = prev.findIndex((m) => m.id === updated.id);
+      if (idx >= 0) {
+        const copy = [...prev];
+        copy[idx] = updated;
+        return copy;
+      }
+      return [updated, ...prev];
+    });
+  };
+
   const handleSaveForm = async (e: React.FormEvent) => {
     e.preventDefault();
     if (formSelectedProjects.length === 0) {
@@ -387,6 +393,16 @@ export const InceptionSchedulingManager: React.FC = () => {
       ? (formSpecialOrderStatus || 'pending_request')
       : (formPrepareSoRequest ? 'pending_request' : 'pending_request');
 
+    const preservedRollCall =
+      editingMeeting && Array.isArray(editingMeeting.rollCall) && editingMeeting.rollCall.length > 0
+        ? editingMeeting.rollCall
+        : buildDefaultRollCall({
+            projects: formSelectedProjects,
+            leadInvestigator: combinedLeaders || primary.leadInvestigator,
+            studyLeaderCollege: primary.studyLeaderCollege,
+            studyLeaderDepartment: primary.studyLeaderDepartment,
+          });
+
     const payload: Partial<InceptionMeeting> = {
       contractId: primary.contractId || undefined,
       contractNumber: primary.contractNumber || undefined,
@@ -402,8 +418,17 @@ export const InceptionSchedulingManager: React.FC = () => {
       meetingTime: formMeetingTime,
       venue: effectiveVenue,
       meetingType: 'in_person',
-      attendees: [],
-      agenda: '',
+      attendees: editingMeeting?.attendees?.length
+        ? editingMeeting.attendees
+        : preservedRollCall.map((r) => `${r.name} (${r.role})`),
+      rollCall: preservedRollCall,
+      attendanceSummary: summarizeRollCall(preservedRollCall),
+      minutesPdf: editingMeeting?.minutesPdf,
+      resolutionsSummary: editingMeeting?.resolutionsSummary,
+      notes: editingMeeting?.notes,
+      rosterLoggedAt: editingMeeting?.rosterLoggedAt,
+      minutesUploadedAt: editingMeeting?.minutesUploadedAt,
+      agenda: editingMeeting?.agenda || '',
       specialOrderNumber: formSpecialOrderNumber.trim() || undefined,
       specialOrderStatus: finalSoStatus,
       specialOrderDate: formMeetingDate,
@@ -413,10 +438,48 @@ export const InceptionSchedulingManager: React.FC = () => {
 
     try {
       let savedMeeting: InceptionMeeting;
-      if (editingMeeting) {
-        savedMeeting = await updateInceptionMeeting(editingMeeting.id, payload, session?.access_token);
-      } else {
-        savedMeeting = await createInceptionMeeting(payload, session?.access_token);
+      try {
+        if (editingMeeting) {
+          savedMeeting = await updateInceptionMeeting(editingMeeting.id, payload, session?.access_token);
+        } else {
+          savedMeeting = await createInceptionMeeting(payload, session?.access_token);
+        }
+      } catch (backendErr) {
+        console.warn('Backend schedule save notice, persisting locally:', backendErr);
+        const nowIso = new Date().toISOString();
+        savedMeeting = {
+          id: editingMeeting?.id || `inc-local-${Date.now()}`,
+          contractId: payload.contractId,
+          contractNumber: payload.contractNumber,
+          proposalId: payload.proposalId || `prop-local-${Date.now()}`,
+          proposalCode: payload.proposalCode || 'N/A',
+          projectTitle: payload.projectTitle || 'Untitled Research Project',
+          leadInvestigator: payload.leadInvestigator || 'Study Leader',
+          studyLeaderCollege: payload.studyLeaderCollege,
+          studyLeaderDepartment: payload.studyLeaderDepartment,
+          projects: payload.projects,
+          meetingTitle: payload.meetingTitle || effectiveTitle,
+          meetingDate: payload.meetingDate || formMeetingDate,
+          meetingTime: payload.meetingTime || formMeetingTime,
+          venue: payload.venue || effectiveVenue,
+          meetingType: 'in_person',
+          attendees: payload.attendees || [],
+          rollCall: preservedRollCall,
+          attendanceSummary: summarizeRollCall(preservedRollCall),
+          minutesPdf: editingMeeting?.minutesPdf,
+          resolutionsSummary: editingMeeting?.resolutionsSummary,
+          notes: editingMeeting?.notes,
+          rosterLoggedAt: editingMeeting?.rosterLoggedAt,
+          minutesUploadedAt: editingMeeting?.minutesUploadedAt,
+          agenda: payload.agenda || '',
+          specialOrderNumber: payload.specialOrderNumber,
+          specialOrderStatus: finalSoStatus,
+          specialOrderDate: payload.specialOrderDate,
+          status: payload.status || 'scheduled',
+          completedDate: payload.completedDate,
+          createdAt: editingMeeting?.createdAt || nowIso,
+          updatedAt: nowIso,
+        };
       }
 
       setMeetings((prev) => {
@@ -869,32 +932,63 @@ export const InceptionSchedulingManager: React.FC = () => {
   }
 
   // -------------------------------------------------------------
-  // VIEW: DETAILS - In-Page Meeting Inspection
+  // VIEW: DETAILS - In-Page Meeting Inspection & Inception Workspace
   // -------------------------------------------------------------
   if (viewMode === 'details' && selectedMeeting) {
     return (
-      <div className="max-w-4xl mx-auto space-y-6">
-        {/* Navigation Breadcrumb */}
-        <div className="flex items-center justify-between pb-3 border-b border-slate-200">
+      <div className="max-w-5xl mx-auto space-y-6">
+        {/* Navigation Breadcrumb & Quick Actions */}
+        <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-200">
           <button
             type="button"
             onClick={() => setViewMode('list')}
             className="inline-flex items-center gap-2 font-semibold text-slate-600 hover:text-[#C8102E] text-xs sm:text-sm cursor-pointer transition-colors"
           >
-            <ArrowLeft className="w-4 h-4" />
+            <ArrowLeft className="w-4 h-4" aria-hidden="true" />
             Back to Inception Meetings
           </button>
+
+          <div className="flex flex-wrap items-center gap-2">
+            {selectedMeeting.specialOrderStatus !== 'forwarded_to_op' && (
+              <button
+                type="button"
+                onClick={() => handleForwardSoRequest(selectedMeeting.id)}
+                className="px-3 py-1.5 text-xs font-bold text-blue-700 bg-white hover:bg-blue-50 border border-blue-200 rounded-sm shadow-2xs transition-colors cursor-pointer inline-flex items-center gap-1.5"
+              >
+                <Send className="w-3.5 h-3.5 text-blue-600" aria-hidden="true" />
+                Forward SO Request
+              </button>
+            )}
+            {selectedMeeting.status === 'scheduled' && (
+              <button
+                type="button"
+                onClick={() => handleMarkMeetingCompleted(selectedMeeting.id)}
+                className="px-3 py-1.5 text-xs font-bold text-emerald-700 bg-white hover:bg-emerald-50 border border-emerald-200 rounded-sm shadow-2xs transition-colors cursor-pointer inline-flex items-center gap-1.5"
+              >
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" aria-hidden="true" />
+                Mark Meeting Completed
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => openEditForm(selectedMeeting)}
+              className="px-3 py-1.5 text-xs font-bold text-slate-700 bg-white hover:bg-slate-50 border border-slate-300 rounded-sm shadow-2xs transition-colors cursor-pointer inline-flex items-center gap-1.5"
+            >
+              <Edit2 className="w-3.5 h-3.5 text-slate-500" aria-hidden="true" />
+              Edit Schedule
+            </button>
+          </div>
         </div>
 
         {/* Meeting Header Banner */}
         <div className="bg-white p-6 rounded-md border border-slate-200 shadow-xs space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
-            <div>
+            <div className="min-w-0">
               <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#C8102E]">
-                <Calendar className="w-4 h-4 text-[#C8102E]" />
-                <span>Inception Orientation Details</span>
+                <Calendar className="w-4 h-4 text-[#C8102E]" aria-hidden="true" />
+                <span>Inception Orientation &amp; Meeting Workspace</span>
               </div>
-              <h1 className="text-xl sm:text-2xl font-bold text-slate-900 mt-1">
+              <h1 className="text-xl sm:text-2xl font-bold text-slate-900 mt-1 break-words">
                 {selectedMeeting.meetingTitle}
               </h1>
             </div>
@@ -923,16 +1017,16 @@ export const InceptionSchedulingManager: React.FC = () => {
 
           <div className="pt-3 border-t border-slate-100 flex flex-wrap items-center gap-x-6 gap-y-2 text-xs text-slate-600">
             <span className="flex items-center gap-1.5 font-semibold text-slate-800">
-              <Clock className="w-3.5 h-3.5 text-slate-500" />
+              <Clock className="w-3.5 h-3.5 text-slate-500" aria-hidden="true" />
               {selectedMeeting.meetingDate} at {selectedMeeting.meetingTime}
             </span>
             <span className="flex items-center gap-1.5">
-              <MapPin className="w-3.5 h-3.5 text-[#C8102E]" />
+              <MapPin className="w-3.5 h-3.5 text-[#C8102E]" aria-hidden="true" />
               {selectedMeeting.venue}
             </span>
             {selectedMeeting.specialOrderNumber && (
               <span className="flex items-center gap-1.5">
-                <FileCheck className="w-3.5 h-3.5 text-slate-500" />
+                <FileCheck className="w-3.5 h-3.5 text-slate-500" aria-hidden="true" />
                 SO Ref: <strong className="font-mono text-slate-800">{selectedMeeting.specialOrderNumber}</strong>
               </span>
             )}
@@ -949,7 +1043,7 @@ export const InceptionSchedulingManager: React.FC = () => {
             </h2>
             {selectedMeeting.projects && selectedMeeting.projects.length > 1 && (
               <span className="text-[10px] font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded-xs border border-slate-200 flex items-center gap-1">
-                <Layers className="w-3 h-3 text-slate-600" /> Joint Session
+                <Layers className="w-3 h-3 text-slate-600" aria-hidden="true" /> Joint Session
               </span>
             )}
           </div>
@@ -974,12 +1068,6 @@ export const InceptionSchedulingManager: React.FC = () => {
                         <span className="text-slate-500"> ({proj.studyLeaderCollege})</span>
                       )}
                     </div>
-                    {proj.proposalCode && (
-                      <div>
-                        <span className="text-slate-400 font-bold uppercase text-[10px]">Proposal Code: </span>
-                        <strong className="font-mono text-slate-800">{proj.proposalCode}</strong>
-                      </div>
-                    )}
                   </div>
                 </div>
               ))}
@@ -1002,16 +1090,17 @@ export const InceptionSchedulingManager: React.FC = () => {
                     <span className="text-slate-500"> ({selectedMeeting.studyLeaderCollege})</span>
                   )}
                 </div>
-                {selectedMeeting.proposalCode && (
-                  <div>
-                    <span className="text-slate-400 font-bold uppercase text-[10px]">Proposal Code: </span>
-                    <strong className="font-mono text-slate-800">{selectedMeeting.proposalCode}</strong>
-                  </div>
-                )}
               </div>
             </div>
           )}
         </div>
+
+        {/* Inception Meeting Workspace: Roster Roll-Call & Official Minutes */}
+        <InceptionRosterMinutesWorkspace
+          meeting={selectedMeeting}
+          accessToken={session?.access_token}
+          onMeetingUpdated={handleWorkspaceMeetingUpdated}
+        />
       </div>
     );
   }
@@ -1023,7 +1112,7 @@ export const InceptionSchedulingManager: React.FC = () => {
     return (
       <div className="max-w-2xl mx-auto py-16 px-6 text-center space-y-5">
         <div className="w-16 h-16 mx-auto rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center">
-          <FileText className="w-8 h-8 text-slate-400" />
+          <FileText className="w-8 h-8 text-slate-400" aria-hidden="true" />
         </div>
         <div>
           <h2 className="text-lg font-bold text-slate-900">Official Special Order Memo Format Pending</h2>
@@ -1037,7 +1126,7 @@ export const InceptionSchedulingManager: React.FC = () => {
             onClick={() => setViewMode('list')}
             className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-sm inline-flex items-center gap-2 cursor-pointer transition-colors"
           >
-            <ArrowLeft className="w-3.5 h-3.5" /> Back to Inception Meetings
+            <ArrowLeft className="w-3.5 h-3.5" aria-hidden="true" /> Back to Inception Meetings
           </button>
         </div>
       </div>
@@ -1053,14 +1142,14 @@ export const InceptionSchedulingManager: React.FC = () => {
       <div className="bg-white p-6 rounded-md border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#C8102E]">
-            <Calendar className="w-4 h-4 text-[#C8102E]" />
-            <span>Orientation Kickoff</span>
+            <Calendar className="w-4 h-4 text-[#C8102E]" aria-hidden="true" />
+            <span>Orientation Kickoff &amp; Inception Workspace</span>
           </div>
           <h1 className="text-xl sm:text-2xl font-bold text-slate-900 mt-1">
             Inception Meetings &amp; Scheduling
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
-            Coordinate kickoff orientations for notarized research contracts and prepare official Special Order (SO) requests.
+            Coordinate kickoff orientations, log attendee roll-call, and upload official minutes &amp; resolutions.
           </p>
         </div>
 
@@ -1069,14 +1158,14 @@ export const InceptionSchedulingManager: React.FC = () => {
           onClick={openCreateForm}
           className="px-4 py-2.5 bg-[#C8102E] hover:bg-[#A00D26] text-white font-bold text-xs rounded-sm shadow-xs transition-colors cursor-pointer flex items-center justify-center gap-2 self-start md:self-auto shrink-0"
         >
-          <Plus className="w-4 h-4" /> Schedule Inception Meeting
+          <Plus className="w-4 h-4" aria-hidden="true" /> Schedule Inception Meeting
         </button>
       </div>
 
       {apiError && (
         <div className="p-3 bg-amber-50 border border-amber-200 text-amber-800 rounded-md text-xs flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+            <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" aria-hidden="true" />
             <span>Server sync notice: {apiError} (Displaying cached records)</span>
           </div>
           <button
@@ -1095,13 +1184,13 @@ export const InceptionSchedulingManager: React.FC = () => {
         <div className="p-4 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-3 bg-slate-50/50">
           {/* Search Input */}
           <div className="relative flex-1 max-w-md">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" aria-hidden="true" />
             <input
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Search by project, leader, SO ref, or venue..."
-              className="w-full pl-9 pr-3 py-2 bg-white border border-slate-200 rounded-sm text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-[#C8102E]"
+              className="w-full pl-9 pr-3 py-2 bg-white border border-slate-200 rounded-sm text-base sm:text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-[#C8102E]"
             />
           </div>
 
@@ -1170,17 +1259,17 @@ export const InceptionSchedulingManager: React.FC = () => {
               {isLoading ? (
                 <tr>
                   <td colSpan={5} className="py-12 text-center text-slate-400">
-                    <RotateCcw className="w-6 h-6 mx-auto mb-2 text-[#C8102E] animate-spin" />
+                    <RotateCcw className="w-6 h-6 mx-auto mb-2 text-[#C8102E] animate-spin" aria-hidden="true" />
                     <p className="font-semibold text-slate-700">Loading inception meetings...</p>
                   </td>
                 </tr>
               ) : filteredMeetings.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="py-12 text-center text-slate-400">
-                    <Calendar className="w-8 h-8 mx-auto mb-2 text-slate-300 stroke-1" />
+                    <Calendar className="w-8 h-8 mx-auto mb-2 text-slate-300 stroke-1" aria-hidden="true" />
                     <p className="font-semibold text-slate-700">No Inception Meetings matching criteria.</p>
                     <p className="text-xs text-slate-400 mt-0.5">
-                      Click &ldquo;Schedule Inception Meeting&rdquo; to select a notarized PSC and schedule kickoff.
+                      Click &ldquo;Schedule Inception Meeting&rdquo; to select approved projects and schedule kickoff.
                     </p>
                   </td>
                 </tr>
@@ -1191,15 +1280,14 @@ export const InceptionSchedulingManager: React.FC = () => {
                     <td className="py-3 px-4 align-top whitespace-nowrap">
                       <div className="font-bold text-slate-900">{meeting.meetingDate}</div>
                       <div className="text-[11px] text-slate-500 flex items-center gap-1 mt-0.5">
-                        <Clock className="w-3 h-3 text-slate-400" /> {meeting.meetingTime}
+                        <Clock className="w-3 h-3 text-slate-400" aria-hidden="true" /> {meeting.meetingTime}
                       </div>
                     </td>
-
 
                     {/* Venue */}
                     <td className="py-3 px-4 align-top max-w-xs">
                       <div className="flex items-center gap-1.5 text-xs text-slate-800 font-medium">
-                        <MapPin className="w-3.5 h-3.5 text-[#C8102E] shrink-0" />
+                        <MapPin className="w-3.5 h-3.5 text-[#C8102E] shrink-0" aria-hidden="true" />
                         <span className="truncate" title={meeting.venue}>{meeting.venue}</span>
                       </div>
                     </td>
@@ -1208,11 +1296,11 @@ export const InceptionSchedulingManager: React.FC = () => {
                     <td className="py-3 px-4 align-top whitespace-nowrap">
                       {meeting.specialOrderStatus === 'forwarded_to_op' ? (
                         <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-50 text-blue-800 border border-blue-200 rounded-sm text-[10px] font-bold">
-                          <FileCheck className="w-3 h-3 text-blue-600" /> Forwarded to President
+                          <FileCheck className="w-3 h-3 text-blue-600" aria-hidden="true" /> Forwarded to President
                         </span>
                       ) : (
                         <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-amber-50 text-amber-800 border border-amber-200 rounded-sm text-[10px] font-bold">
-                          <AlertCircle className="w-3 h-3 text-amber-600" /> Request Prepared
+                          <AlertCircle className="w-3 h-3 text-amber-600" aria-hidden="true" /> Request Prepared
                         </span>
                       )}
                     </td>
@@ -1221,22 +1309,22 @@ export const InceptionSchedulingManager: React.FC = () => {
                     <td className="py-3 px-4 align-top text-center whitespace-nowrap">
                       {meeting.status === 'scheduled' && (
                         <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-amber-50 text-amber-800 border border-amber-200 rounded-sm text-[10px] font-bold">
-                          <Clock className="w-3 h-3 text-amber-600" /> Scheduled
+                          <Clock className="w-3 h-3 text-amber-600" aria-hidden="true" /> Scheduled
                         </span>
                       )}
                       {meeting.status === 'completed' && (
                         <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-sm text-[10px] font-bold">
-                          <CheckCircle2 className="w-3 h-3 text-emerald-600" /> Completed
+                          <CheckCircle2 className="w-3 h-3 text-emerald-600" aria-hidden="true" /> Completed
                         </span>
                       )}
                       {meeting.status === 'rescheduled' && (
                         <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-purple-50 text-purple-700 border border-purple-200 rounded-sm text-[10px] font-bold">
-                          <RotateCcw className="w-3 h-3 text-purple-600" /> Rescheduled
+                          <RotateCcw className="w-3 h-3 text-purple-600" aria-hidden="true" /> Rescheduled
                         </span>
                       )}
                       {meeting.status === 'cancelled' && (
                         <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-rose-50 text-rose-700 border border-rose-200 rounded-sm text-[10px] font-bold">
-                          <XCircle className="w-3 h-3 text-rose-600" /> Cancelled
+                          <XCircle className="w-3 h-3 text-rose-600" aria-hidden="true" /> Cancelled
                         </span>
                       )}
                     </td>
@@ -1244,6 +1332,20 @@ export const InceptionSchedulingManager: React.FC = () => {
                     {/* Actions */}
                     <td className="py-3 px-4 align-top text-center whitespace-nowrap">
                       <div className="flex items-center justify-center gap-1.5 whitespace-nowrap">
+                        {/* Primary Workspace Action: Roster & Minutes */}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedMeeting(meeting);
+                            setViewMode('details');
+                          }}
+                          className="px-2.5 py-1.5 text-xs font-bold text-[#C8102E] bg-red-50/70 hover:bg-[#C8102E] hover:text-white border border-red-200 rounded-sm shadow-2xs transition-colors cursor-pointer inline-flex items-center gap-1 shrink-0"
+                          title="Open Roster &amp; Minutes Workspace"
+                        >
+                          <ClipboardCheck className="w-3.5 h-3.5" aria-hidden="true" />
+                          Roster &amp; Minutes
+                        </button>
+
                         {/* 1. Forward SO Request */}
                         {meeting.specialOrderStatus !== 'forwarded_to_op' && (
                           <button
@@ -1252,7 +1354,7 @@ export const InceptionSchedulingManager: React.FC = () => {
                             className="px-2.5 py-1.5 text-xs font-semibold text-blue-700 bg-white hover:bg-blue-50 border border-blue-200 rounded-sm shadow-2xs transition-colors cursor-pointer inline-flex items-center gap-1 shrink-0"
                             title="Forward SO Request to Office of the President"
                           >
-                            <Send className="w-3 h-3 text-blue-600" /> Forward SO
+                            <Send className="w-3 h-3 text-blue-600" aria-hidden="true" /> Forward SO
                           </button>
                         )}
 
@@ -1264,18 +1366,21 @@ export const InceptionSchedulingManager: React.FC = () => {
                             className="px-2.5 py-1.5 text-xs font-semibold text-emerald-700 bg-white hover:bg-emerald-50 border border-emerald-200 rounded-sm shadow-2xs transition-colors cursor-pointer inline-flex items-center gap-1 shrink-0"
                             title="Mark as Completed"
                           >
-                            <CheckCircle2 className="w-3 h-3 text-emerald-600" /> Complete
+                            <CheckCircle2 className="w-3 h-3 text-emerald-600" aria-hidden="true" /> Complete
                           </button>
                         )}
 
                         {/* 3. View Special Order Memo */}
                         <button
                           type="button"
-                          onClick={() => {}}
+                          onClick={() => {
+                            setSelectedMeeting(meeting);
+                            setViewMode('memo');
+                          }}
                           className="p-1.5 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-sm transition-colors cursor-pointer shrink-0"
                           title="View Special Order Request Memo"
                         >
-                          <FileText className="w-3.5 h-3.5" />
+                          <FileText className="w-3.5 h-3.5" aria-hidden="true" />
                         </button>
 
                         {/* 4. Edit */}
@@ -1285,7 +1390,7 @@ export const InceptionSchedulingManager: React.FC = () => {
                           className="p-1.5 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-sm transition-colors cursor-pointer shrink-0"
                           title="Edit Meeting"
                         >
-                          <Edit2 className="w-3.5 h-3.5" />
+                          <Edit2 className="w-3.5 h-3.5" aria-hidden="true" />
                         </button>
 
                         {/* 5. Delete */}
@@ -1295,7 +1400,7 @@ export const InceptionSchedulingManager: React.FC = () => {
                           className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-sm transition-colors cursor-pointer shrink-0"
                           title="Delete Meeting"
                         >
-                          <Trash2 className="w-3.5 h-3.5" />
+                          <Trash2 className="w-3.5 h-3.5" aria-hidden="true" />
                         </button>
 
                         {/* 6. View Meeting Details */}
@@ -1308,7 +1413,7 @@ export const InceptionSchedulingManager: React.FC = () => {
                           className="p-1.5 text-slate-400 hover:text-[#C8102E] hover:bg-red-50/60 rounded-sm transition-colors cursor-pointer shrink-0"
                           title="View Meeting Details"
                         >
-                          <Eye className="w-3.5 h-3.5" />
+                          <Eye className="w-3.5 h-3.5" aria-hidden="true" />
                         </button>
                       </div>
                     </td>

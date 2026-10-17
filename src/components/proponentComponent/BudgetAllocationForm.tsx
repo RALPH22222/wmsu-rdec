@@ -1006,7 +1006,6 @@ export const BudgetAllocationForm: React.FC = () => {
                     value={metadata.projectStaff}
                     disabled={isLocked}
                     onChange={(e) => setMetadata({ ...metadata, projectStaff: e.target.value })}
-                    placeholder="e.g. Research Assistants, Clerical Staff"
                     className="w-full pl-8 pr-3 py-2 border border-slate-200 rounded-md font-medium text-slate-800 bg-slate-50/50 disabled:bg-slate-100 disabled:cursor-not-allowed focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#C8102E]"
                   />
                 </div>

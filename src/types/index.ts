@@ -629,6 +629,36 @@ export interface InceptionProjectItem {
 
 export type InceptionMeetingStatus = 'scheduled' | 'completed' | 'rescheduled' | 'cancelled';
 
+export type InceptionAttendanceStatus = 'present' | 'absent' | 'excused' | 'pending';
+
+export interface InceptionRollCallEntry {
+  id: string;
+  name: string;
+  role: string;
+  affiliation?: string;
+  status: InceptionAttendanceStatus;
+  timeIn?: string;
+  remarks?: string;
+  isCustom?: boolean;
+}
+
+export interface InceptionAttendanceSummary {
+  total: number;
+  present: number;
+  excused: number;
+  absent: number;
+  pending: number;
+  allLogged: boolean;
+}
+
+export interface InceptionMinutesDocument {
+  name: string;
+  size: number;
+  uploadedAt: string;
+  fileUrl?: string;
+  dataUrl?: string;
+}
+
 export interface InceptionMeeting {
   id: string;
   contractId?: string;
@@ -647,19 +677,19 @@ export interface InceptionMeeting {
   venue: string; // Physical Room/Venue (Face-to-Face only)
   meetingType: 'in_person'; // Inception meetings are strictly Face-to-Face (F2F)
   attendees: string[];
+  rollCall?: InceptionRollCallEntry[];
+  attendanceSummary?: InceptionAttendanceSummary;
   agenda?: string;
+  resolutionsSummary?: string;
   specialOrderNumber?: string;
   specialOrderStatus: 'pending_request' | 'forwarded_to_op' | 'so_issued';
   specialOrderDate?: string;
   status: InceptionMeetingStatus;
   completedDate?: string;
-  minutesPdf?: {
-    name: string;
-    size: number;
-    uploadedAt: string;
-    dataUrl?: string;
-  } | null;
+  minutesPdf?: InceptionMinutesDocument | null;
   notes?: string;
+  rosterLoggedAt?: string | null;
+  minutesUploadedAt?: string | null;
   createdAt: string;
   updatedAt: string;
 }
