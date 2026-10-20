@@ -27,11 +27,14 @@ interface MemoPageProps {
 }
 
 const MEMO_SUBJECT_OPTIONS = [
-  'Request authority for the Conduct of Agency In-House Review',
+  'Request for the Conduct of Agency In-House Review',
+  'Request for Approval of Budget Allocation, Implementation Schedule and Annual Financial Plan Inclusion',
+  'Request for Special Order for the Inception Meeting',
+  'Request for Designation and Approval of Line-Item Budget',
 ];
 const MEMO_SUBJECT_DEFAULT = MEMO_SUBJECT_OPTIONS[0];
 
-export function MemoPage({ role: _role = 'rpdu' }: MemoPageProps) {
+export const MemoPage: React.FC<MemoPageProps> = () => {
   const { session } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -63,17 +66,22 @@ export function MemoPage({ role: _role = 'rpdu' }: MemoPageProps) {
     setLoading(true);
     setError(null);
     try {
-      const [memosData, recData] = await Promise.all([
+      const [memosResult, recipientsResult] = await Promise.allSettled([
         getMemos(session?.access_token),
         getMemoRecipients(session?.access_token),
       ]);
-      setMemos(memosData);
-      setRecipientsData(recData);
+      if (memosResult.status === 'fulfilled') setMemos(memosResult.value);
+      if (recipientsResult.status === 'fulfilled') {
+        const recData = recipientsResult.value;
+        setRecipientsData(recData);
 
-      // Auto-select first project if none selected
-      if (recData.proposals && recData.proposals.length > 0 && !selectedProjectId) {
-        setSelectedProjectId(recData.proposals[0].id);
+        // Auto-select first project if none selected
+        if (recData.proposals && recData.proposals.length > 0 && !selectedProjectId) {
+          setSelectedProjectId(recData.proposals[0].id);
+        }
       }
+      if (memosResult.status === 'rejected') throw memosResult.reason;
+      if (recipientsResult.status === 'rejected') throw recipientsResult.reason;
     } catch (err: unknown) {
       console.error('Error fetching memos:', err);
       setError(err instanceof Error ? err.message : 'Unable to load memos.');
@@ -93,6 +101,10 @@ export function MemoPage({ role: _role = 'rpdu' }: MemoPageProps) {
         setFormError('File size exceeds the 25 MB limit.');
         return;
       }
+      if (file.type !== 'application/pdf' && !/\.pdf$/i.test(file.name)) {
+        setFormError('Only PDF memorandums can be uploaded.');
+        return;
+      }
       setSelectedFile(file);
       setFormError(null);
     }
@@ -105,7 +117,7 @@ export function MemoPage({ role: _role = 'rpdu' }: MemoPageProps) {
       return;
     }
     if (!selectedFile) {
-      setFormError('Please select a memo file to upload (PDF, Word, or Image).');
+      setFormError('Please select a PDF memorandum to upload.');
       return;
     }
 
@@ -287,7 +299,7 @@ export function MemoPage({ role: _role = 'rpdu' }: MemoPageProps) {
               <input
                 ref={fileInputRef}
                 type="file"
-                accept=".pdf,.doc,.docx,.png,.jpg,.jpeg"
+                accept="application/pdf,.pdf"
                 onChange={handleFileChange}
                 className="hidden"
               />
@@ -305,7 +317,7 @@ export function MemoPage({ role: _role = 'rpdu' }: MemoPageProps) {
               ) : (
                 <div className="flex items-center gap-2 text-slate-400">
                   <Upload className="w-4 h-4" />
-                  <span className="text-xs">Choose document file (PDF, Word, or Image scan up to 25 MB)</span>
+                  <span className="text-xs">Choose PDF memorandum (up to 25 MB)</span>
                 </div>
               )}
 
@@ -553,6 +565,13 @@ export function MemoPage({ role: _role = 'rpdu' }: MemoPageProps) {
                     className="max-h-full max-w-full object-contain rounded shadow"
                   />
                 </div>
+              ) : (previewMemo.fileName?.match(/\.html?$/i) || previewMemo.fileUrl?.split('?')[0].match(/\.html?$/i) || previewMemo.fileType?.includes('html')) ? (
+                <iframe
+                  src={getFullFileUrl(previewMemo.fileUrl)}
+                  sandbox="allow-same-origin allow-modals"
+                  className="w-full h-full border-0"
+                  title={previewMemo.fileName || 'Internal memorandum preview'}
+                />
               ) : (previewMemo.fileName?.match(/\.pdf$/i) || previewMemo.fileUrl?.split('?')[0].match(/\.pdf$/i) || previewMemo.fileType?.includes('pdf')) ? (
                 <iframe
                   src={getFullFileUrl(previewMemo.fileUrl)}
@@ -624,6 +643,6 @@ export function MemoPage({ role: _role = 'rpdu' }: MemoPageProps) {
       )}
     </div>
   );
-}
+};
 
 export default MemoPage;
