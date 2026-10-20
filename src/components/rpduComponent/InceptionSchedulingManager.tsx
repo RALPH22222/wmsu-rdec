@@ -103,6 +103,14 @@ export const InceptionSchedulingManager: React.FC = () => {
   const [selectedMeeting, setSelectedMeeting] = useState<InceptionMeeting | null>(null);
   const [editingMeeting, setEditingMeeting] = useState<InceptionMeeting | null>(null);
 
+  // Pagination for Included Research Projects in Details View (max 3 per page)
+  const [projectsPage, setProjectsPage] = useState(1);
+  const DETAILS_PROJECTS_PER_PAGE = 3;
+
+  useEffect(() => {
+    setProjectsPage(1);
+  }, [selectedMeeting?.id]);
+
   // Track all project IDs/codes/titles that have already been scheduled into an inception meeting
   const alreadyScheduledIdentifiers = useMemo(() => {
     const scheduledIds = new Set<string>();
@@ -1049,28 +1057,75 @@ export const InceptionSchedulingManager: React.FC = () => {
           </div>
 
           {selectedMeeting.projects && selectedMeeting.projects.length > 1 ? (
-            <div className="space-y-2.5">
-              {selectedMeeting.projects.map((proj, pIdx) => (
-                <div key={pIdx} className="p-3.5 bg-slate-50 rounded-md border border-slate-200 space-y-1.5 text-xs">
-                  <div className="flex items-start justify-between gap-3">
-                    <span className="font-bold text-slate-900 leading-snug">{proj.projectTitle}</span>
-                    {proj.contractNumber && (
-                      <span className="font-mono text-[10px] font-bold text-slate-700 bg-white px-2 py-0.5 rounded-xs border border-slate-200 shrink-0">
-                        {proj.contractNumber}
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex flex-wrap items-center gap-x-6 gap-y-1 pt-1 border-t border-slate-200/60 text-[11px]">
-                    <div>
-                      <span className="text-slate-400 font-bold uppercase text-[10px]">Study Leader: </span>
-                      <strong className="text-slate-800">{proj.leadInvestigator}</strong>
-                      {proj.studyLeaderCollege && (
-                        <span className="text-slate-500"> ({proj.studyLeaderCollege})</span>
-                      )}
+            <div className="space-y-3">
+              {(() => {
+                const totalProjPages = Math.max(1, Math.ceil(selectedMeeting.projects.length / DETAILS_PROJECTS_PER_PAGE));
+                const currentProjPage = Math.min(projectsPage, totalProjPages);
+                const startProjIdx = (currentProjPage - 1) * DETAILS_PROJECTS_PER_PAGE;
+                const paginatedProjects = selectedMeeting.projects.slice(startProjIdx, startProjIdx + DETAILS_PROJECTS_PER_PAGE);
+
+                return (
+                  <>
+                    <div className="space-y-2.5">
+                      {paginatedProjects.map((proj, pIdx) => (
+                        <div key={startProjIdx + pIdx} className="p-3.5 bg-slate-50 rounded-md border border-slate-200 space-y-1.5 text-xs">
+                          <div className="flex items-start justify-between gap-3">
+                            <span className="font-bold text-slate-900 leading-snug">{proj.projectTitle}</span>
+                            {proj.contractNumber && (
+                              <span className="font-mono text-[10px] font-bold text-slate-700 bg-white px-2 py-0.5 rounded-xs border border-slate-200 shrink-0">
+                                {proj.contractNumber}
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex flex-wrap items-center gap-x-6 gap-y-1 pt-1 border-t border-slate-200/60 text-[11px]">
+                            <div>
+                              <span className="text-slate-400 font-bold uppercase text-[10px]">Study Leader: </span>
+                              <strong className="text-slate-800">{proj.leadInvestigator}</strong>
+                              {proj.studyLeaderCollege && (
+                                <span className="text-slate-500"> ({proj.studyLeaderCollege})</span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                  </div>
-                </div>
-              ))}
+
+                    {selectedMeeting.projects.length > DETAILS_PROJECTS_PER_PAGE && (
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-3 border-t border-slate-100 text-xs">
+                        <span className="text-slate-500 font-medium">
+                          Showing <strong className="text-slate-800">{startProjIdx + 1}</strong> to{' '}
+                          <strong className="text-slate-800">
+                            {Math.min(startProjIdx + DETAILS_PROJECTS_PER_PAGE, selectedMeeting.projects.length)}
+                          </strong> of <strong className="text-slate-800">{selectedMeeting.projects.length}</strong> projects
+                        </span>
+                        <div className="flex items-center gap-1.5 self-end sm:self-auto">
+                          <button
+                            type="button"
+                            onClick={() => setProjectsPage((p) => Math.max(1, p - 1))}
+                            disabled={currentProjPage <= 1}
+                            className="px-2.5 py-1.5 bg-white border border-slate-200 rounded-sm font-semibold text-slate-700 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors inline-flex items-center gap-1 cursor-pointer"
+                            aria-label="Previous projects"
+                          >
+                            <ChevronLeft className="w-3.5 h-3.5" aria-hidden="true" /> Prev
+                          </button>
+                          <span className="px-2 font-bold text-slate-700">
+                            Page {currentProjPage} of {totalProjPages}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => setProjectsPage((p) => Math.min(totalProjPages, p + 1))}
+                            disabled={currentProjPage >= totalProjPages}
+                            className="px-2.5 py-1.5 bg-white border border-slate-200 rounded-sm font-semibold text-slate-700 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors inline-flex items-center gap-1 cursor-pointer"
+                            aria-label="Next projects"
+                          >
+                            Next <ChevronRight className="w-3.5 h-3.5" aria-hidden="true" />
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
             </div>
           ) : (
             <div className="p-4 bg-slate-50 rounded-md border border-slate-200 space-y-2 text-xs">

@@ -15,6 +15,8 @@ import {
   ExternalLink,
   ClipboardCheck,
   FileCheck2,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import type {
   InceptionMeeting,
@@ -79,14 +81,27 @@ export const InceptionRosterMinutesWorkspace: React.FC<InceptionRosterMinutesWor
   const [isSavingMinutes, setIsSavingMinutes] = useState(false);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
+  // Pagination for Attendees (max 3 per page)
+  const [rosterPage, setRosterPage] = useState(1);
+  const ATTENDEES_PER_PAGE = 3;
+
   useEffect(() => {
     setRollCall(buildDefaultRollCall(meeting));
     setMinutesDoc(meeting.minutesPdf || null);
     setSelectedFile(null);
     setFeedback(null);
+    setRosterPage(1);
   }, [meeting.id]);
 
   const attendanceSummary = useMemo(() => summarizeRollCall(rollCall), [rollCall]);
+
+  const totalRosterPages = Math.max(1, Math.ceil(rollCall.length / ATTENDEES_PER_PAGE));
+  const currentRosterPage = Math.min(rosterPage, totalRosterPages);
+  const startRosterIdx = (currentRosterPage - 1) * ATTENDEES_PER_PAGE;
+  const paginatedRollCall = useMemo(
+    () => rollCall.slice(startRosterIdx, startRosterIdx + ATTENDEES_PER_PAGE),
+    [rollCall, startRosterIdx]
+  );
 
   const handleStatusChange = (id: string, status: InceptionAttendanceStatus) => {
     const nowTime = new Date().toTimeString().slice(0, 5);
@@ -135,7 +150,11 @@ export const InceptionRosterMinutesWorkspace: React.FC<InceptionRosterMinutesWor
       remarks: '',
       isCustom: true,
     };
-    setRollCall((prev) => [...prev, newEntry]);
+    setRollCall((prev) => {
+      const next = [...prev, newEntry];
+      setRosterPage(Math.ceil(next.length / ATTENDEES_PER_PAGE));
+      return next;
+    });
     setNewAttendeeName('');
     setNewAttendeeAffiliation('');
     setFeedback(null);
@@ -400,16 +419,18 @@ export const InceptionRosterMinutesWorkspace: React.FC<InceptionRosterMinutesWor
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {rollCall.map((entry, idx) => (
-                  <tr key={entry.id} className="hover:bg-slate-50/60 transition-colors">
-                    <td className="py-3 px-3 align-top min-w-[180px]">
-                      <input
-                        type="text"
-                        aria-label={`Attendee ${idx + 1} name`}
-                        value={entry.name}
-                        onChange={(e) => handleFieldChange(entry.id, 'name', e.target.value)}
-                        className="w-full font-bold text-slate-900 bg-transparent border-b border-transparent focus:border-slate-300 focus:bg-white px-1 py-0.5 rounded-xs text-base sm:text-xs focus:outline-none focus:ring-1 focus:ring-[#C8102E]"
-                      />
+                {paginatedRollCall.map((entry, pIdx) => {
+                  const itemNumber = startRosterIdx + pIdx + 1;
+                  return (
+                    <tr key={entry.id} className="hover:bg-slate-50/60 transition-colors">
+                      <td className="py-3 px-3 align-top min-w-[180px]">
+                        <input
+                          type="text"
+                          aria-label={`Attendee ${itemNumber} name`}
+                          value={entry.name}
+                          onChange={(e) => handleFieldChange(entry.id, 'name', e.target.value)}
+                          className="w-full font-bold text-slate-900 bg-transparent border-b border-transparent focus:border-slate-300 focus:bg-white px-1 py-0.5 rounded-xs text-base sm:text-xs focus:outline-none focus:ring-1 focus:ring-[#C8102E]"
+                        />
                       <span className="text-[11px] text-slate-500 block px-1 mt-0.5">
                         {entry.role}
                       </span>
@@ -417,7 +438,7 @@ export const InceptionRosterMinutesWorkspace: React.FC<InceptionRosterMinutesWor
                     <td className="py-3 px-3 align-top min-w-[150px]">
                       <input
                         type="text"
-                        aria-label={`Attendee ${idx + 1} affiliation`}
+                        aria-label={`Attendee ${itemNumber} affiliation`}
                         value={entry.affiliation || ''}
                         onChange={(e) => handleFieldChange(entry.id, 'affiliation', e.target.value)}
                         placeholder="College or unit..."
@@ -493,11 +514,47 @@ export const InceptionRosterMinutesWorkspace: React.FC<InceptionRosterMinutesWor
                       </button>
                     </td>
                   </tr>
-                ))}
-              </tbody>
+                );
+              })}
+            </tbody>
             </table>
           </div>
         </div>
+
+        {/* Attendee Pagination Controls (Max 3 per page) */}
+        {rollCall.length > ATTENDEES_PER_PAGE && (
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-md text-xs">
+            <span className="text-slate-500 font-medium">
+              Showing <strong className="text-slate-800">{startRosterIdx + 1}</strong> to{' '}
+              <strong className="text-slate-800">
+                {Math.min(startRosterIdx + ATTENDEES_PER_PAGE, rollCall.length)}
+              </strong> of <strong className="text-slate-800">{rollCall.length}</strong> attendees
+            </span>
+            <div className="flex items-center gap-1.5 self-end sm:self-auto">
+              <button
+                type="button"
+                onClick={() => setRosterPage((p) => Math.max(1, p - 1))}
+                disabled={currentRosterPage <= 1}
+                className="px-2.5 py-1.5 bg-white border border-slate-200 rounded-sm font-semibold text-slate-700 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors inline-flex items-center gap-1 cursor-pointer"
+                aria-label="Previous attendees"
+              >
+                <ChevronLeft className="w-3.5 h-3.5" aria-hidden="true" /> Prev
+              </button>
+              <span className="px-2 font-bold text-slate-700">
+                Page {currentRosterPage} of {totalRosterPages}
+              </span>
+              <button
+                type="button"
+                onClick={() => setRosterPage((p) => Math.min(totalRosterPages, p + 1))}
+                disabled={currentRosterPage >= totalRosterPages}
+                className="px-2.5 py-1.5 bg-white border border-slate-200 rounded-sm font-semibold text-slate-700 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors inline-flex items-center gap-1 cursor-pointer"
+                aria-label="Next attendees"
+              >
+                Next <ChevronRight className="w-3.5 h-3.5" aria-hidden="true" />
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Add Participant Row */}
         <div className="p-4 bg-slate-50 border border-slate-200 rounded-md space-y-3">
