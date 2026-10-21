@@ -5,7 +5,7 @@ import { callDateToday } from '../utils/callWindow';
 
 export function CallOpeningConfirmation() {
   const { user, profile } = useAuth();
-  const { calls, loadingCalls, activeCall, confirmCallOpening } = useCallForProposals();
+  const { calls, loadingCalls, activeCall, confirmCallOpening } = useCallForProposals({ calls: true });
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [dismissed, setDismissed] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);

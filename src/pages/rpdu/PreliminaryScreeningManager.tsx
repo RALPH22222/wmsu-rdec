@@ -33,7 +33,7 @@ export const PreliminaryScreeningManager: React.FC<PreliminaryScreeningManagerPr
     loadingConceptProposals,
     screeningError,
     refreshConceptProposals,
-  } = useCallForProposals();
+  } = useCallForProposals({ concepts: true });
   const navigate = useNavigate();
   const restored = useLocation().state?.screeningList;
 

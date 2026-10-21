@@ -8,7 +8,7 @@ import { CallForProposalsManager } from '../../components/rpduComponent/CallForP
 
 export const RpduDashboard: React.FC = () => {
   const navigate = useNavigate();
-  const { activeCall, calls, conceptProposals } = useCallForProposals();
+  const { activeCall, calls, conceptProposals } = useCallForProposals({ calls: true, concepts: true });
   const { user, profile, loadingProfile } = useAuth();
   const [activeTab, setActiveTab] = useState<'calls' | 'evaluators'>('calls');
 

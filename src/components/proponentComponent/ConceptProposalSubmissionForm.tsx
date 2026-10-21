@@ -95,7 +95,7 @@ const formatWindowDate = (date: string) => new Date(`${date}T00:00:00+08:00`).to
 export const ConceptProposalSubmissionForm: React.FC = () => {
   const navigate = useNavigate();
   const restoredList = useLocation().state?.proposalList;
-  const { activeCall, loadingCalls, conceptProposals, loadingConceptProposals, screeningError, refreshConceptProposals, submitConceptProposal, showToast } = useCallForProposals();
+  const { activeCall, loadingCalls, conceptProposals, loadingConceptProposals, screeningError, refreshConceptProposals, submitConceptProposal, showToast } = useCallForProposals({ calls: true, concepts: true });
   const { user, profile, session } = useAuth();
   const [confirmedCallId, setConfirmedCallId] = useState<string | null>(null);
   const canSubmit = Boolean(!loadingCalls && activeCall && profile?.is_eligible_to_submit === true);

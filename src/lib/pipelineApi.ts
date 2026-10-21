@@ -100,3 +100,34 @@ export const uploadRevisionApi = async (proposalId: string, payload: UploadRevis
 
 export const postMyClarificationApi = async (proposalId: string, round: number, body: string, token?: string): Promise<ProponentProposal> =>
   (await request<ProponentProposal>(API_ENDPOINTS.PIPELINE.MY_PROPOSAL_CLARIFICATIONS(proposalId), token, { method: 'POST', body: JSON.stringify({ round, body: body.trim() }) })).data;
+
+export interface ExternalFundingRequest {
+  id: string;
+  requestFormName: string;
+  requestFormUrl: string;
+  approvalLetterName: string;
+  approvalLetterUrl: string;
+  status: 'SUBMITTED';
+  submittedAt: string;
+}
+
+export const getExternalFundingRequests = async (token?: string, signal?: AbortSignal): Promise<ExternalFundingRequest[]> =>
+  (await request<ExternalFundingRequest[]>(API_ENDPOINTS.PIPELINE.EXTERNAL_FUNDING_REQUESTS, token, {}, signal)).data;
+
+export interface ReceivedExternalFundingRequest extends Pick<ExternalFundingRequest, 'id' | 'requestFormName' | 'approvalLetterName' | 'submittedAt'> {
+  status: string;
+  proponent: { id: string; name: string; email: string; department: string };
+}
+
+export const getReceivedExternalFundingRequests = async (token?: string, signal?: AbortSignal): Promise<ReceivedExternalFundingRequest[]> =>
+  (await request<ReceivedExternalFundingRequest[]>(API_ENDPOINTS.PIPELINE.RECEIVED_EXTERNAL_FUNDING_REQUESTS, token, {}, signal)).data;
+
+export const getExternalFundingDocumentUrl = async (id: string, kind: 'request-form' | 'approval-letter', token?: string): Promise<string> =>
+  (await request<{ url: string }>(API_ENDPOINTS.PIPELINE.EXTERNAL_FUNDING_DOCUMENT(id, kind), token, {}, AbortSignal.timeout(15_000))).data.url;
+
+export const submitExternalFundingRequest = async (requestForm: File, approvalLetter: File, token?: string): Promise<void> => {
+  const body = new FormData();
+  body.append('request_form_file', requestForm);
+  body.append('approval_letter_file', approvalLetter);
+  await request<{ id: string; status: 'SUBMITTED'; submittedAt: string }>(API_ENDPOINTS.PIPELINE.EXTERNAL_FUNDING_REQUESTS, token, { method: 'POST', body });
+};

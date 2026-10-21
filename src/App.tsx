@@ -29,6 +29,8 @@ import { LetterPreviewPage } from './pages/proponents/LetterPreviewPage';
 import { MemoPreviewPage } from './pages/proponents/MemoPreviewPage';
 import { RevisionHistoryPage } from './pages/proponents/RevisionHistoryPage';
 import { DetailedProposalSubmissionPage } from './pages/proponents/DetailedProposalSubmissionPage';
+import { ExternalFundingRequestPage } from './pages/proponents/ExternalFundingRequestPage';
+import { ExternalFundingRequestsPage } from './pages/rpdu/ExternalFundingRequestsPage';
 import { PipelineProposalDetailPage } from './pages/rpdu/PipelineProposalDetailPage';
 import EvaluatorDashboard from './pages/evaluator/evaluatorDashboard';
 import { EvaluatorReviewsPage } from './pages/evaluator/EvaluatorReviewsPage';
@@ -111,6 +113,7 @@ export function App() {
                 <Route path="/proponent/submit" element={<ProponentDashboard />} />
                 <Route path="/proponent/proposals/:proposalId" element={<ConceptProposalDetailsPage />} />
                 <Route path="/proponent/detailed-proposals" element={<DetailedProposalSubmissionPage />} />
+                <Route path="/proponent/external-funding" element={<ExternalFundingRequestPage />} />
                 <Route path="/proponent/budget" element={<BudgetAllocationPage />} />
                 <Route path="/proponent/memos" element={<ProponentMemosPage />} />
                 <Route path="/proponent/memos/preview/:memoId" element={<MemoPreviewPage />} />
@@ -185,6 +188,7 @@ export function App() {
                 <Route path="/rpdu/contracts" element={<Navigate to="/rpdu/archive?filter=CONTRACT" replace />} />
                 <Route path="/rpdu/scheduling" element={<InceptionSchedulingPage />} />
                 <Route path="/rpdu/evaluations" element={<EvaluatorAssignmentPage role="rpdu" />} />
+                <Route path="/rpdu/external-funding" element={<ExternalFundingRequestsPage />} />
                 <Route path="/rpdu/evaluations/:id" element={<PipelineProposalDetailPage role="rpdu" />} />
                 <Route path="/rpdu/budgets" element={<RpduBudgetAllocationPage />} />
                 <Route path="/rpdu/budgets/:allocationId" element={<RpduBudgetAllocationReviewPage />} />

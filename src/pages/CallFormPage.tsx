@@ -9,7 +9,7 @@ export function CallFormPage({ role, mode = 'edit' }: { role: 'admin' | 'rpdu'; 
   const { callId } = useParams();
   const { user, profile, loadingProfile } = useAuth();
   const navigate = useNavigate();
-  const { calls, loadingCalls, createCall, updateCall, refreshCalls } = useCallForProposals();
+  const { calls, loadingCalls, createCall, updateCall, refreshCalls } = useCallForProposals({ calls: true });
   const isCreating = mode === 'create';
   const call = calls.find((item) => item.id === callId);
   const CallForm = role === 'admin' ? AdminCallForm : RpduCallForm;

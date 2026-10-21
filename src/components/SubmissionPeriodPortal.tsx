@@ -24,7 +24,7 @@ interface PriorityArea {
 }
 
 export const SubmissionPeriodPortal: React.FC<SubmissionPeriodPortalProps> = ({ onSignInClick }) => {
-  const { activeCall, calls, loadingCalls } = useCallForProposals();
+  const { activeCall, calls, loadingCalls } = useCallForProposals({ calls: true });
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [showAllTopics, setShowAllTopics] = useState<boolean>(false);
 

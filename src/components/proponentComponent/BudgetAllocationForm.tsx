@@ -87,7 +87,7 @@ type MetadataState = Omit<LibMetadata, 'title' | 'coResearchers'> & {
 };
 
 export const BudgetAllocationForm: React.FC = () => {
-  const { conceptProposals, calls } = useCallForProposals();
+  const { conceptProposals, calls } = useCallForProposals({ calls: true, concepts: true });
   const { profile, session } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const pdfInputId = useId();

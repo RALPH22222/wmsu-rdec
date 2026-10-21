@@ -58,7 +58,7 @@ const INITIAL_CERTIFICATES: TechnicalReviewCertificate[] = [
 ];
 
 export const TechnicalClearanceManager: React.FC = () => {
-  const { conceptProposals } = useCallForProposals();
+  const { conceptProposals } = useCallForProposals({ concepts: true });
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'signed' | 'pending_signed'>('all');
 

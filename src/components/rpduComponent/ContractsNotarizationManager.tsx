@@ -169,7 +169,7 @@ export const INITIAL_CONTRACTS: ProfessionalServiceContract[] = [
 ];
 
 export const ContractsNotarizationManager: React.FC = () => {
-  const { conceptProposals } = useCallForProposals();
+  const { conceptProposals } = useCallForProposals({ concepts: true });
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'op_queue' | 'legal_queue' | 'notarized'>('all');
 

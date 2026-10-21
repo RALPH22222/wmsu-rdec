@@ -13,7 +13,7 @@ import { CallOpeningConfirmation } from '../CallOpeningConfirmation';
 export const CallForProposalsManager: React.FC = () => {
   const navigate = useNavigate();
   const { user, profile } = useAuth();
-  const { calls, loadingCalls, activeCall, closeCall, updateCall, reopenCall, deleteCall, showToast } = useCallForProposals();
+  const { calls, loadingCalls, activeCall, closeCall, updateCall, reopenCall, deleteCall, showToast } = useCallForProposals({ calls: true });
 
   const reservedCall = activeCall || calls.find((call) => call.scheduledOpen) || null;
 

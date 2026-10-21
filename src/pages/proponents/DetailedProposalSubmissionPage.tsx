@@ -1,4 +1,4 @@
-import { ArrowRight, FileCheck2, FileText } from 'lucide-react';
+import { ArrowRight, FileCheck2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { SubmitDetailedProposalCard } from '../../components/proponentComponent/SubmitDetailedProposalCard';
 import { EmptyState } from '../../components/ui/EmptyState';
@@ -6,6 +6,7 @@ import { TONE_CLASSES } from '../../components/ui/toneClasses';
 import { useMyPipelineProposals } from '../../hooks/useMyPipelineProposals';
 import { STAGE_META, stageExplanation } from '../../lib/aihrMeta';
 import { formatDate } from '../../lib/format';
+import { ProposalTemplateList } from '../../components/proponentComponent/ProposalTemplateList';
 import type { PendingConcept } from '../../types';
 
 function ConceptStageList({ titleId, title, concepts }: { titleId: string; title: string; concepts: PendingConcept[] }) {
@@ -29,7 +30,6 @@ export function DetailedProposalSubmissionPage() {
   const submitted = proposals.filter((proposal) => proposal.manuscriptUrl);
   const waiting = pendingConcepts.filter((c) => c.stage === 'AWAITING_AIHR' || c.stage === 'QUEUED_FOR_EN_BANC');
   const closed = pendingConcepts.filter((c) => c.stage === 'AIHR_FAILED' || c.stage === 'NOT_APPROVED');
-
   return (
     <section className="mx-auto max-w-5xl space-y-5">
       <header>
@@ -37,10 +37,11 @@ export function DetailedProposalSubmissionPage() {
         <p className="mt-2 text-sm text-slate-600">Submit your detailed research proposal once your concept has passed preliminary screening. Submit before the Agency In-House Review.</p>
       </header>
 
-      <section aria-labelledby="detailed-template-title" className="rounded-sm border border-slate-200 bg-white p-5">
+      <section aria-labelledby="detailed-template-title" className="rounded-sm border border-slate-200 bg-white p-3 sm:p-4">
         <div>
-          <h2 id="detailed-template-title" className="flex items-center gap-2 text-sm font-bold text-slate-900"><FileText className="h-4 w-4 text-[#C8102E]" />Detailed Research Proposal Template</h2>
+          <h2 id="detailed-template-title" className="text-sm font-bold text-slate-900">Detailed Research Proposal Template</h2>
           <p className="mt-1 text-xs text-slate-500">Use the Detailed Research Proposal Template provided by RPDU. Upload your completed proposal as a PDF or Word document up to 15 MB.</p>
+          <ProposalTemplateList folder="detailed-proposals" />
         </div>
       </section>
 

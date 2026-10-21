@@ -17,6 +17,7 @@ import { getScreeningProposals } from '../lib/screeningApi';
 import { applyCallWindow, callStartAt, callEndAt } from '../utils/callWindow';
 
 interface CallForProposalsContextType {
+  requestData: (calls: boolean, concepts: boolean) => void;
   calls: CallForProposals[];
   loadingCalls: boolean;
   refreshCalls: () => Promise<void>;
@@ -63,6 +64,12 @@ export const CallForProposalsProvider: React.FC<{ children: React.ReactNode }> =
   const userId = session?.user.id;
   const profileId = profile?.id;
   const profileRole = profile?.role;
+  const [requested, setRequested] = useState({ calls: false, concepts: false });
+  const requestData = useCallback((calls: boolean, concepts: boolean) => {
+    setRequested((previous) => (!calls || previous.calls) && (!concepts || previous.concepts)
+      ? previous
+      : { calls: previous.calls || calls, concepts: previous.concepts || concepts });
+  }, []);
   const [calls, setCalls] = useState<CallForProposals[]>([]);
   const [loadingCalls, setLoadingCalls] = useState(true);
   const callRequest = useRef(0);
@@ -133,16 +140,16 @@ export const CallForProposalsProvider: React.FC<{ children: React.ReactNode }> =
 
   // Only fetch once auth has resolved so we always have a valid token.
   useEffect(() => {
-    if (authLoading) return;
+    if (authLoading || !requested.calls) return;
     const sameViewer = callViewer.current === userId;
     callViewer.current = userId;
     void loadCalls(accessToken, sameViewer);
-  }, [authLoading, accessToken, userId, profileRole, loadCalls]);
+  }, [authLoading, accessToken, userId, profileRole, loadCalls, requested.calls]);
 
   useEffect(() => {
-    if (authLoading) return;
+    if (authLoading || !requested.concepts) return;
     void loadConceptProposals(accessToken);
-  }, [authLoading, accessToken, loadConceptProposals]);
+  }, [authLoading, accessToken, loadConceptProposals, requested.concepts]);
 
   const [currentUser, setCurrentUser] = useState<UserProfile>(MOCK_USERS[0]);
   const [proposals] = useState<ProposalItem[]>(MOCK_PROPOSALS);
@@ -261,6 +268,7 @@ export const CallForProposalsProvider: React.FC<{ children: React.ReactNode }> =
   return (
     <CallForProposalsContext.Provider
       value={{
+        requestData,
         calls,
         loadingCalls,
         refreshCalls: loadCalls,
@@ -291,8 +299,12 @@ export const CallForProposalsProvider: React.FC<{ children: React.ReactNode }> =
 
 };
 
-export const useCallForProposals = () => {
+export const useCallForProposals = ({ calls = false, concepts = false }: { calls?: boolean; concepts?: boolean } = {}) => {
   const context = useContext(CallForProposalsContext);
+  const requestData = context?.requestData;
+  useEffect(() => {
+    if (calls || concepts) requestData?.(calls, concepts);
+  }, [calls, concepts, requestData]);
   if (!context) {
     throw new Error('useCallForProposals must be used within a CallForProposalsProvider');
   }

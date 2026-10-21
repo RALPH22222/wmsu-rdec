@@ -10,6 +10,7 @@ import {
   User as UserIcon,
   LogOut,
   ScrollText,
+  Handshake,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { formatUserFullName } from '../../utils/userUtils';
@@ -38,6 +39,7 @@ export const ProponentSidebar: React.FC<ProponentSidebarProps> = ({
     location.pathname === '/dashboard';
   const isBudgetActive = location.pathname === '/proponent/budget';
   const isDetailedProposalActive = location.pathname === '/proponent/detailed-proposals';
+  const isExternalFundingActive = location.pathname === '/proponent/external-funding';
   const isMemosActive = location.pathname.startsWith('/proponent/memos');
   const isDocumentsActive =
     location.pathname.startsWith('/proponent/documents') ||
@@ -144,6 +146,19 @@ export const ProponentSidebar: React.FC<ProponentSidebarProps> = ({
                 >
                   <FileUp className={`w-5 h-5 shrink-0 ${isDetailedProposalActive ? 'text-white' : 'text-slate-400'}`} />
                   <span className="truncate">Detailed Proposal</span>
+                </Link>
+
+                <Link
+                  to="/proponent/external-funding"
+                  onClick={onCloseMobile}
+                  className={`w-full flex items-center gap-3.5 px-4 py-3 text-sm font-semibold rounded-sm text-left transition-colors border ${
+                    isExternalFundingActive
+                      ? 'bg-[#C8102E] text-white shadow-xs border-[#C8102E]'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50 border-transparent'
+                  }`}
+                >
+                  <Handshake className={`w-5 h-5 shrink-0 ${isExternalFundingActive ? 'text-white' : 'text-slate-400'}`} />
+                  <span className="truncate">External Funding</span>
                 </Link>
 
                 <Link
