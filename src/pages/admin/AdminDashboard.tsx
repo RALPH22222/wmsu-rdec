@@ -5,6 +5,7 @@ import { useCallForProposals } from '../../context/CallForProposalsContext';
 import { useAuth } from '../../context/AuthContext';
 import { formatUserFullName } from '../../utils/userUtils';
 import { CallForProposalsManager } from '../../components/adminComponent/CallForProposalsManager';
+import { EvaluatorsRoster } from '../../components/rpduComponent/EvaluatorsRoster';
 
 export const AdminDashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -137,15 +138,7 @@ export const AdminDashboard: React.FC = () => {
       {/* Tab Panels */}
       {activeTab === 'calls' && <CallForProposalsManager />}
 
-      {activeTab === 'evaluators' && (
-        <div className="bg-white p-12 text-center rounded-sm border border-slate-200 shadow-xs">
-          <Users className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-          <h3 className="text-lg font-bold text-slate-800">Technical Evaluators Panel</h3>
-          <p className="text-xs sm:text-sm text-slate-500 max-w-md mx-auto mt-1">
-            Maintain the roster of internal and external peer reviewers, track evaluation turnaround times, and assign proposals.
-          </p>
-        </div>
-      )}
+      {activeTab === 'evaluators' && <EvaluatorsRoster />}
     </div>
   );
 };

@@ -1,6 +1,6 @@
 import { API_ENDPOINTS } from '../config/apiConfig';
 import type {
-  ActionSheetPoints, BlindReview, Checklist, DeclineReason, EligibleConcept, PendingConcept, PipelineEvaluator, ProponentProposal, ReviewRecommendation, RpduProposal,
+  ActionSheetPoints, BlindReview, Checklist, DeclineReason, EligibleConcept, EvaluatorProfile, PendingConcept, PipelineEvaluator, ProponentProposal, ReviewRecommendation, RpduProposal,
 } from '../types';
 import { request } from './apiRequest';
 
@@ -12,8 +12,13 @@ export const getPipelineProposals = async (token?: string, signal?: AbortSignal)
 export const getPipelineProposal = async (id: string, token?: string, signal?: AbortSignal): Promise<RpduProposal> =>
   (await request<RpduProposal>(API_ENDPOINTS.PIPELINE.PROPOSAL_BY_ID(id), token, {}, signal)).data;
 
-export const getPipelineEvaluators = async (token?: string, signal?: AbortSignal): Promise<PipelineEvaluator[]> =>
-  (await request<PipelineEvaluator[]>(API_ENDPOINTS.PIPELINE.EVALUATORS, token, {}, signal)).data;
+export const getPipelineEvaluators = async (token?: string, signal?: AbortSignal): Promise<PipelineEvaluator[]> => {
+  const { data } = await request<PipelineEvaluator[]>(API_ENDPOINTS.PIPELINE.EVALUATORS, token, {}, signal);
+  return data.map((person) => ({ ...person, disciplines: person.disciplines ?? [], highestDegree: person.highestDegree ?? '', qualifications: person.qualifications ?? '' }));
+};
+
+export const saveEvaluatorProfileApi = async (id: string, profile: EvaluatorProfile, token?: string): Promise<EvaluatorProfile> =>
+  (await request<EvaluatorProfile>(API_ENDPOINTS.PIPELINE.EVALUATOR_PROFILE(id), token, { method: 'PUT', body: JSON.stringify(profile) }, AbortSignal.timeout(15_000))).data;
 
 export const assignEvaluatorApi = async (proposalId: string, evaluatorId: string, token?: string): Promise<{ proposal: RpduProposal; warning: string | null }> => {
   const result = await request<RpduProposal>(API_ENDPOINTS.PIPELINE.PROPOSAL_REVIEWS(proposalId), token, { method: 'POST', body: JSON.stringify({ evaluatorId }) });

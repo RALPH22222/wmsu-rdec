@@ -380,7 +380,13 @@ export interface RpduProposal {
   awaitingReply: number;
 }
 
-export interface PipelineEvaluator {
+export interface EvaluatorProfile {
+  disciplines: string[];
+  highestDegree: string;
+  qualifications: string;
+}
+
+export interface PipelineEvaluator extends EvaluatorProfile {
   id: string;
   name: string;
   email: string;
