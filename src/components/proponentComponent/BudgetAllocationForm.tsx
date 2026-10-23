@@ -13,6 +13,7 @@ import {
   Users,
   Building,
   Clock,
+  Briefcase,
 } from 'lucide-react';
 import type {
   LibLineItem,
@@ -24,56 +25,154 @@ import { useCallForProposals } from '../../context/CallForProposalsContext';
 import { useAuth } from '../../context/AuthContext';
 import { API_ENDPOINTS } from '../../config/apiConfig';
 
-// Standard baseline items defined in official WMSU-RPDU Excel LIB Template
+export type CompensationOption = 'Honoraria' | 'Teaching De-loading';
+
+// Reference catalog from the official WMSU-RPDU Line-Item Budget Template
+export const MOOE_TEMPLATE_CATALOG: string[] = [
+  'Supplies and Materials',
+  'Traveling Expenses',
+  'Printing and Binding',
+  'Professional Services',
+  'Communication Expenses',
+  'Representation Expenses',
+  'Enumerator',
+  'Research Assistant',
+  'Publication',
+  'Ethics Fee',
+];
+
+export const EO_TEMPLATE_CATALOG: string[] = [
+  'ICT Equipment',
+  'Furnitures and Fixtures',
+];
+
+// Removed legacy default IDs that should not be pre-filled when zero
+const REMOVED_LEGACY_PREFILLED_IDS = new Set([
+  'mooe-comm',
+  'mooe-rep',
+  'mooe-enum',
+  'mooe-ra',
+  'mooe-pub',
+  'mooe-ethics',
+  'eo-furn',
+]);
+
+// Simplified default visible items (only the most common items by default)
 const DEFAULT_STANDARD_LIB_ITEMS: Omit<LibLineItem, 'year1' | 'year2' | 'total'>[] = [
   // I. PERSONNEL SERVICES (PS) - Honoraria
   { id: 'ps-pl', classType: 'PS', subclass: 'Honoraria', description: 'Project Leader @4,500/mo', isStandard: true },
   { id: 'ps-co', classType: 'PS', subclass: 'Honoraria', description: 'Co-Researchers @2,000/mo', isStandard: true },
   { id: 'ps-staff', classType: 'PS', subclass: 'Honoraria', description: 'Project Staff @1,500/mo', isStandard: true },
 
-  // II. MAINTENANCE & OTHER OPERATING EXPENSES (MOOE)
+  // II. MAINTENANCE & OTHER OPERATING EXPENSES (MOOE) - Common Default Items
   { id: 'mooe-supplies', classType: 'MOOE', description: 'Supplies and Materials', isStandard: true },
   { id: 'mooe-travel', classType: 'MOOE', description: 'Traveling Expenses', isStandard: true },
-  { id: 'mooe-comm', classType: 'MOOE', description: 'Communication Expenses', isStandard: true },
-  { id: 'mooe-print', classType: 'MOOE', description: 'Printing and Binding Expenses', isStandard: true },
-  { id: 'mooe-rep', classType: 'MOOE', description: 'Representation Expenses', isStandard: true },
+  { id: 'mooe-print', classType: 'MOOE', description: 'Printing and Binding', isStandard: true },
   { id: 'mooe-prof', classType: 'MOOE', description: 'Professional Services', isStandard: true },
-  { id: 'mooe-enum', classType: 'MOOE', description: 'Enumerator', isStandard: true },
-  { id: 'mooe-ra', classType: 'MOOE', description: 'Research Assistant', isStandard: true },
-  { id: 'mooe-pub', classType: 'MOOE', description: 'Publication', isStandard: true },
-  { id: 'mooe-ethics', classType: 'MOOE', description: 'Ethics Fee', isStandard: true },
 
-  // III. EQUIPMENT OUTLAY (EO)
+  // III. EQUIPMENT OUTLAY (EO) - Common Default Item
   { id: 'eo-ict', classType: 'EO', description: 'ICT Equipment', isStandard: true },
-  { id: 'eo-furn', classType: 'EO', description: 'Furnitures and Fixtures', isStandard: true },
 ];
 
-// Helper to calculate official quarterly honoraria per WMSU-RPDU policy:
+// Helper to calculate official honoraria based on rates and duration (12 vs 24 months):
 // - Project Leader: ₱4,500/quarter × 4 quarters = ₱18,000/yr
 // - Co-Researchers: count × ₱2,000/quarter × 4 quarters = count × ₱8,000/yr
-// - Project Staff: ₱1,500/quarter × 4 quarters = ₱6,000/yr
-// - Year 2 is 0 when project is 1 Year
-const calculateHonoraria = (coResCount: number, isTwoYears: boolean) => ({
-  pl: {
-    year1: 18000,
-    year2: isTwoYears ? 18000 : 0,
-    total: isTwoYears ? 36000 : 18000,
-  },
-  co: {
-    year1: coResCount * 8000,
-    year2: isTwoYears ? coResCount * 8000 : 0,
-    total: isTwoYears ? coResCount * 16000 : coResCount * 8000,
-  },
-  staff: {
-    year1: 6000,
-    year2: isTwoYears ? 6000 : 0,
-    total: isTwoYears ? 12000 : 6000,
-  },
-});
+// - Project Staff: count × ₱1,500/quarter × 4 quarters = count × ₱6,000/yr
+// - When Teaching De-loading is selected, all PS honoraria are ₱0.00
+const calculateHonoraria = (
+  coResCount: number,
+  staffCount: number,
+  isTwoYears: boolean,
+  compensationType: CompensationOption = 'Honoraria'
+) => {
+  if (compensationType === 'Teaching De-loading') {
+    return {
+      pl: { year1: 0, year2: 0, total: 0 },
+      co: { year1: 0, year2: 0, total: 0 },
+      staff: { year1: 0, year2: 0, total: 0 },
+    };
+  }
+  return {
+    pl: {
+      year1: 18000,
+      year2: isTwoYears ? 18000 : 0,
+      total: isTwoYears ? 36000 : 18000,
+    },
+    co: {
+      year1: coResCount * 8000,
+      year2: isTwoYears ? coResCount * 8000 : 0,
+      total: isTwoYears ? coResCount * 16000 : coResCount * 8000,
+    },
+    staff: {
+      year1: staffCount * 6000,
+      year2: isTwoYears ? staffCount * 6000 : 0,
+      total: isTwoYears ? staffCount * 12000 : staffCount * 6000,
+    },
+  };
+};
+
+// Normalize loaded items: remove zero-amount legacy pre-filled items and simplify names
+const normalizeLoadedItems = (
+  rawItems: LibLineItem[],
+  coCount: number,
+  staffCount: number,
+  isTwoYears: boolean,
+  compensationType: CompensationOption
+): LibLineItem[] => {
+  const calc = calculateHonoraria(coCount, staffCount, isTwoYears, compensationType);
+  const cleaned = rawItems
+    .filter((item) => {
+      if (REMOVED_LEGACY_PREFILLED_IDS.has(item.id) && (item.total || 0) === 0 && (item.year1 || 0) === 0 && (item.year2 || 0) === 0) {
+        return false;
+      }
+      return true;
+    })
+    .map((item) => {
+      const desc =
+        item.description === 'Printing and Binding Expenses'
+          ? 'Printing and Binding'
+          : item.description;
+      if (item.id === 'ps-pl') return { ...item, description: desc, ...calc.pl };
+      if (item.id === 'ps-co') return { ...item, description: desc, ...calc.co };
+      if (item.id === 'ps-staff') return { ...item, description: desc, ...calc.staff };
+      if (item.classType === 'PS' && compensationType === 'Teaching De-loading') {
+        return { ...item, description: desc, year1: 0, year2: 0, total: 0 };
+      }
+      return {
+        ...item,
+        description: desc,
+        year1: Number(item.year1) || 0,
+        year2: isTwoYears ? (Number(item.year2) || 0) : 0,
+        total: (Number(item.year1) || 0) + (isTwoYears ? (Number(item.year2) || 0) : 0),
+      };
+    });
+
+  // Ensure standard PS rows exist so switching back to Honoraria always works
+  const hasPl = cleaned.some((i) => i.id === 'ps-pl');
+  const hasCo = cleaned.some((i) => i.id === 'ps-co');
+  const hasStaff = cleaned.some((i) => i.id === 'ps-staff');
+  const psDefaults: LibLineItem[] = [];
+  if (!hasPl) {
+    psDefaults.push({ id: 'ps-pl', classType: 'PS', subclass: 'Honoraria', description: 'Project Leader @4,500/mo', isStandard: true, ...calc.pl });
+  }
+  if (!hasCo) {
+    psDefaults.push({ id: 'ps-co', classType: 'PS', subclass: 'Honoraria', description: 'Co-Researchers @2,000/mo', isStandard: true, ...calc.co });
+  }
+  if (!hasStaff) {
+    psDefaults.push({ id: 'ps-staff', classType: 'PS', subclass: 'Honoraria', description: 'Project Staff @1,500/mo', isStandard: true, ...calc.staff });
+  }
+
+  return [...psDefaults, ...cleaned];
+};
 
 // Helper to construct fresh standard line items with calculated honoraria
-const getFreshLibItems = (coCount = 0, isTwoYears = false): LibLineItem[] => {
-  const calc = calculateHonoraria(coCount, isTwoYears);
+const getFreshLibItems = (
+  coCount = 0,
+  staffCount = 0,
+  isTwoYears = false,
+  compensationType: CompensationOption = 'Honoraria'
+): LibLineItem[] => {
+  const calc = calculateHonoraria(coCount, staffCount, isTwoYears, compensationType);
   return DEFAULT_STANDARD_LIB_ITEMS.map((std) => {
     if (std.id === 'ps-pl') return { ...std, ...calc.pl };
     if (std.id === 'ps-co') return { ...std, ...calc.co };
@@ -82,8 +181,20 @@ const getFreshLibItems = (coCount = 0, isTwoYears = false): LibLineItem[] => {
   });
 };
 
-type MetadataState = Omit<LibMetadata, 'title' | 'coResearchers'> & {
+const parseStringArray = (val: unknown): string[] => {
+  if (Array.isArray(val)) {
+    return val.map((v) => String(v ?? ''));
+  }
+  if (typeof val === 'string' && val.trim().length > 0) {
+    return [val.trim()];
+  }
+  return [];
+};
+
+type MetadataState = Omit<LibMetadata, 'title' | 'coResearchers' | 'projectStaff'> & {
   coResearchers: string[];
+  projectStaff: string[];
+  compensationType: CompensationOption;
 };
 
 export const BudgetAllocationForm: React.FC = () => {
@@ -91,6 +202,8 @@ export const BudgetAllocationForm: React.FC = () => {
   const { profile, session } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const pdfInputId = useId();
+  const mooeDatalistId = useId();
+  const eoDatalistId = useId();
 
   // Selected proposal state
   const [selectedProposalId, setSelectedProposalId] = useState<string>(() => {
@@ -117,24 +230,28 @@ export const BudgetAllocationForm: React.FC = () => {
   // Helper to generate default metadata and line items for any given proposal
   const getProposalDefaults = (propId: string) => {
     const c = conceptProposals.find((cp) => cp.id === propId);
-    const duration = (c?.durationMonths && c.durationMonths > 12) ? '2 Years' : '1 Year';
+    const duration = c?.durationMonths && c.durationMonths > 12 ? '2 Years' : '1 Year';
     const leader = c?.leadInvestigator || profileFullName || '';
-    const coRes = (c?.coInvestigators && c.coInvestigators.length > 0)
-      ? c.coInvestigators
-      : [];
+    const coRes =
+      c?.coInvestigators && c.coInvestigators.length > 0
+        ? c.coInvestigators.filter((n) => typeof n === 'string' && n.trim().length > 0)
+        : [];
     const dept = c?.college || profileDepartment || '';
     const isTwo = duration.startsWith('2');
-    const coCount = coRes.filter((n) => typeof n === 'string' && n.trim().length > 0).length;
+    const coCount = coRes.length;
+    const staffCount = 0;
+    const compensationType: CompensationOption = 'Honoraria';
 
     const defaultMeta: MetadataState = {
       projectDuration: duration,
       studyLeader: leader,
       coResearchers: coRes,
-      projectStaff: '',
+      projectStaff: [],
+      compensationType,
       implementingDepartment: dept,
     };
 
-    const defaultItems = getFreshLibItems(coCount, isTwo);
+    const defaultItems = getFreshLibItems(coCount, staffCount, isTwo, compensationType);
     return { defaultMeta, defaultItems };
   };
 
@@ -166,8 +283,10 @@ export const BudgetAllocationForm: React.FC = () => {
         return {
           projectDuration: parsed.projectDuration?.startsWith('2') ? '2 Years' : '1 Year',
           studyLeader: parsed.studyLeader || defaultMeta.studyLeader,
-          coResearchers: Array.isArray(parsed.coResearchers) ? parsed.coResearchers : defaultMeta.coResearchers,
-          projectStaff: parsed.projectStaff || '',
+          coResearchers: parseStringArray(parsed.coResearchers ?? defaultMeta.coResearchers),
+          projectStaff: parseStringArray(parsed.projectStaff),
+          compensationType:
+            parsed.compensationType === 'Teaching De-loading' ? 'Teaching De-loading' : 'Honoraria',
           implementingDepartment: parsed.implementingDepartment || defaultMeta.implementingDepartment,
         };
       } catch {}
@@ -176,9 +295,11 @@ export const BudgetAllocationForm: React.FC = () => {
   });
 
   const isTwoYears = metadata.projectDuration.startsWith('2');
-  const validCoResearchersCount = useMemo(() => {
-    return metadata.coResearchers.filter((c) => c.trim().length > 0).length;
-  }, [metadata.coResearchers]);
+  const isTeachingDeloading = metadata.compensationType === 'Teaching De-loading';
+
+  // Count active Co-Researchers and Project Staff entries
+  const coResearchersCount = metadata.coResearchers.length;
+  const projectStaffCount = metadata.projectStaff.length;
 
   // Line items state for Selected Proposal
   const [items, setItems] = useState<LibLineItem[]>(() => {
@@ -187,11 +308,23 @@ export const BudgetAllocationForm: React.FC = () => {
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return normalizeLoadedItems(
+            parsed,
+            metadata.coResearchers.length,
+            metadata.projectStaff.length,
+            metadata.projectDuration.startsWith('2'),
+            metadata.compensationType
+          );
+        }
       } catch {}
     }
     return defaultItems;
   });
+
+  // Quick-select state for "+ Add Budget Item"
+  const [selectedMooeTemplate, setSelectedMooeTemplate] = useState<string>('');
+  const [selectedEoTemplate, setSelectedEoTemplate] = useState<string>('');
 
   // Attached PDF state for Selected Proposal
   const [attachedPdf, setAttachedPdf] = useState<{
@@ -228,6 +361,11 @@ export const BudgetAllocationForm: React.FC = () => {
     }
   };
 
+  const handleCompensationTypeChange = (newOption: CompensationOption) => {
+    if (isLocked) return;
+    setMetadata((prev) => ({ ...prev, compensationType: newOption }));
+  };
+
   // Synchronize form when selected proposal changes: loads proposal-specific data
   useEffect(() => {
     setIsEditingSubmitted(false);
@@ -250,17 +388,34 @@ export const BudgetAllocationForm: React.FC = () => {
           setSubmissionStatus(cached.status === 'submitted' ? 'submitted' : 'draft');
           const cachedRevStatus = cached.reviewStatus || (cached.isApproved ? 'APPROVED' : null);
           setReviewStatus(cachedRevStatus);
-          if (cached.metadata) {
-            setMetadata({
-              projectDuration: cached.metadata.projectDuration || defaultMeta.projectDuration,
-              studyLeader: cached.metadata.studyLeader || defaultMeta.studyLeader,
-              coResearchers: Array.isArray(cached.metadata.coResearchers) ? cached.metadata.coResearchers : defaultMeta.coResearchers,
-              projectStaff: cached.metadata.projectStaff || '',
-              implementingDepartment: cached.metadata.implementingDepartment || defaultMeta.implementingDepartment,
-            });
-          }
+
+          const nextMeta: MetadataState = cached.metadata
+            ? {
+                projectDuration: cached.metadata.projectDuration || defaultMeta.projectDuration,
+                studyLeader: cached.metadata.studyLeader || defaultMeta.studyLeader,
+                coResearchers: parseStringArray(cached.metadata.coResearchers ?? defaultMeta.coResearchers),
+                projectStaff: parseStringArray(cached.metadata.projectStaff),
+                compensationType:
+                  cached.metadata.compensationType === 'Teaching De-loading'
+                    ? 'Teaching De-loading'
+                    : 'Honoraria',
+                implementingDepartment:
+                  cached.metadata.implementingDepartment || defaultMeta.implementingDepartment,
+              }
+            : defaultMeta;
+
+          setMetadata(nextMeta);
+
           if (Array.isArray(cached.libItems) && cached.libItems.length > 0) {
-            setItems(cached.libItems);
+            setItems(
+              normalizeLoadedItems(
+                cached.libItems,
+                nextMeta.coResearchers.length,
+                nextMeta.projectStaff.length,
+                nextMeta.projectDuration.startsWith('2'),
+                nextMeta.compensationType
+              )
+            );
           } else {
             setItems(defaultItems);
           }
@@ -297,18 +452,36 @@ export const BudgetAllocationForm: React.FC = () => {
             setSubmissionStatus('submitted');
             const effectiveReview = dbReviewStatus || (result.data.isApproved ? 'APPROVED' : 'PENDING');
             setReviewStatus(effectiveReview);
-            if (dbMeta) {
-              setMetadata({
-                projectDuration: dbMeta.projectDuration || defaultMeta.projectDuration,
-                studyLeader: dbMeta.studyLeader || defaultMeta.studyLeader,
-                coResearchers: Array.isArray(dbMeta.coResearchers) ? dbMeta.coResearchers : defaultMeta.coResearchers,
-                projectStaff: dbMeta.projectStaff || '',
-                implementingDepartment: dbMeta.implementingDepartment || defaultMeta.implementingDepartment,
-              });
-            }
-            if (Array.isArray(dbLibItems) && dbLibItems.length > 0) {
-              setItems(dbLibItems);
-            }
+
+            const resolvedMeta: MetadataState = dbMeta
+              ? {
+                  projectDuration: dbMeta.projectDuration || defaultMeta.projectDuration,
+                  studyLeader: dbMeta.studyLeader || defaultMeta.studyLeader,
+                  coResearchers: parseStringArray(dbMeta.coResearchers ?? defaultMeta.coResearchers),
+                  projectStaff: parseStringArray(dbMeta.projectStaff),
+                  compensationType:
+                    dbMeta.compensationType === 'Teaching De-loading'
+                      ? 'Teaching De-loading'
+                      : 'Honoraria',
+                  implementingDepartment: dbMeta.implementingDepartment || defaultMeta.implementingDepartment,
+                }
+              : defaultMeta;
+
+            setMetadata(resolvedMeta);
+
+            const normalizedDbItems =
+              Array.isArray(dbLibItems) && dbLibItems.length > 0
+                ? normalizeLoadedItems(
+                    dbLibItems,
+                    resolvedMeta.coResearchers.length,
+                    resolvedMeta.projectStaff.length,
+                    resolvedMeta.projectDuration.startsWith('2'),
+                    resolvedMeta.compensationType
+                  )
+                : defaultItems;
+
+            setItems(normalizedDbItems);
+
             if (budgetPdfUrl) {
               setAttachedPdf({
                 name: 'Submitted_Budget.pdf',
@@ -326,8 +499,8 @@ export const BudgetAllocationForm: React.FC = () => {
                 status: 'submitted',
                 reviewStatus: effectiveReview,
                 isApproved: result.data.isApproved,
-                libItems: dbLibItems,
-                metadata: dbMeta || defaultMeta,
+                libItems: normalizedDbItems,
+                metadata: resolvedMeta,
                 pdfFile: budgetPdfUrl ? { name: 'Submitted_Budget.pdf', dataUrl: budgetPdfUrl } : null,
               })
             );
@@ -339,7 +512,6 @@ export const BudgetAllocationForm: React.FC = () => {
             setIsEditingSubmitted(false);
             localStorage.setItem(`proponent_budget_status_${selectedProposalId}`, 'draft');
 
-            // If local storage has a stale submitted cache for this proposal, invalidate it
             const cachedProposal = localStorage.getItem(`proponent_budget_${selectedProposalId}`);
             if (cachedProposal) {
               try {
@@ -392,14 +564,40 @@ export const BudgetAllocationForm: React.FC = () => {
     }));
   };
 
-  // Auto-sync official quarterly honoraria rates:
-  // - Project Leader: 4,500 * 4 = 18,000 per GIA year
-  // - Co-Researchers: count * 2,000 * 4 = count * 8,000 per GIA year
-  // - Project Staff: 1,500 * 4 = 6,000 per GIA year
-  // - If 1-Year project, Year 2 is 0 across all items
+  // Project Staff list management (works like Co-Researchers)
+  const handleAddProjectStaff = () => {
+    if (isLocked) return;
+    setMetadata((prev) => ({
+      ...prev,
+      projectStaff: [...prev.projectStaff, ''],
+    }));
+  };
+
+  const handleRemoveProjectStaff = (index: number) => {
+    if (isLocked) return;
+    setMetadata((prev) => ({
+      ...prev,
+      projectStaff: prev.projectStaff.filter((_, i) => i !== index),
+    }));
+  };
+
+  const handleProjectStaffChange = (index: number, value: string) => {
+    if (isLocked) return;
+    setMetadata((prev) => ({
+      ...prev,
+      projectStaff: prev.projectStaff.map((s, i) => (i === index ? value : s)),
+    }));
+  };
+
+  // Auto-sync official honoraria rates whenever Co-Researchers, Project Staff, Duration, or Compensation Option changes
   useEffect(() => {
     if (isLocked) return;
-    const calc = calculateHonoraria(validCoResearchersCount, isTwoYears);
+    const calc = calculateHonoraria(
+      coResearchersCount,
+      projectStaffCount,
+      isTwoYears,
+      metadata.compensationType
+    );
     setItems((prev) => {
       let changed = false;
       const updated = prev.map((item) => {
@@ -418,6 +616,11 @@ export const BudgetAllocationForm: React.FC = () => {
             changed = true;
             return { ...item, ...calc.staff };
           }
+        } else if (item.classType === 'PS' && metadata.compensationType === 'Teaching De-loading') {
+          if (item.year1 !== 0 || item.year2 !== 0 || item.total !== 0) {
+            changed = true;
+            return { ...item, year1: 0, year2: 0, total: 0 };
+          }
         } else if (!isTwoYears && item.year2 !== 0) {
           changed = true;
           return { ...item, year2: 0, total: item.year1 };
@@ -426,19 +629,19 @@ export const BudgetAllocationForm: React.FC = () => {
       });
       return changed ? updated : prev;
     });
-  }, [validCoResearchersCount, isTwoYears, isLocked]);
+  }, [coResearchersCount, projectStaffCount, isTwoYears, metadata.compensationType, isLocked]);
+
   // Update line item amount
   const handleAmountChange = (id: string, field: 'year1' | 'year2', value: number) => {
     if (isLocked) return;
-    // Standard honoraria items are auto-calculated; prevent manual edits
-    if (id === 'ps-pl' || id === 'ps-co' || id === 'ps-staff') return;
     if (field === 'year2' && !isTwoYears) return;
     const safeVal = Math.max(0, isNaN(value) ? 0 : value);
     setItems((prev) =>
       prev.map((item) => {
         if (item.id !== id) return item;
+        if (item.classType === 'PS' && isTeachingDeloading) return item;
         const year1 = field === 'year1' ? safeVal : item.year1;
-        const year2 = !isTwoYears ? 0 : (field === 'year2' ? safeVal : item.year2);
+        const year2 = !isTwoYears ? 0 : field === 'year2' ? safeVal : item.year2;
         return {
           ...item,
           year1,
@@ -449,13 +652,14 @@ export const BudgetAllocationForm: React.FC = () => {
     );
   };
 
-  // Add custom line item
-  const handleAddCustomItem = (classType: 'PS' | 'MOOE' | 'EO') => {
+  // Add budget item (with optional preset description from Line-Item Budget Template)
+  const handleAddBudgetItem = (classType: 'PS' | 'MOOE' | 'EO', presetDescription = '') => {
     if (isLocked) return;
+    if (classType === 'PS' && isTeachingDeloading) return;
     const newItem: LibLineItem = {
-      id: `custom-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+      id: `custom-${classType.toLowerCase()}-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
       classType,
-      description: '',
+      description: presetDescription,
       year1: 0,
       year2: 0,
       total: 0,
@@ -464,7 +668,7 @@ export const BudgetAllocationForm: React.FC = () => {
     setItems((prev) => [...prev, newItem]);
   };
 
-  // Remove custom item
+  // Remove budget item and recalculate totals
   const handleRemoveItem = (id: string) => {
     if (isLocked) return;
     setItems((prev) => prev.filter((i) => i.id !== id));
@@ -473,9 +677,7 @@ export const BudgetAllocationForm: React.FC = () => {
   // Update item description
   const handleDescriptionChange = (id: string, description: string) => {
     if (isLocked) return;
-    setItems((prev) =>
-      prev.map((i) => (i.id === id ? { ...i, description } : i))
-    );
+    setItems((prev) => prev.map((i) => (i.id === id ? { ...i, description } : i)));
   };
 
   // Grouped Calculations
@@ -483,29 +685,43 @@ export const BudgetAllocationForm: React.FC = () => {
   const mooeItems = useMemo(() => items.filter((i) => i.classType === 'MOOE'), [items]);
   const eoItems = useMemo(() => items.filter((i) => i.classType === 'EO'), [items]);
 
-  const psSubtotal = useMemo(() => ({
-    year1: psItems.reduce((acc, i) => acc + (i.year1 || 0), 0),
-    year2: psItems.reduce((acc, i) => acc + (i.year2 || 0), 0),
-    total: psItems.reduce((acc, i) => acc + (i.total || 0), 0),
-  }), [psItems]);
+  const psSubtotal = useMemo(() => {
+    if (isTeachingDeloading) {
+      return { year1: 0, year2: 0, total: 0 };
+    }
+    return {
+      year1: psItems.reduce((acc, i) => acc + (i.year1 || 0), 0),
+      year2: psItems.reduce((acc, i) => acc + (i.year2 || 0), 0),
+      total: psItems.reduce((acc, i) => acc + (i.total || 0), 0),
+    };
+  }, [psItems, isTeachingDeloading]);
 
-  const mooeSubtotal = useMemo(() => ({
-    year1: mooeItems.reduce((acc, i) => acc + (i.year1 || 0), 0),
-    year2: mooeItems.reduce((acc, i) => acc + (i.year2 || 0), 0),
-    total: mooeItems.reduce((acc, i) => acc + (i.total || 0), 0),
-  }), [mooeItems]);
+  const mooeSubtotal = useMemo(
+    () => ({
+      year1: mooeItems.reduce((acc, i) => acc + (i.year1 || 0), 0),
+      year2: mooeItems.reduce((acc, i) => acc + (i.year2 || 0), 0),
+      total: mooeItems.reduce((acc, i) => acc + (i.total || 0), 0),
+    }),
+    [mooeItems]
+  );
 
-  const eoSubtotal = useMemo(() => ({
-    year1: eoItems.reduce((acc, i) => acc + (i.year1 || 0), 0),
-    year2: eoItems.reduce((acc, i) => acc + (i.year2 || 0), 0),
-    total: eoItems.reduce((acc, i) => acc + (i.total || 0), 0),
-  }), [eoItems]);
+  const eoSubtotal = useMemo(
+    () => ({
+      year1: eoItems.reduce((acc, i) => acc + (i.year1 || 0), 0),
+      year2: eoItems.reduce((acc, i) => acc + (i.year2 || 0), 0),
+      total: eoItems.reduce((acc, i) => acc + (i.total || 0), 0),
+    }),
+    [eoItems]
+  );
 
-  const grandTotal = useMemo(() => ({
-    year1: psSubtotal.year1 + mooeSubtotal.year1 + eoSubtotal.year1,
-    year2: psSubtotal.year2 + mooeSubtotal.year2 + eoSubtotal.year2,
-    total: psSubtotal.total + mooeSubtotal.total + eoSubtotal.total,
-  }), [psSubtotal, mooeSubtotal, eoSubtotal]);
+  const grandTotal = useMemo(
+    () => ({
+      year1: psSubtotal.year1 + mooeSubtotal.year1 + eoSubtotal.year1,
+      year2: psSubtotal.year2 + mooeSubtotal.year2 + eoSubtotal.year2,
+      total: psSubtotal.total + mooeSubtotal.total + eoSubtotal.total,
+    }),
+    [psSubtotal, mooeSubtotal, eoSubtotal]
+  );
 
   const isOverBudget = grandTotal.total > maxBudgetLimit;
 
@@ -540,6 +756,37 @@ export const BudgetAllocationForm: React.FC = () => {
     };
   }, [grandTotal]);
 
+  // Effective items for persistence (excludes PS honoraria when Teaching De-loading is active)
+  const getEffectiveItemsForSave = (): LibLineItem[] => {
+    if (!isTeachingDeloading) return items;
+    return items.map((item) =>
+      item.classType === 'PS' ? { ...item, year1: 0, year2: 0, total: 0 } : item
+    );
+  };
+
+  // Convert LibLineItem to legacy BudgetLineItem for compatibility
+  const exportCompatibleLineItems = (): BudgetLineItem[] => {
+    return getEffectiveItemsForSave()
+      .filter((i) => i.total > 0)
+      .map((i) => ({
+        id: i.id,
+        category:
+          i.classType === 'PS'
+            ? 'Personal Services (PS)'
+            : i.classType === 'MOOE'
+            ? 'Maintenance & Other Operating Expenses (MOOE)'
+            : 'Equipment Outlay (EO)',
+        description: i.description,
+        totalCost: i.total,
+        quantity: 1,
+        unitCost: i.total,
+        classType: i.classType,
+        year1Amount: i.year1,
+        year2Amount: i.year2,
+        isStandard: i.isStandard,
+      }));
+  };
+
   // Handle PDF Upload (Optional: Can be attached initially or after signatures are gathered)
   const handlePdfUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -562,7 +809,6 @@ export const BudgetAllocationForm: React.FC = () => {
       setAttachedPdf(pdfData);
       localStorage.setItem(`proponent_budget_pdf_${selectedProposalId}`, JSON.stringify(pdfData));
 
-      // If budget allocation is already submitted, update the PDF in Supabase directly
       if (submissionStatus === 'submitted' && session?.access_token) {
         showToast('Attaching signed PDF to submitted budget...');
         try {
@@ -575,7 +821,7 @@ export const BudgetAllocationForm: React.FC = () => {
             body: JSON.stringify({
               proposalId: selectedProposalId,
               totalLineItemAmount: grandTotal.total,
-              libItems: items,
+              libItems: getEffectiveItemsForSave(),
               lineItems: exportCompatibleLineItems(),
               metadata: {
                 ...metadata,
@@ -612,7 +858,7 @@ export const BudgetAllocationForm: React.FC = () => {
           body: JSON.stringify({
             proposalId: selectedProposalId,
             totalLineItemAmount: grandTotal.total,
-            libItems: items,
+            libItems: getEffectiveItemsForSave(),
             lineItems: exportCompatibleLineItems(),
             metadata: {
               ...metadata,
@@ -628,34 +874,10 @@ export const BudgetAllocationForm: React.FC = () => {
     }
   };
 
-  // Convert LibLineItem to legacy BudgetLineItem for compatibility
-  const exportCompatibleLineItems = (): BudgetLineItem[] => {
-    return items
-      .filter((i) => i.total > 0)
-      .map((i) => ({
-        id: i.id,
-        category:
-          i.classType === 'PS'
-            ? 'Personal Services (PS)'
-            : i.classType === 'MOOE'
-            ? 'Maintenance & Other Operating Expenses (MOOE)'
-            : 'Equipment Outlay (EO)',
-        description: i.description,
-        totalCost: i.total,
-        quantity: 1,
-        unitCost: i.total,
-        classType: i.classType,
-        year1Amount: i.year1,
-        year2Amount: i.year2,
-        isStandard: i.isStandard,
-      }));
-  };
-
   // Save Draft (scoped to selected proposal)
   const handleSaveDraft = () => {
-    const proposalTitle =
-      matchedConcept?.title ||
-      'Research Project Line-Item Budget';
+    const proposalTitle = matchedConcept?.title || 'Research Project Line-Item Budget';
+    const effectiveItems = getEffectiveItemsForSave();
 
     const draftRecord: HybridBudgetAllocation = {
       id: `draft-${Date.now()}`,
@@ -664,7 +886,7 @@ export const BudgetAllocationForm: React.FC = () => {
       proposalTitle,
       totalLineItemAmount: grandTotal.total,
       lineItems: exportCompatibleLineItems(),
-      libItems: items,
+      libItems: effectiveItems,
       metadata: {
         ...metadata,
         title: proposalTitle,
@@ -675,7 +897,7 @@ export const BudgetAllocationForm: React.FC = () => {
     };
 
     localStorage.setItem(`proponent_budget_${selectedProposalId}`, JSON.stringify(draftRecord));
-    localStorage.setItem(`proponent_lib_items_${selectedProposalId}`, JSON.stringify(items));
+    localStorage.setItem(`proponent_lib_items_${selectedProposalId}`, JSON.stringify(effectiveItems));
     localStorage.setItem(`proponent_lib_metadata_${selectedProposalId}`, JSON.stringify(metadata));
     localStorage.setItem(`proponent_budget_status_${selectedProposalId}`, 'draft');
     setSubmissionStatus('draft');
@@ -684,7 +906,7 @@ export const BudgetAllocationForm: React.FC = () => {
 
   // Submit to RPDU (persists in Supabase PostgreSQL and syncs locally)
   const handleSubmitAllocation = async () => {
-    if (grandTotal.total === 0 && !attachedPdf) {
+    if (grandTotal.total === 0 && !attachedPdf && !isTeachingDeloading) {
       showToast('Please allocate funds across the budget categories or upload a signed PDF.');
       return;
     }
@@ -700,9 +922,8 @@ export const BudgetAllocationForm: React.FC = () => {
       return;
     }
 
-    const proposalTitle =
-      matchedConcept?.title ||
-      'Research Project Line-Item Budget';
+    const proposalTitle = matchedConcept?.title || 'Research Project Line-Item Budget';
+    const effectiveItems = getEffectiveItemsForSave();
 
     const allocationRecord: HybridBudgetAllocation = {
       id: `alloc-${Date.now()}`,
@@ -711,7 +932,7 @@ export const BudgetAllocationForm: React.FC = () => {
       proposalTitle,
       totalLineItemAmount: grandTotal.total,
       lineItems: exportCompatibleLineItems(),
-      libItems: items,
+      libItems: effectiveItems,
       metadata: {
         ...metadata,
         title: proposalTitle,
@@ -734,7 +955,7 @@ export const BudgetAllocationForm: React.FC = () => {
           body: JSON.stringify({
             proposalId: selectedProposalId,
             totalLineItemAmount: grandTotal.total,
-            libItems: items,
+            libItems: effectiveItems,
             lineItems: exportCompatibleLineItems(),
             metadata: {
               ...metadata,
@@ -750,10 +971,9 @@ export const BudgetAllocationForm: React.FC = () => {
         }
       }
 
-      // Persist local state and show confirmation
       const updatedRecord = { ...allocationRecord, reviewStatus: 'PENDING', reviewRemarks: null };
       localStorage.setItem(`proponent_budget_${selectedProposalId}`, JSON.stringify(updatedRecord));
-      localStorage.setItem(`proponent_lib_items_${selectedProposalId}`, JSON.stringify(items));
+      localStorage.setItem(`proponent_lib_items_${selectedProposalId}`, JSON.stringify(effectiveItems));
       localStorage.setItem(`proponent_lib_metadata_${selectedProposalId}`, JSON.stringify(metadata));
       localStorage.setItem(`proponent_budget_status_${selectedProposalId}`, 'submitted');
       setSubmissionStatus('submitted');
@@ -762,10 +982,9 @@ export const BudgetAllocationForm: React.FC = () => {
       showToast('Project Line-Item Budget (LIB) submitted and stored in the database!');
     } catch (err: unknown) {
       console.error('Error submitting budget allocation to database:', err);
-      // Fallback: preserve work locally
       const fallbackRecord = { ...allocationRecord, reviewStatus: 'PENDING', reviewRemarks: null };
       localStorage.setItem(`proponent_budget_${selectedProposalId}`, JSON.stringify(fallbackRecord));
-      localStorage.setItem(`proponent_lib_items_${selectedProposalId}`, JSON.stringify(items));
+      localStorage.setItem(`proponent_lib_items_${selectedProposalId}`, JSON.stringify(effectiveItems));
       localStorage.setItem(`proponent_lib_metadata_${selectedProposalId}`, JSON.stringify(metadata));
       localStorage.setItem(`proponent_budget_status_${selectedProposalId}`, 'submitted');
       setSubmissionStatus('submitted');
@@ -780,6 +999,18 @@ export const BudgetAllocationForm: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      {/* Datalists for selecting reference items from the Line-Item Budget Template */}
+      <datalist id={mooeDatalistId}>
+        {MOOE_TEMPLATE_CATALOG.map((option) => (
+          <option key={option} value={option} />
+        ))}
+      </datalist>
+      <datalist id={eoDatalistId}>
+        {EO_TEMPLATE_CATALOG.map((option) => (
+          <option key={option} value={option} />
+        ))}
+      </datalist>
+
       {/* Top Banner: Official Header & Proposal Selector */}
       <div className="bg-white p-6 rounded-md border border-slate-200 shadow-xs space-y-5 print:hidden">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-5 border-b border-slate-100">
@@ -802,7 +1033,8 @@ export const BudgetAllocationForm: React.FC = () => {
                 ₱{grandTotal.total.toLocaleString('en-US', { minimumFractionDigits: 2 })}
               </span>
               <div className="text-[10px] text-slate-500 mt-0.5 font-medium">
-                Year 1: ₱{grandTotal.year1.toLocaleString()} &bull; Year 2: {isTwoYears ? `₱${grandTotal.year2.toLocaleString()}` : 'N/A (1-Yr)'}
+                Year 1: ₱{grandTotal.year1.toLocaleString()} &bull; Year 2:{' '}
+                {isTwoYears ? `₱${grandTotal.year2.toLocaleString()}` : 'N/A (1-Yr)'}
               </div>
             </div>
 
@@ -813,7 +1045,10 @@ export const BudgetAllocationForm: React.FC = () => {
               <span className="text-lg font-black text-slate-900">
                 ₱{maxBudgetLimit.toLocaleString('en-US', { minimumFractionDigits: 2 })}
               </span>
-              <div className="text-[10px] text-slate-500 mt-0.5 font-medium truncate max-w-[140px]" title={matchedCall?.title || 'Call Limit'}>
+              <div
+                className="text-[10px] text-slate-500 mt-0.5 font-medium truncate max-w-[140px]"
+                title={matchedCall?.title || 'Call Limit'}
+              >
                 {matchedCall?.code || 'Call Cap'}
               </div>
             </div>
@@ -827,7 +1062,9 @@ export const BudgetAllocationForm: React.FC = () => {
                   : 'bg-slate-50 text-slate-700 border-slate-200'
               }`}
             >
-              <span className="text-[10px] font-bold uppercase tracking-wider block text-slate-400">Review Status</span>
+              <span className="text-[10px] font-bold uppercase tracking-wider block text-slate-400">
+                Review Status
+              </span>
               <span className="text-xs font-black capitalize flex items-center justify-center gap-1 mt-0.5">
                 {submissionStatus === 'submitted' ? (
                   reviewStatus === 'APPROVED' ? (
@@ -856,7 +1093,7 @@ export const BudgetAllocationForm: React.FC = () => {
             <select
               value={selectedProposalId}
               onChange={(e) => setSelectedProposalId(e.target.value)}
-              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-md font-medium focus:outline-none focus:ring-1 focus:ring-[#C8102E]"
+              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-md font-medium focus:outline-none focus:ring-1 focus:ring-[#C8102E] cursor-pointer"
             >
               {conceptProposals.length > 0 ? (
                 conceptProposals.map((c) => (
@@ -883,8 +1120,8 @@ export const BudgetAllocationForm: React.FC = () => {
         </div>
 
         {/* Review & Submission Status Notification Banner */}
-        {submissionStatus === 'submitted' && (
-          reviewStatus === 'APPROVED' ? (
+        {submissionStatus === 'submitted' &&
+          (reviewStatus === 'APPROVED' ? (
             <div className="p-4 bg-emerald-50/90 border border-emerald-300 rounded-md text-xs text-emerald-950 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
               <div className="flex items-start gap-3">
                 <div className="w-8 h-8 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0 mt-0.5 font-bold">
@@ -915,15 +1152,16 @@ export const BudgetAllocationForm: React.FC = () => {
                 </span>
               </div>
             </div>
-          )
-        )}
+          ))}
 
         {/* Over-Budget Alert */}
         {isOverBudget && (
           <div className="p-3 bg-rose-50 border border-rose-200 rounded-md text-xs text-rose-800 flex items-start gap-2.5">
             <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
             <div>
-              <span className="font-bold">Budget Ceiling Exceeded:</span> Total line-item expenditures (₱{grandTotal.total.toLocaleString('en-US', { minimumFractionDigits: 2 })}) exceed the approved budget limit of ₱{maxBudgetLimit.toLocaleString('en-US', { minimumFractionDigits: 2 })}. Please adjust item amounts before submitting.
+              <span className="font-bold">Budget Ceiling Exceeded:</span> Total line-item expenditures (₱
+              {grandTotal.total.toLocaleString('en-US', { minimumFractionDigits: 2 })}) exceed the approved budget limit of ₱
+              {maxBudgetLimit.toLocaleString('en-US', { minimumFractionDigits: 2 })}. Please adjust item amounts before submitting.
             </div>
           </div>
         )}
@@ -933,7 +1171,7 @@ export const BudgetAllocationForm: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left Column (2 Cols): Project Metadata Header, 3-Class Table */}
         <div className="lg:col-span-2 space-y-6">
-          {/* Project Metadata Header (Template Rows 4–9 without duplicate Title) */}
+          {/* Project Metadata Header */}
           <div className="bg-white p-6 rounded-md border border-slate-200 shadow-xs space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
@@ -995,24 +1233,28 @@ export const BudgetAllocationForm: React.FC = () => {
                 </div>
               </div>
 
+              {/* Honoraria or Teaching De-loading Selection Field */}
               <div>
                 <label className="font-bold text-slate-700 block mb-1">
-                  Project Staff
+                  Personnel Services (PS) Option *
                 </label>
                 <div className="relative">
-                  <Users className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
-                  <input
-                    type="text"
-                    value={metadata.projectStaff}
+                  <Briefcase className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5 pointer-events-none" />
+                  <select
+                    aria-label="Honoraria or Teaching De-loading"
+                    value={metadata.compensationType}
                     disabled={isLocked}
-                    onChange={(e) => setMetadata({ ...metadata, projectStaff: e.target.value })}
-                    className="w-full pl-8 pr-3 py-2 border border-slate-200 rounded-md font-medium text-slate-800 bg-slate-50/50 disabled:bg-slate-100 disabled:cursor-not-allowed focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#C8102E]"
-                  />
+                    onChange={(e) => handleCompensationTypeChange(e.target.value as CompensationOption)}
+                    className="w-full pl-8 pr-8 py-2 border border-slate-200 rounded-md font-semibold text-slate-800 bg-slate-50/50 disabled:bg-slate-100 disabled:cursor-not-allowed focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#C8102E] cursor-pointer"
+                  >
+                    <option value="Honoraria">Honoraria</option>
+                    <option value="Teaching De-loading">Teaching De-loading</option>
+                  </select>
                 </div>
               </div>
 
-              {/* Co-Researchers Dynamic List (Individual Entries) */}
-              <div className="sm:col-span-2 pt-2 border-t border-slate-100">
+              {/* Co-Researchers Dynamic List */}
+              <div className="sm:col-span-2 pt-3 border-t border-slate-100">
                 <div className="flex items-center justify-between mb-2">
                   <div>
                     <label className="font-bold text-slate-700 block text-xs">
@@ -1073,27 +1315,120 @@ export const BudgetAllocationForm: React.FC = () => {
                   </div>
                 )}
               </div>
+
+              {/* Project Staff Dynamic List (Works like Co-Researchers) */}
+              <div className="sm:col-span-2 pt-3 border-t border-slate-100">
+                <div className="flex items-center justify-between mb-2">
+                  <div>
+                    <label className="font-bold text-slate-700 block text-xs">
+                      Project Staff
+                    </label>
+                  </div>
+                  {!isLocked && (
+                    <button
+                      type="button"
+                      onClick={handleAddProjectStaff}
+                      className="text-[11px] font-semibold text-[#C8102E] hover:text-[#A00D26] inline-flex items-center gap-1 cursor-pointer"
+                    >
+                      <Plus className="w-3 h-3" /> Add Project Staff
+                    </button>
+                  )}
+                </div>
+
+                {metadata.projectStaff.length === 0 ? (
+                  <div className="p-3 border border-dashed border-slate-200 rounded-md bg-slate-50/70 text-[11px] text-slate-400 flex items-center justify-between">
+                    <span>No project staff added yet.</span>
+                    {!isLocked && (
+                      <button
+                        type="button"
+                        onClick={handleAddProjectStaff}
+                        className="font-bold text-[#C8102E] hover:underline cursor-pointer"
+                      >
+                        + Add Project Staff
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {metadata.projectStaff.map((staffMember, index) => (
+                      <div key={index} className="flex items-center gap-2">
+                        <div className="relative flex-1">
+                          <Users className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
+                          <input
+                            type="text"
+                            value={staffMember}
+                            disabled={isLocked}
+                            onChange={(e) => handleProjectStaffChange(index, e.target.value)}
+                            placeholder={`Project Staff ${index + 1} Full Name`}
+                            className="w-full pl-8 pr-3 py-1.5 border border-slate-200 rounded-md text-xs font-medium text-slate-800 bg-slate-50/50 disabled:bg-slate-100 disabled:cursor-not-allowed focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#C8102E]"
+                          />
+                        </div>
+                        {!isLocked && (
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveProjectStaff(index)}
+                            className="text-slate-400 hover:text-rose-600 p-1.5 transition-colors cursor-pointer"
+                            title="Remove Project Staff"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
           {/* Official 3-Class Multi-Year Table */}
           <div className="bg-white rounded-md border border-slate-200 shadow-xs overflow-hidden">
-            <div className="p-4 border-b border-slate-100 bg-slate-50/50">
-              <h3 className="text-sm font-bold text-slate-900">
-                Line-Item Budget Expenditure Schedule
-              </h3>
-              <p className="text-[11px] text-slate-500 mt-0.5">
-                Enter allocated institutional funds (₱) for Year 1 and Year 2 across the three expense classes.
-              </p>
+            <div className="p-4 border-b border-slate-100 bg-slate-50/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <h3 className="text-sm font-bold text-slate-900">
+                  Line-Item Budget Expenditure Schedule
+                </h3>
+                <p className="text-[11px] text-slate-500 mt-0.5">
+                  Enter allocated institutional funds (₱) for Year 1 and Year 2 across the three expense classes.
+                </p>
+              </div>
+
+              {/* Segmented Toggle for Honoraria vs Teaching De-loading */}
+              <div className="inline-flex items-center rounded-md bg-slate-200/70 p-0.5 text-xs self-start sm:self-auto shrink-0">
+                <button
+                  type="button"
+                  disabled={isLocked}
+                  onClick={() => handleCompensationTypeChange('Honoraria')}
+                  className={`px-3 py-1 rounded-sm font-bold transition-colors cursor-pointer whitespace-nowrap ${
+                    !isTeachingDeloading
+                      ? 'bg-[#C8102E] text-white shadow-2xs'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  Honoraria
+                </button>
+                <button
+                  type="button"
+                  disabled={isLocked}
+                  onClick={() => handleCompensationTypeChange('Teaching De-loading')}
+                  className={`px-3 py-1 rounded-sm font-bold transition-colors cursor-pointer whitespace-nowrap ${
+                    isTeachingDeloading
+                      ? 'bg-[#C8102E] text-white shadow-2xs'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  Teaching De-loading
+                </button>
+              </div>
             </div>
 
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs text-slate-700 border-collapse">
                 <thead className="bg-slate-100/80 text-[11px] uppercase tracking-wider font-bold text-slate-600 border-b border-slate-200">
                   <tr>
-                    <th className="py-3 px-4 w-[50%] min-w-[260px]">ITEMS</th>
-                    <th className="py-3 px-3 text-right w-[20%] min-w-[130px]">WMSU-GIA YEAR 1 (₱)</th>
-                    <th className="py-3 px-3 text-right w-[20%] min-w-[130px]">
+                    <th className="py-3 px-4 w-[48%]">ITEMS</th>
+                    <th className="py-3 px-2 text-right w-[17%] whitespace-nowrap">WMSU-GIA YEAR 1 (₱)</th>
+                    <th className="py-3 px-2 text-right w-[17%] whitespace-nowrap">
                       WMSU-GIA YEAR 2 (₱)
                       {!isTwoYears && (
                         <span className="block text-[9px] font-normal normal-case text-slate-400">
@@ -1101,7 +1436,7 @@ export const BudgetAllocationForm: React.FC = () => {
                         </span>
                       )}
                     </th>
-                    <th className="py-3 px-4 text-right w-[10%] min-w-[110px]">TOTAL (₱)</th>
+                    <th className="py-3 px-4 text-right w-[18%] whitespace-nowrap">TOTAL (₱)</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -1110,124 +1445,121 @@ export const BudgetAllocationForm: React.FC = () => {
                   {/* ========================================================================= */}
                   <tr className="bg-slate-50/90 font-bold text-slate-900 border-t border-slate-200">
                     <td colSpan={4} className="py-2.5 px-4 text-xs tracking-wide text-[#C8102E]">
-                      I. PERSONNEL SERVICES
+                      <div className="flex items-center justify-between">
+                        <span>I. PERSONNEL SERVICES</span>
+                        <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded bg-red-50 text-[#C8102E] border border-red-100">
+                          {metadata.compensationType}
+                        </span>
+                      </div>
                     </td>
                   </tr>
-                  <tr className="bg-slate-50/40 text-[11px] font-semibold text-slate-500 italic">
-                    <td colSpan={4} className="py-1 px-6">
-                      Honoraria (Quarterly disbursement per WMSU-RPDU guidelines)
-                    </td>
-                  </tr>
-                  {psItems.map((item) => {
-                    const isAutoPS = item.id === 'ps-pl' || item.id === 'ps-co' || item.id === 'ps-staff';
-                    return (
-                      <tr key={item.id} className="hover:bg-slate-50/50 transition-colors">
-                        <td className="py-2.5 px-6">
-                          {item.isStandard ? (
-                            <span className="font-semibold text-slate-800">{item.description}</span>
-                          ) : (
-                            <div className="flex items-center gap-2">
-                              <input
-                                type="text"
-                                value={item.description}
-                                disabled={isLocked}
-                                onChange={(e) => handleDescriptionChange(item.id, e.target.value)}
-                                placeholder="Custom PS item description"
-                                className="w-full px-2 py-1 text-xs border border-slate-200 rounded-sm focus:outline-none focus:ring-1 focus:ring-[#C8102E] disabled:bg-slate-100 disabled:cursor-not-allowed"
-                              />
-                              {!isLocked && (
-                                <button
-                                  type="button"
-                                  onClick={() => handleRemoveItem(item.id)}
-                                  className="text-slate-400 hover:text-rose-600 p-1 cursor-pointer"
-                                  title="Remove item"
-                                >
-                                  <Trash2 className="w-3.5 h-3.5" />
-                                </button>
-                              )}
-                            </div>
-                          )}
-                        </td>
-                        <td className="py-2 px-3 text-right">
-                          {isAutoPS ? (
-                            <input
-                              type="text"
-                              readOnly
-                              value={item.year1.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                              title="Auto-calculated per quarterly policy rate"
-                              className="w-full px-2 py-1 text-right text-xs border border-slate-200 rounded-sm font-bold bg-slate-50 text-slate-800 cursor-default select-all"
-                            />
-                          ) : (
-                            <input
-                              type="number"
-                              min="0"
-                              step="100"
-                              disabled={isLocked}
-                              value={item.year1 === 0 ? '' : item.year1}
-                              onChange={(e) => handleAmountChange(item.id, 'year1', parseFloat(e.target.value) || 0)}
-                              placeholder="0.00"
-                              className={`w-full px-2 py-1 text-right text-xs border rounded-sm font-semibold transition-colors ${
-                                isLocked
-                                  ? 'bg-slate-100 text-slate-500 border-slate-200 cursor-not-allowed select-none'
-                                  : 'bg-white border-slate-200 focus:bg-amber-50/20 focus:outline-none focus:ring-1 focus:ring-[#C8102E]'
-                              }`}
-                            />
-                          )}
-                        </td>
-                        <td className="py-2 px-3 text-right">
-                          {!isTwoYears ? (
-                            <input
-                              type="text"
-                              disabled
-                              value=""
-                              placeholder="—"
-                              title="Disabled for 1-Year projects"
-                              className="w-full px-2 py-1 text-right text-xs border border-slate-200 rounded-sm font-semibold bg-slate-100 text-slate-400 cursor-not-allowed select-none"
-                            />
-                          ) : isAutoPS ? (
-                            <input
-                              type="text"
-                              readOnly
-                              value={item.year2.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                              title="Auto-calculated Year 2 honoraria"
-                              className="w-full px-2 py-1 text-right text-xs border border-slate-200 rounded-sm font-bold bg-slate-50 text-slate-800 cursor-default select-all"
-                            />
-                          ) : (
-                            <input
-                              type="number"
-                              min="0"
-                              step="100"
-                              disabled={isLocked}
-                              value={item.year2 === 0 ? '' : item.year2}
-                              onChange={(e) => handleAmountChange(item.id, 'year2', parseFloat(e.target.value) || 0)}
-                              placeholder="0.00"
-                              className={`w-full px-2 py-1 text-right text-xs border rounded-sm font-semibold transition-colors ${
-                                isLocked
-                                  ? 'bg-slate-100 text-slate-500 border-slate-200 cursor-not-allowed select-none'
-                                  : 'bg-white border-slate-200 focus:bg-amber-50/20 focus:outline-none focus:ring-1 focus:ring-[#C8102E]'
-                              }`}
-                            />
-                          )}
-                        </td>
-                        <td className="py-2 px-4 text-right font-bold text-slate-900">
-                          ₱{item.total.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                  {!isLocked && (
-                    <tr>
-                      <td colSpan={4} className="py-1 px-6">
-                        <button
-                          type="button"
-                          onClick={() => handleAddCustomItem('PS')}
-                          className="text-[11px] font-semibold text-[#C8102E] hover:text-[#A00D26] inline-flex items-center gap-1 cursor-pointer"
-                        >
-                          <Plus className="w-3 h-3" /> Add Custom Personnel Service
-                        </button>
+
+                  {isTeachingDeloading ? (
+                    <tr className="bg-slate-50/50 text-xs text-slate-500">
+                      <td colSpan={4} className="py-3.5 px-6 italic">
+                        Teaching De-loading is selected. Honoraria budget inputs are disabled and Personnel Services (PS) budget is set to ₱0.00.
                       </td>
                     </tr>
+                  ) : (
+                    <>
+                      <tr className="bg-slate-50/40 text-[11px] font-semibold text-slate-500 italic">
+                        <td colSpan={4} className="py-1 px-6">
+                          Honoraria (Quarterly disbursement per WMSU-RPDU guidelines)
+                        </td>
+                      </tr>
+                      {psItems.map((item) => {
+                        return (
+                          <tr key={item.id} className="hover:bg-slate-50/50 transition-colors">
+                            <td className="py-2.5 px-6">
+                              {item.isStandard ? (
+                                <div className="flex flex-wrap items-center gap-1.5">
+                                  <span className="font-semibold text-slate-800">{item.description}</span>
+                                  {item.id === 'ps-co' && (
+                                    <span className="text-[10px] font-medium text-slate-400 whitespace-nowrap">
+                                      ({coResearchersCount})
+                                    </span>
+                                  )}
+                                  {item.id === 'ps-staff' && (
+                                    <span className="text-[10px] font-medium text-slate-400 whitespace-nowrap">
+                                      ({projectStaffCount})
+                                    </span>
+                                  )}
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-2">
+                                  <input
+                                    type="text"
+                                    value={item.description}
+                                    disabled={isLocked}
+                                    onChange={(e) => handleDescriptionChange(item.id, e.target.value)}
+                                    placeholder="Custom PS item description"
+                                    className="w-full px-2 py-1 text-xs border border-slate-200 rounded-sm focus:outline-none focus:ring-1 focus:ring-[#C8102E] disabled:bg-slate-100 disabled:cursor-not-allowed"
+                                  />
+                                  {!isLocked && (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleRemoveItem(item.id)}
+                                      className="text-slate-400 hover:text-rose-600 p-1 cursor-pointer"
+                                      title="Remove item"
+                                    >
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                    </button>
+                                  )}
+                                </div>
+                              )}
+                            </td>
+                            <td className="py-2 px-3 text-right">
+                              <input
+                                type="number"
+                                min="0"
+                                step="100"
+                                disabled={isLocked}
+                                value={item.year1}
+                                onChange={(e) => handleAmountChange(item.id, 'year1', parseFloat(e.target.value) || 0)}
+                                placeholder="0.00"
+                                className={`w-full px-2 py-1 text-right text-xs border rounded-sm font-bold transition-colors ${
+                                  isLocked
+                                    ? 'bg-slate-100 text-slate-500 border-slate-200 cursor-not-allowed select-none'
+                                    : 'bg-slate-50 border-slate-200 text-slate-800 focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#C8102E]'
+                                }`}
+                              />
+                            </td>
+                            <td className="py-2 px-3 text-right">
+                              {!isTwoYears ? (
+                                <input
+                                  type="text"
+                                  disabled
+                                  value=""
+                                  placeholder="—"
+                                  title="Disabled for 1-Year projects"
+                                  className="w-full px-2 py-1 text-right text-xs border border-slate-200 rounded-sm font-semibold bg-slate-100 text-slate-400 cursor-not-allowed select-none"
+                                />
+                              ) : (
+                                <input
+                                  type="number"
+                                  min="0"
+                                  step="100"
+                                  disabled={isLocked}
+                                  value={item.year2}
+                                  onChange={(e) => handleAmountChange(item.id, 'year2', parseFloat(e.target.value) || 0)}
+                                  placeholder="0.00"
+                                  className={`w-full px-2 py-1 text-right text-xs border rounded-sm font-bold transition-colors ${
+                                    isLocked
+                                      ? 'bg-slate-100 text-slate-500 border-slate-200 cursor-not-allowed select-none'
+                                      : 'bg-slate-50 border-slate-200 text-slate-800 focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#C8102E]'
+                                  }`}
+                                />
+                              )}
+                            </td>
+                            <td className="py-2 px-4 text-right font-bold text-slate-900">
+                              ₱{item.total.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </>
                   )}
+
                   {/* PS Subtotal */}
                   <tr className="bg-slate-100/90 font-bold text-slate-900 border-y border-slate-200">
                     <td className="py-2.5 px-4 font-bold text-slate-800">Total for PS</td>
@@ -1254,22 +1586,35 @@ export const BudgetAllocationForm: React.FC = () => {
                     <tr key={item.id} className="hover:bg-slate-50/50 transition-colors">
                       <td className="py-2.5 px-6">
                         {item.isStandard ? (
-                          <span className="font-medium text-slate-800">{item.description}</span>
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="font-medium text-slate-800">{item.description}</span>
+                            {!isLocked && (
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveItem(item.id)}
+                                className="text-slate-300 hover:text-rose-600 p-1 transition-colors cursor-pointer"
+                                title="Remove budget item"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                          </div>
                         ) : (
                           <div className="flex items-center gap-2">
                             <input
                               type="text"
+                              list={mooeDatalistId}
                               value={item.description}
                               disabled={isLocked}
                               onChange={(e) => handleDescriptionChange(item.id, e.target.value)}
-                              placeholder="Custom MOOE item description"
+                              placeholder="Select or enter expense item..."
                               className="w-full px-2 py-1 text-xs border border-slate-200 rounded-sm focus:outline-none focus:ring-1 focus:ring-[#C8102E] disabled:bg-slate-100 disabled:cursor-not-allowed"
                             />
                             {!isLocked && (
                               <button
                                 type="button"
                                 onClick={() => handleRemoveItem(item.id)}
-                                className="text-slate-400 hover:text-rose-600 p-1"
+                                className="text-slate-400 hover:text-rose-600 p-1 cursor-pointer"
                                 title="Remove item"
                               >
                                 <Trash2 className="w-3.5 h-3.5" />
@@ -1300,7 +1645,7 @@ export const BudgetAllocationForm: React.FC = () => {
                           min="0"
                           step="100"
                           disabled={!isTwoYears || isLocked}
-                          value={!isTwoYears ? '' : (item.year2 === 0 ? '' : item.year2)}
+                          value={!isTwoYears ? '' : item.year2 === 0 ? '' : item.year2}
                           onChange={(e) => handleAmountChange(item.id, 'year2', parseFloat(e.target.value) || 0)}
                           placeholder={!isTwoYears ? '—' : '0.00'}
                           className={`w-full px-2 py-1 text-right text-xs border rounded-sm font-semibold transition-colors ${
@@ -1317,15 +1662,37 @@ export const BudgetAllocationForm: React.FC = () => {
                     </tr>
                   ))}
                   {!isLocked && (
-                    <tr>
-                      <td colSpan={4} className="py-1 px-6">
-                        <button
-                          type="button"
-                          onClick={() => handleAddCustomItem('MOOE')}
-                          className="text-[11px] font-semibold text-[#C8102E] hover:text-[#A00D26] inline-flex items-center gap-1 cursor-pointer"
-                        >
-                          <Plus className="w-3 h-3" /> Add Custom MOOE Sub-line
-                        </button>
+                    <tr className="bg-slate-50/30">
+                      <td colSpan={4} className="py-2 px-6">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <select
+                            aria-label="Select MOOE template item"
+                            value={selectedMooeTemplate}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              if (val) {
+                                handleAddBudgetItem('MOOE', val === '__custom__' ? '' : val);
+                                setSelectedMooeTemplate('');
+                              }
+                            }}
+                            className="px-2.5 py-1 text-[11px] bg-white border border-slate-200 rounded-sm text-slate-700 font-medium focus:outline-none focus:ring-1 focus:ring-[#C8102E] cursor-pointer"
+                          >
+                            <option value="">Select template item...</option>
+                            {MOOE_TEMPLATE_CATALOG.map((opt) => (
+                              <option key={opt} value={opt}>
+                                {opt}
+                              </option>
+                            ))}
+                            <option value="__custom__">Other / Custom Expense...</option>
+                          </select>
+                          <button
+                            type="button"
+                            onClick={() => handleAddBudgetItem('MOOE', '')}
+                            className="text-[11px] font-semibold text-[#C8102E] hover:text-[#A00D26] inline-flex items-center gap-1 cursor-pointer px-2 py-1 rounded-sm hover:bg-red-50 transition-colors"
+                          >
+                            <Plus className="w-3 h-3" /> Add Budget Item
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   )}
@@ -1348,29 +1715,42 @@ export const BudgetAllocationForm: React.FC = () => {
                   {/* ========================================================================= */}
                   <tr className="bg-slate-50/90 font-bold text-slate-900 border-t-2 border-slate-200">
                     <td colSpan={4} className="py-2.5 px-4 text-xs tracking-wide text-[#C8102E]">
-                      III. Equipment Outlay
+                      III. EQUIPMENT OUTLAY
                     </td>
                   </tr>
                   {eoItems.map((item) => (
                     <tr key={item.id} className="hover:bg-slate-50/50 transition-colors">
                       <td className="py-2.5 px-6">
                         {item.isStandard ? (
-                          <span className="font-medium text-slate-800">{item.description}</span>
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="font-medium text-slate-800">{item.description}</span>
+                            {!isLocked && (
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveItem(item.id)}
+                                className="text-slate-300 hover:text-rose-600 p-1 transition-colors cursor-pointer"
+                                title="Remove budget item"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                          </div>
                         ) : (
                           <div className="flex items-center gap-2">
                             <input
                               type="text"
+                              list={eoDatalistId}
                               value={item.description}
                               disabled={isLocked}
                               onChange={(e) => handleDescriptionChange(item.id, e.target.value)}
-                              placeholder="Custom equipment description"
+                              placeholder="Select or enter equipment item..."
                               className="w-full px-2 py-1 text-xs border border-slate-200 rounded-sm focus:outline-none focus:ring-1 focus:ring-[#C8102E] disabled:bg-slate-100 disabled:cursor-not-allowed"
                             />
                             {!isLocked && (
                               <button
                                 type="button"
                                 onClick={() => handleRemoveItem(item.id)}
-                                className="text-slate-400 hover:text-rose-600 p-1"
+                                className="text-slate-400 hover:text-rose-600 p-1 cursor-pointer"
                                 title="Remove item"
                               >
                                 <Trash2 className="w-3.5 h-3.5" />
@@ -1401,7 +1781,7 @@ export const BudgetAllocationForm: React.FC = () => {
                           min="0"
                           step="100"
                           disabled={!isTwoYears || isLocked}
-                          value={!isTwoYears ? '' : (item.year2 === 0 ? '' : item.year2)}
+                          value={!isTwoYears ? '' : item.year2 === 0 ? '' : item.year2}
                           onChange={(e) => handleAmountChange(item.id, 'year2', parseFloat(e.target.value) || 0)}
                           placeholder={!isTwoYears ? '—' : '0.00'}
                           className={`w-full px-2 py-1 text-right text-xs border rounded-sm font-semibold transition-colors ${
@@ -1418,15 +1798,37 @@ export const BudgetAllocationForm: React.FC = () => {
                     </tr>
                   ))}
                   {!isLocked && (
-                    <tr>
-                      <td colSpan={4} className="py-1 px-6">
-                        <button
-                          type="button"
-                          onClick={() => handleAddCustomItem('EO')}
-                          className="text-[11px] font-semibold text-[#C8102E] hover:text-[#A00D26] inline-flex items-center gap-1 cursor-pointer"
-                        >
-                          <Plus className="w-3 h-3" /> Add Custom Equipment Line
-                        </button>
+                    <tr className="bg-slate-50/30">
+                      <td colSpan={4} className="py-2 px-6">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <select
+                            aria-label="Select Equipment template item"
+                            value={selectedEoTemplate}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              if (val) {
+                                handleAddBudgetItem('EO', val === '__custom__' ? '' : val);
+                                setSelectedEoTemplate('');
+                              }
+                            }}
+                            className="px-2.5 py-1 text-[11px] bg-white border border-slate-200 rounded-sm text-slate-700 font-medium focus:outline-none focus:ring-1 focus:ring-[#C8102E] cursor-pointer"
+                          >
+                            <option value="">Select equipment item...</option>
+                            {EO_TEMPLATE_CATALOG.map((opt) => (
+                              <option key={opt} value={opt}>
+                                {opt}
+                              </option>
+                            ))}
+                            <option value="__custom__">Other / Custom Equipment...</option>
+                          </select>
+                          <button
+                            type="button"
+                            onClick={() => handleAddBudgetItem('EO', '')}
+                            className="text-[11px] font-semibold text-[#C8102E] hover:text-[#A00D26] inline-flex items-center gap-1 cursor-pointer px-2 py-1 rounded-sm hover:bg-red-50 transition-colors"
+                          >
+                            <Plus className="w-3 h-3" /> Add Budget Item
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   )}
@@ -1465,7 +1867,6 @@ export const BudgetAllocationForm: React.FC = () => {
               </table>
             </div>
           </div>
-
         </div>
 
         {/* Right Column: PDF Attachment, Category Analytics, & Actions */}
@@ -1487,12 +1888,14 @@ export const BudgetAllocationForm: React.FC = () => {
 
             {!attachedPdf ? (
               <div className="space-y-3">
-                {submissionStatus === 'submitted' && (
-                  reviewStatus === 'APPROVED' ? (
+                {submissionStatus === 'submitted' &&
+                  (reviewStatus === 'APPROVED' ? (
                     <div className="p-3 bg-emerald-50 border border-emerald-300 rounded-md text-xs text-emerald-950 flex items-start gap-2.5 shadow-2xs">
                       <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
                       <div>
-                        <span className="font-extrabold block text-emerald-900">RPDU Approved &mdash; Upload Signed PDF</span>
+                        <span className="font-extrabold block text-emerald-900">
+                          RPDU Approved &mdash; Upload Signed PDF
+                        </span>
                         <span className="text-[11px] text-emerald-800 block mt-0.5 leading-relaxed">
                           Your budget allocation has been approved by RPDU! Please gather physical signatures and submit the endorsed Line-Item Budget PDF below.
                         </span>
@@ -1508,8 +1911,7 @@ export const BudgetAllocationForm: React.FC = () => {
                         </span>
                       </div>
                     </div>
-                  )
-                )}
+                  ))}
                 <div>
                   <input
                     type="file"
@@ -1559,7 +1961,8 @@ export const BudgetAllocationForm: React.FC = () => {
                       {attachedPdf.name}
                     </div>
                     <div className="text-[10px] text-slate-500 mt-0.5">
-                      {attachedPdf.size ? `${(attachedPdf.size / (1024 * 1024)).toFixed(2)} MB • ` : ''}Uploaded {attachedPdf.uploadedAt}
+                      {attachedPdf.size ? `${(attachedPdf.size / (1024 * 1024)).toFixed(2)} MB • ` : ''}
+                      Uploaded {attachedPdf.uploadedAt}
                     </div>
                   </div>
                 </div>
@@ -1599,7 +2002,7 @@ export const BudgetAllocationForm: React.FC = () => {
               {categoryBreakdown.map((cat) => (
                 <div key={cat.name} className="space-y-1">
                   <div className="flex items-center justify-between text-xs">
-                    <span className="font-medium text-slate-700 truncate max-w-[170px]">
+                    <span className="font-medium text-slate-700 truncate max-w-[170px]" title={cat.name}>
                       {cat.name}
                     </span>
                     <span className="font-bold text-slate-900">
@@ -1689,7 +2092,8 @@ export const BudgetAllocationForm: React.FC = () => {
                   <div className="p-3 bg-rose-50 border border-rose-200 rounded-md text-[11px] text-rose-800 flex items-start gap-2">
                     <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
                     <div>
-                      <strong>Submission Blocked:</strong> Total allocation exceeds the Call ceiling of ₱{maxBudgetLimit.toLocaleString('en-US', { minimumFractionDigits: 2 })}.
+                      <strong>Submission Blocked:</strong> Total allocation exceeds the Call ceiling of ₱
+                      {maxBudgetLimit.toLocaleString('en-US', { minimumFractionDigits: 2 })}.
                     </div>
                   </div>
                 )}
@@ -1723,7 +2127,8 @@ export const BudgetAllocationForm: React.FC = () => {
                   <div className="p-3 bg-rose-50 border border-rose-200 rounded-md text-[11px] text-rose-800 flex items-start gap-2">
                     <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
                     <div>
-                      <strong>Submission Blocked:</strong> Total allocation exceeds the Call ceiling of ₱{maxBudgetLimit.toLocaleString('en-US', { minimumFractionDigits: 2 })}.
+                      <strong>Submission Blocked:</strong> Total allocation exceeds the Call ceiling of ₱
+                      {maxBudgetLimit.toLocaleString('en-US', { minimumFractionDigits: 2 })}.
                     </div>
                   </div>
                 )}

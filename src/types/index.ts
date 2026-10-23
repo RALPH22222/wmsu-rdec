@@ -189,7 +189,8 @@ export interface LibMetadata {
   projectDuration: string;
   studyLeader: string;
   coResearchers: string | string[];
-  projectStaff: string;
+  projectStaff: string | string[];
+  compensationType?: 'Honoraria' | 'Teaching De-loading';
   implementingDepartment: string;
 }
 

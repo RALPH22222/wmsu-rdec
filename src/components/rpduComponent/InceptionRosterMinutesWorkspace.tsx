@@ -69,7 +69,7 @@ export const InceptionRosterMinutesWorkspace: React.FC<InceptionRosterMinutesWor
   // Roll-Call Roster State (populated from the meeting's projects)
   const [rollCall, setRollCall] = useState<InceptionRollCallEntry[]>(() => buildDefaultRollCall(meeting));
   const [newAttendeeName, setNewAttendeeName] = useState('');
-  const [newAttendeeRole, setNewAttendeeRole] = useState('Study Leader / Co-Researcher');
+  const [newAttendeeRole, setNewAttendeeRole] = useState('');
   const [newAttendeeAffiliation, setNewAttendeeAffiliation] = useState('');
 
   // Official Minutes Document State
@@ -89,6 +89,9 @@ export const InceptionRosterMinutesWorkspace: React.FC<InceptionRosterMinutesWor
     setRollCall(buildDefaultRollCall(meeting));
     setMinutesDoc(meeting.minutesPdf || null);
     setSelectedFile(null);
+  }, [meeting.id, meeting.updatedAt, meeting.rosterLoggedAt, meeting.minutesUploadedAt]);
+
+  useEffect(() => {
     setFeedback(null);
     setRosterPage(1);
   }, [meeting.id]);
@@ -103,15 +106,16 @@ export const InceptionRosterMinutesWorkspace: React.FC<InceptionRosterMinutesWor
     [rollCall, startRosterIdx]
   );
 
+  const defaultMeetingTime = meeting.meetingTime === '01:30' ? '09:30' : (meeting.meetingTime || '09:30');
+
   const handleStatusChange = (id: string, status: InceptionAttendanceStatus) => {
-    const nowTime = new Date().toTimeString().slice(0, 5);
     setRollCall((prev) =>
       prev.map((entry) => {
         if (entry.id !== id) return entry;
         return {
           ...entry,
           status,
-          timeIn: status === 'present' && !entry.timeIn ? (meeting.meetingTime || nowTime) : entry.timeIn,
+          timeIn: status === 'present' ? (entry.timeIn || defaultMeetingTime) : '',
         };
       })
     );
@@ -124,12 +128,11 @@ export const InceptionRosterMinutesWorkspace: React.FC<InceptionRosterMinutesWor
   };
 
   const handleMarkAllStatus = (status: InceptionAttendanceStatus) => {
-    const defaultTime = meeting.meetingTime || '09:30';
     setRollCall((prev) =>
       prev.map((entry) => ({
         ...entry,
         status,
-        timeIn: status === 'present' ? (entry.timeIn || defaultTime) : entry.timeIn,
+        timeIn: status === 'present' ? (entry.timeIn || defaultMeetingTime) : '',
       }))
     );
   };
@@ -140,13 +143,24 @@ export const InceptionRosterMinutesWorkspace: React.FC<InceptionRosterMinutesWor
       setFeedback({ type: 'error', message: 'Enter the attendee full name before adding to the roster.' });
       return;
     }
+    const alreadyExists = rollCall.some(
+      (r) => r.name.trim().toLowerCase() === trimmedName.toLowerCase()
+    );
+    if (alreadyExists) {
+      setFeedback({
+        type: 'error',
+        message: `${trimmedName} is already listed in the roll-call roster.`,
+      });
+      return;
+    }
+
     const newEntry: InceptionRollCallEntry = {
       id: `rc-custom-${Date.now()}`,
       name: trimmedName,
       role: newAttendeeRole.trim() || 'Participant',
       affiliation: newAttendeeAffiliation.trim() || '',
       status: 'present',
-      timeIn: meeting.meetingTime || '09:30',
+      timeIn: defaultMeetingTime,
       remarks: '',
       isCustom: true,
     };
@@ -156,6 +170,7 @@ export const InceptionRosterMinutesWorkspace: React.FC<InceptionRosterMinutesWor
       return next;
     });
     setNewAttendeeName('');
+    setNewAttendeeRole('');
     setNewAttendeeAffiliation('');
     setFeedback(null);
   };
@@ -175,6 +190,15 @@ export const InceptionRosterMinutesWorkspace: React.FC<InceptionRosterMinutesWor
       return;
     }
 
+    const sanitizedRollCall = rollCall.map((entry) => ({
+      ...entry,
+      name: entry.name.trim(),
+      role: entry.role.trim() || 'Participant',
+      affiliation: (entry.affiliation || '').trim(),
+      timeIn: entry.status === 'present' ? (entry.timeIn || defaultMeetingTime) : '',
+      remarks: (entry.remarks || '').trim(),
+    }));
+
     setIsSavingRoster(true);
     setFeedback(null);
     const nowIso = new Date().toISOString();
@@ -184,7 +208,7 @@ export const InceptionRosterMinutesWorkspace: React.FC<InceptionRosterMinutesWor
       if (accessToken) {
         updated = await updateInceptionRoster(
           meeting.id,
-          { rollCall },
+          { rollCall: sanitizedRollCall },
           accessToken
         ).catch((err) => {
           console.warn('Backend roster update fallback to local state:', err);
@@ -192,19 +216,29 @@ export const InceptionRosterMinutesWorkspace: React.FC<InceptionRosterMinutesWor
         });
       }
 
+      const summary = summarizeRollCall(sanitizedRollCall);
+      const nextStatus =
+        meeting.status === 'completed' && summary.present === 0
+          ? 'scheduled'
+          : meeting.status;
+
       const finalMeeting: InceptionMeeting = updated || {
         ...meeting,
-        rollCall,
-        attendanceSummary: summarizeRollCall(rollCall),
-        attendees: rollCall.map((r) => (r.name ? `${r.role} (${r.name})` : r.role)),
+        status: nextStatus,
+        completedDate: nextStatus === 'completed' ? meeting.completedDate : '',
+        rollCall: sanitizedRollCall,
+        attendanceSummary: summary,
+        attendees: sanitizedRollCall.map((r) => (r.name ? `${r.role} (${r.name})` : r.role)),
         rosterLoggedAt: nowIso,
         updatedAt: nowIso,
       };
 
+      setRollCall(finalMeeting.rollCall || sanitizedRollCall);
       onMeetingUpdated(finalMeeting);
+      const finalSummary = finalMeeting.attendanceSummary || summary;
       setFeedback({
         type: 'success',
-        message: `Attendee roll-call saved (${attendanceSummary.present} of ${attendanceSummary.total} marked present).`,
+        message: `Attendee roll-call saved (${finalSummary.present} present, ${finalSummary.excused} excused, ${finalSummary.absent} absent).`,
       });
     } catch (err: any) {
       setFeedback({ type: 'error', message: err.message || 'Unable to save attendee roll-call.' });
@@ -239,16 +273,52 @@ export const InceptionRosterMinutesWorkspace: React.FC<InceptionRosterMinutesWor
     setSelectedFile(file);
     setFeedback(null);
 
+    const nowIso = new Date().toISOString();
     const reader = new FileReader();
-    reader.onload = () => {
-      setMinutesDoc({
+    reader.onload = async () => {
+      const stagedDoc: InceptionMinutesDocument = {
         name: file.name,
         size: file.size,
-        uploadedAt: new Date().toISOString(),
+        uploadedAt: nowIso,
         dataUrl: typeof reader.result === 'string' ? reader.result : undefined,
-      });
+      };
+      setMinutesDoc(stagedDoc);
+
+      // Persist uploaded document immediately so it stays attached if reopened
+      if (accessToken) {
+        setIsSavingMinutes(true);
+        try {
+          const sanitizedRollCall = rollCall.map((entry) => ({
+            ...entry,
+            timeIn: entry.status === 'present' ? (entry.timeIn || '') : '',
+          }));
+          const updated = await uploadInceptionMinutes(
+            meeting.id,
+            {
+              file,
+              minutesPdf: stagedDoc,
+              rollCall: sanitizedRollCall,
+              markCompleted: false,
+            },
+            accessToken
+          ).catch(() => null);
+
+          if (updated) {
+            setMinutesDoc(updated.minutesPdf || stagedDoc);
+            setSelectedFile(null);
+            onMeetingUpdated(updated);
+            setFeedback({
+              type: 'success',
+              message: `Official minutes document "${file.name}" uploaded and saved.`,
+            });
+          }
+        } finally {
+          setIsSavingMinutes(false);
+        }
+      }
     };
     reader.readAsDataURL(file);
+    e.target.value = '';
   };
 
   const handleSaveMinutes = async (markCompleted = false) => {
@@ -260,10 +330,23 @@ export const InceptionRosterMinutesWorkspace: React.FC<InceptionRosterMinutesWor
       return;
     }
 
+    if (markCompleted && attendanceSummary.present === 0) {
+      setFeedback({
+        type: 'error',
+        message: 'Mark at least one attendee as Present in the roll-call roster before completing the meeting.',
+      });
+      return;
+    }
+
     setIsSavingMinutes(true);
     setFeedback(null);
     const nowIso = new Date().toISOString();
     const todayDate = nowIso.split('T')[0];
+
+    const sanitizedRollCall = rollCall.map((entry) => ({
+      ...entry,
+      timeIn: entry.status === 'present' ? (entry.timeIn || defaultMeetingTime) : '',
+    }));
 
     try {
       let updated: InceptionMeeting | null = null;
@@ -273,7 +356,7 @@ export const InceptionRosterMinutesWorkspace: React.FC<InceptionRosterMinutesWor
           {
             file: selectedFile,
             minutesPdf: minutesDoc,
-            rollCall,
+            rollCall: sanitizedRollCall,
             markCompleted,
             completedDate: markCompleted ? (meeting.completedDate || todayDate) : undefined,
           },
@@ -284,12 +367,17 @@ export const InceptionRosterMinutesWorkspace: React.FC<InceptionRosterMinutesWor
         });
       }
 
+      const updatedDoc: InceptionMinutesDocument | null = updated?.minutesPdf || (minutesDoc ? {
+        ...minutesDoc,
+        uploadedAt: nowIso,
+      } : null);
+
       const finalMeeting: InceptionMeeting = updated || {
         ...meeting,
-        rollCall,
-        attendanceSummary: summarizeRollCall(rollCall),
-        attendees: rollCall.map((r) => (r.name ? `${r.role} (${r.name})` : r.role)),
-        minutesPdf: minutesDoc,
+        rollCall: sanitizedRollCall,
+        attendanceSummary: summarizeRollCall(sanitizedRollCall),
+        attendees: sanitizedRollCall.map((r) => (r.name ? `${r.role} (${r.name})` : r.role)),
+        minutesPdf: updatedDoc,
         rosterLoggedAt: meeting.rosterLoggedAt || nowIso,
         minutesUploadedAt: nowIso,
         status: markCompleted ? 'completed' : meeting.status,
@@ -297,13 +385,14 @@ export const InceptionRosterMinutesWorkspace: React.FC<InceptionRosterMinutesWor
         updatedAt: nowIso,
       };
 
-      setMinutesDoc(finalMeeting.minutesPdf || minutesDoc);
+      setMinutesDoc(finalMeeting.minutesPdf || updatedDoc);
+      setRollCall(finalMeeting.rollCall || sanitizedRollCall);
       setSelectedFile(null);
       onMeetingUpdated(finalMeeting);
       setFeedback({
         type: 'success',
         message: markCompleted
-          ? 'Official minutes uploaded and Inception Meeting marked as Completed.'
+          ? 'Official minutes saved and Inception Meeting marked as Completed.'
           : 'Official minutes/resolutions document saved to Inception Meeting record.',
       });
     } catch (err: any) {
@@ -317,16 +406,20 @@ export const InceptionRosterMinutesWorkspace: React.FC<InceptionRosterMinutesWor
     setIsSavingMinutes(true);
     setFeedback(null);
     try {
+      let updatedFromBackend: InceptionMeeting | null = null;
       if (accessToken && meeting.minutesPdf) {
-        await removeInceptionMinutes(meeting.id, accessToken).catch(() => null);
+        updatedFromBackend = await removeInceptionMinutes(meeting.id, accessToken).catch(() => null);
       }
       setSelectedFile(null);
       setMinutesDoc(null);
       if (fileInputRef.current) fileInputRef.current.value = '';
 
-      const updated: InceptionMeeting = {
+      const updated: InceptionMeeting = updatedFromBackend || {
         ...meeting,
+        status: meeting.status === 'completed' ? 'scheduled' : meeting.status,
+        completedDate: meeting.status === 'completed' ? '' : meeting.completedDate,
         minutesPdf: null,
+        minutesUploadedAt: null,
         updatedAt: new Date().toISOString(),
       };
       onMeetingUpdated(updated);
@@ -337,6 +430,48 @@ export const InceptionRosterMinutesWorkspace: React.FC<InceptionRosterMinutesWor
   };
 
   const documentHref = resolveDocumentHref(minutesDoc);
+
+  const handleViewMinutes = async () => {
+    if (!documentHref) return;
+    if (documentHref.startsWith('data:')) {
+      try {
+        const res = await fetch(documentHref);
+        const blob = await res.blob();
+        const blobUrl = URL.createObjectURL(blob);
+        window.open(blobUrl, '_blank', 'noopener,noreferrer');
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
+        return;
+      } catch {
+        // Fallback below
+      }
+    }
+    window.open(documentHref, '_blank', 'noopener,noreferrer');
+  };
+
+  const handleDownloadMinutes = async () => {
+    if (!documentHref || !minutesDoc) return;
+    try {
+      const response = await fetch(documentHref);
+      const blob = await response.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = minutesDoc.name || 'Inception_Meeting_Minutes.pdf';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
+    } catch {
+      const link = document.createElement('a');
+      link.href = documentHref;
+      link.download = minutesDoc.name || 'Inception_Meeting_Minutes.pdf';
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -372,13 +507,32 @@ export const InceptionRosterMinutesWorkspace: React.FC<InceptionRosterMinutesWor
       <section className="bg-white p-6 rounded-md border border-slate-200 shadow-xs space-y-5" aria-labelledby="roster-heading">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
           <div>
-            <h3 id="roster-heading" className="text-sm font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
-              <Users className="w-4 h-4 text-[#C8102E]" aria-hidden="true" />
-              Attendee Roll-Call Roster
-              <span className="ml-2 px-2 py-0.5 rounded-sm text-xs font-semibold bg-slate-100 text-slate-700 normal-case border border-slate-200">
-                {attendanceSummary.present} / {attendanceSummary.total} Present
-              </span>
-            </h3>
+            <div className="flex flex-wrap items-center gap-2">
+              <h3 id="roster-heading" className="text-sm font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
+                <Users className="w-4 h-4 text-[#C8102E]" aria-hidden="true" />
+                Attendee Roll-Call Roster
+              </h3>
+              <div className="flex flex-wrap items-center gap-1.5 text-xs">
+                <span className="px-2 py-0.5 rounded-sm font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                  {attendanceSummary.present} / {attendanceSummary.total} Present
+                </span>
+                {attendanceSummary.excused > 0 && (
+                  <span className="px-2 py-0.5 rounded-sm font-semibold bg-blue-50 text-blue-800 border border-blue-200">
+                    {attendanceSummary.excused} Excused
+                  </span>
+                )}
+                {attendanceSummary.absent > 0 && (
+                  <span className="px-2 py-0.5 rounded-sm font-semibold bg-rose-50 text-rose-800 border border-rose-200">
+                    {attendanceSummary.absent} Absent
+                  </span>
+                )}
+                {attendanceSummary.pending > 0 && (
+                  <span className="px-2 py-0.5 rounded-sm font-semibold bg-slate-100 text-slate-700 border border-slate-200">
+                    {attendanceSummary.pending} Pending
+                  </span>
+                )}
+              </div>
+            </div>
             <p className="text-xs text-slate-600 mt-0.5 max-w-[65ch]">
               Log the attendance status, arrival time, and remarks for each designated Study Leader, Co-Researcher, and RPDU/RDEC official.
             </p>
@@ -413,7 +567,7 @@ export const InceptionRosterMinutesWorkspace: React.FC<InceptionRosterMinutesWor
                   <th className="py-3 px-3">Attendee &amp; Role</th>
                   <th className="py-3 px-3">College / Office</th>
                   <th className="py-3 px-3">Roll-Call Status</th>
-                  <th className="py-3 px-3 w-28">Time-In</th>
+                  <th className="py-3 px-3 w-32">Time-In</th>
                   <th className="py-3 px-3">Remarks / Proxy</th>
                   <th className="py-3 px-2 w-12 text-center">Remove</th>
                 </tr>
@@ -431,92 +585,101 @@ export const InceptionRosterMinutesWorkspace: React.FC<InceptionRosterMinutesWor
                           onChange={(e) => handleFieldChange(entry.id, 'name', e.target.value)}
                           className="w-full font-bold text-slate-900 bg-transparent border-b border-transparent focus:border-slate-300 focus:bg-white px-1 py-0.5 rounded-xs text-base sm:text-xs focus:outline-none focus:ring-1 focus:ring-[#C8102E]"
                         />
-                      <span className="text-[11px] text-slate-500 block px-1 mt-0.5">
-                        {entry.role}
-                      </span>
-                    </td>
-                    <td className="py-3 px-3 align-top min-w-[150px]">
-                      <input
-                        type="text"
-                        aria-label={`Attendee ${itemNumber} affiliation`}
-                        value={entry.affiliation || ''}
-                        onChange={(e) => handleFieldChange(entry.id, 'affiliation', e.target.value)}
-                        placeholder="College or unit..."
-                        className="w-full text-slate-700 bg-transparent border-b border-transparent focus:border-slate-300 focus:bg-white px-1 py-0.5 rounded-xs text-base sm:text-xs focus:outline-none focus:ring-1 focus:ring-[#C8102E]"
-                      />
-                    </td>
-                    <td className="py-3 px-3 align-top whitespace-nowrap">
-                      <div className="inline-flex items-center rounded-sm border border-slate-200 bg-slate-50 p-0.5 gap-0.5" role="group" aria-label={`Attendance status for ${entry.name}`}>
+                        <span className="text-[11px] text-slate-500 block px-1 mt-0.5" title={entry.role}>
+                          {entry.role}
+                        </span>
+                      </td>
+                      <td className="py-3 px-3 align-top min-w-[150px]">
+                        <input
+                          type="text"
+                          aria-label={`Attendee ${itemNumber} affiliation`}
+                          value={entry.affiliation || ''}
+                          onChange={(e) => handleFieldChange(entry.id, 'affiliation', e.target.value)}
+                          placeholder="College or unit..."
+                          className="w-full text-slate-700 bg-transparent border-b border-transparent focus:border-slate-300 focus:bg-white px-1 py-0.5 rounded-xs text-base sm:text-xs focus:outline-none focus:ring-1 focus:ring-[#C8102E]"
+                        />
+                      </td>
+                      <td className="py-3 px-3 align-top whitespace-nowrap">
+                        <div className="inline-flex items-center rounded-sm border border-slate-200 bg-slate-50 p-0.5 gap-0.5" role="group" aria-label={`Attendance status for ${entry.name}`}>
+                          <button
+                            type="button"
+                            onClick={() => handleStatusChange(entry.id, 'present')}
+                            className={`px-2.5 py-1.5 rounded-xs text-[11px] font-bold cursor-pointer transition-colors ${
+                              entry.status === 'present'
+                                ? 'bg-emerald-700 text-white shadow-2xs'
+                                : 'text-slate-600 hover:bg-white hover:text-slate-900'
+                            }`}
+                          >
+                            Present
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleStatusChange(entry.id, 'excused')}
+                            className={`px-2.5 py-1.5 rounded-xs text-[11px] font-bold cursor-pointer transition-colors ${
+                              entry.status === 'excused'
+                                ? 'bg-blue-700 text-white shadow-2xs'
+                                : 'text-slate-600 hover:bg-white hover:text-slate-900'
+                            }`}
+                          >
+                            Excused
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleStatusChange(entry.id, 'absent')}
+                            className={`px-2.5 py-1.5 rounded-xs text-[11px] font-bold cursor-pointer transition-colors ${
+                              entry.status === 'absent'
+                                ? 'bg-rose-700 text-white shadow-2xs'
+                                : 'text-slate-600 hover:bg-white hover:text-slate-900'
+                            }`}
+                          >
+                            Absent
+                          </button>
+                        </div>
+                      </td>
+                      <td className="py-3 px-3 align-top">
+                        {entry.status === 'present' ? (
+                          <input
+                            type="time"
+                            aria-label={`Time in for ${entry.name}`}
+                            value={entry.timeIn || ''}
+                            onChange={(e) => handleFieldChange(entry.id, 'timeIn', e.target.value)}
+                            className="w-full px-2 py-1 bg-white border border-slate-200 rounded-sm text-base sm:text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#C8102E]"
+                          />
+                        ) : (
+                          <span
+                            className="inline-flex items-center px-2.5 py-1 bg-slate-50 border border-slate-200 rounded-sm text-xs text-slate-400 w-full select-none"
+                            title="Time-In is only recorded for attendees marked Present"
+                          >
+                            &mdash;
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-3 px-3 align-top min-w-[175px]">
+                        <input
+                          type="text"
+                          aria-label={`Remarks for ${entry.name}`}
+                          value={entry.remarks || ''}
+                          onChange={(e) => handleFieldChange(entry.id, 'remarks', e.target.value)}
+                          placeholder="Add remarks or proxy..."
+                          className="w-full px-2.5 py-1 bg-white border border-slate-200 rounded-sm text-base sm:text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-[#C8102E]"
+                        />
+                      </td>
+                      <td className="py-3 px-2 align-top text-center">
                         <button
                           type="button"
-                          onClick={() => handleStatusChange(entry.id, 'present')}
-                          className={`px-2.5 py-1.5 rounded-xs text-[11px] font-bold cursor-pointer transition-colors ${
-                            entry.status === 'present'
-                              ? 'bg-emerald-700 text-white shadow-2xs'
-                              : 'text-slate-600 hover:bg-white hover:text-slate-900'
-                          }`}
+                          onClick={() => handleRemoveAttendee(entry.id)}
+                          disabled={rollCall.length <= 1}
+                          className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 disabled:opacity-40 disabled:cursor-not-allowed rounded-sm cursor-pointer transition-colors inline-flex items-center justify-center"
+                          title="Remove participant from roster"
+                          aria-label={`Remove ${entry.name} from roster`}
                         >
-                          Present
+                          <Trash2 className="w-3.5 h-3.5" aria-hidden="true" />
                         </button>
-                        <button
-                          type="button"
-                          onClick={() => handleStatusChange(entry.id, 'excused')}
-                          className={`px-2.5 py-1.5 rounded-xs text-[11px] font-bold cursor-pointer transition-colors ${
-                            entry.status === 'excused'
-                              ? 'bg-blue-700 text-white shadow-2xs'
-                              : 'text-slate-600 hover:bg-white hover:text-slate-900'
-                          }`}
-                        >
-                          Excused
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleStatusChange(entry.id, 'absent')}
-                          className={`px-2.5 py-1.5 rounded-xs text-[11px] font-bold cursor-pointer transition-colors ${
-                            entry.status === 'absent'
-                              ? 'bg-rose-700 text-white shadow-2xs'
-                              : 'text-slate-600 hover:bg-white hover:text-slate-900'
-                          }`}
-                        >
-                          Absent
-                        </button>
-                      </div>
-                    </td>
-                    <td className="py-3 px-3 align-top">
-                      <input
-                        type="time"
-                        aria-label={`Time in for ${entry.name}`}
-                        value={entry.timeIn || ''}
-                        onChange={(e) => handleFieldChange(entry.id, 'timeIn', e.target.value)}
-                        className="w-full px-2 py-1 bg-white border border-slate-200 rounded-sm text-base sm:text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#C8102E]"
-                      />
-                    </td>
-                    <td className="py-3 px-3 align-top min-w-[160px]">
-                      <input
-                        type="text"
-                        aria-label={`Remarks for ${entry.name}`}
-                        value={entry.remarks || ''}
-                        onChange={(e) => handleFieldChange(entry.id, 'remarks', e.target.value)}
-                        placeholder="e.g. Signed attendance sheet / Representative"
-                        className="w-full px-2.5 py-1 bg-white border border-slate-200 rounded-sm text-base sm:text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-[#C8102E]"
-                      />
-                    </td>
-                    <td className="py-3 px-2 align-top text-center">
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveAttendee(entry.id)}
-                        disabled={rollCall.length <= 1}
-                        className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 disabled:opacity-40 disabled:cursor-not-allowed rounded-sm cursor-pointer transition-colors inline-flex items-center justify-center"
-                        title="Remove participant from roster"
-                        aria-label={`Remove ${entry.name} from roster`}
-                      >
-                        <Trash2 className="w-3.5 h-3.5" aria-hidden="true" />
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
             </table>
           </div>
         </div>
@@ -590,7 +753,7 @@ export const InceptionRosterMinutesWorkspace: React.FC<InceptionRosterMinutesWor
                 type="text"
                 value={newAttendeeRole}
                 onChange={(e) => setNewAttendeeRole(e.target.value)}
-                placeholder="e.g. Co-Researcher / Budget Officer"
+                placeholder="e.g. Co-Researcher / RPDU Staff"
                 className="w-full px-3 py-2 bg-white border border-slate-300 rounded-sm text-base sm:text-xs text-slate-900 focus:outline-none focus:ring-1 focus:ring-[#C8102E]"
               />
             </div>
@@ -625,9 +788,9 @@ export const InceptionRosterMinutesWorkspace: React.FC<InceptionRosterMinutesWor
           <div className="text-xs text-slate-500 flex items-center gap-1.5">
             <Clock className="w-3.5 h-3.5 text-slate-400" aria-hidden="true" />
             {meeting.rosterLoggedAt ? (
-              <span>Last logged: <strong className="text-slate-700">{new Date(meeting.rosterLoggedAt).toLocaleString()}</strong></span>
+              <span>Last updated: <strong className="text-slate-700">{new Date(meeting.rosterLoggedAt).toLocaleString()}</strong></span>
             ) : (
-              <span>Roll-call has not been logged to the permanent record yet.</span>
+              <span>Roll-call has not been saved yet.</span>
             )}
           </div>
           <button
@@ -676,8 +839,7 @@ export const InceptionRosterMinutesWorkspace: React.FC<InceptionRosterMinutesWor
                   </p>
                   <p className="text-[11px] text-slate-600 mt-0.5">
                     {formatBytes(minutesDoc.size)} &bull; Uploaded{' '}
-                    {minutesDoc.uploadedAt ? new Date(minutesDoc.uploadedAt).toLocaleDateString() : 'just now'}
-                    {selectedFile ? ' (Staged — click Save below to finalize)' : ''}
+                    {minutesDoc.uploadedAt ? new Date(minutesDoc.uploadedAt).toLocaleString() : 'just now'}
                   </p>
                 </div>
               </div>
@@ -685,25 +847,22 @@ export const InceptionRosterMinutesWorkspace: React.FC<InceptionRosterMinutesWor
               <div className="flex flex-wrap items-center gap-2 shrink-0">
                 {documentHref && (
                   <>
-                    <a
-                      href={documentHref}
-                      target="_blank"
-                      rel="noopener noreferrer"
+                    <button
+                      type="button"
+                      onClick={handleViewMinutes}
                       className="min-h-11 px-3 py-2 bg-white hover:bg-slate-50 text-slate-800 border border-slate-200 rounded-sm text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer transition-colors"
                     >
                       <ExternalLink className="w-3.5 h-3.5 text-[#C8102E]" aria-hidden="true" />
-                      Open
-                    </a>
-                    <a
-                      href={documentHref}
-                      download={minutesDoc.name}
-                      target="_blank"
-                      rel="noopener noreferrer"
+                      View
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleDownloadMinutes}
                       className="min-h-11 px-3 py-2 bg-white hover:bg-slate-50 text-slate-800 border border-slate-200 rounded-sm text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer transition-colors"
                     >
                       <Download className="w-3.5 h-3.5 text-slate-600" aria-hidden="true" />
                       Download
-                    </a>
+                    </button>
                   </>
                 )}
                 <button
@@ -760,9 +919,15 @@ export const InceptionRosterMinutesWorkspace: React.FC<InceptionRosterMinutesWor
 
         {/* Save Minutes & Complete Actions */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-3 border-t border-slate-200">
-          <div className="text-xs text-slate-500">
-            {meeting.minutesUploadedAt ? (
-              <span>Minutes last updated: <strong className="text-slate-700">{new Date(meeting.minutesUploadedAt).toLocaleString()}</strong></span>
+          <div className="text-xs text-slate-500 flex items-center gap-1.5">
+            <Clock className="w-3.5 h-3.5 text-slate-400" aria-hidden="true" />
+            {minutesDoc && (meeting.minutesUploadedAt || minutesDoc.uploadedAt) ? (
+              <span>
+                Last updated:{' '}
+                <strong className="text-slate-700">
+                  {new Date((meeting.minutesUploadedAt || minutesDoc.uploadedAt)!).toLocaleString()}
+                </strong>
+              </span>
             ) : (
               <span>Upload the signed official minutes/resolutions file to complete inception meeting documentation.</span>
             )}

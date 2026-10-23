@@ -34,6 +34,7 @@ import {
   deleteInceptionMeeting,
   buildDefaultRollCall,
   summarizeRollCall,
+  normalizeInceptionMeeting,
 } from '../../lib/inceptionApi';
 import { InceptionRosterMinutesWorkspace } from './InceptionRosterMinutesWorkspace';
 
@@ -82,12 +83,7 @@ export const InceptionSchedulingManager: React.FC = () => {
         if (Array.isArray(parsed)) {
           return parsed
             .filter((m: InceptionMeeting) => m.id !== 'inc-seed-1' && !String(m.id).startsWith('inc-seed-'))
-            .map((m: InceptionMeeting) => ({
-              ...m,
-              meetingType: 'in_person' as const,
-              specialOrderStatus: m.specialOrderStatus === 'so_issued' ? 'forwarded_to_op' : m.specialOrderStatus,
-              rollCall: buildDefaultRollCall(m),
-            }));
+            .map((m: InceptionMeeting) => normalizeInceptionMeeting(m));
         }
       } catch {
         return [];
@@ -181,8 +177,12 @@ export const InceptionSchedulingManager: React.FC = () => {
       ]);
 
       if (backendMeetings && Array.isArray(backendMeetings)) {
-        setMeetings(backendMeetings);
-        localStorage.setItem('wmsu_inception_meetings', JSON.stringify(backendMeetings));
+        const normalized = backendMeetings.map((m) => normalizeInceptionMeeting(m));
+        setMeetings(normalized);
+        localStorage.setItem('wmsu_inception_meetings', JSON.stringify(normalized));
+        setSelectedMeeting((prev) =>
+          prev ? normalized.find((m) => m.id === prev.id) || prev : null
+        );
       }
       if (backendContracts && Array.isArray(backendContracts)) {
         setContracts(backendContracts);
@@ -352,15 +352,16 @@ export const InceptionSchedulingManager: React.FC = () => {
   };
 
   const handleWorkspaceMeetingUpdated = (updated: InceptionMeeting) => {
-    setSelectedMeeting(updated);
+    const normalized = normalizeInceptionMeeting(updated);
+    setSelectedMeeting(normalized);
     setMeetings((prev) => {
-      const idx = prev.findIndex((m) => m.id === updated.id);
-      if (idx >= 0) {
-        const copy = [...prev];
-        copy[idx] = updated;
-        return copy;
-      }
-      return [updated, ...prev];
+      const idx = prev.findIndex((m) => m.id === normalized.id);
+      const next =
+        idx >= 0
+          ? prev.map((m, i) => (i === idx ? normalized : m))
+          : [normalized, ...prev];
+      localStorage.setItem('wmsu_inception_meetings', JSON.stringify(next));
+      return next;
     });
   };
 
@@ -557,31 +558,53 @@ export const InceptionSchedulingManager: React.FC = () => {
 
 
   const handleMarkMeetingCompleted = async (id: string) => {
+    const target = meetings.find((m) => m.id === id) || (selectedMeeting?.id === id ? selectedMeeting : null);
+    const hasPresentAttendee = Boolean(
+      target &&
+        ((target.attendanceSummary && target.attendanceSummary.present > 0) ||
+          (Array.isArray(target.rollCall) && target.rollCall.some((r) => r.status === 'present')))
+    );
+    const hasMinutesDoc = Boolean(
+      target?.minutesPdf &&
+        (target.minutesPdf.name || target.minutesPdf.fileUrl || target.minutesPdf.dataUrl)
+    );
+
+    if (!hasPresentAttendee || !hasMinutesDoc) {
+      if (target) {
+        setSelectedMeeting(target);
+        setViewMode('details');
+      }
+      setApiError(
+        !hasPresentAttendee && !hasMinutesDoc
+          ? 'Please record at least one Present attendee and upload the official minutes before marking the meeting Completed.'
+          : !hasPresentAttendee
+          ? 'Please record and save at least one Present attendee before marking the meeting Completed.'
+          : 'Please upload the official meeting minutes & resolutions before marking the meeting Completed.'
+      );
+      return;
+    }
+
     const today = new Date().toISOString().split('T')[0];
     try {
       if (session?.access_token) {
-        await updateInceptionStatus(id, 'completed', today, session.access_token).catch((err) => {
-          console.warn('Backend status update failed:', err);
-        });
+        const updated = await updateInceptionStatus(id, 'completed', today, session.access_token);
+        handleWorkspaceMeetingUpdated(updated);
+        setApiError(null);
+        return;
       }
-    } catch (err) {
-      console.warn('Status error:', err);
+    } catch (err: any) {
+      setApiError(err?.message || 'Unable to mark meeting as Completed.');
+      return;
     }
-    setMeetings((prev) =>
-      prev.map((m) =>
-        m.id === id
-          ? {
-              ...m,
-              status: 'completed',
-              completedDate: today,
-              updatedAt: new Date().toISOString(),
-            }
-          : m
-      )
-    );
-    setSelectedMeeting((prev) =>
-      prev && prev.id === id ? { ...prev, status: 'completed', completedDate: today } : prev
-    );
+
+    if (target) {
+      handleWorkspaceMeetingUpdated({
+        ...target,
+        status: 'completed',
+        completedDate: today,
+        updatedAt: new Date().toISOString(),
+      });
+    }
   };
 
   const filteredMeetings = meetings.filter((meeting) => {
@@ -987,6 +1010,22 @@ export const InceptionSchedulingManager: React.FC = () => {
             </button>
           </div>
         </div>
+
+        {apiError && (
+          <div className="p-3 bg-amber-50 border border-amber-200 text-amber-800 rounded-md text-xs flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" aria-hidden="true" />
+              <span>{apiError}</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setApiError(null)}
+              className="font-bold text-amber-700 hover:text-amber-900 underline ml-2 cursor-pointer"
+            >
+              Dismiss
+            </button>
+          </div>
+        )}
 
         {/* Meeting Header Banner */}
         <div className="bg-white p-6 rounded-md border border-slate-200 shadow-xs space-y-4">
