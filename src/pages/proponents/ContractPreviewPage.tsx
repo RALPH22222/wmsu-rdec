@@ -38,21 +38,17 @@ export default function ContractPreviewPage() {
 
   const [loading, setLoading] = useState(true);
   const [downloading, setDownloading] = useState(false);
+  const [downloadingDocx, setDownloadingDocx] = useState(false);
   const [error, setError] = useState('');
   const [previewData, setPreviewData] = useState<PreviewResponseData | null>(null);
 
-  // Retrieve any custom contractData passed via router state or sessionStorage
+  // Retrieve any contractData passed via router state (database autofill is authoritative)
   const getInitialContractData = (): Partial<ContractData> => {
+    if (conceptId) {
+      sessionStorage.removeItem(`psc_contract_data_${conceptId}`);
+    }
     if (location.state && (location.state as { contractData?: ContractData }).contractData) {
       return (location.state as { contractData: ContractData }).contractData;
-    }
-    if (conceptId) {
-      const stored = sessionStorage.getItem(`psc_contract_data_${conceptId}`);
-      if (stored) {
-        try {
-          return JSON.parse(stored);
-        } catch {}
-      }
     }
     return {};
   };
@@ -102,7 +98,7 @@ export default function ContractPreviewPage() {
     setError('');
     try {
       const contractData = previewData?.contractData || getInitialContractData();
-      const filename = `${contractData.contractNumber || 'PSC'}-Pre-Filled-Contract.pdf`;
+      const filename = `11_PSC_${contractData.contractNumber || 'WMSU-RPDU-CA-001.01'}.pdf`;
 
       const res = await fetch(`${API_BASE_URL}/letters/mine/contracts/download-pdf`, {
         method: 'POST',
@@ -134,6 +130,47 @@ export default function ContractPreviewPage() {
       setError(err instanceof Error ? err.message : 'Error downloading PDF.');
     } finally {
       setDownloading(false);
+    }
+  };
+
+  const handleDownloadDocx = async () => {
+    if (!session?.access_token || !conceptId || downloadingDocx) return;
+    setDownloadingDocx(true);
+    setError('');
+    try {
+      const contractData = previewData?.contractData || getInitialContractData();
+      const filename = `11_PSC_${contractData.contractNumber || 'WMSU-RPDU-CA-001.01'}.docx`;
+
+      const res = await fetch(`${API_BASE_URL}/letters/mine/contracts/download-docx`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          conceptId,
+          contractData,
+        }),
+      });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.message || 'Failed to download 11 PSC.docx.');
+      }
+
+      const blob = await res.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(blobUrl);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error downloading DOCX.');
+    } finally {
+      setDownloadingDocx(false);
     }
   };
 
@@ -187,7 +224,17 @@ export default function ContractPreviewPage() {
               className="inline-flex items-center gap-2 bg-[#C8102E] hover:bg-red-800 text-white px-4 py-2 text-xs font-bold rounded cursor-pointer disabled:opacity-50 transition-colors shadow-xs"
             >
               <Download size={14} className={downloading ? 'animate-bounce' : ''} />
-              {downloading ? 'Downloading...' : 'Download PDF'}
+              {downloading ? 'Downloading...' : 'Download 11 PSC.pdf'}
+            </button>
+
+            <button
+              type="button"
+              onClick={handleDownloadDocx}
+              disabled={loading || downloadingDocx}
+              className="inline-flex items-center gap-2 bg-slate-900 hover:bg-slate-800 text-white px-4 py-2 text-xs font-bold rounded cursor-pointer disabled:opacity-50 transition-colors shadow-xs"
+            >
+              <Download size={14} className={downloadingDocx ? 'animate-bounce' : ''} />
+              {downloadingDocx ? 'Generating...' : 'Download 11 PSC.docx'}
             </button>
           </div>
         </div>
@@ -203,6 +250,12 @@ export default function ContractPreviewPage() {
               <div>
                 <span className="text-slate-500">Study Leader:</span>{' '}
                 <strong className="text-slate-900">{previewData.recipientName}</strong>
+              </div>
+              <div>
+                <span className="text-slate-500">Final Approved Budget:</span>{' '}
+                <strong className="text-[#C8102E] font-mono">
+                  ₱{(Number(previewData.contractData?.contractAmount) || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                </strong>
               </div>
               <div>
                 <span className="text-slate-500">Compensation:</span>{' '}

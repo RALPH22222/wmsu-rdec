@@ -4,8 +4,10 @@ import {
   ArrowLeft,
   ArrowRight,
   Check,
+  Database,
+  Download,
   FileText,
-  Printer
+  Printer,
 } from 'lucide-react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
@@ -25,6 +27,9 @@ type Source = {
   id: string;
   title: string;
   proponentName: string;
+  finalApprovedBudget?: number;
+  isBudgetApproved?: boolean;
+  hasSignedBudget?: boolean;
   screeningDecision: 'PASS' | 'FAIL';
   screeningReady: boolean;
   invitationReady: boolean;
@@ -72,7 +77,20 @@ type ContractData = {
   workPlan: string;
 };
 
-type ContractContext = { contractData: ContractData; missingFields: string[]; lockedFields: string[]; studyLeader: string; signatories: Partial<Signatories>; existingContract: Source['existingContract'] };
+type ContractContext = {
+  contractData: ContractData;
+  missingFields: string[];
+  lockedFields: string[];
+  studyLeader: string;
+  proposalTitle?: string;
+  finalApprovedBudget?: number;
+  finalApprovedBudgetWords?: string;
+  isBudgetApproved?: boolean;
+  budgetSource?: string;
+  routedForPresidentSignature?: boolean;
+  signatories: Partial<Signatories>;
+  existingContract: Source['existingContract'];
+};
 
 type Preview = {
   html: string;
@@ -109,15 +127,29 @@ export function LetterDeskPage() {
   }, [searchParams]);
 
   const [template, setTemplate] = useState<Template>(initialTemplate);
-  const [stage, setStage] = useState(1);
+  const [stage, setStage] = useState(() => (searchParams.get('proposal') || searchParams.get('template') === 'psc' ? 2 : 1));
 
   // Form State
-  const [conceptId, setConceptId] = useState('');
+  const [conceptId, setConceptId] = useState(() => searchParams.get('proposal') || '');
   const [reviewId, setReviewId] = useState('');
   const [headApprovalConfirmed, setHeadApprovalConfirmed] = useState(false);
 
   const [contractContext, setContractContext] = useState<ContractContext | null>(null);
-  const [contextLoading, setContextLoading] = useState(false);
+  const [contextLoading, setContextLoading] = useState(() => Boolean(searchParams.get('proposal')));
+
+  useEffect(() => {
+    const t = searchParams.get('template');
+    const prop = searchParams.get('proposal');
+    if (t === CONTRACT || t === 'WMSU-RPDU-PSC-001.00' || t === 'psc') {
+      setTemplate(CONTRACT);
+      setStage(2);
+    }
+    if (prop) {
+      requestedProposal.current = prop;
+      setConceptId(prop);
+      setStage(2);
+    }
+  }, [searchParams]);
 
   // Signatories
   const [signatories, setSignatories] = useState<Signatories>({
@@ -141,6 +173,7 @@ export function LetterDeskPage() {
   const [newlyIssuedId, setNewlyIssuedId] = useState<string | null>(null);
 
   const [busy, setBusy] = useState(false);
+  const [downloadingFormat, setDownloadingFormat] = useState<'pdf' | 'docx' | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -148,8 +181,15 @@ export function LetterDeskPage() {
 
   const selectedSource = sources.find((item) => item.id === conceptId);
 
-  // All proposal records are available for testing without restraints
-  const choices = sources;
+  // For Professional Service Contracts (PSC), only show projects with a signed budget allocation
+  const choices = useMemo(() => {
+    if (isContractTemplate(template)) {
+      return sources.filter((item) =>
+        Boolean(item.hasSignedBudget ?? item.prerequisites?.lineItemBudgetSigned)
+      );
+    }
+    return sources;
+  }, [sources, template]);
 
   const signatoriesReady = useMemo(() => {
     if (template === CERTIFICATE) {
@@ -223,18 +263,37 @@ export function LetterDeskPage() {
     };
   }, [roleAllowed, loadingProfile, session?.access_token]);
 
-
-
   useEffect(() => {
     if (!isContractTemplate(template) || !conceptId || !session?.access_token) return;
     let active = true;
     setError('');
-    fetch(`${API_BASE_URL}/letters/contract-context/${conceptId}`, { headers: { Authorization: `Bearer ${session.access_token}` } })
-      .then(async response => { const result = await response.json(); if (!response.ok) throw new Error(result.message || 'Could not load saved contract information.'); return result.data as ContractContext; })
-      .then(data => { if (active) { setContractContext(data); setSignatories(current => ({ ...current, ...data.signatories, secondParty: data.studyLeader })); } })
-      .catch(cause => { if (active) setError(cause instanceof Error ? cause.message : 'Could not load contract information.'); })
-      .finally(() => { if (active) setContextLoading(false); });
-    return () => { active = false; };
+    fetch(`${API_BASE_URL}/letters/contract-context/${conceptId}`, {
+      headers: { Authorization: `Bearer ${session.access_token}` },
+    })
+      .then(async (response) => {
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.message || 'Could not load saved contract information.');
+        return result.data as ContractContext;
+      })
+      .then((data) => {
+        if (active) {
+          setContractContext(data);
+          setSignatories((current) => ({
+            ...current,
+            ...data.signatories,
+            secondParty: data.studyLeader,
+          }));
+        }
+      })
+      .catch((cause) => {
+        if (active) setError(cause instanceof Error ? cause.message : 'Could not load contract information.');
+      })
+      .finally(() => {
+        if (active) setContextLoading(false);
+      });
+    return () => {
+      active = false;
+    };
   }, [template, conceptId, session?.access_token]);
 
   const clearDraft = () => {
@@ -274,7 +333,11 @@ export function LetterDeskPage() {
         reviewId,
         signatories: {
           ...signatories,
-          secondParty: signatories.secondParty || selectedSource?.proponentName || contractContext?.studyLeader || 'Study Leader',
+          secondParty:
+            signatories.secondParty ||
+            selectedSource?.proponentName ||
+            contractContext?.studyLeader ||
+            'Study Leader',
         },
         signatures,
         headApprovalConfirmed,
@@ -300,7 +363,11 @@ export function LetterDeskPage() {
         reviewId,
         signatories: {
           ...signatories,
-          secondParty: signatories.secondParty || selectedSource?.proponentName || contractContext?.studyLeader || 'Study Leader',
+          secondParty:
+            signatories.secondParty ||
+            selectedSource?.proponentName ||
+            contractContext?.studyLeader ||
+            'Study Leader',
         },
         signatures,
         headApprovalConfirmed,
@@ -313,6 +380,84 @@ export function LetterDeskPage() {
       setError(cause instanceof Error ? cause.message : 'Could not issue the document.');
     } finally {
       setBusy(false);
+    }
+  };
+
+  const handleDownloadPdf = async () => {
+    if (!preview?.html || !session?.access_token) return;
+    setDownloadingFormat('pdf');
+    setError('');
+    try {
+      const tracking = contractContext?.contractData?.contractNumber || 'WMSU-RPDU-CA-001.01';
+      const filename = isContractTemplate(template) ? `11_PSC_${tracking}.pdf` : `${template}.pdf`;
+      const response = await fetch(`${API_BASE_URL}/letters/download-pdf`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ html: preview.html, filename }),
+      });
+      if (!response.ok) throw new Error('Failed to generate PDF file.');
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Could not download 11 PSC.pdf.');
+    } finally {
+      setDownloadingFormat(null);
+    }
+  };
+
+  const handleDownloadDocx = async () => {
+    if (!conceptId || !session?.access_token) return;
+    setDownloadingFormat('docx');
+    setError('');
+    try {
+      const tracking = contractContext?.contractData?.contractNumber || 'WMSU-RPDU-CA-001.01';
+      const filename = `11_PSC_${tracking}.docx`;
+      const response = await fetch(`${API_BASE_URL}/letters/download-docx`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          conceptId,
+          title: contractContext?.proposalTitle || selectedSource?.title,
+          recipientName: contractContext?.studyLeader || selectedSource?.proponentName,
+          signatories: {
+            ...signatories,
+            secondParty:
+              signatories.secondParty ||
+              contractContext?.studyLeader ||
+              selectedSource?.proponentName ||
+              'Study Leader',
+          },
+          contractData: contractContext?.contractData,
+          filename,
+        }),
+      });
+      if (!response.ok) throw new Error('Failed to generate 11 PSC.docx file.');
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Could not download 11 PSC.docx.');
+    } finally {
+      setDownloadingFormat(null);
     }
   };
 
@@ -341,77 +486,81 @@ export function LetterDeskPage() {
           Prepare, review, sign, and issue technical review clearances (COTR), institutional research agreements (PSC), and official screening letters all in one place—without complicated pop-up windows.
         </p>
         <div className="mt-3 flex flex-wrap items-center gap-2.5">
-          <Link to={`/${profile?.role === 'ADMIN' ? 'admin' : 'rpdu'}/letters/screening-results`} className="inline-flex min-h-11 items-center rounded-sm bg-[#C8102E] px-4 text-sm font-semibold text-white hover:bg-[#A00D26]">Send screening results</Link>
-          <Link to={`/${profile?.role === 'ADMIN' ? 'admin' : 'rpdu'}/archive`} className="inline-flex min-h-11 items-center gap-2 rounded-sm border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 hover:bg-slate-50 shadow-2xs">
+          <Link
+            to={`/${profile?.role === 'ADMIN' ? 'admin' : 'rpdu'}/letters/screening-results`}
+            className="inline-flex min-h-11 items-center rounded-sm bg-[#C8102E] px-4 text-sm font-semibold text-white hover:bg-[#A00D26]"
+          >
+            Send screening results
+          </Link>
+          <Link
+            to={`/${profile?.role === 'ADMIN' ? 'admin' : 'rpdu'}/archive`}
+            className="inline-flex min-h-11 items-center gap-2 rounded-sm border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 hover:bg-slate-50 shadow-2xs"
+          >
             <Archive size={16} className="text-slate-500" />
             View Document Archive
           </Link>
         </div>
       </header>
 
-      {/* Workflow Navigation */}
-      <nav aria-label="Document workflow" className="bg-white rounded-md border border-slate-200 p-2 sm:p-2.5 shadow-xs">
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+      {/* Progress Stepper */}
+      <nav aria-label="Document issuance steps">
+        <ol className="grid grid-cols-1 gap-4 sm:grid-cols-4 border-y border-slate-200 py-5">
           {STAGES.map((label, index) => {
-            const stageNum = index + 1;
-            const complete = stage > stageNum;
-            const active = stage === stageNum;
+            const step = index + 1;
+            const active = stage === step;
+            const done = stage > step;
             return (
-              <button
-                key={label}
-                type="button"
-                disabled={stageNum > stage || busy}
-                onClick={() => setStage(stageNum)}
-                className={`flex items-center gap-2.5 px-3.5 py-2.5 rounded-md text-xs transition-all text-left cursor-pointer disabled:cursor-default ${
-                  active
-                    ? 'bg-red-50/70 text-[#C8102E] border border-red-200 font-bold'
-                    : complete
-                    ? 'bg-slate-50 text-slate-800 hover:bg-slate-100 font-semibold'
-                    : 'text-slate-500 hover:text-slate-600 font-medium'
-                }`}
-              >
+              <li key={label} className="flex items-center gap-3">
                 <span
-                  className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold transition-all ${
-                    active
+                  className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold transition-colors ${
+                    done
+                      ? 'bg-emerald-700 text-white'
+                      : active
                       ? 'bg-[#C8102E] text-white'
-                      : complete
-                      ? 'bg-emerald-600 text-white'
-                      : 'bg-slate-100 text-slate-500'
+                      : 'border border-slate-300 text-slate-500 bg-slate-50'
                   }`}
                 >
-                  {stageNum}
+                  {done ? <Check size={14} strokeWidth={3} /> : step}
                 </span>
-                <span className="truncate">{label}</span>
-                {complete && <Check size={14} strokeWidth={2.5} className="ml-auto shrink-0 text-emerald-600" />}
-              </button>
+                <span
+                  className={`text-sm font-medium ${
+                    active ? 'font-bold text-slate-900' : done ? 'text-slate-700' : 'text-slate-400'
+                  }`}
+                >
+                  {label}
+                </span>
+              </li>
             );
           })}
-        </div>
+        </ol>
       </nav>
 
-      {/* Error alert */}
+      {/* Error Message */}
       {error && (
-        <div role="alert" className="rounded-md border border-red-200 bg-red-50 p-4 text-xs font-medium text-red-700">
+        <div
+          role="alert"
+          className="rounded-md border border-red-200 bg-red-50 px-5 py-4 text-sm font-medium text-red-900"
+        >
           {error}
         </div>
       )}
 
-      {/* WORKSPACE CONTAINER (ZERO MODALS) */}
-      <section className="bg-white rounded-lg border border-slate-200 p-6 sm:p-8 shadow-xs" aria-label="Document creation workspace">
-        {/* DOCUMENT TYPE SELECTION */}
+      {/* Main Content Card */}
+      <section className="rounded-lg border border-slate-200 bg-white p-6 sm:p-10 shadow-2xs">
+        {/* CHOOSE DOCUMENT TYPE */}
         {stage === 1 && (
           <div className="mx-auto max-w-2xl space-y-6">
             <div>
-              <h2 className="text-xl font-bold text-slate-900">Select Document or Contract Template</h2>
+              <h2 className="text-xl font-bold text-slate-900">Select Official Document Type</h2>
               <p className="mt-1 text-sm text-slate-600">
-                Choose the official university instrument you need to issue.
+                Choose the letter, certificate, or contract you want to prepare and issue.
               </p>
             </div>
 
             <fieldset className="space-y-3">
-              <legend className="sr-only">Document template choices</legend>
+              <legend className="sr-only">Document templates</legend>
 
-              {/* 1. Preliminary Screening Result */}
+              {/* 1. Screening Letter */}
               <label
                 className={`block cursor-pointer rounded-lg border p-5 transition-all ${
                   template === SCREENING
@@ -430,13 +579,13 @@ export function LetterDeskPage() {
                   <div>
                     <span className="font-bold text-slate-900">Preliminary Screening Result Letter</span>
                     <p className="mt-1 text-xs text-slate-500">
-                      WMSU-RPDU-LET-001.01 · Formal notice informing proponents whether their concept proposal passed initial desk evaluation.
+                      WMSU-RPDU-LET-001.01 · Official notice of screening completion and AIHR endorsement status.
                     </p>
                   </div>
                 </div>
               </label>
 
-              {/* 2. Technical Reviewer Invitation */}
+              {/* 2. Reviewer Invitation */}
               <label
                 className={`block cursor-pointer rounded-lg border p-5 transition-all ${
                   template === INVITATION
@@ -503,9 +652,11 @@ export function LetterDeskPage() {
                     onChange={() => selectTemplate(CONTRACT)}
                   />
                   <div>
-                    <span className="font-bold text-slate-900">Professional Service Contract (PSC)</span>
+                    <span className="font-bold text-slate-900">
+                      Professional Service Contract (PSC)
+                    </span>
                     <p className="mt-1 text-xs text-slate-500">
-                      WMSU-RPDU-CA-001.01 · Official 6-page institutional grant contract adhering to WMSU research process flow and template standards.
+                      WMSU-RPDU-CA-001.01 · Pulls Final Approved Budget, Proponent Name, and Proposal Title directly from the database into 11 PSC.pdf &amp; 11 PSC.docx.
                     </p>
                   </div>
                 </div>
@@ -530,11 +681,13 @@ export function LetterDeskPage() {
           <div className="mx-auto max-w-2xl space-y-7">
             <div>
               <h2 className="text-xl font-bold text-slate-900">
-                {isContractTemplate(template) ? 'Select the Proponent’s PSC' : 'Select Associated Research Proposal'}
+                {isContractTemplate(template)
+                  ? 'Professional Service Contract (WMSU-RPDU-CA-001.01)'
+                  : 'Select Associated Research Proposal'}
               </h2>
               <p className="mt-1 text-sm text-slate-600">
                 {isContractTemplate(template)
-                  ? 'Select the proposal. Saved information is filled automatically; the proponent completes missing details after RPDU sends the prepared PSC.'
+                  ? 'Select a research proposal with a signed Line-Item Budget to automatically pull its Final Approved Budget, Proponent Name, and Proposal Title from the database into 11 PSC.pdf and 11 PSC.docx.'
                   : template === CERTIFICATE
                   ? 'Select the technically reviewed proposal to issue the clearance certificate.'
                   : 'Select the proposal record to address this official correspondence.'}
@@ -573,14 +726,18 @@ export function LetterDeskPage() {
 
             {!choices.length && (
               <p className="rounded-md border border-slate-200 bg-slate-50 p-4 text-sm leading-relaxed text-slate-600">
-                No research proposal records found in the database.
+                {isContractTemplate(template)
+                  ? 'No proposals with a signed Line-Item Budget (LIB) found yet. A project will appear here once its budget allocation is approved and the signed LIB PDF has been uploaded.'
+                  : 'No research proposal records found in the database.'}
               </p>
             )}
 
-            {/* Proponent / Recipient Info Card */}
-            {selectedSource && (
+            {/* Proponent / Recipient Info Card (Non-PSC) */}
+            {selectedSource && !isContractTemplate(template) && (
               <div className="rounded-lg border border-slate-200 bg-slate-50/80 p-5 space-y-2">
-                <div className="text-xs font-bold uppercase tracking-wider text-slate-500">Lead Researcher / Study Leader (Second Party)</div>
+                <div className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                  Lead Researcher / Study Leader (Second Party)
+                </div>
                 <div className="text-base font-bold text-slate-900">{selectedSource.proponentName}</div>
                 <div className="text-xs text-slate-600 line-clamp-2">
                   <span className="font-semibold text-slate-700">Project:</span> {selectedSource.title}
@@ -588,13 +745,103 @@ export function LetterDeskPage() {
               </div>
             )}
 
-            {isContractTemplate(template) && contextLoading && <p role="status" className="text-sm text-slate-600">Checking existing PSC…</p>}
+            {isContractTemplate(template) && contextLoading && (
+              <p role="status" className="text-sm text-slate-600">
+                Pulling Final Approved Budget, Proponent Name, and Proposal Title from database…
+              </p>
+            )}
+
+            {/* Database Autofill Summary Card */}
+            {isContractTemplate(template) && contractContext && !contextLoading && (
+              <div className="rounded-lg border border-slate-200 bg-slate-50/90 p-5 space-y-4">
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 pb-3">
+                  <div className="flex items-center gap-2">
+                    <Database className="w-4 h-4 text-[#C8102E]" />
+                    <span className="text-xs font-extrabold uppercase tracking-wider text-slate-800">
+                      Database-Injected PSC Fields (WMSU-RPDU-CA-001.01)
+                    </span>
+                  </div>
+                </div>
+
+                {/* 3 Core Autofilled Fields */}
+                <div className="grid grid-cols-1 gap-3 text-xs">
+                  <div className="p-3 bg-white rounded-md border border-slate-200">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+                      1. Proposal Title (Injected into Witnesses &amp; Clause 2 Expected Outputs)
+                    </span>
+                    <span className="font-bold text-slate-900 text-sm block mt-0.5">
+                      {contractContext.proposalTitle || selectedSource?.title}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="p-3 bg-white rounded-md border border-slate-200">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+                        2. Proponent Name / Study Leader (Second Party)
+                      </span>
+                      <span className="font-bold text-slate-900 text-sm block mt-0.5">
+                        {contractContext.studyLeader || selectedSource?.proponentName}
+                      </span>
+                      <span className="text-[11px] text-slate-500 block mt-0.5">
+                        {contractContext.contractData.collegeDepartment}
+                      </span>
+                    </div>
+
+                    <div className="p-3 bg-white rounded-md border border-slate-200">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+                        3. Final Approved Budget (Clause 5 Project Cost)
+                      </span>
+                      <span className="font-mono font-black text-[#C8102E] text-sm block mt-0.5">
+                        Php{' '}
+                        {(Number(contractContext.contractData.contractAmount) || 0).toLocaleString('en-US', {
+                          minimumFractionDigits: 2,
+                        })}
+                      </span>
+                      <span className="text-[11px] text-slate-500 block mt-0.5 italic">
+                        {contractContext.finalApprovedBudgetWords || 'Approved Operating Budget'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Read-Only Budget Allocation Metadata Summary */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 border-t border-slate-200 text-xs">
+                  <div className="bg-white border border-slate-200 rounded p-2.5">
+                    <span className="block text-[11px] font-bold text-slate-500">
+                      Compensation Arrangement (from LIB)
+                    </span>
+                    <span className="font-semibold text-slate-900 block mt-0.5">
+                      {contractContext.contractData.compensationArrangement === 'Deloading'
+                        ? `Teaching De-loading (AY ${contractContext.contractData.schoolYear || '2026–2027'})`
+                        : 'Research Honorarium'}
+                    </span>
+                  </div>
+                  <div className="bg-white border border-slate-200 rounded p-2.5">
+                    <span className="block text-[11px] font-bold text-slate-500">
+                      Project Duration (from LIB)
+                    </span>
+                    <span className="font-semibold text-slate-900 block mt-0.5">
+                      {contractContext.contractData.durationMonths || '12'} Months ({contractContext.contractData.startDate} to {contractContext.contractData.endDate})
+                    </span>
+                  </div>
+                  <div className="bg-white border border-slate-200 rounded p-2.5">
+                    <span className="block text-[11px] font-bold text-slate-500">
+                      Co-Researchers (from LIB)
+                    </span>
+                    <span className="font-semibold text-slate-900 block mt-0.5">
+                      {contractContext.contractData.coResearchers || 'None (Solo Study Leader)'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {isContractTemplate(template) && contractContext?.existingContract && (
               <div role="status" className="border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 rounded-md">
                 <p>
                   {contractContext.existingContract.status === 'DRAFT'
                     ? 'A PSC draft already exists. Continue this draft using the next step; its existing record will be issued.'
-                    : 'A PSC has already been issued for this proposal. Another PSC cannot be generated.'}
+                    : 'A PSC has already been issued for this proposal. You can still regenerate or download the 11 PSC.pdf and 11 PSC.docx copies.'}
                 </p>
                 {contractContext.existingContract.status === 'DRAFT' ? (
                   <button
@@ -606,7 +853,9 @@ export function LetterDeskPage() {
                   </button>
                 ) : (
                   <Link
-                    to={`/${profile?.role === 'ADMIN' ? 'admin' : 'rpdu'}/archive?issued=${encodeURIComponent(contractContext.existingContract.id)}`}
+                    to={`/${profile?.role === 'ADMIN' ? 'admin' : 'rpdu'}/archive?issued=${encodeURIComponent(
+                      contractContext.existingContract.id
+                    )}`}
                     className="mt-2 inline-block font-semibold underline cursor-pointer"
                   >
                     Open existing PSC in Archive
@@ -651,7 +900,11 @@ export function LetterDeskPage() {
               </button>
               <button
                 type="button"
-                disabled={!choices.some((item) => (item.id || (item as any).conceptProposalId) === conceptId) || (isContractTemplate(template) && (!contractContext || (contractContext.existingContract?.status === 'ISSUED' && !contractContext.existingContract?.id))) || (template === INVITATION && !reviewId)}
+                disabled={
+                  !choices.some((item) => (item.id || (item as any).conceptProposalId) === conceptId) ||
+                  (isContractTemplate(template) && !contractContext) ||
+                  (template === INVITATION && !reviewId)
+                }
                 onClick={() => setStage(3)}
                 className="inline-flex items-center gap-2 bg-[#C8102E] hover:bg-[#A00D26] px-6 py-3 text-sm font-bold text-white rounded-md shadow-xs transition-colors cursor-pointer disabled:cursor-not-allowed disabled:bg-slate-300"
               >
@@ -666,12 +919,16 @@ export function LetterDeskPage() {
           <div className="mx-auto max-w-3xl space-y-8">
             <div>
               <h2 className="text-xl font-bold text-slate-900">
-                {isContractTemplate(template) ? 'Contract Signatories & Witnesses (Conforme)' : 'Signatories & Authorizations'}
+                {isContractTemplate(template)
+                  ? 'Contract Signatories & Witnesses (Conforme)'
+                  : 'Signatories & Authorizations'}
               </h2>
               <p className="mt-1 text-sm text-slate-600">
                 {isContractTemplate(template)
                   ? 'Confirm the Conforme contracting parties and official witnesses in accordance with the official WMSU PSC template.'
-                  : `Confirm the designated officials and signers for this ${template === CERTIFICATE ? 'certificate' : 'letter'}.`}
+                  : `Confirm the designated officials and signers for this ${
+                      template === CERTIFICATE ? 'certificate' : 'letter'
+                    }.`}
               </p>
             </div>
 
@@ -696,75 +953,75 @@ export function LetterDeskPage() {
             <div className="space-y-6">
               {/* FOR CONTRACT (PSC): INSTITUTIONAL SIGNATORIES & WITNESSES */}
               {isContractTemplate(template) ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* First Party: University President */}
-                    <div>
-                      <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1" htmlFor="psc-first-party">
-                        University President (First Party) *
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* First Party: University President */}
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1" htmlFor="psc-first-party">
+                      University President (First Party) *
+                    </label>
+                    <input
+                      id="psc-first-party"
+                      maxLength={120}
+                      value={signatories.firstParty || ''}
+                      onChange={(event) => updateSignatory('firstParty', event.target.value)}
+                      placeholder="Dr. Ma. Carla A. Ochotorena"
+                      className="w-full rounded-md border border-slate-300 bg-white p-3 text-sm text-slate-900 font-semibold focus:border-[#C8102E] focus:outline-hidden"
+                    />
+                    <div className="mt-3">
+                      <SignatureField
+                        label="President Signature"
+                        value={signatures.firstParty || ''}
+                        onChange={(value) => updateSignature('firstParty', value)}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Witness 1: RDEC Director */}
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1" htmlFor="psc-director-witness">
+                      RDEC Director (Witness) *
+                    </label>
+                    <input
+                      id="psc-director-witness"
+                      maxLength={120}
+                      value={signatories.director}
+                      onChange={(event) => updateSignatory('director', event.target.value)}
+                      placeholder="Dr. Roberto M. Bernardo"
+                      className="w-full rounded-md border border-slate-300 bg-white p-3 text-sm text-slate-900 font-semibold focus:border-[#C8102E] focus:outline-hidden"
+                    />
+                    <div className="mt-3">
+                      <SignatureField
+                        label="Director Signature"
+                        value={signatures.director}
+                        onChange={(value) => updateSignature('director', value)}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Witness 2: VP RESEL */}
+                  <div className="md:col-span-2 flex justify-center">
+                    <div className="w-full md:w-[calc(50%-0.75rem)]">
+                      <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1" htmlFor="psc-vp-witness">
+                        Vice President, RESEL (Witness) *
                       </label>
                       <input
-                        id="psc-first-party"
+                        id="psc-vp-witness"
                         maxLength={120}
-                        value={signatories.firstParty || ''}
-                        onChange={(event) => updateSignatory('firstParty', event.target.value)}
-                        placeholder="Dr. Ma. Carla A. Ochotorena"
+                        value={signatories.vicePresident}
+                        onChange={(event) => updateSignatory('vicePresident', event.target.value)}
+                        placeholder="Dr. Joel G. Fernando"
                         className="w-full rounded-md border border-slate-300 bg-white p-3 text-sm text-slate-900 font-semibold focus:border-[#C8102E] focus:outline-hidden"
                       />
                       <div className="mt-3">
                         <SignatureField
-                          label="President Signature"
-                          value={signatures.firstParty || ''}
-                          onChange={(value) => updateSignature('firstParty', value)}
+                          label="Vice President Signature"
+                          value={signatures.vicePresident}
+                          onChange={(value) => updateSignature('vicePresident', value)}
                         />
-                      </div>
-                    </div>
-
-                    {/* Witness 1: RDEC Director */}
-                    <div>
-                      <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1" htmlFor="psc-director-witness">
-                        RDEC Director (Witness) *
-                      </label>
-                      <input
-                        id="psc-director-witness"
-                        maxLength={120}
-                        value={signatories.director}
-                        onChange={(event) => updateSignatory('director', event.target.value)}
-                        placeholder="Dr. Roberto M. Bernardo"
-                        className="w-full rounded-md border border-slate-300 bg-white p-3 text-sm text-slate-900 font-semibold focus:border-[#C8102E] focus:outline-hidden"
-                      />
-                      <div className="mt-3">
-                        <SignatureField
-                          label="Director Signature"
-                          value={signatures.director}
-                          onChange={(value) => updateSignature('director', value)}
-                        />
-                      </div>
-                    </div>
-
-                    {/* Witness 2: VP RESEL */}
-                    <div className="md:col-span-2 flex justify-center">
-                      <div className="w-full md:w-[calc(50%-0.75rem)]">
-                        <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1" htmlFor="psc-vp-witness">
-                          Vice President, RESEL (Witness) *
-                        </label>
-                        <input
-                          id="psc-vp-witness"
-                          maxLength={120}
-                          value={signatories.vicePresident}
-                          onChange={(event) => updateSignatory('vicePresident', event.target.value)}
-                          placeholder="Dr. Joel G. Fernando"
-                          className="w-full rounded-md border border-slate-300 bg-white p-3 text-sm text-slate-900 font-semibold focus:border-[#C8102E] focus:outline-hidden"
-                        />
-                        <div className="mt-3">
-                          <SignatureField
-                            label="Vice President Signature"
-                            value={signatures.vicePresident}
-                            onChange={(value) => updateSignature('vicePresident', value)}
-                          />
-                        </div>
                       </div>
                     </div>
                   </div>
+                </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
@@ -880,14 +1137,40 @@ export function LetterDeskPage() {
               </div>
 
               {preview && (
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <button
                     type="button"
                     onClick={() => previewFrame.current?.contentWindow?.print()}
-                    className="inline-flex items-center gap-2 rounded-md border border-slate-300 bg-white px-4 py-2.5 text-sm font-bold text-slate-800 hover:bg-slate-50 shadow-2xs transition-colors cursor-pointer"
+                    className="inline-flex min-h-10 items-center gap-2 rounded-md border border-slate-300 bg-white px-3.5 py-2 text-xs font-bold text-slate-800 hover:bg-slate-50 shadow-2xs transition-colors cursor-pointer"
                   >
-                    <Printer size={16} className="text-[#C8102E]" /> Print or Save as PDF
+                    <Printer size={15} className="text-[#C8102E]" /> Print
                   </button>
+
+                  <button
+                    type="button"
+                    onClick={handleDownloadPdf}
+                    disabled={downloadingFormat !== null}
+                    className="inline-flex min-h-10 items-center gap-2 rounded-md bg-[#C8102E] hover:bg-[#A00D26] px-3.5 py-2 text-xs font-bold text-white shadow-2xs transition-colors cursor-pointer disabled:opacity-50"
+                  >
+                    <Download size={15} />
+                    {downloadingFormat === 'pdf'
+                      ? 'Generating PDF…'
+                      : isContractTemplate(template)
+                      ? 'Download 11 PSC.pdf'
+                      : 'Download PDF'}
+                  </button>
+
+                  {isContractTemplate(template) && (
+                    <button
+                      type="button"
+                      onClick={handleDownloadDocx}
+                      disabled={downloadingFormat !== null}
+                      className="inline-flex min-h-10 items-center gap-2 rounded-md bg-slate-900 hover:bg-slate-800 px-3.5 py-2 text-xs font-bold text-white shadow-2xs transition-colors cursor-pointer disabled:opacity-50"
+                    >
+                      <FileText size={15} />
+                      {downloadingFormat === 'docx' ? 'Generating DOCX…' : 'Download 11 PSC.docx'}
+                    </button>
+                  )}
                 </div>
               )}
             </div>
@@ -955,13 +1238,16 @@ export function LetterDeskPage() {
                         : 'Official letter successfully issued!'}
                     </div>
                     <div className="text-xs text-emerald-800 mt-0.5">
-                      Archived in permanent university records under {isContractTemplate(template) ? 'professional_service_contracts' : 'official_letters'}. You can view or print it in the Issued Documents Archive.
+                      Archived in permanent university records under{' '}
+                      {isContractTemplate(template) ? 'professional_service_contracts' : 'official_letters'}. You can view or print it in the Issued Documents Archive.
                     </div>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
                   <Link
-                    to={`/${profile?.role === 'ADMIN' ? 'admin' : 'rpdu'}/archive?issued=${encodeURIComponent(newlyIssuedId)}`}
+                    to={`/${profile?.role === 'ADMIN' ? 'admin' : 'rpdu'}/archive?issued=${encodeURIComponent(
+                      newlyIssuedId
+                    )}`}
                     className="px-4 py-2 bg-emerald-800 text-white hover:bg-emerald-900 rounded-md text-xs font-bold transition-colors cursor-pointer inline-flex items-center gap-1.5"
                   >
                     <Archive size={14} />
@@ -980,7 +1266,16 @@ export function LetterDeskPage() {
                 </div>
               </div>
             )}
-            {newlyIssuedId && template === SCREENING && <Link to={`/${profile?.role === 'ADMIN' ? 'admin' : 'rpdu'}/letters/screening-results?letter=${encodeURIComponent(newlyIssuedId)}`} className="inline-flex min-h-11 items-center rounded-sm bg-[#C8102E] px-4 text-sm font-semibold text-white hover:bg-[#A00D26]">Preview &amp; send to proponent</Link>}
+            {newlyIssuedId && template === SCREENING && (
+              <Link
+                to={`/${profile?.role === 'ADMIN' ? 'admin' : 'rpdu'}/letters/screening-results?letter=${encodeURIComponent(
+                  newlyIssuedId
+                )}`}
+                className="inline-flex min-h-11 items-center rounded-sm bg-[#C8102E] px-4 text-sm font-semibold text-white hover:bg-[#A00D26]"
+              >
+                Preview &amp; send to proponent
+              </Link>
+            )}
           </div>
         )}
       </section>

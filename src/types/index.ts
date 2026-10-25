@@ -238,8 +238,17 @@ export interface RpduBudgetAllocationItem {
   proponentEmail: string;
   proponentDepartment: string;
   totalApprovedAmount: number;
+  enBancApprovedAmount?: number;
+  enBancOutcome?: string;
+  enBancDeliberatedOn?: string | null;
+  enBancRemarks?: string;
+  budgetVariance?: number;
+  budgetSynced?: boolean;
+  signedLibVerifiedAmount?: number | null;
+  routedForPresidentSignature?: boolean;
+  routedAt?: string | null;
   isApproved: boolean;
-  reviewStatus: 'PENDING' | 'APPROVED' | 'REJECTED';
+  reviewStatus: 'PENDING' | 'APPROVED' | 'SIGNED' | 'REJECTED';
   reviewRemarks?: string;
   reviewedAt?: string | null;
   reviewerName?: string | null;

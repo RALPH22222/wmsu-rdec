@@ -221,8 +221,11 @@ export const BudgetAllocationForm: React.FC = () => {
   const matchedConcept = conceptProposals.find((c) => c.id === selectedProposalId);
   const matchedCall = calls.find((c) => c.id === matchedConcept?.callId) || calls[0];
 
-  // Budget cap calculation
-  const maxBudgetLimit = matchedCall?.maxBudgetPerProject || 500000;
+  // Budget cap calculation: prefer the proposal's En Banc / Concept Approved Budget if set, otherwise fallback to Call limit
+  const hasProposalApprovedBudget = Boolean(matchedConcept?.budgetRequested && Number(matchedConcept.budgetRequested) > 0);
+  const maxBudgetLimit = hasProposalApprovedBudget
+    ? Number(matchedConcept!.budgetRequested)
+    : matchedCall?.maxBudgetPerProject || 500000;
 
   const profileFullName = profile ? `${profile.first_name || ''} ${profile.last_name || ''}`.trim() : '';
   const profileDepartment = profile?.departments?.name || '';
@@ -260,18 +263,22 @@ export const BudgetAllocationForm: React.FC = () => {
     const saved = localStorage.getItem(`proponent_budget_status_${selectedProposalId}`);
     return saved === 'submitted' ? 'submitted' : 'draft';
   });
-  const [reviewStatus, setReviewStatus] = useState<'PENDING' | 'APPROVED' | null>(() => {
+  const [reviewStatus, setReviewStatus] = useState<'PENDING' | 'APPROVED' | 'SIGNED' | null>(() => {
     const cached = localStorage.getItem(`proponent_budget_${selectedProposalId}`);
     if (cached) {
       try {
         const parsed = JSON.parse(cached);
-        return parsed.reviewStatus === 'APPROVED' || parsed.isApproved ? 'APPROVED' : 'PENDING';
+        if (parsed.reviewStatus === 'SIGNED') return 'SIGNED';
+        if (parsed.reviewStatus === 'APPROVED' || parsed.isApproved) {
+          return 'APPROVED';
+        }
+        return 'PENDING';
       } catch {}
     }
     return null;
   });
   const [isEditingSubmitted, setIsEditingSubmitted] = useState<boolean>(false);
-  const isLocked = submissionStatus === 'submitted' && !isEditingSubmitted && reviewStatus !== 'APPROVED';
+  const isLocked = submissionStatus === 'submitted' && !isEditingSubmitted;
 
   // Metadata State for Selected Proposal
   const [metadata, setMetadata] = useState<MetadataState>(() => {
@@ -631,7 +638,7 @@ export const BudgetAllocationForm: React.FC = () => {
     });
   }, [coResearchersCount, projectStaffCount, isTwoYears, metadata.compensationType, isLocked]);
 
-  // Update line item amount
+  // Update line item amount (PS rows are auto-calculated and never manually editable)
   const handleAmountChange = (id: string, field: 'year1' | 'year2', value: number) => {
     if (isLocked) return;
     if (field === 'year2' && !isTwoYears) return;
@@ -639,7 +646,7 @@ export const BudgetAllocationForm: React.FC = () => {
     setItems((prev) =>
       prev.map((item) => {
         if (item.id !== id) return item;
-        if (item.classType === 'PS' && isTeachingDeloading) return item;
+        if (item.classType === 'PS') return item;
         const year1 = field === 'year1' ? safeVal : item.year1;
         const year2 = !isTwoYears ? 0 : field === 'year2' ? safeVal : item.year2;
         return {
@@ -847,6 +854,9 @@ export const BudgetAllocationForm: React.FC = () => {
   const handleRemovePdf = async () => {
     setAttachedPdf(null);
     localStorage.removeItem(`proponent_budget_pdf_${selectedProposalId}`);
+    if (reviewStatus === 'SIGNED') {
+      setReviewStatus('APPROVED');
+    }
     if (submissionStatus === 'submitted' && session?.access_token) {
       try {
         await fetch(API_ENDPOINTS.PROPONENT.BUDGET_ALLOCATIONS, {
@@ -1040,24 +1050,26 @@ export const BudgetAllocationForm: React.FC = () => {
 
             <div className="text-right p-3 bg-slate-50 rounded-md border border-slate-200 min-w-[140px]">
               <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
-                Call Budget Limit
+                {hasProposalApprovedBudget ? 'En Banc Approved Budget' : 'Call Budget Limit'}
               </span>
               <span className="text-lg font-black text-slate-900">
                 ₱{maxBudgetLimit.toLocaleString('en-US', { minimumFractionDigits: 2 })}
               </span>
               <div
                 className="text-[10px] text-slate-500 mt-0.5 font-medium truncate max-w-[140px]"
-                title={matchedCall?.title || 'Call Limit'}
+                title={hasProposalApprovedBudget ? matchedConcept?.title : matchedCall?.title || 'Call Limit'}
               >
-                {matchedCall?.code || 'Call Cap'}
+                {hasProposalApprovedBudget ? 'Target LIB Amount' : matchedCall?.code || 'Call Cap'}
               </div>
             </div>
 
             <div
               className={`px-3 py-2 rounded-md border text-center min-w-[120px] flex flex-col justify-center ${
                 submissionStatus === 'submitted'
-                  ? reviewStatus === 'APPROVED'
+                  ? reviewStatus === 'SIGNED'
                     ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                    : reviewStatus === 'APPROVED'
+                    ? 'bg-sky-50 text-sky-700 border-sky-200'
                     : 'bg-amber-50 text-amber-700 border-amber-200'
                   : 'bg-slate-50 text-slate-700 border-slate-200'
               }`}
@@ -1065,15 +1077,19 @@ export const BudgetAllocationForm: React.FC = () => {
               <span className="text-[10px] font-bold uppercase tracking-wider block text-slate-400">
                 Review Status
               </span>
-              <span className="text-xs font-black capitalize flex items-center justify-center gap-1 mt-0.5">
+              <span className="text-xs font-black flex items-center justify-center gap-1 mt-0.5">
                 {submissionStatus === 'submitted' ? (
-                  reviewStatus === 'APPROVED' ? (
+                  reviewStatus === 'SIGNED' ? (
                     <>
-                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> Approved
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> Signed LIB Uploaded
+                    </>
+                  ) : reviewStatus === 'APPROVED' ? (
+                    <>
+                      <CheckCircle2 className="w-3.5 h-3.5 text-sky-600" /> Approved — Awaiting Signed PDF
                     </>
                   ) : (
                     <>
-                      <Clock className="w-3.5 h-3.5 text-amber-600" /> Pending
+                      <Clock className="w-3.5 h-3.5 text-amber-600" /> Pending Review
                     </>
                   )
                 ) : (
@@ -1121,7 +1137,7 @@ export const BudgetAllocationForm: React.FC = () => {
 
         {/* Review & Submission Status Notification Banner */}
         {submissionStatus === 'submitted' &&
-          (reviewStatus === 'APPROVED' ? (
+          (reviewStatus === 'SIGNED' ? (
             <div className="p-4 bg-emerald-50/90 border border-emerald-300 rounded-md text-xs text-emerald-950 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
               <div className="flex items-start gap-3">
                 <div className="w-8 h-8 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0 mt-0.5 font-bold">
@@ -1129,13 +1145,32 @@ export const BudgetAllocationForm: React.FC = () => {
                 </div>
                 <div>
                   <div className="font-extrabold text-emerald-900 text-sm flex items-center gap-2">
-                    <span>Allocation Approved by RPDU</span>
+                    <span>Signed LIB Uploaded &amp; Approved</span>
                     <span className="bg-emerald-200/80 text-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
-                      Ready for Signatures
+                      Signed LIB Uploaded
                     </span>
                   </div>
                   <p className="mt-1 text-emerald-800 leading-relaxed text-xs">
-                    Your line-item budget has been vetted and officially approved by the RPDU office. You can now proceed to obtain the required physical signatures on your official budget document, then submit the signed Line-Item Budget PDF in the document upload section on the right.
+                    Your officially signed Line-Item Budget PDF has been uploaded and attached to your RPDU-approved allocation.
+                  </p>
+                </div>
+              </div>
+            </div>
+          ) : reviewStatus === 'APPROVED' ? (
+            <div className="p-4 bg-sky-50/90 border border-sky-300 rounded-md text-xs text-sky-950 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 rounded-full bg-sky-100 text-sky-700 flex items-center justify-center shrink-0 mt-0.5 font-bold">
+                  <CheckCircle2 className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="font-extrabold text-sky-900 text-sm flex items-center gap-2">
+                    <span>Approved by RPDU &mdash; Awaiting Signed PDF</span>
+                    <span className="bg-sky-200/80 text-sky-800 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
+                      Ready for Physical Signatures
+                    </span>
+                  </div>
+                  <p className="mt-1 text-sky-800 leading-relaxed text-xs">
+                    Your digital Line-Item Budget has been approved by RPDU. Please print your budget, gather the required physical signatures, and upload the signed PDF in the document upload section on the right.
                   </p>
                 </div>
               </div>
@@ -1146,9 +1181,9 @@ export const BudgetAllocationForm: React.FC = () => {
                 <Clock className="w-4 h-4" />
               </div>
               <div className="font-bold text-amber-900 text-xs flex items-center gap-2">
-                <span>Allocation Submitted &mdash; Pending RPDU Review</span>
+                <span>Allocation Submitted &mdash; Pending Review</span>
                 <span className="bg-amber-100 text-amber-800 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase">
-                  Pending
+                  Pending Review
                 </span>
               </div>
             </div>
@@ -1511,17 +1546,11 @@ export const BudgetAllocationForm: React.FC = () => {
                             <td className="py-2 px-3 text-right">
                               <input
                                 type="number"
-                                min="0"
-                                step="100"
-                                disabled={isLocked}
+                                disabled
+                                readOnly
                                 value={item.year1}
-                                onChange={(e) => handleAmountChange(item.id, 'year1', parseFloat(e.target.value) || 0)}
-                                placeholder="0.00"
-                                className={`w-full px-2 py-1 text-right text-xs border rounded-sm font-bold transition-colors ${
-                                  isLocked
-                                    ? 'bg-slate-100 text-slate-500 border-slate-200 cursor-not-allowed select-none'
-                                    : 'bg-slate-50 border-slate-200 text-slate-800 focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#C8102E]'
-                                }`}
+                                title="Auto-calculated from Study Leader, Co-Researchers, and Project Staff counts"
+                                className="w-full px-2 py-1 text-right text-xs border rounded-sm font-bold bg-slate-100 text-slate-600 border-slate-200 cursor-not-allowed select-none"
                               />
                             </td>
                             <td className="py-2 px-3 text-right">
@@ -1529,6 +1558,7 @@ export const BudgetAllocationForm: React.FC = () => {
                                 <input
                                   type="text"
                                   disabled
+                                  readOnly
                                   value=""
                                   placeholder="—"
                                   title="Disabled for 1-Year projects"
@@ -1537,17 +1567,11 @@ export const BudgetAllocationForm: React.FC = () => {
                               ) : (
                                 <input
                                   type="number"
-                                  min="0"
-                                  step="100"
-                                  disabled={isLocked}
+                                  disabled
+                                  readOnly
                                   value={item.year2}
-                                  onChange={(e) => handleAmountChange(item.id, 'year2', parseFloat(e.target.value) || 0)}
-                                  placeholder="0.00"
-                                  className={`w-full px-2 py-1 text-right text-xs border rounded-sm font-bold transition-colors ${
-                                    isLocked
-                                      ? 'bg-slate-100 text-slate-500 border-slate-200 cursor-not-allowed select-none'
-                                      : 'bg-slate-50 border-slate-200 text-slate-800 focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#C8102E]'
-                                  }`}
+                                  title="Auto-calculated from Study Leader, Co-Researchers, and Project Staff counts"
+                                  className="w-full px-2 py-1 text-right text-xs border rounded-sm font-bold bg-slate-100 text-slate-600 border-slate-200 cursor-not-allowed select-none"
                                 />
                               )}
                             </td>

@@ -33,9 +33,13 @@ interface ProposalContractItem {
   conceptId: string;
   title: string;
   proposedBudget: number | string;
+  finalApprovedBudget?: number;
+  isBudgetApproved?: boolean;
+  budgetSource?: string;
   studyLeader: string;
   department: string;
   detailedProposalId: string | null;
+  contractData?: ContractData | null;
   contract: {
     id: string;
     contractFileUrl: string | null;
@@ -75,15 +79,16 @@ export default function ProponentDocumentsPage() {
   const [selectedId, setSelectedId] = useState<string>('');
   const [previewHtml, setPreviewHtml] = useState<string>('');
   const [downloading, setDownloading] = useState(false);
+  const [downloadingDocx, setDownloadingDocx] = useState(false);
 
-  // Contract parameters form state
+  // Contract parameters state (autofilled directly from Budget Allocation & Proposal DB records)
   const [contractData, setContractData] = useState<ContractData>({
     contractNumber: '',
     durationMonths: '12',
     startDate: new Date().toISOString().split('T')[0],
     endDate: new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split('T')[0],
     contractAmount: '180000',
-    compensationArrangement: 'Deloading',
+    compensationArrangement: 'Honorarium',
     schoolYear: '2026–2027',
     collegeDepartment: '',
     coResearchers: '',
@@ -94,6 +99,27 @@ export default function ProponentDocumentsPage() {
   const [uploading, setUploading] = useState(false);
   const [uploadSuccess, setUploadSuccess] = useState('');
   const [uploadError, setUploadError] = useState('');
+
+  const buildAutofilledContractData = (proposal: ProposalContractItem): ContractData => {
+    const finalAmt = Number(proposal.finalApprovedBudget || proposal.proposedBudget || 180000);
+    if (proposal.contractData) {
+      return {
+        ...proposal.contractData,
+        contractAmount: String(finalAmt),
+      };
+    }
+    return {
+      contractNumber: `PSC-2026-${proposal.conceptId.slice(0, 4).toUpperCase()}`,
+      durationMonths: '12',
+      startDate: new Date().toISOString().split('T')[0],
+      endDate: new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split('T')[0],
+      contractAmount: String(finalAmt),
+      compensationArrangement: 'Honorarium',
+      schoolYear: '2026–2027',
+      collegeDepartment: proposal.department || 'College of Science and Mathematics',
+      coResearchers: '',
+    };
+  };
 
   const fetchData = async () => {
     if (!session?.access_token) return;
@@ -125,7 +151,6 @@ export default function ProponentDocumentsPage() {
         const loadedProposals: ProposalContractItem[] = contractsData.data || [];
         setProposals(loadedProposals);
 
-        // Restore active selected contract only when explicitly requested via URL params
         const urlType = searchParams.get('type');
         const targetPscId = urlType === 'PSC' ? searchParams.get('id') : null;
 
@@ -134,24 +159,8 @@ export default function ProponentDocumentsPage() {
           if (matched) {
             setSelectedType('PSC');
             setSelectedId(matched.conceptId);
-            const saved = sessionStorage.getItem(`psc_contract_data_${matched.conceptId}`);
-            if (saved) {
-              try {
-                setContractData(JSON.parse(saved));
-              } catch {}
-            } else {
-              setContractData({
-                contractNumber: `PSC-2026-${matched.conceptId.slice(0, 4).toUpperCase()}`,
-                durationMonths: '12',
-                startDate: new Date().toISOString().split('T')[0],
-                endDate: new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split('T')[0],
-                contractAmount: String(matched.proposedBudget || 180000),
-                compensationArrangement: 'Deloading',
-                schoolYear: '2026–2027',
-                collegeDepartment: matched.department || 'College of Science and Mathematics',
-                coResearchers: '',
-              });
-            }
+            sessionStorage.removeItem(`psc_contract_data_${matched.conceptId}`);
+            setContractData(buildAutofilledContractData(matched));
           }
         }
       }
@@ -187,6 +196,7 @@ export default function ProponentDocumentsPage() {
     setUploadError('');
 
     sessionStorage.setItem('last_selected_psc_id', proposal.conceptId);
+    sessionStorage.removeItem(`psc_contract_data_${proposal.conceptId}`);
     setSearchParams((prev) => {
       const next = new URLSearchParams(prev);
       next.set('type', 'PSC');
@@ -194,25 +204,7 @@ export default function ProponentDocumentsPage() {
       return next;
     }, { replace: true });
 
-    const saved = sessionStorage.getItem(`psc_contract_data_${proposal.conceptId}`);
-    if (saved) {
-      try {
-        setContractData(JSON.parse(saved));
-        return;
-      } catch {}
-    }
-
-    setContractData({
-      contractNumber: `PSC-2026-${proposal.conceptId.slice(0, 4).toUpperCase()}`,
-      durationMonths: '12',
-      startDate: new Date().toISOString().split('T')[0],
-      endDate: new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split('T')[0],
-      contractAmount: String(proposal.proposedBudget || 180000),
-      compensationArrangement: 'Deloading',
-      schoolYear: '2026–2027',
-      collegeDepartment: proposal.department || 'College of Science and Mathematics',
-      coResearchers: '',
-    });
+    setContractData(buildAutofilledContractData(proposal));
   };
 
   const handleCloseSelectedContract = () => {
@@ -237,7 +229,7 @@ export default function ProponentDocumentsPage() {
 
   const handleViewContractPreview = () => {
     if (!selectedId) return;
-    sessionStorage.setItem(`psc_contract_data_${selectedId}`, JSON.stringify(contractData));
+    sessionStorage.removeItem(`psc_contract_data_${selectedId}`);
     navigate(`/proponent/documents/contract-preview/${selectedId}`, {
       state: { contractData },
     });
@@ -285,7 +277,7 @@ export default function ProponentDocumentsPage() {
       let filename = 'document.pdf';
 
       if (selectedType === 'PSC' && selectedId) {
-        filename = `${contractData.contractNumber || 'PSC'}-Pre-Filled-Contract.pdf`;
+        filename = `11_PSC_${contractData.contractNumber || 'WMSU-RPDU-CA-001.01'}.pdf`;
         const res = await fetch(`${API_BASE_URL}/letters/mine/contracts/download-pdf`, {
           method: 'POST',
           headers: {
@@ -294,7 +286,6 @@ export default function ProponentDocumentsPage() {
           },
           body: JSON.stringify({
             conceptId: selectedId,
-            contractData,
           }),
         });
         if (!res.ok) {
@@ -343,6 +334,42 @@ export default function ProponentDocumentsPage() {
     }
   };
 
+  const handleDownloadDocx = async () => {
+    if (!session?.access_token || !selectedId || downloadingDocx) return;
+    setDownloadingDocx(true);
+    setError('');
+    try {
+      const filename = `11_PSC_${contractData.contractNumber || 'WMSU-RPDU-CA-001.01'}.docx`;
+      const res = await fetch(`${API_BASE_URL}/letters/mine/contracts/download-docx`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          conceptId: selectedId,
+        }),
+      });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.message || 'Failed to download contract DOCX.');
+      }
+      const blob = await res.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(blobUrl);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Error downloading DOCX.');
+    } finally {
+      setDownloadingDocx(false);
+    }
+  };
+
   const resolveFileUrl = (url: string | null) => {
     if (!url) return '';
     if (url.startsWith('http://') || url.startsWith('https://')) return url;
@@ -357,6 +384,8 @@ export default function ProponentDocumentsPage() {
   // When a contract is clicked, show only this contract workspace page
   // ---------------------------------------------------------------------------
   if (selectedType === 'PSC' && selectedProposal) {
+    const displayBudget = Number(selectedProposal.finalApprovedBudget || selectedProposal.proposedBudget || contractData.contractAmount || 0);
+
     return (
       <div className="mx-auto max-w-7xl">
         <section className="space-y-6 bg-white p-6 sm:p-8" aria-labelledby="psc-page-title">
@@ -381,7 +410,10 @@ export default function ProponentDocumentsPage() {
               <span className="text-xs font-bold uppercase tracking-wider text-[#C8102E]">Professional Service Contract (PSC)</span>
               <h3 id="psc-page-title" className="text-base font-bold text-slate-900">{selectedProposal.title}</h3>
               <p className="text-xs text-slate-500 mt-0.5">
-                Study Leader: <strong>{selectedProposal.studyLeader}</strong> · Budget: ₱{Number(selectedProposal.proposedBudget || 0).toLocaleString('en-PH')}
+                Study Leader: <strong>{selectedProposal.studyLeader}</strong> · Final Approved Budget:{' '}
+                <strong className="text-emerald-700 font-mono">
+                  ₱{displayBudget.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </strong>
               </p>
             </div>
 
@@ -410,83 +442,50 @@ export default function ProponentDocumentsPage() {
           {/* Quick Pre-fill Parameters & Actions */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Left Box: Prepare & Download Pre-Filled Contract */}
-            <div className="p-5 rounded-lg border border-slate-200 bg-white space-y-4">
-              <div>
-                <h4 className="text-sm font-bold text-slate-900">Prepare Pre-Filled Contract</h4>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  Verify parameters and download the official 6-page PSC for external notarization.
-                </p>
-              </div>
-
-              {/* Compensation choice */}
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1.5">Compensation Arrangement *</label>
-                <div className="grid grid-cols-2 gap-2 text-xs">
-                  <label
-                    className={`flex items-center gap-2 p-2.5 rounded border cursor-pointer ${
-                      contractData.compensationArrangement === 'Deloading'
-                        ? 'border-[#C8102E] bg-red-50 text-red-950 font-bold'
-                        : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300'
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      name="comp"
-                      value="Deloading"
-                      checked={contractData.compensationArrangement === 'Deloading'}
-                      onChange={() => setContractData((d) => ({ ...d, compensationArrangement: 'Deloading' }))}
-                      className="accent-[#C8102E]"
-                    />
-                    <span>Teaching De-loading</span>
-                  </label>
-
-                  <label
-                    className={`flex items-center gap-2 p-2.5 rounded border cursor-pointer ${
-                      contractData.compensationArrangement === 'Honorarium'
-                        ? 'border-[#C8102E] bg-red-50 text-red-950 font-bold'
-                        : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300'
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      name="comp"
-                      value="Honorarium"
-                      checked={contractData.compensationArrangement === 'Honorarium'}
-                      onChange={() => setContractData((d) => ({ ...d, compensationArrangement: 'Honorarium' }))}
-                      className="accent-[#C8102E]"
-                    />
-                    <span>Research Honorarium</span>
-                  </label>
+            <div className="p-5 rounded-lg border border-slate-200 bg-white space-y-4 flex flex-col justify-between">
+              <div className="space-y-4">
+                <div>
+                  <h4 className="text-sm font-bold text-slate-900">Prepare Pre-Filled Contract</h4>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    All contract parameters below are automatically pulled from your approved Proposal &amp; Budget Allocation (WMSU-RPDU-CA-001.01).
+                  </p>
                 </div>
-              </div>
 
-              {contractData.compensationArrangement === 'Deloading' && (
-                <div className="text-xs">
-                  <label className="block font-semibold text-slate-700 mb-1">
-                    Academic Year for Teaching De-loading *
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. 2026–2027"
-                    value={contractData.schoolYear}
-                    onChange={(e) => setContractData((d) => ({ ...d, schoolYear: e.target.value }))}
-                    className="w-full rounded border border-slate-300 p-2 text-slate-900 focus:border-[#C8102E] focus:outline-hidden"
-                  />
-                  <span className="text-[11px] text-slate-500 mt-0.5 block">
-                    Indicate the academic year during which the 3-unit teaching de-load will be utilized.
-                  </span>
+                {/* Read-only Database-Autofilled Contract Summary */}
+                <div className="rounded-lg border border-slate-200 bg-slate-50 p-3.5 space-y-2.5 text-xs">
+                  <div className="flex items-center justify-between border-b border-slate-200/80 pb-2">
+                    <span className="text-slate-500 font-medium">Final Approved Budget</span>
+                    <span className="font-bold font-mono text-sm text-emerald-700">
+                      ₱{displayBudget.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between border-b border-slate-200/80 pb-2">
+                    <span className="text-slate-500 font-medium">Compensation Arrangement (from LIB)</span>
+                    <span className="font-semibold text-slate-900">
+                      {contractData.compensationArrangement === 'Deloading'
+                        ? `Teaching De-loading (AY ${contractData.schoolYear || '2026–2027'})`
+                        : 'Research Honorarium'}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between border-b border-slate-200/80 pb-2">
+                    <span className="text-slate-500 font-medium">Project Duration</span>
+                    <span className="font-semibold text-slate-900">
+                      {contractData.durationMonths || '12'} Months ({contractData.startDate} to {contractData.endDate})
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between border-b border-slate-200/80 pb-2">
+                    <span className="text-slate-500 font-medium">Implementing College / Dept.</span>
+                    <span className="font-semibold text-slate-900 text-right">
+                      {contractData.collegeDepartment || selectedProposal.department}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-500 font-medium">Co-Researchers</span>
+                    <span className="font-semibold text-slate-900 text-right">
+                      {contractData.coResearchers ? contractData.coResearchers : 'None (Solo Study Leader)'}
+                    </span>
+                  </div>
                 </div>
-              )}
-
-              <div className="text-xs">
-                <label className="block font-semibold text-slate-700 mb-1">Co-Researchers (Optional)</label>
-                <input
-                  type="text"
-                  placeholder="e.g. Prof. Maria Santos, Engr. Dan Ramos"
-                  value={contractData.coResearchers}
-                  onChange={(e) => setContractData((d) => ({ ...d, coResearchers: e.target.value }))}
-                  className="w-full rounded border border-slate-300 p-2 text-slate-900 focus:border-[#C8102E] focus:outline-hidden"
-                />
               </div>
 
               <div className="pt-2 flex flex-wrap items-center gap-2">
@@ -506,7 +505,17 @@ export default function ProponentDocumentsPage() {
                   className="inline-flex items-center gap-1.5 rounded bg-slate-800 px-3.5 py-2 text-xs font-bold text-white hover:bg-slate-900 transition-colors cursor-pointer disabled:opacity-50"
                 >
                   <Download size={14} className={downloading ? 'animate-bounce' : ''} />
-                  {downloading ? 'Downloading...' : 'Download PDF'}
+                  {downloading ? 'Downloading...' : 'Download 11 PSC.pdf'}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleDownloadDocx}
+                  disabled={downloadingDocx}
+                  className="inline-flex items-center gap-1.5 rounded border border-slate-300 bg-white px-3.5 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer disabled:opacity-50"
+                >
+                  <Download size={14} className={downloadingDocx ? 'animate-bounce' : ''} />
+                  {downloadingDocx ? 'Generating...' : 'Download 11 PSC.docx'}
                 </button>
               </div>
             </div>
@@ -735,6 +744,7 @@ export default function ProponentDocumentsPage() {
               proposals.map((item) => {
                 const isSelected = selectedType === 'PSC' && selectedId === item.conceptId;
                 const isNotarized = Boolean(item.contract?.isNotarized);
+                const itemBudget = Number(item.finalApprovedBudget || item.proposedBudget || 0);
 
                 return (
                   <button
@@ -752,7 +762,7 @@ export default function ProponentDocumentsPage() {
                       <span className="min-w-0">
                         <span className="block truncate text-sm font-semibold">{item.title}</span>
                         <span className="mt-0.5 block text-xs text-slate-500">
-                          WMSU-RPDU-CA-001.01 · Professional Service Contract · ₱{Number(item.proposedBudget || 0).toLocaleString('en-PH')}
+                          WMSU-RPDU-CA-001.01 · Professional Service Contract · ₱{itemBudget.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </span>
                       </span>
                     </span>
