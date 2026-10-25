@@ -318,7 +318,14 @@ export const RpduBudgetAllocationReviewPage: React.FC = () => {
               </div>
 
               <div className="p-3 bg-slate-50 rounded-md border border-slate-100">
-                <span className="text-[10px] uppercase font-bold text-slate-400 block">En Banc Approved Budget</span>
+                <div className="flex items-center justify-between gap-1">
+                  <span className="text-[10px] uppercase font-bold text-slate-400 block">En Banc Approved Budget</span>
+                  {syncValidation.stage === 'SIGNED' && (
+                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                      <CheckCircle2 className="w-2.5 h-2.5 text-emerald-600" /> Signed LIB Uploaded
+                    </span>
+                  )}
+                </div>
                 <span className="font-black text-emerald-700 text-sm block mt-0.5 font-mono">
                   ₱{syncValidation.enBancTarget.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                 </span>

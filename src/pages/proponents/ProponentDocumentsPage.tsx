@@ -409,12 +409,19 @@ export default function ProponentDocumentsPage() {
             <div>
               <span className="text-xs font-bold uppercase tracking-wider text-[#C8102E]">Professional Service Contract (PSC)</span>
               <h3 id="psc-page-title" className="text-base font-bold text-slate-900">{selectedProposal.title}</h3>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Study Leader: <strong>{selectedProposal.studyLeader}</strong> · Final Approved Budget:{' '}
-                <strong className="text-emerald-700 font-mono">
-                  ₱{displayBudget.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </strong>
-              </p>
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500 mt-1">
+                <span>Study Leader: <strong className="text-slate-800">{selectedProposal.studyLeader}</strong></span>
+                <span>·</span>
+                <span className="flex items-center gap-1.5">
+                  En Banc Approved Budget:{' '}
+                  <strong className="text-emerald-700 font-mono">
+                    ₱{displayBudget.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </strong>
+                </span>
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                  <CheckCircle2 size={12} className="text-emerald-600" /> Signed LIB Uploaded
+                </span>
+              </div>
             </div>
 
             <div className="flex items-center gap-2">
@@ -454,10 +461,15 @@ export default function ProponentDocumentsPage() {
                 {/* Read-only Database-Autofilled Contract Summary */}
                 <div className="rounded-lg border border-slate-200 bg-slate-50 p-3.5 space-y-2.5 text-xs">
                   <div className="flex items-center justify-between border-b border-slate-200/80 pb-2">
-                    <span className="text-slate-500 font-medium">Final Approved Budget</span>
-                    <span className="font-bold font-mono text-sm text-emerald-700">
-                      ₱{displayBudget.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </span>
+                    <span className="text-slate-500 font-medium">En Banc Approved Budget</span>
+                    <div className="flex items-center gap-2">
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                        <CheckCircle2 size={12} className="text-emerald-600" /> Signed LIB Uploaded
+                      </span>
+                      <span className="font-bold font-mono text-sm text-emerald-700">
+                        ₱{displayBudget.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </span>
+                    </div>
                   </div>
                   <div className="flex items-center justify-between border-b border-slate-200/80 pb-2">
                     <span className="text-slate-500 font-medium">Compensation Arrangement (from LIB)</span>
@@ -496,26 +508,6 @@ export default function ProponentDocumentsPage() {
                 >
                   <Eye size={14} />
                   View Pre-Filled Contract
-                </button>
-
-                <button
-                  type="button"
-                  onClick={handleDownloadPdf}
-                  disabled={downloading}
-                  className="inline-flex items-center gap-1.5 rounded bg-slate-800 px-3.5 py-2 text-xs font-bold text-white hover:bg-slate-900 transition-colors cursor-pointer disabled:opacity-50"
-                >
-                  <Download size={14} className={downloading ? 'animate-bounce' : ''} />
-                  {downloading ? 'Downloading...' : 'Download 11 PSC.pdf'}
-                </button>
-
-                <button
-                  type="button"
-                  onClick={handleDownloadDocx}
-                  disabled={downloadingDocx}
-                  className="inline-flex items-center gap-1.5 rounded border border-slate-300 bg-white px-3.5 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer disabled:opacity-50"
-                >
-                  <Download size={14} className={downloadingDocx ? 'animate-bounce' : ''} />
-                  {downloadingDocx ? 'Generating...' : 'Download 11 PSC.docx'}
                 </button>
               </div>
             </div>
