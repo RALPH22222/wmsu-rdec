@@ -4,7 +4,6 @@ import {
   MailCheck,
   FileCheck,
   FileSignature,
-  Download,
   Upload,
   CheckCircle2,
   Clock,
@@ -77,9 +76,6 @@ export default function ProponentDocumentsPage() {
   // Selection & Preview state
   const [selectedType, setSelectedType] = useState<'LETTER' | 'COTR' | 'PSC' | null>(null);
   const [selectedId, setSelectedId] = useState<string>('');
-  const [previewHtml, setPreviewHtml] = useState<string>('');
-  const [downloading, setDownloading] = useState(false);
-  const [downloadingDocx, setDownloadingDocx] = useState(false);
 
   // Contract parameters state (autofilled directly from Budget Allocation & Proposal DB records)
   const [contractData, setContractData] = useState<ContractData>({
@@ -190,7 +186,6 @@ export default function ProponentDocumentsPage() {
   const selectPscProposal = (proposal: ProposalContractItem) => {
     setSelectedType('PSC');
     setSelectedId(proposal.conceptId);
-    setPreviewHtml('');
     setSelectedFile(null);
     setUploadSuccess('');
     setUploadError('');
@@ -210,7 +205,6 @@ export default function ProponentDocumentsPage() {
   const handleCloseSelectedContract = () => {
     setSelectedType(null);
     setSelectedId('');
-    setPreviewHtml('');
     sessionStorage.removeItem('last_selected_psc_id');
     setSearchParams((prev) => {
       const next = new URLSearchParams(prev);
@@ -268,107 +262,6 @@ export default function ProponentDocumentsPage() {
     }
   };
 
-  const handleDownloadPdf = async () => {
-    if (!session?.access_token || downloading) return;
-    setDownloading(true);
-    setError('');
-    try {
-      let blob: Blob;
-      let filename = 'document.pdf';
-
-      if (selectedType === 'PSC' && selectedId) {
-        filename = `11_PSC_${contractData.contractNumber || 'WMSU-RPDU-CA-001.01'}.pdf`;
-        const res = await fetch(`${API_BASE_URL}/letters/mine/contracts/download-pdf`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${session.access_token}`,
-          },
-          body: JSON.stringify({
-            conceptId: selectedId,
-          }),
-        });
-        if (!res.ok) {
-          const errData = await res.json().catch(() => ({}));
-          throw new Error(errData.message || 'Failed to download contract PDF.');
-        }
-        blob = await res.blob();
-      } else if (previewHtml) {
-        if (selectedType === 'COTR') {
-          filename = 'Certificate-of-Technical-Review.pdf';
-        } else if (selectedType === 'LETTER') {
-          filename = 'Screening-Result-Letter.pdf';
-        }
-        const res = await fetch(`${API_BASE_URL}/letters/download-pdf`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${session.access_token}`,
-          },
-          body: JSON.stringify({
-            html: previewHtml,
-            filename,
-          }),
-        });
-        if (!res.ok) {
-          const errData = await res.json().catch(() => ({}));
-          throw new Error(errData.message || 'Failed to download PDF.');
-        }
-        blob = await res.blob();
-      } else {
-        return;
-      }
-
-      const blobUrl = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = blobUrl;
-      link.download = filename;
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.URL.revokeObjectURL(blobUrl);
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Error downloading PDF.');
-    } finally {
-      setDownloading(false);
-    }
-  };
-
-  const handleDownloadDocx = async () => {
-    if (!session?.access_token || !selectedId || downloadingDocx) return;
-    setDownloadingDocx(true);
-    setError('');
-    try {
-      const filename = `11_PSC_${contractData.contractNumber || 'WMSU-RPDU-CA-001.01'}.docx`;
-      const res = await fetch(`${API_BASE_URL}/letters/mine/contracts/download-docx`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify({
-          conceptId: selectedId,
-        }),
-      });
-      if (!res.ok) {
-        const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.message || 'Failed to download contract DOCX.');
-      }
-      const blob = await res.blob();
-      const blobUrl = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = blobUrl;
-      link.download = filename;
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.URL.revokeObjectURL(blobUrl);
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Error downloading DOCX.');
-    } finally {
-      setDownloadingDocx(false);
-    }
-  };
 
   const resolveFileUrl = (url: string | null) => {
     if (!url) return '';
