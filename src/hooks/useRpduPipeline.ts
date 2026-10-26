@@ -1,9 +1,9 @@
 import { useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useCallForProposals } from '../context/CallForProposalsContext';
-import { assignEvaluatorApi, buildActionSheetApi, checkRevisionApi, forwardToReoApi, getPipelineEvaluators, getPipelineProposal, getPipelineProposals, postClarificationApi, unassignEvaluatorApi } from '../lib/pipelineApi';
+import { assignEvaluatorApi, buildActionSheetApi, checkRevisionApi, forwardToReoApi, getPipelineEvaluators, getPipelineProposal, getPipelineProposals, postClarificationApi, saveFundingClassificationApi, unassignEvaluatorApi } from '../lib/pipelineApi';
 import type { ActionSheetInput } from '../lib/pipelineApi';
-import type { PipelineEvaluator, RpduProposal } from '../types';
+import type { FundingClassification, PipelineEvaluator, RpduProposal } from '../types';
 import { useAsyncResource } from './useAsyncResource';
 
 interface PipelineData { proposals: RpduProposal[]; evaluators: PipelineEvaluator[] }
@@ -128,5 +128,17 @@ export function useRpduProposal(id: string | undefined) {
     }
   }, [id, token, setData, showToast, reread]);
 
-  return { proposal: resource.data, loading: resource.loading, error: resource.error, refresh: resource.refresh, replace: resource.setData, unassign, checkRevision, forward, buildActionSheet, clarify };
+  const saveFundingClassification = useCallback(async (proposalId: string, fundingClassification: FundingClassification) => {
+    if (proposalId !== id) return;
+    try {
+      setData(await saveFundingClassificationApi(proposalId, fundingClassification, token));
+      showToast('Funding classification saved');
+    } catch (failure) {
+      showToast(failure instanceof Error ? failure.message : 'Unable to save the funding classification');
+      reread();
+      throw failure;
+    }
+  }, [id, token, setData, showToast, reread]);
+
+  return { proposal: resource.data, loading: resource.loading, error: resource.error, refresh: resource.refresh, replace: resource.setData, unassign, checkRevision, forward, buildActionSheet, clarify, saveFundingClassification };
 }

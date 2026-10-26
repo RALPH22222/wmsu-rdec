@@ -8,6 +8,7 @@ import { formatDate } from '../../lib/format';
 import { ProposalStatusBadge } from '../../components/ui/ProposalStatusBadge';
 import { PipelineStepper } from '../../components/ui/PipelineStepper';
 import { DocumentLink } from '../../components/ui/DocumentLink';
+import { DocumentViewer } from '../../components/ui/DocumentViewer';
 import { RoundAccordion } from '../../components/ui/RoundAccordion';
 import { ChecklistSummary, RecommendationBadge } from '../../components/ui/ChecklistSummary';
 import { HistoryList } from '../../components/ui/HistoryList';
@@ -18,6 +19,7 @@ import { TechnicalReviewGateway } from '../../components/rpduComponent/Technical
 import { DeclinedInvitations } from '../../components/rpduComponent/DeclinedInvitations';
 import { ActionSheetCard } from '../../components/rpduComponent/ActionSheetCard';
 import { ClarificationThread } from '../../components/ui/ClarificationThread';
+import { FundingClassificationField } from '../../components/rpduComponent/FundingClassificationField';
 
 interface PipelineProposalDetailPageProps { role?: 'rpdu' | 'admin' }
 
@@ -27,7 +29,7 @@ const Card = ({ title, badge, children }: { title: string; badge?: ReactNode; ch
 
 /** Rendered keyed by the route id, so a stale response for a previous id can never write into this proposal. */
 function DetailBody({ id, role }: { id: string | undefined; role: 'rpdu' | 'admin' }) {
-  const { proposal, loading, error, unassign, checkRevision, forward, buildActionSheet, clarify } = useRpduProposal(id);
+  const { proposal, loading, error, refresh, unassign, checkRevision, forward, buildActionSheet, clarify, saveFundingClassification } = useRpduProposal(id);
   const backHref = `/${role}/evaluations`;
 
   if (loading) return <section className="mx-auto max-w-5xl space-y-3" aria-label="Loading proposal"><div className="h-20 animate-pulse rounded-sm bg-slate-100" /><div className="h-40 animate-pulse rounded-sm bg-slate-100" /></section>;
@@ -40,7 +42,10 @@ function DetailBody({ id, role }: { id: string | undefined; role: 'rpdu' | 'admi
 
   return (
     <section className="mx-auto max-w-5xl space-y-4">
-      <Link to={backHref} className="inline-flex min-h-11 items-center gap-1 text-xs font-semibold text-slate-600 hover:text-slate-900"><ArrowLeft className="h-4 w-4" />All evaluations</Link>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <Link to={backHref} className="inline-flex min-h-11 items-center gap-1 text-xs font-semibold text-slate-600 hover:text-slate-900"><ArrowLeft className="h-4 w-4" />All evaluations</Link>
+        <button type="button" onClick={refresh} className="inline-flex min-h-11 items-center rounded-sm bg-slate-100 px-3 text-xs font-semibold text-slate-700 hover:bg-slate-200">Refresh documents</button>
+      </div>
 
       <header className="rounded-sm border border-slate-200 bg-white p-4 shadow-xs sm:p-5">
         <div className="flex flex-wrap items-center gap-2"><span className="font-mono text-[11px] font-bold text-slate-500">{proposal.code}</span><ProposalStatusBadge proposal={proposal} size="md" /><span className="text-xs text-slate-500">Round {proposal.currentRound}</span></div>
@@ -51,9 +56,14 @@ function DetailBody({ id, role }: { id: string | undefined; role: 'rpdu' | 'admi
         <div className="mt-4 flex flex-wrap gap-2"><DocumentLink href={proposal.manuscriptUrl} label={proposal.manuscriptUrl ? 'Original manuscript' : 'Manuscript'} />{latestRevision && <DocumentLink href={latestRevision.revisedFileUrl} label={`Revision ${latestRevision.revisionNumber}`} muted />}</div>
       </header>
 
+      <Card title="Detailed research proposal">
+        <DocumentViewer url={proposal.manuscriptUrl} title="Original manuscript" />
+      </Card>
+
       {(proposal.status === 'APPROVED' || proposal.status === 'FORWARDED_TO_REO') && <TechnicalReviewGateway proposal={proposal} role={role} onForward={forward} />}
 
       <Card title="Review panel">
+        <div className="mb-5"><FundingClassificationField key={proposal.fundingClassification ?? 'unclassified'} value={proposal.fundingClassification ?? null} canEdit={Boolean(proposal.canSetFundingClassification)} onSave={(value) => saveFundingClassification(proposal.id, value)} /></div>
         <PanelDots count={proposal.panel.length} className="mb-2" />
         <ReviewPanelList panel={proposal.panel} onRemove={unassign} />
         {proposal.technicalReviewReady && proposal.manuscriptUrl && proposal.panel.length < MAX_EVALUATORS_PER_PROPOSAL && !isTerminalStatus(proposal.status) && <Link to={backHref} className="mt-3 inline-flex min-h-11 items-center text-xs font-semibold text-[#C8102E]">Assign evaluators from the list →</Link>}

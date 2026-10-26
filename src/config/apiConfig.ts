@@ -61,6 +61,9 @@ export const API_ENDPOINTS = {
   PIPELINE: {
     PROPOSALS: `${API_BASE_URL}/pipeline/proposals`,
     PROPOSAL_BY_ID: (id: string) => `${API_BASE_URL}/pipeline/proposals/${encodeURIComponent(id)}`,
+    FUNDING_CLASSIFICATION: (id: string) => `${API_BASE_URL}/pipeline/proposals/${encodeURIComponent(id)}/funding-classification`,
+    ASSESSMENT_TEMPLATE: (id: string) => `${API_BASE_URL}/pipeline/my-reviews/${encodeURIComponent(id)}/assessment-template`,
+    REVISION_HISTORY_DRAFT: (id: string) => `${API_BASE_URL}/pipeline/my-proposals/${encodeURIComponent(id)}/revision-history/draft`,
     PROPOSAL_REVIEWS: (id: string) => `${API_BASE_URL}/pipeline/proposals/${encodeURIComponent(id)}/reviews`,
     PROPOSAL_REVISIONS: (id: string) => `${API_BASE_URL}/pipeline/proposals/${encodeURIComponent(id)}/revisions`,
     REVIEW_BY_ID: (id: string) => `${API_BASE_URL}/pipeline/reviews/${encodeURIComponent(id)}`,

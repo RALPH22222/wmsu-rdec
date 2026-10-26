@@ -1,6 +1,6 @@
 import { API_ENDPOINTS } from '../config/apiConfig';
 import type {
-  ActionSheetPoints, BlindReview, Checklist, DeclineReason, EligibleConcept, EvaluatorProfile, PendingConcept, PipelineEvaluator, ProponentProposal, ReviewRecommendation, RpduProposal,
+  ActionSheetPoints, BlindReview, Checklist, DeclineReason, EligibleConcept, EvaluatorProfile, FundingClassification, PendingConcept, PipelineEvaluator, ProponentProposal, ReviewRecommendation, RevisionHistoryDraft, RpduProposal,
 } from '../types';
 import { request } from './apiRequest';
 
@@ -11,6 +11,36 @@ export const getPipelineProposals = async (token?: string, signal?: AbortSignal)
 
 export const getPipelineProposal = async (id: string, token?: string, signal?: AbortSignal): Promise<RpduProposal> =>
   (await request<RpduProposal>(API_ENDPOINTS.PIPELINE.PROPOSAL_BY_ID(id), token, {}, signal)).data;
+
+export const saveFundingClassificationApi = async (id: string, fundingClassification: FundingClassification, token?: string): Promise<RpduProposal> =>
+  (await request<RpduProposal>(API_ENDPOINTS.PIPELINE.FUNDING_CLASSIFICATION(id), token, { method: 'PUT', body: JSON.stringify({ fundingClassification }) })).data;
+
+const downloadDocument = async (url: string, fileName: string, token: string | undefined, draft?: RevisionHistoryDraft): Promise<void> => {
+  if (!token) throw new Error('Please sign in to continue.');
+  const response = await fetch(url, {
+    method: draft ? 'POST' : 'GET',
+    headers: { Authorization: `Bearer ${token}`, ...(draft ? { 'Content-Type': 'application/json' } : {}) },
+    ...(draft ? { body: JSON.stringify(draft) } : {}),
+  });
+  if (!response.ok) {
+    const result = await response.json().catch(() => ({}));
+    throw new Error(result.message || `Unable to download the document (${response.status}).`);
+  }
+  const objectUrl = URL.createObjectURL(await response.blob());
+  const link = document.createElement('a');
+  link.href = objectUrl;
+  link.download = fileName;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+};
+
+export const downloadAssessmentTemplate = (reviewId: string, token?: string): Promise<void> =>
+  downloadDocument(API_ENDPOINTS.PIPELINE.ASSESSMENT_TEMPLATE(reviewId), 'Proposal Assessment Form.docx', token);
+
+export const downloadRevisionHistoryDraft = (proposalId: string, draft: RevisionHistoryDraft, token?: string): Promise<void> =>
+  downloadDocument(API_ENDPOINTS.PIPELINE.REVISION_HISTORY_DRAFT(proposalId), 'Revision History Draft.docx', token, draft);
 
 export const getPipelineEvaluators = async (token?: string, signal?: AbortSignal): Promise<PipelineEvaluator[]> => {
   const { data } = await request<PipelineEvaluator[]>(API_ENDPOINTS.PIPELINE.EVALUATORS, token, {}, signal);
@@ -92,13 +122,20 @@ export const submitDetailedProposalApi = async (conceptProposalId: string, file:
   return (await request<ProponentProposal>(API_ENDPOINTS.PIPELINE.PROPOSALS, token, { method: 'POST', body })).data;
 };
 
-export interface UploadRevisionPayload { revisedFile: File; actionSheetFile: File; revisionHistoryFile: File; notes: string }
+export type UploadRevisionPayload = { revisedFile: File; actionSheetFile: File; notes: string } & (
+  { revisionHistoryFile: File; revisionHistoryDraft?: never; historyReviewed?: never }
+  | { revisionHistoryFile?: never; revisionHistoryDraft: RevisionHistoryDraft; historyReviewed: true }
+);
 
 export const uploadRevisionApi = async (proposalId: string, payload: UploadRevisionPayload, token?: string): Promise<ProponentProposal> => {
   const body = new FormData();
   body.append('revised_file', payload.revisedFile);
   body.append('action_sheet_file', payload.actionSheetFile);
-  body.append('revision_history_file', payload.revisionHistoryFile);
+  if (payload.revisionHistoryFile) body.append('revision_history_file', payload.revisionHistoryFile);
+  else {
+    body.append('revision_history_draft', JSON.stringify(payload.revisionHistoryDraft));
+    body.append('history_reviewed', String(payload.historyReviewed));
+  }
   if (payload.notes.trim()) body.append('notes', payload.notes.trim());
   return (await request<ProponentProposal>(API_ENDPOINTS.PIPELINE.PROPOSAL_REVISIONS(proposalId), token, { method: 'POST', body })).data;
 };

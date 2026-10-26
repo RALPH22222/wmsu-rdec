@@ -62,8 +62,8 @@ export function RevisionComparator({ proposal, onCheck }: RevisionComparatorProp
   const round = selected.revisionNumber;
   const locked = proposal.status === 'REJECTED' || proposal.status === 'FORWARDED_TO_REO';
   const lockHintId = `${baseId}-lock`;
-  const checkDisabled = locked;
-  const checkHintId = locked ? lockHintId : undefined;
+  const checkDisabled = locked || !proposal.canCheckRevision;
+  const checkHintId = checkDisabled ? lockHintId : undefined;
 
   const evaluations: ProponentFeedbackEvaluation[] = proposal.panel.flatMap((seat) =>
     seat.submissions.filter((s) => s.round === round).map((s) => ({
@@ -79,6 +79,7 @@ export function RevisionComparator({ proposal, onCheck }: RevisionComparatorProp
 
   const openCheck = () => { setNote(''); setDialog('check'); };
   const confirm = async () => {
+    if (checkDisabled) return;
     setBusy(true);
     try {
       await onCheck(selected.id, dialog === 'check', dialog === 'check' ? note : '');
@@ -129,7 +130,7 @@ export function RevisionComparator({ proposal, onCheck }: RevisionComparatorProp
             <button type="button" onClick={openCheck} disabled={checkDisabled} aria-describedby={checkHintId} className="inline-flex min-h-11 w-full shrink-0 items-center justify-center gap-1.5 rounded-sm bg-[#C8102E] px-4 text-xs font-semibold text-white hover:bg-[#A00D26] disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"><ClipboardCheck className="h-4 w-4" />Mark as cross-checked</button>
           </div>
         )}
-        {locked && <p id={lockHintId} className="flex items-center gap-1.5 text-xs text-slate-500"><Lock className="h-3.5 w-3.5" />Revision checks are locked once the proposal is closed</p>}
+        {checkDisabled && <p id={lockHintId} className="flex items-center gap-1.5 text-xs text-slate-500"><Lock className="h-3.5 w-3.5" />{locked ? 'Revision checks are locked once the proposal is closed' : 'Only the RPDU Head or an administrator can cross-check revisions.'}</p>}
 
         <div role="group" className="grid grid-cols-2 gap-2 lg:hidden" aria-label="Choose a pane">
           {([['manuscript', 'Manuscript'], ['panel', 'Panel documents']] as const).map(([key, label]) => (

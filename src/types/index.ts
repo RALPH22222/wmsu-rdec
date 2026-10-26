@@ -358,7 +358,13 @@ export interface ScreeningReviewDetails {
   rcEndorsed: boolean;
 }
 
+export type FundingClassification = 'INSTITUTIONAL' | 'OUTSOURCE';
+
 export interface RpduProposal {
+  /** Only RPDU Head and ADMIN may record the Step 7.6 check. */
+  canCheckRevision?: boolean;
+  fundingClassification: FundingClassification | null;
+  canSetFundingClassification: boolean;
   technicalReviewReady: boolean;
   preReviewStage?: AihrStage | null;
   id: string;
@@ -406,6 +412,8 @@ export interface PipelineEvaluator extends EvaluatorProfile {
 
 /** What an evaluator may see. Never carries proponent, department, or concept identifiers. */
 export interface BlindReview {
+  fundingClassification?: FundingClassification | null;
+  assessmentTemplateLabel?: string | null;
   id: string;
   code: string;
   title: string;
@@ -418,6 +426,12 @@ export interface BlindReview {
   submissions: ReviewSubmission[];
   history: { status: PipelineStatus; round: number; changedAt: string }[];
   invitation: InvitationState;
+}
+
+export interface RevisionHistoryDraft {
+  expectedRevisionNumber: number;
+  remarks: Record<string, string>;
+  currentRemarks: string;
 }
 
 export interface ProponentFeedbackEvaluation {

@@ -3,7 +3,7 @@ import { Send } from 'lucide-react';
 import type { BlindReview, ChecklistDraft, ChecklistEntry, ChecklistPresence, ReviewRecommendation } from '../../types';
 import type { SubmitReviewPayload } from '../../lib/pipelineApi';
 import {
-  ACCEPTED_DOCUMENT_TYPES, ASSESSMENT_GROUPS, ASSESSMENT_POINTS, MAX_COMMENT_LENGTH, MAX_JUSTIFICATION_LENGTH, MAX_PAGE_REF_LENGTH, MAX_UPLOAD_BYTES,
+  ACCEPTED_PREVIEW_DOCUMENT_TYPES, ASSESSMENT_GROUPS, ASSESSMENT_POINTS, MAX_COMMENT_LENGTH, MAX_JUSTIFICATION_LENGTH, MAX_PAGE_REF_LENGTH, MAX_UPLOAD_BYTES,
   PRESENCE_META, RECOMMENDATION_META, RECOMMENDATION_ORDER, answeredCount, finalizeChecklist, pointsInGroup, validateSubmissionDraft, type AssessmentPoint,
 } from '../../lib/proposalPipeline';
 import { formatFileSize } from '../../lib/format';
@@ -19,8 +19,8 @@ function FileField({ id, label, file, onChange }: { id: string; label: string; f
   const tooBig = file ? file.size > MAX_UPLOAD_BYTES : false;
   return (
     <div>
-      <label htmlFor={id} className="block text-xs font-bold text-slate-700">{label} <span className="font-normal text-slate-500">PDF or Word, up to 15 MB</span></label>
-      <input id={id} type="file" accept={ACCEPTED_DOCUMENT_TYPES} onChange={(e) => onChange(e.target.files?.[0] ?? null)} className={`mt-1 block min-h-11 w-full ${INPUT} file:mr-3 file:min-h-11 file:border-0 file:bg-slate-100 file:px-3 file:text-xs file:font-semibold`} />
+      <label htmlFor={id} className="block text-xs font-bold text-slate-700">{label} <span className="font-normal text-slate-500">PDF, Word, JPEG, PNG, WebP, or GIF, up to 15 MB</span></label>
+      <input id={id} type="file" accept={ACCEPTED_PREVIEW_DOCUMENT_TYPES} onChange={(e) => onChange(e.target.files?.[0] ?? null)} className={`mt-1 block min-h-11 w-full ${INPUT} file:mr-3 file:min-h-11 file:border-0 file:bg-slate-100 file:px-3 file:text-xs file:font-semibold`} />
       {file && <p className={`mt-1 text-xs ${tooBig ? 'text-red-700' : 'text-slate-500'}`}>{file.name} · {formatFileSize(file.size)}{tooBig ? ' — too large' : ''}</p>}
     </div>
   );

@@ -40,7 +40,7 @@ export function DetailedProposalSubmissionPage() {
       <section aria-labelledby="detailed-template-title" className="rounded-sm border border-slate-200 bg-white p-3 sm:p-4">
         <div>
           <h2 id="detailed-template-title" className="text-sm font-bold text-slate-900">Detailed Research Proposal Template</h2>
-          <p className="mt-1 text-xs text-slate-500">Use the Detailed Research Proposal Template provided by RPDU. Upload your completed proposal as a PDF or Word document up to 15 MB.</p>
+          <p className="mt-1 text-xs text-slate-500">Use the Detailed Research Proposal Template provided by RPDU. Upload your completed proposal as a PDF, Word, JPEG, PNG, WebP, or GIF file up to 15 MB.</p>
           <ProposalTemplateList folder="detailed-proposals" />
         </div>
       </section>

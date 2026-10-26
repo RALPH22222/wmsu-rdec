@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Download, ExternalLink, FileText } from 'lucide-react';
+import { documentPreview } from '../../lib/documentPreview';
 
 interface DocumentViewerProps {
   url: string | null | undefined;
@@ -8,28 +9,19 @@ interface DocumentViewerProps {
   className?: string;
 }
 
-/** Only https links are rendered (same rule as DocumentLink). */
-const safeUrl = (raw: string | null | undefined): string | null => {
-  if (!raw) return null;
-  try { return new URL(raw).protocol === 'https:' ? raw : null; } catch { return null; }
-};
-
-const isPdfUrl = (url: string): boolean => {
-  try { return /\.pdf(\?|#|$)/i.test(new URL(url).pathname); } catch { return false; }
-};
-
-/** Inline document preview: an iframe for PDFs (with a loading skeleton), Open/Download links for everything. */
+/** Preview PDFs and standard images; keep Open/Download available for Word documents and failed previews. */
 export function DocumentViewer({ url: rawUrl, title, emptyMessage, className = '' }: DocumentViewerProps) {
-  const url = safeUrl(rawUrl);
-  // Holds the url whose iframe finished loading, so switching documents shows the skeleton again without an effect.
+  const preview = documentPreview(rawUrl);
   const [loadedUrl, setLoadedUrl] = useState<string | null>(null);
+  const [failedUrl, setFailedUrl] = useState<string | null>(null);
 
-  if (!url) {
+  if (!preview) {
     return <div className={`rounded-sm border border-slate-200 bg-white ${className}`}><div className="p-8 text-center text-sm text-slate-500">{emptyMessage ?? 'No document available.'}</div></div>;
   }
 
-  const isPdf = isPdfUrl(url);
+  const { url, kind } = preview;
   const loaded = loadedUrl === url;
+  const failed = failedUrl === url;
 
   return (
     <div className={`min-w-0 overflow-hidden rounded-sm border border-slate-200 bg-white ${className}`}>
@@ -40,7 +32,9 @@ export function DocumentViewer({ url: rawUrl, title, emptyMessage, className = '
           <a href={url} download target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center gap-1 px-2 hover:underline"><Download className="h-3.5 w-3.5" />Download</a>
         </div>
       </div>
-      {isPdf ? (
+      {failed ? (
+        <p role="alert" className="p-8 text-center text-sm text-slate-600">Preview could not load. Refresh the proposal, or use Open or Download.</p>
+      ) : kind !== 'download' ? (
         <div className="relative h-[60vh] min-h-80 bg-slate-50">
           {!loaded && (
             <div role="status" className="absolute inset-0 p-4 sm:p-6">
@@ -48,12 +42,16 @@ export function DocumentViewer({ url: rawUrl, title, emptyMessage, className = '
               <div aria-hidden="true" className="h-full space-y-5 rounded-sm border border-slate-200 bg-white p-6 motion-safe:animate-pulse"><div className="h-5 w-2/3 rounded bg-slate-100" /><div className="h-3 w-full rounded bg-slate-100" /><div className="h-3 w-5/6 rounded bg-slate-100" /><div className="h-3 w-full rounded bg-slate-100" /></div>
             </div>
           )}
-          <iframe key={url} src={url} title={title} onLoad={() => setLoadedUrl(url)} className={`h-full w-full border-0 ${loaded ? '' : 'opacity-0'}`} />
+          {kind === 'pdf' ? (
+            <iframe key={url} src={url} title={title} onLoad={() => setLoadedUrl(url)} onError={() => setFailedUrl(url)} className={`h-full w-full border-0 ${loaded ? '' : 'opacity-0'}`} />
+          ) : (
+            <img key={url} src={url} alt={title} onLoad={() => setLoadedUrl(url)} onError={() => setFailedUrl(url)} className={`h-full w-full object-contain ${loaded ? '' : 'opacity-0'}`} />
+          )}
         </div>
       ) : (
-        <div className="p-8 text-center text-sm text-slate-500">This Word document opens in a new tab. Use Open or Download.</div>
+        <div className="p-8 text-center text-sm text-slate-500">Preview is available for PDF, JPEG, PNG, WebP, and GIF files. Use Open or Download for Word documents.</div>
       )}
-      <p className="border-t border-slate-200 px-3 py-2 text-xs text-slate-500">If the preview is blank, use Open.</p>
+      <p className="border-t border-slate-200 px-3 py-2 text-xs text-slate-500">If the preview is blank, refresh the proposal or use Open.</p>
     </div>
   );
 }
