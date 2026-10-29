@@ -40,7 +40,7 @@ function DetailBody({ id, role }: { id: string | undefined; role: 'rpdu' | 'admi
   const openRound = proposal.status === 'UNDER_REVIEW' ? [proposal.currentRound] : [];
   const rounds = [...new Set([...submittedRounds, ...openRound])].sort((a, b) => b - a);
   const latestRevision = proposal.revisions.length > 0 ? proposal.revisions.reduce((a, b) => (b.revisionNumber > a.revisionNumber ? b : a)) : null;
-  const canAssignMore = proposal.technicalReviewReady && Boolean(proposal.manuscriptUrl) && proposal.panel.length < MAX_EVALUATORS_PER_PROPOSAL && !isTerminalStatus(proposal.status);
+  const canAssignMore = proposal.canManageReviewers && proposal.technicalReviewReady && Boolean(proposal.manuscriptUrl) && proposal.panel.length < MAX_EVALUATORS_PER_PROPOSAL && !isTerminalStatus(proposal.status);
   const thirdSeatBlocked = canAssignMore ? anonymityGateReason(proposal.panel.length, proposal.anonymity.checkedAt) : null;
 
   return (
@@ -74,8 +74,6 @@ function DetailBody({ id, role }: { id: string | undefined; role: 'rpdu' | 'admi
         <div className="mb-5"><FundingClassificationField key={proposal.fundingClassification ?? 'unclassified'} value={proposal.fundingClassification ?? null} canEdit={Boolean(proposal.canSetFundingClassification)} onSave={(value) => saveFundingClassification(proposal.id, value)} /></div>
         <PanelDots count={proposal.panel.length} className="mb-2" />
         <ReviewPanelList externalProposalId={proposal.externalFundingRequestId ? proposal.id : undefined} panel={proposal.panel} canManageReviewers={Boolean(proposal.canManageReviewers)} onRemove={unassign} />
-        {proposal.canManageReviewers && proposal.technicalReviewReady && proposal.manuscriptUrl && proposal.panel.length < MAX_EVALUATORS_PER_PROPOSAL && !isTerminalStatus(proposal.status) && <Link to={backHref} className="mt-3 inline-flex min-h-11 items-center text-xs font-semibold text-[#C8102E]">Assign evaluators from the list →</Link>}
-        <ReviewPanelList panel={proposal.panel} onRemove={unassign} />
         {canAssignMore && (thirdSeatBlocked
           ? <p className="mt-3 flex items-start gap-1.5 rounded-sm border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800"><ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" /><span><span className="font-semibold">Third seat on hold.</span> {thirdSeatBlocked}. Record it in the Manuscript anonymity card above, then assign the last evaluator from the list.</span></p>
           : <Link to={backHref} className="mt-3 inline-flex min-h-11 items-center text-xs font-semibold text-[#C8102E]">Assign evaluators from the list →</Link>)}

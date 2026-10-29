@@ -62,8 +62,8 @@ export const checkRevisionApi = async (proposalId: string, revisionId: string, c
   (await request<RpduProposal>(API_ENDPOINTS.PIPELINE.REVISION_CHECK(proposalId, revisionId), token, { method: 'PUT', body: JSON.stringify({ checked, note: note.trim() }) })).data;
 
 /** RPDU's manuscript anonymity check (reversible); gates the third seat on the server. */
-export const checkAnonymityApi = async (proposalId: string, checked: boolean, token?: string): Promise<RpduProposal> =>
-  (await request<RpduProposal>(API_ENDPOINTS.PIPELINE.ANONYMITY(proposalId), token, { method: 'PUT', body: JSON.stringify({ checked }) })).data;
+export const checkAnonymityApi = async (proposalId: string, checked: boolean, expectedUpdatedAt: string | null, token?: string): Promise<RpduProposal> =>
+  (await request<RpduProposal>(API_ENDPOINTS.PIPELINE.ANONYMITY(proposalId), token, { method: 'PUT', body: JSON.stringify({ checked, expectedUpdatedAt }) })).data;
 
 export const forwardToReoApi = async (proposalId: string, token?: string): Promise<RpduProposal> =>
   (await request<RpduProposal>(API_ENDPOINTS.PIPELINE.FORWARD(proposalId), token, { method: 'POST' })).data;

@@ -3,21 +3,22 @@ import type { ProponentProposal } from '../../types';
 import { useAuth } from '../../context/AuthContext';
 import { API_ENDPOINTS } from '../../config/apiConfig';
 import { request } from '../../lib/apiRequest';
-import { ACCEPTED_PREVIEW_DOCUMENT_TYPES, MAX_UPLOAD_BYTES } from '../../lib/proposalPipeline';
+import { ACCEPTED_PREVIEW_DOCUMENT_TYPES, ANONYMITY_ATTESTATION_LABEL, MAX_UPLOAD_BYTES } from '../../lib/proposalPipeline';
 import { DocumentLink } from '../ui/DocumentLink';
 
 export function PostAihrManuscript({ proposal, onSaved }: { proposal: ProponentProposal; onSaved: () => void }) {
   const { session } = useAuth();
   const [file, setFile] = useState<File | null>(null);
+  const [attested, setAttested] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const submit = async () => {
-    if (!file || busy) return;
+    if (!file || !attested || busy) return;
     setBusy(true); setError('');
     try {
-      const body = new FormData(); body.append('detailed_file', file);
+      const body = new FormData(); body.append('detailed_file', file); body.append('anonymity_attested', 'true');
       await request(`${API_ENDPOINTS.PIPELINE.PROPOSAL_BY_ID(proposal.id)}/post-aihr`, session?.access_token, { method: 'POST', body });
-      setFile(null); onSaved();
+      setFile(null); setAttested(false); onSaved();
     } catch (failure) { setError(failure instanceof Error ? failure.message : 'Unable to submit manuscript.'); }
     finally { setBusy(false); }
   };
@@ -31,7 +32,8 @@ export function PostAihrManuscript({ proposal, onSaved }: { proposal: ProponentP
       <p className="text-sm text-slate-600">Optional when changes were made. Previous files remain available. Reviewer assignment locks the current manuscript.</p>
       <label className="block text-sm">Updated manuscript<input type="file" accept={ACCEPTED_PREVIEW_DOCUMENT_TYPES} onChange={(e) => setFile(e.target.files?.[0] || null)} className="mt-2 block min-h-11 max-w-full" /></label>
       {file && file.size > MAX_UPLOAD_BYTES && <p role="alert" className="text-sm text-red-800">Choose a file of 15 MB or smaller.</p>}
-      <button type="button" disabled={!file || file.size > MAX_UPLOAD_BYTES} onClick={submit} className="min-h-11 bg-red-800 px-4 text-sm text-white disabled:opacity-50">{busy ? 'Submitting…' : 'Submit updated manuscript'}</button>
+      <label className="flex min-h-11 items-start gap-2 text-sm text-slate-700"><input type="checkbox" checked={attested} onChange={(e) => setAttested(e.target.checked)} className="mt-1 accent-red-800" /><span>Anonymity attestation (required). {ANONYMITY_ATTESTATION_LABEL}</span></label>
+      <button type="button" disabled={!file || !attested || file.size > MAX_UPLOAD_BYTES} onClick={submit} className="min-h-11 bg-red-800 px-4 text-sm text-white disabled:opacity-50">{busy ? 'Submitting…' : 'Submit updated manuscript'}</button>
       {error && <p role="alert" className="text-sm text-red-800">{error}</p>}
     </fieldset>}
   </div>;

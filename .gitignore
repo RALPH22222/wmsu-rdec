@@ -25,3 +25,6 @@ dist-ssr
 .env
 # Claude Code subagent-driven-development scratch workspace
 .superpowers/
+
+# Local RPDU verification harness and private read-only snapshots
+.rpdu-*

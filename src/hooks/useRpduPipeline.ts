@@ -89,10 +89,11 @@ export function useRpduProposal(id: string | undefined) {
     }
   }, [id, token, setData, showToast, reread]);
 
+  const expectedUpdatedAt = resource.data?.updatedAt || null;
   const checkAnonymity = useCallback(async (checked: boolean) => {
     if (!id) return;
     try {
-      const proposal = await checkAnonymityApi(id, checked, token);
+      const proposal = await checkAnonymityApi(id, checked, expectedUpdatedAt, token);
       setData(proposal);
       showToast(checked ? `Manuscript anonymity check recorded for ${proposal.code}` : `Anonymity check removed from ${proposal.code}`);
     } catch (failure) {
@@ -100,7 +101,7 @@ export function useRpduProposal(id: string | undefined) {
       reread();
       throw failure;
     }
-  }, [id, token, setData, showToast, reread]);
+  }, [id, token, setData, showToast, reread, expectedUpdatedAt]);
 
   const forward = useCallback(async () => {
     if (!id) return;

@@ -39,7 +39,7 @@ export function ManuscriptAnonymityCard({ proposal, onCheck }: ManuscriptAnonymi
         <div className="rounded-sm border border-slate-100 p-3">
           <dt className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Proponent attestation</dt>
           <dd className={`mt-1 ${attestedAt ? 'text-slate-700' : 'text-amber-700'}`}>
-            {attestedAt ? <>Attested {formatDateTime(attestedAt)}{latestRevision ? ` (with Revision ${latestRevision.revisionNumber})` : ''}</> : 'No attestation on file — uploaded before it was required.'}
+            {attestedAt ? <>Attested {formatDateTime(attestedAt)}{latestRevision ? ` (with Revision ${latestRevision.revisionNumber})` : ''}</> : 'No attestation recorded for the current manuscript.'}
           </dd>
           {attestedAt && <dd className="mt-1 text-[11px] text-slate-500">“{ANONYMITY_ATTESTATION_LABEL}”</dd>}
         </div>
