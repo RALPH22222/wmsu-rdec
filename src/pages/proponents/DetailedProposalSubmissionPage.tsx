@@ -1,3 +1,4 @@
+import { PostAihrManuscript } from '../../components/proponentComponent/PostAihrManuscript';
 import { ArrowRight, FileCheck2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { SubmitDetailedProposalCard } from '../../components/proponentComponent/SubmitDetailedProposalCard';
@@ -77,7 +78,7 @@ export function DetailedProposalSubmissionPage() {
                 <Link to="/proponent/revisions" className="inline-flex min-h-11 items-center gap-2 text-xs font-semibold text-[#C8102E]">Evaluation & Revisions<ArrowRight className="h-4 w-4" /></Link>
               </div>
               <ul className="mt-2 divide-y divide-slate-100">
-                {submitted.map((proposal) => <li key={proposal.id} className="py-3"><p className="break-words text-sm font-semibold text-slate-900">{proposal.title}</p><p className="mt-1 text-xs text-slate-500">Submitted {formatDate(proposal.submittedAt)}</p></li>)}
+                {submitted.map((proposal) => <li key={proposal.id} className="py-3"><p className="break-words text-sm font-semibold text-slate-900">{proposal.title}</p><p className="mt-1 text-xs text-slate-500">Submitted {formatDate(proposal.submittedAt)}</p><PostAihrManuscript proposal={proposal} onSaved={refresh} /></li>)}
               </ul>
             </section>
           )}

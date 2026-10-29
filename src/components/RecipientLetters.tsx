@@ -14,7 +14,7 @@ type Letter = {
 };
 
 type Props = {
-  templateCode: 'WMSU-RPDU-LET-001.01' | 'WMSU-RPDU-LET-003.00' | typeof EN_BANC_NOTICE_CODE;
+  templateCode: 'AIHR_PASS_NOTICE' | 'WMSU-RPDU-LET-001.01' | 'WMSU-RPDU-LET-003.00' | typeof EN_BANC_NOTICE_CODE;
   heading: string;
   description: string;
   emptyText: string;

@@ -1,7 +1,9 @@
 import type { ConceptProposal } from '../types/index.ts';
 
-export const consolidateProposals = (proposals: ConceptProposal[], minimum = '', maximum = '', callId = 'all') => {
-  const rows = proposals.filter((p) => (callId === 'all' || p.callId === callId) &&
+export type ConsolidationPopulation = 'all-received' | 'screening-passed';
+
+export const consolidateProposals = (proposals: ConceptProposal[], minimum = '', maximum = '', callId = 'all', population: ConsolidationPopulation = 'all-received') => {
+  const rows = proposals.filter((p) => (population === 'all-received' || p.screeningStatus === 'passed') && (callId === 'all' || p.callId === callId) &&
     (minimum === '' || p.budgetRequested >= Number(minimum)) && (maximum === '' || p.budgetRequested <= Number(maximum)))
     .sort((a, b) => a.thematicArea.localeCompare(b.thematicArea) || b.budgetRequested - a.budgetRequested || a.title.localeCompare(b.title));
   const agendas = new Map<string, { agenda: string; count: number; budget: number; passed: number; detailed: number }>();

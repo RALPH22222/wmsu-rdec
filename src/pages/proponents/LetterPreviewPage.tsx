@@ -86,7 +86,7 @@ export function LetterPreviewPage() {
     ? 'Official Screening Result Letter'
     : isEnBancNotice
     ? 'Notice of Approval for Implementation'
-    : 'Official Document';
+    : letterData?.template_code === 'AIHR_PASS_NOTICE' ? 'AIHR qualification notice' : 'Official Document';
 
   const docIcon = isCotr ? (
     <FileCheck size={14} className="text-emerald-700" />

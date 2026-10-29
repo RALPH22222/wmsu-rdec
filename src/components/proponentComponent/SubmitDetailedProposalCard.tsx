@@ -28,7 +28,7 @@ export function SubmitDetailedProposalCard({ concept, onSubmit }: SubmitDetailed
     <article className="rounded-sm border border-slate-200 bg-white p-4 sm:p-5">
       <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">Passed preliminary screening{concept.screenedAt ? ` · ${formatDate(concept.screenedAt)}` : ''}</p>
       <h3 className="mt-1 text-sm font-bold text-slate-900">{concept.title}</h3>
-      <p className="mt-1 text-xs text-slate-600">Submit your detailed proposal to enter technical review.</p>
+      <p className="mt-1 text-xs text-slate-600">Submit your detailed proposal for AIHR. Technical review follows AIHR and any required en banc approval.</p>
       {concept.noticeLetterId && (
         <Link to={`/proponent/letters/${concept.noticeLetterId}/preview`} className="mt-1 inline-flex min-h-11 items-center gap-1.5 text-xs font-semibold text-emerald-700 hover:text-emerald-800">
           Approved for implementation by the en banc · View notice <ArrowUpRight className="h-3.5 w-3.5" />

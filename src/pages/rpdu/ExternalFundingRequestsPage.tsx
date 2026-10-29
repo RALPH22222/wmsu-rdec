@@ -1,3 +1,7 @@
+import { ExternalPacketCompletion } from '../../components/ExternalPacketCompletion';
+import { API_ENDPOINTS } from '../../config/apiConfig';
+import { request as apiRequest } from '../../lib/apiRequest';
+import { Link, useLocation } from 'react-router-dom';
 import { useState } from 'react';
 import { ArrowUpRight, FileText, RefreshCw, Search } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
@@ -7,6 +11,14 @@ import { getExternalFundingDocumentUrl, getReceivedExternalFundingRequests, type
 
 export function ExternalFundingRequestsPage() {
   const { session } = useAuth();
+  const role = useLocation().pathname.startsWith('/admin') ? 'admin' : 'rpdu';
+  const [clearing, setClearing] = useState('');
+  const clear = async (id: string) => {
+    setClearing(id); setDocumentError('');
+    try { await apiRequest(`${API_ENDPOINTS.PIPELINE.EXTERNAL_FUNDING_REQUESTS}/${id}/clear`, session?.access_token, { method: 'POST', body: '{}' }); refresh(); }
+    catch (failure) { setDocumentError(failure instanceof Error ? failure.message : 'Unable to record clearance.'); }
+    finally { setClearing(''); }
+  };
   const { data, loading, error, refresh } = useAsyncResource<ReceivedExternalFundingRequest[]>(
     (signal, token) => getReceivedExternalFundingRequests(token, AbortSignal.any([signal, AbortSignal.timeout(15_000)])), [],
   );
@@ -15,10 +27,10 @@ export function ExternalFundingRequestsPage() {
   const [documentError, setDocumentError] = useState('');
   const requests = data ?? [];
   const needle = query.trim().toLowerCase();
-  const visible = requests.filter((item) => [item.proponent.name, item.proponent.email, item.proponent.department, item.requestFormName, item.approvalLetterName]
+  const visible = requests.filter((item) => [item.title || '', item.reference || '', item.proponent.name, item.proponent.email, item.proponent.department, item.requestFormName, item.approvalLetterName]
     .some((value) => value.toLowerCase().includes(needle)));
 
-  const openDocument = async (id: string, kind: 'request-form' | 'approval-letter') => {
+  const openDocument = async (id: string, kind: 'manuscript' | 'request-form' | 'approval-letter') => {
     if (opening) return;
     const preview = window.open('about:blank', '_blank');
     if (preview) preview.opener = null;
@@ -40,7 +52,7 @@ export function ExternalFundingRequestsPage() {
     <section className="mx-auto max-w-5xl space-y-5">
       <header>
         <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">External Funding Requests</h1>
-        <p className="mt-2 text-sm text-slate-600">View endorsement requests and approval letters submitted by proponents seeking external research funding.</p>
+        <p className="mt-2 text-sm text-slate-600">Review the full manuscript and supporting documents. RPDU Head or ADMIN clearance sends a complete packet to technical review.</p>
       </header>
 
       <section aria-label="Received external funding requests" className="overflow-hidden rounded-sm border border-slate-200 bg-white">
@@ -73,7 +85,7 @@ export function ExternalFundingRequestsPage() {
               <li key={request.id} className="space-y-4 p-4 sm:p-5">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
-                    <h2 className="break-words text-base font-bold text-slate-900">{request.proponent.name}</h2>
+                    <h2 className="break-words text-base font-bold text-slate-900">{request.title || "Title not recorded"}</h2><p className="text-sm">{request.proponent.name}</p>
                     <p className="mt-1 break-words text-xs text-slate-500">{[request.proponent.email, request.proponent.department].filter(Boolean).join(' · ')}</p>
                     <p className="mt-2 text-xs text-slate-500">Submitted {formatDateTime(request.submittedAt)}</p>
                   </div>
@@ -81,6 +93,7 @@ export function ExternalFundingRequestsPage() {
                 </div>
                 <div className="grid gap-3 sm:grid-cols-2">
                   {([
+                    { kind: 'manuscript', label: 'Full manuscript', name: request.manuscriptName || 'Not recorded' },
                     { kind: 'request-form', label: 'Endorsement request form', name: request.requestFormName },
                     { kind: 'approval-letter', label: 'Approval letter', name: request.approvalLetterName },
                   ] as const).map((document) => (
@@ -90,6 +103,8 @@ export function ExternalFundingRequestsPage() {
                     </div>
                   ))}
                 </div>
+                {!request.complete && <ExternalPacketCompletion id={request.id} onSaved={refresh} />}
+                {request.detailedProposalId ? <Link to={`/${role}/evaluations/${request.detailedProposalId}`} className="inline-flex min-h-11 items-center text-sm font-semibold text-red-800">Head cleared: open technical review</Link> : request.complete && (request.canClear ? <button type="button" disabled={Boolean(clearing)} onClick={() => void clear(request.id)} className="min-h-11 bg-red-800 px-4 text-sm text-white disabled:opacity-50">{clearing === request.id ? 'Recording clearance?' : 'Clear packet for technical review'}</button> : <p className="text-sm text-slate-600">Awaiting RPDU Head or ADMIN clearance.</p>)}
               </li>
             ))}
           </ul>

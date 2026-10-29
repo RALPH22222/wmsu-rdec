@@ -144,6 +144,12 @@ export const postMyClarificationApi = async (proposalId: string, round: number, 
   (await request<ProponentProposal>(API_ENDPOINTS.PIPELINE.MY_PROPOSAL_CLARIFICATIONS(proposalId), token, { method: 'POST', body: JSON.stringify({ round, body: body.trim() }) })).data;
 
 export interface ExternalFundingRequest {
+  title: string | null;
+  reference: string | null;
+  manuscriptName: string | null;
+  manuscriptUrl: string | null;
+  clearedAt: string | null;
+  complete: boolean;
   id: string;
   requestFormName: string;
   requestFormUrl: string;
@@ -156,19 +162,24 @@ export interface ExternalFundingRequest {
 export const getExternalFundingRequests = async (token?: string, signal?: AbortSignal): Promise<ExternalFundingRequest[]> =>
   (await request<ExternalFundingRequest[]>(API_ENDPOINTS.PIPELINE.EXTERNAL_FUNDING_REQUESTS, token, {}, signal)).data;
 
-export interface ReceivedExternalFundingRequest extends Pick<ExternalFundingRequest, 'id' | 'requestFormName' | 'approvalLetterName' | 'submittedAt'> {
+export interface ReceivedExternalFundingRequest extends Pick<ExternalFundingRequest, 'id' | 'requestFormName' | 'approvalLetterName' | 'submittedAt' | 'title' | 'reference' | 'manuscriptName' | 'clearedAt' | 'complete'> {
   status: string;
+  canClear: boolean;
+  detailedProposalId: string | null;
   proponent: { id: string; name: string; email: string; department: string };
 }
 
 export const getReceivedExternalFundingRequests = async (token?: string, signal?: AbortSignal): Promise<ReceivedExternalFundingRequest[]> =>
   (await request<ReceivedExternalFundingRequest[]>(API_ENDPOINTS.PIPELINE.RECEIVED_EXTERNAL_FUNDING_REQUESTS, token, {}, signal)).data;
 
-export const getExternalFundingDocumentUrl = async (id: string, kind: 'request-form' | 'approval-letter', token?: string): Promise<string> =>
+export const getExternalFundingDocumentUrl = async (id: string, kind: 'manuscript' | 'request-form' | 'approval-letter', token?: string): Promise<string> =>
   (await request<{ url: string }>(API_ENDPOINTS.PIPELINE.EXTERNAL_FUNDING_DOCUMENT(id, kind), token, {}, AbortSignal.timeout(15_000))).data.url;
 
-export const submitExternalFundingRequest = async (requestForm: File, approvalLetter: File, token?: string): Promise<void> => {
+export const submitExternalFundingRequest = async (requestForm: File, approvalLetter: File, manuscript: File, title: string, reference: string, token?: string): Promise<void> => {
   const body = new FormData();
+  body.append('title', title.trim());
+  body.append('reference', reference.trim());
+  body.append('manuscript_file', manuscript);
   body.append('request_form_file', requestForm);
   body.append('approval_letter_file', approvalLetter);
   await request<{ id: string; status: 'SUBMITTED'; submittedAt: string }>(API_ENDPOINTS.PIPELINE.EXTERNAL_FUNDING_REQUESTS, token, { method: 'POST', body });

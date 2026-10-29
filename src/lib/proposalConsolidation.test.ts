@@ -19,3 +19,20 @@ test('CSV preserves quoted titles and prevents spreadsheet formula execution', (
   assert.ok(csv.includes('Detailed proposal received'));
   assert.ok(csv.includes('Not received'));
 });
+
+test('all received includes ten submissions while screening passed includes only three, with matching totals and exports', () => {
+  const rows = Array.from({ length: 10 }, (_, i) => proposal(String(i), 'Health', 100, {
+    screeningStatus: i < 3 ? 'passed' : i < 8 ? 'pending' : 'failed',
+  }));
+  const all = consolidateProposals(rows, '', '', 'all', 'all-received');
+  const passed = consolidateProposals(rows, '', '', 'all', 'screening-passed');
+  assert.equal(all.rows.length, 10);
+  assert.equal(all.totalBudget, 1000);
+  assert.equal(passed.rows.length, 3);
+  assert.equal(passed.totalBudget, 300);
+  for (const result of [all, passed]) assert.equal(consolidationCsv(result.rows).split('\r\n').length, result.rows.length + 1);
+  assert.equal(consolidateProposals(rows, '101', '', 'all', 'all-received').rows.length, 0);
+  const searched = rows.filter((row) => row.id === '4');
+  assert.equal(consolidateProposals(searched, '', '', 'call', 'all-received').totalBudget, 100);
+  assert.equal(consolidateProposals(searched, '', '', 'call', 'screening-passed').totalBudget, 0);
+});

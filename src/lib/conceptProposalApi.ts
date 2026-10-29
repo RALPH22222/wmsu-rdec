@@ -39,6 +39,7 @@ interface ProposalRecord {
   submitted_at: string;
   concept_paper_file_url: string;
   endorsement_file_url: string;
+  college_memo_file_url?: string;
   call?: { title: string };
   proponent?: { first_name: string; last_name: string; email: string; departments?: { name: string } };
   preliminary_screenings?: ScreeningRecord[] | ScreeningRecord | null;
@@ -48,11 +49,11 @@ function formatProposal(row: ProposalRecord): ConceptProposal {
   const screening = Array.isArray(row.preliminary_screenings) ? row.preliminary_screenings[0] : row.preliminary_screenings;
   const department = row.proponent?.departments?.name || 'Unassigned';
   const fileUrl = (url: string) => url ? new URL(url, `${API_BASE_URL.replace(/\/api\/?$/, '')}/`).href : undefined;
-  const attachment = (url: string, category: 'concept_proposal' | 'endorsement_pdf', label: string) => {
+  const attachment = (url: string, category: 'college_memo' | 'concept_proposal' | 'endorsement_pdf', label: string) => {
     const dataUrl = fileUrl(url);
     let name = label;
     try { name = decodeURIComponent(new URL(dataUrl!).pathname.split('/').pop() || label); } catch { /* Missing file URL. */ }
-    return { name, size: '', type: name.match(/\.(pdf|docx?)$/i)?.[1].toUpperCase() || 'File', dataUrl, category };
+    return { name, label, size: '', type: name.match(/\.(pdf|docx?)$/i)?.[1].toUpperCase() || 'File', dataUrl, category };
   };
   return {
     id: row.id,
@@ -83,7 +84,8 @@ function formatProposal(row: ProposalRecord): ConceptProposal {
     criteriaChecklist: { eligibleProponent: false, withinBudgetCap: false, alignedPriority: false, requiredFormsAttached: Boolean(row.concept_paper_file_url && row.endorsement_file_url) },
     attachments: [
       attachment(row.concept_paper_file_url, 'concept_proposal', 'Concept Proposal'),
-      attachment(row.endorsement_file_url, 'endorsement_pdf', 'Endorsement Form'),
+      attachment(row.endorsement_file_url, 'endorsement_pdf', row.college_memo_file_url ? 'Endorsement form' : 'Existing endorsement PDF ? college memo not separately recorded'),
+      ...(row.college_memo_file_url ? [attachment(row.college_memo_file_url, 'college_memo', 'College endorsement memo')] : []),
     ],
   };
 }
@@ -96,6 +98,7 @@ export interface ConceptProposalPayload {
   proposedBudget?: number;
   conceptPaperFile?: File | null;
   endorsementFile?: File | null;
+  collegeMemoFile?: File | null;
   conceptPaperFileUrl?: string;
 }
 
@@ -129,6 +132,7 @@ export async function submitConceptProposalApi(
     formData.append('endorsement_file', payload.endorsementFile);
   }
 
+  if (payload.collegeMemoFile) formData.append('college_memo_file', payload.collegeMemoFile);
   const headers: Record<string, string> = {};
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;

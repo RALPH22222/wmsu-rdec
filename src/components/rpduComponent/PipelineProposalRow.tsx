@@ -14,6 +14,7 @@ interface PipelineProposalRowProps {
 
 /** Why the Assign button is disabled, or null when assignment is allowed. Mirrors the server's first two rules. Not exported: react-refresh/only-export-components. */
 const assignBlockedReason = (proposal: RpduProposal): string | null => {
+  if (!proposal.canManageReviewers) return 'Only the RPDU Head or ADMIN can assign or remove reviewers.';
   if (!proposal.technicalReviewReady) return 'Awaiting AIHR and any required en banc clearance';
   if (!proposal.manuscriptUrl) return 'Detailed proposal not yet submitted';
   if (isTerminalStatus(proposal.status)) return 'Assignment is closed';

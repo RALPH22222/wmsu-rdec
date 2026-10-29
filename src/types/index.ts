@@ -87,7 +87,8 @@ export interface ConceptProposalAttachment {
   size: string;
   type: string;
   dataUrl?: string;
-  category?: 'concept_proposal' | 'endorsement_pdf' | 'budget_details' | 'other';
+  label?: string;
+  category?: 'college_memo' | 'concept_proposal' | 'endorsement_pdf' | 'budget_details' | 'other';
 }
 
 export interface ConceptProposalCriteria {
@@ -114,6 +115,7 @@ export interface ScreeningSectionComments {
 }
 
 export interface ConceptProposal {
+  screeningLockedReason?: string | null;
   id: string;
   proponentId?: string;
   code: string;
@@ -341,7 +343,7 @@ export interface ProponentActionSheet { round: number; fileUrl: string; prepared
 export type ClarificationAuthor = 'PROPONENT' | 'RPDU';
 /** One message in the proponent↔RPDU clarification thread of a round. `authorName` is present in the RPDU view only. */
 export interface ClarificationMessage { id: string; round: number; authorRole: ClarificationAuthor; authorName?: string; body: string; createdAt: string }
-export type NoticeEmailStatus = 'not_sent' | 'sent' | 'failed';
+export type NoticeEmailStatus = 'not_sent' | 'sent' | 'failed' | 'sending' | 'uncertain';
 /** The system-issued en banc notice letter (template code EN_BANC_NOTICE) for an approved concept. */
 export interface EnBancNotice { letterId: string; issuedAt: string; emailStatus: NoticeEmailStatus }
 
@@ -361,8 +363,11 @@ export interface ScreeningReviewDetails {
 export type FundingClassification = 'INSTITUTIONAL' | 'OUTSOURCE';
 
 export interface RpduProposal {
+  externalFundingRequestId?: string | null;
+  manuscriptVersions?: ManuscriptVersion[];
   /** Only RPDU Head and ADMIN may record the Step 7.6 check. */
   canCheckRevision?: boolean;
+  canManageReviewers?: boolean;
   fundingClassification: FundingClassification | null;
   canSetFundingClassification: boolean;
   technicalReviewReady: boolean;
@@ -448,7 +453,13 @@ export interface ProponentRoundFeedback {
   evaluations: ProponentFeedbackEvaluation[];
 }
 
+export interface ManuscriptVersion { id: string; version: number; stage: string; fileUrl: string; submittedAt: string | null; current: boolean }
+
 export interface ProponentProposal {
+  manuscriptVersions?: ManuscriptVersion[];
+  canUpdateAfterAihr?: boolean;
+  aihrOutcome?: AihrVerdict | null;
+  aihrResult?: { verdict: AihrVerdict; presentedOn?: string; remarks?: string; scoresheetFileUrl?: string; loggedAt?: string } | null;
   technicalReviewReady: boolean;
   preReviewStage?: AihrStage | null;
   id: string;
@@ -505,6 +516,7 @@ export interface EnBancDecision {
 }
 
 export interface AihrConcept {
+  qualificationNotice?: EnBancNotice | null;
   id: string;
   title: string;
   researchAgenda: string;

@@ -11,13 +11,14 @@ function SubmittedFiles({ attachments }: { attachments: ConceptProposalAttachmen
   const [category, setCategory] = useState('concept_proposal');
   const [loadedUrl, setLoadedUrl] = useState<string | null>(null);
   const file = attachments.find((attachment) => attachment.category === category);
-  const label = category === 'concept_proposal' ? 'concept proposal' : 'endorsement form';
+  const label = file?.label || (category === 'college_memo' ? 'college endorsement memo' : category === 'concept_proposal' ? 'concept proposal' : 'endorsement form');
   return (
     <section aria-label="Submitted documents" className="min-w-0 overflow-hidden rounded-sm border border-slate-200 bg-white">
       <div className="flex flex-wrap gap-2 border-b border-slate-200 p-3">
         {[
           { key: 'concept_proposal', label: 'Concept proposal' },
-          { key: 'endorsement_pdf', label: 'Endorsement form' },
+          { key: 'endorsement_pdf', label: attachments.find((item) => item.category === 'endorsement_pdf')?.label || 'Endorsement form' },
+          { key: 'college_memo', label: 'College endorsement memo' },
         ].map((tab) => <button key={tab.key} type="button" aria-pressed={category === tab.key} onClick={() => setCategory(tab.key)} className={`min-h-11 rounded-sm px-3 py-2 text-xs font-semibold ${category === tab.key ? 'bg-[#C8102E] text-white hover:bg-[#A00D26]' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>{tab.label}</button>)}
       </div>
       {file?.dataUrl ? <>

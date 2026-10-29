@@ -53,20 +53,21 @@ function DetailBody({ id, role }: { id: string | undefined; role: 'rpdu' | 'admi
         <p className="mt-1 text-xs text-slate-500">{proposal.proponent.name} · {proposal.proponent.department || 'No department'} · Submitted {formatDate(proposal.submittedAt)}</p>
         <p className="mt-3 rounded-sm bg-slate-50 p-3 text-xs text-slate-700">{proposal.preReviewStage ? stageExplanation(proposal.preReviewStage) : nextStepFor(proposal.status, 'rpdu')}</p>
         {!proposal.preReviewStage && <div className="mt-4"><PipelineStepper status={proposal.status} currentRound={proposal.currentRound} compact /></div>}
-        <div className="mt-4 flex flex-wrap gap-2"><DocumentLink href={proposal.manuscriptUrl} label={proposal.manuscriptUrl ? 'Original manuscript' : 'Manuscript'} />{latestRevision && <DocumentLink href={latestRevision.revisedFileUrl} label={`Revision ${latestRevision.revisionNumber}`} muted />}</div>
+        <div className="mt-4 flex flex-wrap gap-2"><DocumentLink href={proposal.manuscriptUrl} label={proposal.manuscriptUrl ? 'Current manuscript' : 'Manuscript'} />{latestRevision && <DocumentLink href={latestRevision.revisedFileUrl} label={`Revision ${latestRevision.revisionNumber}`} muted />}</div>
       </header>
 
       <Card title="Detailed research proposal">
-        <DocumentViewer url={proposal.manuscriptUrl} title="Original manuscript" />
+        <DocumentViewer url={proposal.manuscriptUrl} title="Current manuscript" />
       </Card>
 
+      {!!proposal.manuscriptVersions?.length && <details className="bg-white p-4"><summary className="min-h-11 cursor-pointer text-sm font-semibold">Manuscript history</summary>{proposal.manuscriptVersions.map((version) => <div key={version.id} className="py-2"><DocumentLink href={version.fileUrl} label={`Version ${version.version} ? ${version.stage}${version.current ? ' ? Current' : ''}`} muted /></div>)}</details>}
       {(proposal.status === 'APPROVED' || proposal.status === 'FORWARDED_TO_REO') && <TechnicalReviewGateway proposal={proposal} role={role} onForward={forward} />}
 
       <Card title="Review panel">
         <div className="mb-5"><FundingClassificationField key={proposal.fundingClassification ?? 'unclassified'} value={proposal.fundingClassification ?? null} canEdit={Boolean(proposal.canSetFundingClassification)} onSave={(value) => saveFundingClassification(proposal.id, value)} /></div>
         <PanelDots count={proposal.panel.length} className="mb-2" />
-        <ReviewPanelList panel={proposal.panel} onRemove={unassign} />
-        {proposal.technicalReviewReady && proposal.manuscriptUrl && proposal.panel.length < MAX_EVALUATORS_PER_PROPOSAL && !isTerminalStatus(proposal.status) && <Link to={backHref} className="mt-3 inline-flex min-h-11 items-center text-xs font-semibold text-[#C8102E]">Assign evaluators from the list →</Link>}
+        <ReviewPanelList externalProposalId={proposal.externalFundingRequestId ? proposal.id : undefined} panel={proposal.panel} canManageReviewers={Boolean(proposal.canManageReviewers)} onRemove={unassign} />
+        {proposal.canManageReviewers && proposal.technicalReviewReady && proposal.manuscriptUrl && proposal.panel.length < MAX_EVALUATORS_PER_PROPOSAL && !isTerminalStatus(proposal.status) && <Link to={backHref} className="mt-3 inline-flex min-h-11 items-center text-xs font-semibold text-[#C8102E]">Assign evaluators from the list →</Link>}
         <DeclinedInvitations declines={proposal.declines} />
       </Card>
 

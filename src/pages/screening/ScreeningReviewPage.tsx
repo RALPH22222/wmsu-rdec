@@ -84,7 +84,7 @@ export function ScreeningReviewPage({ role }: { role: 'rpdu' | 'admin' }) {
 
   const save = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (!proposal || !decision || saving) return;
+    if (!proposal || !decision || saving || proposal.screeningLockedReason) return;
     if (decision === 'FAIL' && failStep < screeningCommentSections.length) {
       setFailStep((step) => step + 1);
       return;
@@ -195,7 +195,8 @@ export function ScreeningReviewPage({ role }: { role: 'rpdu' | 'admin' }) {
               <div className="flex shrink-0 flex-wrap gap-2 border-b border-slate-200 p-3">
                 {[
                   { category: 'concept_proposal', label: 'Concept proposal' },
-                  { category: 'endorsement_pdf', label: 'Endorsement form' },
+                  { category: 'endorsement_pdf', label: proposal.attachments.find((file) => file.category === 'endorsement_pdf')?.label || 'Endorsement form' },
+                  { category: 'college_memo', label: 'College endorsement memo' },
                 ].map((file) => <button type="button" key={file.category} aria-pressed={activeCategory === file.category} onClick={() => setActiveCategory(file.category)} className={`rounded-sm px-3 py-2 text-xs font-semibold ${activeCategory === file.category ? 'bg-[#C8102E] text-white hover:bg-[#A00D26]' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>{file.label}</button>)}
               </div>
               {activeFile?.dataUrl ? <>
@@ -271,7 +272,8 @@ export function ScreeningReviewPage({ role }: { role: 'rpdu' | 'admin' }) {
 
               <form id="screening-decision-panel" role="tabpanel" aria-labelledby="screening-decision-tab" hidden={activePanel !== 'decision'} tabIndex={0} onSubmit={save} className="space-y-4 p-5 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[#C8102E] lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:overscroll-contain">
                 <h3 className="font-bold text-slate-900">{proposal.screeningStatus === 'pending' ? 'Screening decision' : 'Update screening decision'}</h3>
-                <fieldset disabled={saving} className="space-y-4">
+                {proposal.screeningLockedReason && <p role="status" className="bg-neutral-50 p-3 text-sm text-slate-700">Screening is locked. {proposal.screeningLockedReason} A separately authorized correction procedure is required.</p>}
+                <fieldset disabled={saving || Boolean(proposal.screeningLockedReason)} className="space-y-4">
                   <legend className="sr-only">Choose a screening decision</legend>
                   <div className="space-y-3">
                     <h4 className="text-sm font-semibold text-slate-800">Screening participants</h4>

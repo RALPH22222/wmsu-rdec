@@ -16,6 +16,7 @@ interface AssignEvaluatorModalProps {
 
 /** Client-side reasons that mirror the server's assignment rules; the server re-checks every one. */
 const blockedReason = (proposal: RpduProposal, evaluator: PipelineEvaluator): string | null => {
+  if (!proposal.canManageReviewers) return 'Only the RPDU Head or ADMIN can assign or remove reviewers.';
   if (!proposal.manuscriptUrl) return 'Detailed proposal not yet submitted';
   if (proposal.panel.length >= MAX_EVALUATORS_PER_PROPOSAL) return 'Panel is full';
   if (proposal.panel.some((seat) => seat.evaluatorId === evaluator.id)) return 'Already on this panel';
@@ -36,6 +37,7 @@ export function AssignEvaluatorModal({ proposal, evaluators, isOpen, onClose, on
   const full = proposal.panel.length >= MAX_EVALUATORS_PER_PROPOSAL;
 
   const handleAssign = async (evaluator: PipelineEvaluator) => {
+    if (blockedReason(proposal, evaluator) || busyId) return;
     setBusyId(evaluator.id);
     setWarning(null);
     try {

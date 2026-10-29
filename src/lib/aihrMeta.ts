@@ -44,6 +44,8 @@ export const EN_BANC_NOTICE_CODE = 'EN_BANC_NOTICE';
 
 /** Delivery state of the system-issued en banc notice letter (template code EN_BANC_NOTICE). */
 export const NOTICE_EMAIL_META: Record<NoticeEmailStatus, { label: string; tone: StatusTone }> = {
+  sending: { label: 'Email in progress / unconfirmed', tone: 'amber' },
+  uncertain: { label: 'Email unconfirmed', tone: 'amber' },
   not_sent: { label: 'Portal only', tone: 'slate' },
   sent: { label: 'Emailed', tone: 'emerald' },
   failed: { label: 'Email failed', tone: 'red' },

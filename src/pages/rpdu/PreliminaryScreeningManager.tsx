@@ -66,7 +66,7 @@ export const PreliminaryScreeningManager: React.FC<PreliminaryScreeningManagerPr
   const filteredProposals = useMemo(() => {
     return conceptProposals.filter((p) => {
       const matchesStatus = view === 'consolidation'
-        ? p.screeningStatus === 'passed'
+        ? true
         : statusFilter === 'all' || p.screeningStatus === statusFilter;
       const matchesThematic = thematicFilter === 'all' || p.thematicArea === thematicFilter;
       const matchesCollege = collegeFilter === 'all' || p.college === collegeFilter;
@@ -363,7 +363,6 @@ export const PreliminaryScreeningManager: React.FC<PreliminaryScreeningManagerPr
           >
             <TableIcon className="h-4 w-4" />
             <span>Consolidation by Agenda and Budget</span>
-            <span aria-label={`${stats.passed} passed proposals`} className="ml-1 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-600">{stats.passed}</span>
           </Link>
         </nav>
       </div>

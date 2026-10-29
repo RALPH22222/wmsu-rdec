@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { ExternalPacketCompletion } from '../../components/ExternalPacketCompletion';
 import { Upload } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useCallForProposals } from '../../context/CallForProposalsContext';
@@ -13,6 +14,9 @@ export function ExternalFundingRequestPage() {
   const { session } = useAuth();
   const { showToast } = useCallForProposals();
   const token = session?.access_token;
+  const [title, setTitle] = useState('');
+  const [reference, setReference] = useState('');
+  const [manuscript, setManuscript] = useState<File | null>(null);
   const [requestForm, setRequestForm] = useState<File | null>(null);
   const [approvalLetter, setApprovalLetter] = useState<File | null>(null);
   const [requests, setRequests] = useState<ExternalFundingRequest[]>([]);
@@ -35,12 +39,12 @@ export function ExternalFundingRequestPage() {
   }, [refreshRequests]);
 
   const submit = async () => {
-    if (!requestForm || !approvalLetter || busy) return;
+    if (!requestForm || !approvalLetter || !manuscript || !title.trim() || busy) return;
     setBusy(true);
     setError('');
     try {
-      await submitExternalFundingRequest(requestForm, approvalLetter, token);
-      setRequestForm(null);
+      await submitExternalFundingRequest(requestForm, approvalLetter, manuscript, title, reference, token);
+      setRequestForm(null); setManuscript(null); setTitle(''); setReference('');
       setApprovalLetter(null);
       showToast('External funding endorsement request submitted.');
       document.querySelectorAll<HTMLInputElement>('[data-external-funding-file]')
@@ -54,7 +58,7 @@ export function ExternalFundingRequestPage() {
   };
 
   const fileError = (file: File | null) => file && file.size > MAX_UPLOAD_BYTES ? `${file.name} exceeds ${MAX_FILE_SIZE_LABEL}.` : '';
-  const validationError = fileError(requestForm) || fileError(approvalLetter);
+  const validationError = fileError(manuscript) || fileError(requestForm) || fileError(approvalLetter);
 
   return (
     <section className="mx-auto max-w-5xl space-y-5">
@@ -71,8 +75,11 @@ export function ExternalFundingRequestPage() {
 
       <section aria-labelledby="external-upload-title" className="rounded-sm border border-slate-200 bg-white p-4 sm:p-5">
         <h2 id="external-upload-title" className="text-sm font-bold text-slate-900">Submit your request</h2>
-        <p className="mt-1 text-xs text-slate-600">Both documents are required. PDF and Word files up to {MAX_FILE_SIZE_LABEL} each are accepted.</p>
+        <p className="mt-1 text-xs text-slate-600">The title and all three documents are required. Head clearance is followed by technical review. PDF and Word files up to {MAX_FILE_SIZE_LABEL} each are accepted.</p>
         <div className="mt-4 grid gap-4 md:grid-cols-2">
+          <label className="block text-sm">Proposal title<input value={title} maxLength={255} onChange={(e) => setTitle(e.target.value)} disabled={busy} className="block min-h-11 w-full bg-neutral-50 px-3" /></label>
+          <label className="block text-sm">Reference (optional)<input value={reference} maxLength={255} onChange={(e) => setReference(e.target.value)} disabled={busy} className="block min-h-11 w-full bg-neutral-50 px-3" /></label>
+          <label className="block text-sm">Full research manuscript<input data-external-funding-file type="file" accept={ACCEPTED_DOCUMENT_TYPES} disabled={busy} onChange={(e) => setManuscript(e.target.files?.[0] || null)} className="block min-h-11 max-w-full text-sm" /></label>
           <label className="block text-xs font-semibold text-slate-700">Completed endorsement request form
             <input data-external-funding-file type="file" accept={ACCEPTED_DOCUMENT_TYPES} disabled={busy} onChange={(event) => setRequestForm(event.target.files?.[0] ?? null)} className="mt-1 block min-h-11 w-full rounded-sm border border-slate-200 bg-white text-sm file:mr-3 file:min-h-11 file:border-0 file:bg-slate-100 file:px-3 file:text-xs file:font-semibold" />
             {requestForm && <span className={`mt-1 block text-xs ${fileError(requestForm) ? 'text-red-700' : 'text-slate-500'}`}>{requestForm.name} · {formatFileSize(requestForm.size)}</span>}
@@ -83,7 +90,7 @@ export function ExternalFundingRequestPage() {
           </label>
         </div>
         {(error || validationError) && <p role="alert" className="mt-3 text-xs text-red-700">{validationError || error}</p>}
-        <button type="button" onClick={submit} disabled={!requestForm || !approvalLetter || Boolean(validationError) || busy} className="mt-4 inline-flex min-h-11 items-center justify-center gap-2 rounded-sm bg-[#C8102E] px-4 text-sm font-semibold text-white hover:bg-[#A00D26] disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500"><Upload className="h-4 w-4" />{busy ? 'Submitting…' : 'Submit external funding request'}</button>
+        <button type="button" onClick={submit} disabled={!title.trim() || !manuscript || !requestForm || !approvalLetter || Boolean(validationError) || busy} className="mt-4 inline-flex min-h-11 items-center justify-center gap-2 rounded-sm bg-[#C8102E] px-4 text-sm font-semibold text-white hover:bg-[#A00D26] disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500"><Upload className="h-4 w-4" />{busy ? 'Submitting…' : 'Submit external funding request'}</button>
       </section>
 
       {loading ? (
@@ -98,11 +105,13 @@ export function ExternalFundingRequestPage() {
           <h2 id="external-history-title" className="text-sm font-bold text-slate-900">Your submissions</h2>
           <ul className="mt-2 divide-y divide-slate-100">
             {requests.map((request) => <li key={request.id} className="flex flex-wrap items-center justify-between gap-3 py-3">
-              <div><p className="text-xs font-semibold text-slate-800">Submitted {formatDate(request.submittedAt)}</p><p className="mt-1 text-xs text-slate-500">Status: {request.status === 'SUBMITTED' ? 'Submitted to RPDU' : request.status}</p></div>
+              <div><p className="text-sm font-semibold">{request.title || "Title not recorded"}</p><p className="text-xs text-slate-600">{request.clearedAt ? "Head cleared: proceed to Evaluation & Revisions for technical review." : request.complete ? "Awaiting RPDU Head clearance." : "Incomplete legacy packet."}</p><p className="text-xs font-semibold text-slate-800">Submitted {formatDate(request.submittedAt)}</p><p className="mt-1 text-xs text-slate-500">Status: {request.status === 'SUBMITTED' ? 'Submitted to RPDU' : request.status}</p></div>
               <div className="flex flex-wrap gap-x-4">
+                {request.manuscriptUrl && <a href={request.manuscriptUrl} target="_blank" rel="noreferrer" className="min-h-11 text-sm text-red-800">View manuscript</a>}
                 <a href={request.requestFormUrl} target="_blank" rel="noreferrer" className="min-h-8 text-xs font-semibold text-[#C8102E] hover:underline">View request form</a>
                 <a href={request.approvalLetterUrl} target="_blank" rel="noreferrer" className="min-h-8 text-xs font-semibold text-[#C8102E] hover:underline">View approval letter</a>
               </div>
+              {!request.complete && <ExternalPacketCompletion id={request.id} onSaved={() => void refreshRequests()} />}
             </li>)}
           </ul>
         </section>

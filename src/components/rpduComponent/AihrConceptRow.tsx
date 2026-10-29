@@ -6,6 +6,11 @@ import { NOTICE_EMAIL_META, OUTCOME_META, STAGE_META, VERDICT_META, stageExplana
 import { formatCurrency, formatDate } from '../../lib/format';
 import { DocumentLink } from '../ui/DocumentLink';
 import { TONE_CLASSES } from '../ui/toneClasses';
+import { AihrAttendance } from './AihrAttendance';
+import { useState } from 'react';
+import { useAuth } from '../../context/AuthContext';
+import { request } from '../../lib/apiRequest';
+import { API_ENDPOINTS } from '../../config/apiConfig';
 
 interface AihrConceptRowProps {
   concept: AihrConcept;
@@ -28,6 +33,17 @@ function Chip({ tone, label, title }: { tone: StatusTone; label: string; title?:
 }
 
 export function AihrConceptRow({ concept, role, onLogVerdict, onDeliberate }: AihrConceptRowProps) {
+  const { session } = useAuth();
+  const [noticeMessage, setNoticeMessage] = useState('');
+  const [retrying, setRetrying] = useState(false);
+  const retryNotice = async () => {
+    setRetrying(true); setNoticeMessage('');
+    try {
+      const result = await request<{ warning: string | null }>(API_ENDPOINTS.AIHR.VERDICT(concept.id).replace(/verdict$/, 'notice'), session?.access_token, { method: 'POST', body: '{}' });
+      setNoticeMessage(result.data.warning || 'The AIHR notice is available and email delivery is recorded.');
+    } catch (error) { setNoticeMessage(error instanceof Error ? error.message : 'Unable to issue notice. Retry.'); }
+    finally { setRetrying(false); }
+  };
   const stage = STAGE_META[concept.stage];
   const { aihr, enBanc, detailedProposal } = concept;
   return (
@@ -66,7 +82,8 @@ export function AihrConceptRow({ concept, role, onLogVerdict, onDeliberate }: Ai
               {' · '}Score {aihr.score ?? '—'}/100
               {aihr.presentedOn && <> · Presented {formatDate(aihr.presentedOn)}</>}
             </p>
-            <p className="text-xs text-slate-500">Logged by {aihr.loggedBy}</p>
+            <p className="text-xs text-slate-500">Logged by {aihr.loggedBy} ? {formatDate(aihr.updatedAt || aihr.loggedAt)}</p>
+            {aihr.remarks && <p className="whitespace-pre-wrap text-sm text-slate-700">{aihr.remarks}</p>}
           </div>
           <DocumentLink href={aihr.scoresheetFileUrl} label="Result summary" muted />
         </div>
@@ -99,6 +116,8 @@ export function AihrConceptRow({ concept, role, onLogVerdict, onDeliberate }: Ai
           <span className="ml-2 text-xs text-slate-500">Submitted {formatDate(detailedProposal.submittedAt)}</span>
         </div>
       )}
+      {concept.aihr?.verdict === 'PASS' && <div className="mt-3 text-sm text-slate-600"><p>{noticeMessage || (concept.qualificationNotice ? `AIHR notice issued. Email: ${concept.qualificationNotice.emailStatus}.` : 'AIHR notice not issued.')}</p><button type="button" disabled={retrying} onClick={retryNotice} className="min-h-11 text-red-800 underline">{retrying ? 'Checking delivery…' : 'Issue or retry AIHR notice'}</button></div>}
+      {detailedProposal && <AihrAttendance conceptId={concept.id} />}
     </li>
   );
 }

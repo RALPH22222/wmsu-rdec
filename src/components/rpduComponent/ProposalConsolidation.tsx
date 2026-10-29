@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import type { ConceptProposal } from '../../types';
-import { consolidateProposals, consolidationCsv } from '../../lib/proposalConsolidation';
+import { consolidateProposals, consolidationCsv, type ConsolidationPopulation } from '../../lib/proposalConsolidation';
 import { formatCurrency } from '../../lib/format';
 import { DocumentLink } from '../ui/DocumentLink';
 
@@ -8,18 +8,26 @@ export function ProposalConsolidation({ proposals, children }: { proposals: Conc
   const [minimum, setMinimum] = useState('');
   const [maximum, setMaximum] = useState('');
   const [callId, setCallId] = useState('all');
+  const [population, setPopulation] = useState<ConsolidationPopulation>('screening-passed');
+  const populationLabel = population === 'all-received' ? 'All received' : 'Screening passed';
   const calls = [...new Map(proposals.map((p) => [p.callId, p.callTitle])).entries()];
   const invalid = minimum !== '' && maximum !== '' && Number(minimum) > Number(maximum);
-  const { rows, agendas, totalBudget } = consolidateProposals(proposals, minimum, maximum, callId);
+  const { rows, agendas, totalBudget } = consolidateProposals(proposals, minimum, maximum, callId, population);
   const download = () => {
     const url = URL.createObjectURL(new Blob(['\uFEFF', consolidationCsv(rows)], { type: 'text/csv;charset=utf-8' }));
     const link = document.createElement('a');
-    link.href = url; link.download = 'proposal-consolidation.csv'; link.click();
+    link.href = url; link.download = `proposal-consolidation-${population}.csv`; link.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   };
-  return <section className="space-y-4 rounded-sm border border-slate-200 bg-white p-5" aria-labelledby="consolidation-title">
-    <h2 id="consolidation-title" className="text-base font-bold text-slate-900">Consolidation by agenda and budget</h2>
-    <p className="text-sm text-slate-600">Includes only proposals that passed preliminary screening. Filter by agenda, college, call, or budget to compile proposals and track detailed submissions before AIHR.</p>
+  return <section className="space-y-4 rounded-sm bg-white p-5" aria-labelledby="consolidation-title">
+    <h2 id="consolidation-title" className="text-base font-bold text-slate-900">Consolidation by agenda and budget — {populationLabel}</h2>
+    <label className="block text-sm font-medium text-slate-700">Proposals to include
+      <select value={population} onChange={(e) => setPopulation(e.target.value as ConsolidationPopulation)} className="mt-1 block min-h-11 max-w-full rounded-sm bg-slate-50 px-3 focus-visible:outline-red-800">
+        <option value="all-received">All received</option>
+        <option value="screening-passed">Screening passed</option>
+      </select>
+    </label>
+    <p className="text-sm text-slate-600">{population === 'all-received' ? 'Includes submitted proposals awaiting screening and those already decided.' : 'Includes only proposals that passed preliminary screening.'} Filter by agenda, college, call, or budget. Totals and CSV use the selected scope and filters.</p>
     {children}
     <div className="flex flex-wrap items-end gap-3">
       <label className="text-sm text-slate-700">Call for proposals<select value={callId} onChange={(e) => setCallId(e.target.value)} className="mt-1 block min-h-11 max-w-full rounded-sm border border-slate-300 px-3"><option value="all">All calls</option>{calls.map(([id, title]) => <option key={id} value={id}>{title}</option>)}</select></label>
