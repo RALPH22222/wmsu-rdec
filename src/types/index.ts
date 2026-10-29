@@ -275,6 +275,11 @@ export type ReviewRowStatus = 'PENDING' | 'APPROVED' | 'REVISION_REQUESTED' | 'R
 /** RPDU's cross-check of a revision against its action sheet (flow 7.6). `checkedBy` is null outside the RPDU view. */
 export interface RevisionCheck { checkedBy: string | null; checkedAt: string; note: string }
 
+/** The proponent's attestation that the manuscript names no one; `attestedAt` is the latest across the original and every revision (null on uploads made before it was required). */
+export interface ManuscriptAttestation { attestedAt: string | null }
+/** RPDU's own check of the file; the third evaluator cannot be assigned until `checkedAt` is set. Never sent to evaluators. */
+export interface ManuscriptAnonymity extends ManuscriptAttestation { checkedAt: string | null; checkedBy: string | null }
+
 export interface PipelineRevision {
   id: string;
   revisionNumber: number;
@@ -378,6 +383,7 @@ export interface RpduProposal {
   manuscriptUrl: string | null;
   proponent: { id: string; name: string; department: string };
   panel: RpduReview[];
+  anonymity: ManuscriptAnonymity;
   /** Evaluators who declined the invitation (their seats were freed). */
   declines: ReviewDecline[];
   revisions: PipelineRevision[];
@@ -459,6 +465,7 @@ export interface ProponentProposal {
   submittedAt: string;
   manuscriptUrl: string | null;
   canUploadRevision: boolean;
+  anonymity: ManuscriptAttestation;
   revisions: PipelineRevision[];
   feedback: ProponentRoundFeedback[];
   history: StatusHistoryEntry[];

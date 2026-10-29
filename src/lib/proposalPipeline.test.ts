@@ -10,6 +10,8 @@ import {
   RECOMMENDATION_META,
   RECOMMENDATION_ORDER,
   STATUS_META,
+  ANONYMITY_ATTESTATION_LABEL,
+  anonymityGateReason,
   answeredCount,
   finalizeChecklist,
   isTerminalStatus,
@@ -34,6 +36,15 @@ test('assessment points mirror the backend vocabulary in form order', () => {
   assert.equal(pointsInGroup('SCIENTIFIC_DESIGN').length, 10);
   assert.equal(pointsInGroup('ETHICAL_CONSIDERATIONS').map((p) => p.id).join(','), 'ethical_acceptability,reoc_clearance');
   assert.deepEqual(RECOMMENDATION_ORDER, ['APPROVAL', 'MINOR_MODIFICATIONS', 'MAJOR_MODIFICATIONS', 'DISAPPROVAL']);
+});
+
+test('anonymityGateReason blocks only the third seat while RPDU has not checked the manuscript', () => {
+  assert.equal(anonymityGateReason(0, null), null);
+  assert.equal(anonymityGateReason(1, null), null);
+  assert.match(anonymityGateReason(2, null) ?? '', /anonymity check before assigning the third evaluator/);
+  assert.equal(anonymityGateReason(2, '2026-10-29T00:00:00Z'), null);
+  assert.equal(anonymityGateReason(MAX_EVALUATORS_PER_PROPOSAL, null), null, 'a full panel is refused for being full, not by this gate');
+  assert.match(ANONYMITY_ATTESTATION_LABEL, /no proponent names, college, or acknowledgements/);
 });
 
 test('every status and recommendation has display metadata', () => {

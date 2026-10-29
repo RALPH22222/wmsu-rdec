@@ -1,10 +1,10 @@
 import { stageExplanation } from '../../lib/aihrMeta';
 import { useState, type ReactNode } from 'react';
-import { FileSearch } from 'lucide-react';
+import { FileSearch, ShieldCheck } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useMyPipelineProposals } from '../../hooks/useMyPipelineProposals';
 import { nextStepFor } from '../../lib/proposalPipeline';
-import { formatDate } from '../../lib/format';
+import { formatDate, formatDateTime } from '../../lib/format';
 import { ProposalStatusBadge } from '../../components/ui/ProposalStatusBadge';
 import { PipelineStepper } from '../../components/ui/PipelineStepper';
 import { EmptyState } from '../../components/ui/EmptyState';
@@ -63,6 +63,12 @@ export function RevisionHistoryPage() {
                 <div className="flex flex-wrap items-center gap-2"><span className="font-mono text-[11px] font-bold text-slate-500">{selected.code}</span><ProposalStatusBadge proposal={selected} size="md" /><span className="text-xs text-slate-500">Round {selected.currentRound} · Submitted {formatDate(selected.submittedAt)}</span></div>
                 <h2 className="mt-2 break-words font-brand text-lg font-bold text-slate-900">{selected.title}</h2>
                 <p className="mt-3 rounded-sm bg-slate-50 p-3 text-xs text-slate-700">{selected.preReviewStage ? stageExplanation(selected.preReviewStage) : nextStepFor(selected.status, 'proponent')}</p>
+                <p className={`mt-2 flex items-start gap-1.5 text-xs ${selected.anonymity.attestedAt ? 'text-emerald-700' : 'text-amber-700'}`}>
+                  <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                  {selected.anonymity.attestedAt
+                    ? <span>Anonymity attested {formatDateTime(selected.anonymity.attestedAt)}: the manuscript on file names no proponent, college, or research team.</span>
+                    : <span>No anonymity attestation on file for this manuscript (uploaded before it was required). Your next revision will ask for it.</span>}
+                </p>
                 {!selected.preReviewStage && <div className="mt-4"><PipelineStepper status={selected.status} currentRound={selected.currentRound} compact /></div>}
               </header>
 

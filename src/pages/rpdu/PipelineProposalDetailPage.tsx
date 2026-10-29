@@ -1,9 +1,9 @@
 import { stageExplanation } from '../../lib/aihrMeta';
 import type { ReactNode } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, ShieldCheck } from 'lucide-react';
 import { useRpduProposal } from '../../hooks/useRpduPipeline';
-import { MAX_EVALUATORS_PER_PROPOSAL, RECOMMENDATION_META, isTerminalStatus, nextStepFor } from '../../lib/proposalPipeline';
+import { MAX_EVALUATORS_PER_PROPOSAL, RECOMMENDATION_META, anonymityGateReason, isTerminalStatus, nextStepFor } from '../../lib/proposalPipeline';
 import { formatDate } from '../../lib/format';
 import { ProposalStatusBadge } from '../../components/ui/ProposalStatusBadge';
 import { PipelineStepper } from '../../components/ui/PipelineStepper';
@@ -20,6 +20,7 @@ import { DeclinedInvitations } from '../../components/rpduComponent/DeclinedInvi
 import { ActionSheetCard } from '../../components/rpduComponent/ActionSheetCard';
 import { ClarificationThread } from '../../components/ui/ClarificationThread';
 import { FundingClassificationField } from '../../components/rpduComponent/FundingClassificationField';
+import { ManuscriptAnonymityCard } from '../../components/rpduComponent/ManuscriptAnonymityCard';
 
 interface PipelineProposalDetailPageProps { role?: 'rpdu' | 'admin' }
 
@@ -29,7 +30,7 @@ const Card = ({ title, badge, children }: { title: string; badge?: ReactNode; ch
 
 /** Rendered keyed by the route id, so a stale response for a previous id can never write into this proposal. */
 function DetailBody({ id, role }: { id: string | undefined; role: 'rpdu' | 'admin' }) {
-  const { proposal, loading, error, refresh, unassign, checkRevision, forward, buildActionSheet, clarify, saveFundingClassification } = useRpduProposal(id);
+  const { proposal, loading, error, refresh, unassign, checkRevision, checkAnonymity, forward, buildActionSheet, clarify, saveFundingClassification } = useRpduProposal(id);
   const backHref = `/${role}/evaluations`;
 
   if (loading) return <section className="mx-auto max-w-5xl space-y-3" aria-label="Loading proposal"><div className="h-20 animate-pulse rounded-sm bg-slate-100" /><div className="h-40 animate-pulse rounded-sm bg-slate-100" /></section>;
@@ -39,6 +40,8 @@ function DetailBody({ id, role }: { id: string | undefined; role: 'rpdu' | 'admi
   const openRound = proposal.status === 'UNDER_REVIEW' ? [proposal.currentRound] : [];
   const rounds = [...new Set([...submittedRounds, ...openRound])].sort((a, b) => b - a);
   const latestRevision = proposal.revisions.length > 0 ? proposal.revisions.reduce((a, b) => (b.revisionNumber > a.revisionNumber ? b : a)) : null;
+  const canAssignMore = proposal.technicalReviewReady && Boolean(proposal.manuscriptUrl) && proposal.panel.length < MAX_EVALUATORS_PER_PROPOSAL && !isTerminalStatus(proposal.status);
+  const thirdSeatBlocked = canAssignMore ? anonymityGateReason(proposal.panel.length, proposal.anonymity.checkedAt) : null;
 
   return (
     <section className="mx-auto max-w-5xl space-y-4">
@@ -62,11 +65,17 @@ function DetailBody({ id, role }: { id: string | undefined; role: 'rpdu' | 'admi
 
       {(proposal.status === 'APPROVED' || proposal.status === 'FORWARDED_TO_REO') && <TechnicalReviewGateway proposal={proposal} role={role} onForward={forward} />}
 
+      <Card title="Manuscript anonymity" badge={proposal.anonymity.checkedAt ? <span className="rounded-sm bg-emerald-50 px-2 py-0.5 text-[11px] font-bold normal-case tracking-normal text-emerald-700">Checked</span> : <span className="rounded-sm bg-amber-50 px-2 py-0.5 text-[11px] font-bold normal-case tracking-normal text-amber-700">Not checked</span>}>
+        <ManuscriptAnonymityCard proposal={proposal} onCheck={checkAnonymity} />
+      </Card>
+
       <Card title="Review panel">
         <div className="mb-5"><FundingClassificationField key={proposal.fundingClassification ?? 'unclassified'} value={proposal.fundingClassification ?? null} canEdit={Boolean(proposal.canSetFundingClassification)} onSave={(value) => saveFundingClassification(proposal.id, value)} /></div>
         <PanelDots count={proposal.panel.length} className="mb-2" />
         <ReviewPanelList panel={proposal.panel} onRemove={unassign} />
-        {proposal.technicalReviewReady && proposal.manuscriptUrl && proposal.panel.length < MAX_EVALUATORS_PER_PROPOSAL && !isTerminalStatus(proposal.status) && <Link to={backHref} className="mt-3 inline-flex min-h-11 items-center text-xs font-semibold text-[#C8102E]">Assign evaluators from the list →</Link>}
+        {canAssignMore && (thirdSeatBlocked
+          ? <p className="mt-3 flex items-start gap-1.5 rounded-sm border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800"><ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" /><span><span className="font-semibold">Third seat on hold.</span> {thirdSeatBlocked}. Record it in the Manuscript anonymity card above, then assign the last evaluator from the list.</span></p>
+          : <Link to={backHref} className="mt-3 inline-flex min-h-11 items-center text-xs font-semibold text-[#C8102E]">Assign evaluators from the list →</Link>)}
         <DeclinedInvitations declines={proposal.declines} />
       </Card>
 

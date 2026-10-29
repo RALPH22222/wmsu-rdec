@@ -1,9 +1,9 @@
 import { useMemo, useState } from 'react';
-import { Search, UserPlus, AlertTriangle } from 'lucide-react';
+import { Search, UserPlus, AlertTriangle, ShieldCheck } from 'lucide-react';
 import type { PipelineEvaluator, RpduProposal } from '../../../types';
 import { ModalShell } from '../../ui/ModalShell';
 import { PanelDots } from '../PanelDots';
-import { MAX_EVALUATORS_PER_PROPOSAL } from '../../../lib/proposalPipeline';
+import { MAX_EVALUATORS_PER_PROPOSAL, anonymityGateReason } from '../../../lib/proposalPipeline';
 import { evaluatorFilterOptions, matchesEvaluator } from '../../../lib/evaluatorDirectory';
 
 interface AssignEvaluatorModalProps {
@@ -18,6 +18,8 @@ interface AssignEvaluatorModalProps {
 const blockedReason = (proposal: RpduProposal, evaluator: PipelineEvaluator): string | null => {
   if (!proposal.manuscriptUrl) return 'Detailed proposal not yet submitted';
   if (proposal.panel.length >= MAX_EVALUATORS_PER_PROPOSAL) return 'Panel is full';
+  const gate = anonymityGateReason(proposal.panel.length, proposal.anonymity.checkedAt);
+  if (gate) return gate;
   if (proposal.panel.some((seat) => seat.evaluatorId === evaluator.id)) return 'Already on this panel';
   if (evaluator.id === proposal.proponent.id) return 'Conflict of interest: this is the proponent';
   return null;
@@ -34,6 +36,7 @@ export function AssignEvaluatorModal({ proposal, evaluators, isOpen, onClose, on
 
   if (!proposal) return null;
   const full = proposal.panel.length >= MAX_EVALUATORS_PER_PROPOSAL;
+  const gateReason = anonymityGateReason(proposal.panel.length, proposal.anonymity.checkedAt);
 
   const handleAssign = async (evaluator: PipelineEvaluator) => {
     setBusyId(evaluator.id);
@@ -61,6 +64,7 @@ export function AssignEvaluatorModal({ proposal, evaluators, isOpen, onClose, on
       <select value={discipline} onChange={(event) => setDiscipline(event.target.value)} aria-label="Filter evaluators by discipline" className="min-h-11 w-full rounded-sm border border-slate-200 bg-white px-3 text-sm text-slate-600 focus:border-[#C8102E] focus:outline-none"><option value="">All disciplines</option>{disciplines.map((tag) => <option key={tag} value={tag}>{tag}</option>)}</select>
       {warning && <p role="status" className="flex items-start gap-2 rounded-sm border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />{warning}</p>}
       {full && <p className="rounded-sm bg-slate-50 p-3 text-xs text-slate-600">This panel already has three evaluators.</p>}
+      {gateReason && <p role="status" className="flex items-start gap-2 rounded-sm border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800"><ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" />The third seat opens the review. {gateReason} — open the proposal and use the “Manuscript anonymity” card.</p>}
       <ul className="divide-y divide-slate-100 rounded-sm border border-slate-200">
         {visible.length === 0 && <li className="p-4 text-center text-xs text-slate-500">No evaluators match.</li>}
         {visible.map((evaluator) => {
