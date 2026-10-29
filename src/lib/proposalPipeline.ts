@@ -30,6 +30,13 @@ export const STATUS_META: Record<PipelineStatus, StatusMeta> = {
   FORWARDED_TO_REO: { label: 'Forwarded to REO', description: 'Technical review complete; forwarded to the Research Ethics Office', tone: 'emerald' },
 };
 
+/** The proponent's attestation wording; the same sentence the backend requires on every manuscript upload. */
+export const ANONYMITY_ATTESTATION_LABEL = 'This manuscript contains no proponent names, college, or acknowledgements that identify the research team.';
+
+/** Mirrors the server's third-seat gate: the seat that completes the panel needs RPDU's anonymity check first. Null when assignment is not blocked by it. */
+export const anonymityGateReason = (panelSize: number, anonymityCheckedAt: string | null): string | null =>
+  panelSize === MAX_EVALUATORS_PER_PROPOSAL - 1 && !anonymityCheckedAt ? 'Record the manuscript anonymity check before assigning the third evaluator' : null;
+
 export const isTerminalStatus = (status: PipelineStatus): boolean => status === 'APPROVED' || status === 'REJECTED' || status === 'FORWARDED_TO_REO';
 
 // ---- Proposal Assessment Form (WMSU-RPDU-FR-005.00 / FR-006.00) -----------

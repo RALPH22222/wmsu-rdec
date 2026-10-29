@@ -61,6 +61,10 @@ export const unassignEvaluatorApi = async (reviewId: string, token?: string): Pr
 export const checkRevisionApi = async (proposalId: string, revisionId: string, checked: boolean, note: string, token?: string): Promise<RpduProposal> =>
   (await request<RpduProposal>(API_ENDPOINTS.PIPELINE.REVISION_CHECK(proposalId, revisionId), token, { method: 'PUT', body: JSON.stringify({ checked, note: note.trim() }) })).data;
 
+/** RPDU's manuscript anonymity check (reversible); gates the third seat on the server. */
+export const checkAnonymityApi = async (proposalId: string, checked: boolean, token?: string): Promise<RpduProposal> =>
+  (await request<RpduProposal>(API_ENDPOINTS.PIPELINE.ANONYMITY(proposalId), token, { method: 'PUT', body: JSON.stringify({ checked }) })).data;
+
 export const forwardToReoApi = async (proposalId: string, token?: string): Promise<RpduProposal> =>
   (await request<RpduProposal>(API_ENDPOINTS.PIPELINE.FORWARD(proposalId), token, { method: 'POST' })).data;
 
@@ -115,14 +119,16 @@ export interface MyPipelineProposals { proposals: ProponentProposal[]; eligibleC
 export const getMyPipelineProposals = async (token?: string, signal?: AbortSignal): Promise<MyPipelineProposals> =>
   (await request<MyPipelineProposals>(API_ENDPOINTS.PIPELINE.MY_PROPOSALS, token, {}, signal)).data;
 
-export const submitDetailedProposalApi = async (conceptProposalId: string, file: File, token?: string): Promise<ProponentProposal> => {
+/** `anonymityAttested` is the proponent's required attestation; the server answers 400 unless it is true. */
+export const submitDetailedProposalApi = async (conceptProposalId: string, file: File, anonymityAttested: boolean, token?: string): Promise<ProponentProposal> => {
   const body = new FormData();
   body.append('conceptProposalId', conceptProposalId);
   body.append('detailed_file', file);
+  body.append('anonymity_attested', String(anonymityAttested));
   return (await request<ProponentProposal>(API_ENDPOINTS.PIPELINE.PROPOSALS, token, { method: 'POST', body })).data;
 };
 
-export type UploadRevisionPayload = { revisedFile: File; actionSheetFile: File; notes: string } & (
+export type UploadRevisionPayload = { revisedFile: File; actionSheetFile: File; notes: string; anonymityAttested: boolean } & (
   { revisionHistoryFile: File; revisionHistoryDraft?: never; historyReviewed?: never }
   | { revisionHistoryFile?: never; revisionHistoryDraft: RevisionHistoryDraft; historyReviewed: true }
 );
@@ -131,6 +137,7 @@ export const uploadRevisionApi = async (proposalId: string, payload: UploadRevis
   const body = new FormData();
   body.append('revised_file', payload.revisedFile);
   body.append('action_sheet_file', payload.actionSheetFile);
+  body.append('anonymity_attested', String(payload.anonymityAttested));
   if (payload.revisionHistoryFile) body.append('revision_history_file', payload.revisionHistoryFile);
   else {
     body.append('revision_history_draft', JSON.stringify(payload.revisionHistoryDraft));

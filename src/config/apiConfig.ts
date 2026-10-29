@@ -78,6 +78,7 @@ export const API_ENDPOINTS = {
     EXTERNAL_FUNDING_DOCUMENT: (id: string, kind: 'manuscript' | 'request-form' | 'approval-letter') => `${API_BASE_URL}/pipeline/external-funding-requests/${encodeURIComponent(id)}/documents/${kind}`,
     REVISION_CHECK: (proposalId: string, revisionId: string) => `${API_BASE_URL}/pipeline/proposals/${encodeURIComponent(proposalId)}/revisions/${encodeURIComponent(revisionId)}/check`,
     FORWARD: (id: string) => `${API_BASE_URL}/pipeline/proposals/${encodeURIComponent(id)}/forward`,
+    ANONYMITY: (id: string) => `${API_BASE_URL}/pipeline/proposals/${encodeURIComponent(id)}/anonymity`,
     MY_REVIEW_RESPONSE: (id: string) => `${API_BASE_URL}/pipeline/my-reviews/${encodeURIComponent(id)}/response`,
     ACTION_SHEET: (proposalId: string, round: number) => `${API_BASE_URL}/pipeline/proposals/${encodeURIComponent(proposalId)}/action-sheets/${encodeURIComponent(String(round))}`,
     CLARIFICATIONS: (proposalId: string) => `${API_BASE_URL}/pipeline/proposals/${encodeURIComponent(proposalId)}/clarifications`,

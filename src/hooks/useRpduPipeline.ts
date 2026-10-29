@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useCallForProposals } from '../context/CallForProposalsContext';
-import { assignEvaluatorApi, buildActionSheetApi, checkRevisionApi, forwardToReoApi, getPipelineEvaluators, getPipelineProposal, getPipelineProposals, postClarificationApi, saveFundingClassificationApi, unassignEvaluatorApi } from '../lib/pipelineApi';
+import { assignEvaluatorApi, buildActionSheetApi, checkAnonymityApi, checkRevisionApi, forwardToReoApi, getPipelineEvaluators, getPipelineProposal, getPipelineProposals, postClarificationApi, saveFundingClassificationApi, unassignEvaluatorApi } from '../lib/pipelineApi';
 import type { ActionSheetInput } from '../lib/pipelineApi';
 import type { FundingClassification, PipelineEvaluator, RpduProposal } from '../types';
 import { useAsyncResource } from './useAsyncResource';
@@ -89,6 +89,19 @@ export function useRpduProposal(id: string | undefined) {
     }
   }, [id, token, setData, showToast, reread]);
 
+  const checkAnonymity = useCallback(async (checked: boolean) => {
+    if (!id) return;
+    try {
+      const proposal = await checkAnonymityApi(id, checked, token);
+      setData(proposal);
+      showToast(checked ? `Manuscript anonymity check recorded for ${proposal.code}` : `Anonymity check removed from ${proposal.code}`);
+    } catch (failure) {
+      showToast(failure instanceof Error ? failure.message : 'Unable to update the anonymity check');
+      reread();
+      throw failure;
+    }
+  }, [id, token, setData, showToast, reread]);
+
   const forward = useCallback(async () => {
     if (!id) return;
     try {
@@ -140,5 +153,5 @@ export function useRpduProposal(id: string | undefined) {
     }
   }, [id, token, setData, showToast, reread]);
 
-  return { proposal: resource.data, loading: resource.loading, error: resource.error, refresh: resource.refresh, replace: resource.setData, unassign, checkRevision, forward, buildActionSheet, clarify, saveFundingClassification };
+  return { proposal: resource.data, loading: resource.loading, error: resource.error, refresh: resource.refresh, replace: resource.setData, unassign, checkRevision, checkAnonymity, forward, buildActionSheet, clarify, saveFundingClassification };
 }

@@ -24,9 +24,9 @@ export function useMyPipelineProposals() {
     });
   }, [setData]);
 
-  const submitDetailedProposal = useCallback(async (conceptId: string, file: File) => {
+  const submitDetailedProposal = useCallback(async (conceptId: string, file: File, anonymityAttested: boolean) => {
     try {
-      const proposal = await submitDetailedProposalApi(conceptId, file, token);
+      const proposal = await submitDetailedProposalApi(conceptId, file, anonymityAttested, token);
       upsert(proposal, conceptId);
       showToast(`Detailed proposal submitted — ${proposal.code} has been received by RPDU`);
       return proposal;

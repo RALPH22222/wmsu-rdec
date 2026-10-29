@@ -2,7 +2,7 @@ import { useId, useState } from 'react';
 import { Download, Upload } from 'lucide-react';
 import type { ProponentProposal } from '../../types';
 import { downloadRevisionHistoryDraft, type UploadRevisionPayload } from '../../lib/pipelineApi';
-import { ACCEPTED_PREVIEW_DOCUMENT_TYPES, MAX_UPLOAD_BYTES } from '../../lib/proposalPipeline';
+import { ACCEPTED_PREVIEW_DOCUMENT_TYPES, ANONYMITY_ATTESTATION_LABEL, MAX_UPLOAD_BYTES } from '../../lib/proposalPipeline';
 import { createRevisionHistoryDraft, formatHistoryDate, revisionHistoryDraftErrors } from '../../lib/revisionHistoryDraft';
 import { formatFileSize } from '../../lib/format';
 import { useAuth } from '../../context/AuthContext';
@@ -32,6 +32,7 @@ export function RevisionUploadForm({ proposal, onUpload }: RevisionUploadFormPro
   const [historyMode, setHistoryMode] = useState<'upload' | 'compile'>('upload');
   const [remarks, setRemarks] = useState(() => createRevisionHistoryDraft(proposal).remarks);
   const [historyReviewed, setHistoryReviewed] = useState(false);
+  const [anonymityAttested, setAnonymityAttested] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [draftError, setDraftError] = useState('');
   const [showErrors, setShowErrors] = useState(false);
@@ -56,14 +57,15 @@ export function RevisionUploadForm({ proposal, onUpload }: RevisionUploadFormPro
   }
   if ([revisedFile, actionSheetFile, ...(historyMode === 'upload' ? [historyFile] : [])].some((f) => f && f.size > MAX_UPLOAD_BYTES)) errors.push('Each file must be 15 MB or smaller');
   if (notes.trim().length > 5000) errors.push('Notes must be at most 5000 characters');
+  if (!anonymityAttested) errors.push('Confirm the anonymity attestation for the revised manuscript');
 
   const attempt = () => { setShowErrors(true); if (errors.length === 0) setConfirming(true); };
   const send = async () => {
     if (!revisedFile || !actionSheetFile || errors.length > 0) return;
     setBusy(true);
     try {
-      if (historyMode === 'compile') await onUpload(proposal.id, { revisedFile, actionSheetFile, revisionHistoryDraft: historyDraft, historyReviewed: true, notes });
-      else if (historyFile) await onUpload(proposal.id, { revisedFile, actionSheetFile, revisionHistoryFile: historyFile, notes });
+      if (historyMode === 'compile') await onUpload(proposal.id, { revisedFile, actionSheetFile, revisionHistoryDraft: historyDraft, historyReviewed: true, notes, anonymityAttested });
+      else if (historyFile) await onUpload(proposal.id, { revisedFile, actionSheetFile, revisionHistoryFile: historyFile, notes, anonymityAttested });
       setConfirming(false);
     } catch { /* toast shown by hook */ } finally { setBusy(false); }
   };
@@ -120,6 +122,10 @@ export function RevisionUploadForm({ proposal, onUpload }: RevisionUploadFormPro
         {draftError && <p role="alert" className="text-xs text-red-700">{draftError}</p>}
         <label className="flex min-h-11 cursor-pointer items-start gap-2 text-sm text-slate-700"><input type="checkbox" checked={historyReviewed} onChange={(event) => setHistoryReviewed(event.target.checked)} className="mt-1 accent-red-800" /><span>I reviewed every version and its remarks. Use the compiled history for this submission.</span></label>
       </div>}
+      <label className="flex min-h-11 cursor-pointer items-start gap-2 text-xs text-slate-700">
+        <input type="checkbox" checked={anonymityAttested} onChange={(event) => setAnonymityAttested(event.target.checked)} className="mt-0.5 accent-red-800" required />
+        <span><span className="font-semibold text-slate-900">Anonymity attestation (required).</span> {ANONYMITY_ATTESTATION_LABEL} The revised manuscript goes to the panel as uploaded.</span>
+      </label>
       {showErrors && errors.length > 0 && <ul role="alert" className="list-disc space-y-0.5 rounded-sm border border-red-200 bg-red-50 p-3 pl-7 text-xs text-red-800">{errors.map((item) => <li key={item}>{item}</li>)}</ul>}
       <button type="submit" disabled={busy} className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-sm bg-[#C8102E] px-5 text-sm font-semibold text-white hover:bg-[#A00D26] disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"><Upload className="h-4 w-4" />Upload Revision {nextNumber}</button>
       <ConfirmDialog isOpen={confirming} onClose={() => setConfirming(false)} onConfirm={send} loading={busy} title={`Upload Revision ${nextNumber}?`} confirmLabel="Upload" description={`This starts round ${proposal.currentRound + 1}. All three evaluators will review the revised manuscript.`} />

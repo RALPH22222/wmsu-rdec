@@ -2,15 +2,16 @@ import { useId, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowUpRight, Upload } from 'lucide-react';
 import type { EligibleConcept } from '../../types';
-import { ACCEPTED_PREVIEW_DOCUMENT_TYPES, MAX_UPLOAD_BYTES } from '../../lib/proposalPipeline';
+import { ACCEPTED_PREVIEW_DOCUMENT_TYPES, ANONYMITY_ATTESTATION_LABEL, MAX_UPLOAD_BYTES } from '../../lib/proposalPipeline';
 import { formatDate, formatFileSize } from '../../lib/format';
 
-interface SubmitDetailedProposalCardProps { concept: EligibleConcept; onSubmit: (conceptId: string, file: File) => Promise<unknown> }
+interface SubmitDetailedProposalCardProps { concept: EligibleConcept; onSubmit: (conceptId: string, file: File, anonymityAttested: boolean) => Promise<unknown> }
 
 export function SubmitDetailedProposalCard({ concept, onSubmit }: SubmitDetailedProposalCardProps) {
   const inputId = useId();
   const errorId = useId();
   const [file, setFile] = useState<File | null>(null);
+  const [attested, setAttested] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const tooBig = file ? file.size > MAX_UPLOAD_BYTES : false;
@@ -19,9 +20,10 @@ export function SubmitDetailedProposalCard({ concept, onSubmit }: SubmitDetailed
 
   const submit = async () => {
     if (!file || validationError || busy) return;
+    if (!attested) { setError('Confirm the anonymity attestation before submitting.'); return; }
     setBusy(true);
     setError('');
-    try { await onSubmit(concept.id, file); } catch (failure) { setError(failure instanceof Error ? failure.message : 'Unable to submit your detailed proposal. Please try again.'); } finally { setBusy(false); }
+    try { await onSubmit(concept.id, file, attested); } catch (failure) { setError(failure instanceof Error ? failure.message : 'Unable to submit your detailed proposal. Please try again.'); } finally { setBusy(false); }
   };
 
   return (
@@ -40,8 +42,12 @@ export function SubmitDetailedProposalCard({ concept, onSubmit }: SubmitDetailed
           <input id={inputId} type="file" accept={ACCEPTED_PREVIEW_DOCUMENT_TYPES} disabled={busy} aria-invalid={Boolean(validationError || error)} aria-describedby={validationError || error ? errorId : undefined} onChange={(e) => { setFile(e.target.files?.[0] ?? null); setError(''); }} className="mt-1 block min-h-11 w-full rounded-sm border border-slate-200 bg-white text-sm file:mr-3 file:min-h-11 file:border-0 file:bg-slate-100 file:px-3 file:text-xs file:font-semibold" />
           {file && <p className={`mt-1 text-xs ${tooBig ? 'text-red-700' : 'text-slate-500'}`}>{file.name} · {formatFileSize(file.size)}{tooBig ? ' — too large' : ''}</p>}
         </div>
-        <button type="button" onClick={submit} disabled={!file || Boolean(validationError) || busy} className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-sm bg-[#C8102E] px-4 text-sm font-semibold text-white hover:bg-[#A00D26] disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500"><Upload className="h-4 w-4" />{busy ? 'Submitting…' : 'Submit detailed proposal'}</button>
+        <button type="button" onClick={submit} disabled={!file || !attested || Boolean(validationError) || busy} className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-sm bg-[#C8102E] px-4 text-sm font-semibold text-white hover:bg-[#A00D26] disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500"><Upload className="h-4 w-4" />{busy ? 'Submitting…' : 'Submit detailed proposal'}</button>
       </div>
+      <label className="mt-3 flex min-h-11 cursor-pointer items-start gap-2 text-xs text-slate-700">
+        <input type="checkbox" checked={attested} disabled={busy} onChange={(e) => { setAttested(e.target.checked); setError(''); }} className="mt-0.5 accent-red-800" required />
+        <span><span className="font-semibold text-slate-900">Anonymity attestation (required).</span> {ANONYMITY_ATTESTATION_LABEL} Remove the project leader and college from the template header before uploading; evaluators receive this file as-is.</span>
+      </label>
       {(validationError || error) && <p id={errorId} role="alert" className="mt-2 text-xs text-red-700">{validationError || error}</p>}
     </article>
   );
