@@ -84,7 +84,7 @@ function formatProposal(row: ProposalRecord): ConceptProposal {
     criteriaChecklist: { eligibleProponent: false, withinBudgetCap: false, alignedPriority: false, requiredFormsAttached: Boolean(row.concept_paper_file_url && row.endorsement_file_url) },
     attachments: [
       attachment(row.concept_paper_file_url, 'concept_proposal', 'Concept Proposal'),
-      attachment(row.endorsement_file_url, 'endorsement_pdf', row.college_memo_file_url ? 'Endorsement form' : 'Existing endorsement PDF ? college memo not separately recorded'),
+      attachment(row.endorsement_file_url, 'endorsement_pdf', 'Endorsement form'),
       ...(row.college_memo_file_url ? [attachment(row.college_memo_file_url, 'college_memo', 'College endorsement memo')] : []),
     ],
   };
@@ -98,7 +98,6 @@ export interface ConceptProposalPayload {
   proposedBudget?: number;
   conceptPaperFile?: File | null;
   endorsementFile?: File | null;
-  collegeMemoFile?: File | null;
   conceptPaperFileUrl?: string;
 }
 
@@ -132,7 +131,6 @@ export async function submitConceptProposalApi(
     formData.append('endorsement_file', payload.endorsementFile);
   }
 
-  if (payload.collegeMemoFile) formData.append('college_memo_file', payload.collegeMemoFile);
   const headers: Record<string, string> = {};
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;

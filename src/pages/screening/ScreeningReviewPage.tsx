@@ -196,7 +196,7 @@ export function ScreeningReviewPage({ role }: { role: 'rpdu' | 'admin' }) {
                 {[
                   { category: 'concept_proposal', label: 'Concept proposal' },
                   { category: 'endorsement_pdf', label: proposal.attachments.find((file) => file.category === 'endorsement_pdf')?.label || 'Endorsement form' },
-                  { category: 'college_memo', label: 'College endorsement memo' },
+                  ...(proposal.attachments.some((file) => file.category === 'college_memo') ? [{ category: 'college_memo', label: 'College endorsement memo' }] : []),
                 ].map((file) => <button type="button" key={file.category} aria-pressed={activeCategory === file.category} onClick={() => setActiveCategory(file.category)} className={`rounded-sm px-3 py-2 text-xs font-semibold ${activeCategory === file.category ? 'bg-[#C8102E] text-white hover:bg-[#A00D26]' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>{file.label}</button>)}
               </div>
               {activeFile?.dataUrl ? <>

@@ -18,7 +18,7 @@ function SubmittedFiles({ attachments }: { attachments: ConceptProposalAttachmen
         {[
           { key: 'concept_proposal', label: 'Concept proposal' },
           { key: 'endorsement_pdf', label: attachments.find((item) => item.category === 'endorsement_pdf')?.label || 'Endorsement form' },
-          { key: 'college_memo', label: 'College endorsement memo' },
+          ...(attachments.some((item) => item.category === 'college_memo') ? [{ key: 'college_memo', label: 'College endorsement memo' }] : []),
         ].map((tab) => <button key={tab.key} type="button" aria-pressed={category === tab.key} onClick={() => setCategory(tab.key)} className={`min-h-11 rounded-sm px-3 py-2 text-xs font-semibold ${category === tab.key ? 'bg-[#C8102E] text-white hover:bg-[#A00D26]' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>{tab.label}</button>)}
       </div>
       {file?.dataUrl ? <>

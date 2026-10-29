@@ -102,8 +102,6 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
   const mySubmissions = conceptProposals.filter((proposal) => proposal.proponentId === user?.id);
 
   const endorsementInputId = useId();
-  const memoInputId = useId();
-  const [collegeMemo, setCollegeMemo] = useState<File | null>(null);
   const conceptDocInputId = useId();
   const titleErrorId = useId();
 
@@ -178,7 +176,6 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
     setProposalTitle('');
     setConceptProposalFile(null);
     setEndorsementPdf(null);
-      setCollegeMemo(null);
     setErrors({});
     setConfirmModalOpen(false);
     setConfirmedCallId(null);
@@ -269,12 +266,12 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
       errs.conceptFile = 'Please upload your Concept Proposal document (PDF or Word format, max 15MB).';
     }
 
-    if (!collegeMemo) errs.collegeMemo = 'Upload the college endorsement memo as a PDF (max 15 MB).';
     if (!endorsementPdf) {
       errs.endorsement = 'Please upload your official College Dean and Research Coordinator Endorsement PDF (max 15MB).';
     }
 
     setErrors(errs);
+    if (Object.keys(errs).length > 0) showToast(Object.values(errs).join(' '));
     return Object.keys(errs).length === 0;
   };
 
@@ -289,7 +286,6 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
     }
 
     if (!validateForm()) {
-      showToast('Please upload required files and select your research agenda.');
       return;
     }
 
@@ -332,7 +328,6 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
         researchAgenda: selectedAgenda,
         conceptPaperFile: conceptProposalFile?.file,
         endorsementFile: endorsementPdf?.file,
-        collegeMemoFile: collegeMemo,
       });
       setConfirmModalOpen(false);
       setSubmittedProposal(newProposal);
@@ -340,7 +335,6 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
       setProposalTitle('');
       setConceptProposalFile(null);
       setEndorsementPdf(null);
-      setCollegeMemo(null);
     } catch (error) {
       setConfirmModalOpen(false);
       if (error instanceof ConceptProposalTitleExistsError) {
@@ -712,7 +706,7 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
                     Upload Endorsement PDF
                   </h3>
                   <p className="text-xs text-slate-500">
-                    Upload the endorsement form (WMSU-RDEC-FR-001.00) with both College Dean and Research Coordinator endorsements in one PDF.
+                    Upload the endorsement form (WMSU-RDEC-FR-001.00) with both College Dean and Research Coordinator endorsements in one PDF. No separate college memo upload is needed.
                   </p>
                 </div>
               </div>
@@ -733,18 +727,6 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
                 </span>
               </label>
 
-              <div className="space-y-2 bg-neutral-50 p-4">
-                <label htmlFor={memoInputId} className="block text-sm font-semibold text-slate-900">College endorsement memo (PDF, up to 15 MB)</label>
-                <p className="text-sm text-slate-600">Upload separately from the endorsement form. Staff verify both documents.</p>
-                <input id={memoInputId} type="file" accept=".pdf,application/pdf" onChange={(event) => {
-                  const file = event.target.files?.[0] || null;
-                  const invalid = file && (!file.name.toLowerCase().endsWith('.pdf') || file.type !== 'application/pdf' || file.size > 15 * 1024 * 1024);
-                  setCollegeMemo(invalid ? null : file);
-                  setErrors((previous) => ({ ...previous, collegeMemo: invalid ? 'Choose a PDF of 15 MB or smaller.' : '' }));
-                }} className="min-h-11 max-w-full text-sm" />
-                {collegeMemo && <p className="break-words text-sm text-slate-600">Selected: {collegeMemo.name}</p>}
-                {errors.collegeMemo && <p role="alert" className="text-sm text-red-800">{errors.collegeMemo}</p>}
-              </div>
               {errors.endorsement && (
                 <p className="text-xs text-red-600 font-bold flex items-center gap-1">
                   <AlertTriangle className="w-3.5 h-3.5" />
