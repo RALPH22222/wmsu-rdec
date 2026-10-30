@@ -139,7 +139,9 @@ export function RevisionComparator({ proposal, onCheck }: RevisionComparatorProp
         </div>
 
         <div className="lg:grid lg:grid-cols-2 lg:gap-4">
-          <div className={`min-w-0 ${pane === 'manuscript' ? '' : 'hidden lg:block'}`}>
+          <div className={`min-w-0 space-y-3 ${pane === 'manuscript' ? '' : 'hidden lg:block'}`}>
+            {/* Mirrors the height of the panel-document tabs so both viewers start and end on the same line on desktop. */}
+            <p aria-hidden="true" className="hidden min-h-11 items-center rounded-sm bg-slate-100 px-3 text-xs font-semibold text-slate-600 lg:flex">Revised manuscript</p>
             <DocumentViewer url={selected.revisedFileUrl} title={`Revised manuscript · Revision ${n}`} />
           </div>
 

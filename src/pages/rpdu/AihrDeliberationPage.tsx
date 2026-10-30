@@ -17,12 +17,15 @@ type Tab = 'results' | 'enbanc';
 interface StageCard { label: string; stages: AihrStage[]; tone: StatusTone; icon: LucideIcon }
 
 const STAGE_CARDS: StageCard[] = [
-  { label: 'Awaiting detailed proposal', stages: ['AWAITING_DETAILED'], tone: 'amber', icon: ClipboardList },
+  { label: 'Awaiting manuscript', stages: ['AWAITING_DETAILED'], tone: 'amber', icon: ClipboardList },
   { label: 'Awaiting verdict', stages: ['AWAITING_AIHR'], tone: 'slate', icon: ClipboardList },
-  { label: 'Queued for en banc', stages: ['QUEUED_FOR_EN_BANC'], tone: 'amber', icon: Gavel },
+  { label: 'En banc queue', stages: ['QUEUED_FOR_EN_BANC'], tone: 'amber', icon: Gavel },
   { label: 'Cleared', stages: ['CLEARED', 'DETAILED_SUBMITTED'], tone: 'emerald', icon: CheckCircle2 },
   { label: 'Closed', stages: ['AIHR_FAILED', 'NOT_APPROVED'], tone: 'red', icon: XCircle },
 ];
+
+/** Grid spans per stat card (see the grid below): phones 2 columns, tablets 6 (3 + 2 halves), desktop 5. */
+const STAT_CARD_SPANS = ['sm:col-span-2 lg:col-span-1', 'sm:col-span-2 lg:col-span-1', 'sm:col-span-2 lg:col-span-1', 'sm:col-span-3 lg:col-span-1', 'col-span-2 sm:col-span-3 lg:col-span-1'];
 
 const byStageThenTitle = (a: AihrConcept, b: AihrConcept) =>
   STAGE_ORDER.indexOf(a.stage) - STAGE_ORDER.indexOf(b.stage) || a.title.localeCompare(b.title);
@@ -93,9 +96,12 @@ export function AihrDeliberationPage({ role = 'rpdu' }: AihrDeliberationPageProp
         </p>
       </header>
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-        {STAGE_CARDS.map((card) => (
-          <StatCard key={card.label} label={card.label} value={loading ? '—' : counts(card.stages)} icon={card.icon} tone={card.tone} onClick={() => toggleFilter(card.stages)} active={tab === 'results' && stageFilter === card.stages} />
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-6 lg:grid-cols-5">
+        {STAGE_CARDS.map((card, index) => (
+          // Five cards: 2 + 2 + 1 (full width) on phones, 3 + 2 (balanced halves) on tablets, one row on desktop.
+          <div key={card.label} className={STAT_CARD_SPANS[index]}>
+            <StatCard label={card.label} value={loading ? '—' : counts(card.stages)} icon={card.icon} tone={card.tone} onClick={() => toggleFilter(card.stages)} active={tab === 'results' && stageFilter === card.stages} />
+          </div>
         ))}
       </div>
 

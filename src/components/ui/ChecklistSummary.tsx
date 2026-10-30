@@ -18,9 +18,10 @@ export function RecommendationBadge({ recommendation }: { recommendation: Review
 export function ChecklistSummary({ checklist }: { checklist: Checklist }) {
   if (Object.keys(checklist).length === 0) return <p className="text-xs text-slate-500">No checklist recorded for this evaluation.</p>;
   return (
-    <div className="space-y-3">
+    // Two balanced columns on desktop keep the 19 points from running as one long list.
+    <div className="space-y-3 lg:columns-2 lg:gap-x-8 lg:space-y-0">
       {ASSESSMENT_GROUPS.map((group) => (
-        <section key={group.id}>
+        <section key={group.id} className="break-inside-avoid lg:mb-3">
           <h4 className="text-[11px] font-bold uppercase tracking-wider text-slate-500">{group.label}</h4>
           <ul className="mt-1 divide-y divide-slate-100">
             {pointsInGroup(group.id).map((point) => {

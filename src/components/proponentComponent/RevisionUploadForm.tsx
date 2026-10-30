@@ -14,9 +14,10 @@ interface RevisionUploadFormProps { proposal: ProponentProposal; onUpload: (prop
 function FileField({ id, label, hint, file, onChange }: { id: string; label: string; hint: string; file: File | null; onChange: (file: File | null) => void }) {
   const tooBig = file ? file.size > MAX_UPLOAD_BYTES : false;
   return (
-    <div>
-      <label htmlFor={id} className="block text-xs font-bold text-slate-700">{label} <span className="font-normal text-slate-500">{hint}</span></label>
-      <input id={id} type="file" accept={ACCEPTED_PREVIEW_DOCUMENT_TYPES} onChange={(e) => onChange(e.target.files?.[0] ?? null)} className="mt-1 block min-h-11 w-full rounded-sm bg-slate-50 text-sm file:mr-3 file:min-h-11 file:border-0 file:bg-slate-100 file:px-3 file:text-xs file:font-semibold" />
+    // Column flex with the input pushed down so side-by-side fields keep their inputs level even when one label wraps.
+    <div className="flex flex-col">
+      <label htmlFor={id} className="mb-1 block text-xs font-bold text-slate-700">{label} <span className="font-normal text-slate-500">{hint}</span></label>
+      <input id={id} type="file" accept={ACCEPTED_PREVIEW_DOCUMENT_TYPES} onChange={(e) => onChange(e.target.files?.[0] ?? null)} className="mt-auto block min-h-11 w-full rounded-sm bg-slate-50 text-sm file:mr-3 file:min-h-11 file:border-0 file:bg-slate-100 file:px-3 file:text-xs file:font-semibold" />
       {file && <p className={`mt-1 text-xs ${tooBig ? 'text-red-700' : 'text-slate-500'}`}>{file.name} · {formatFileSize(file.size)}{tooBig ? ' — too large' : ''}</p>}
     </div>
   );
@@ -82,8 +83,10 @@ export function RevisionUploadForm({ proposal, onUpload }: RevisionUploadFormPro
 
   return (
     <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); attempt(); }} noValidate>
+      <div className="grid gap-4 lg:grid-cols-2">
       <FileField id={`${baseId}-revised`} label={`Revised manuscript (Revision ${nextNumber})`} hint="PDF, Word, or JPEG, PNG, WebP, GIF image; up to 15 MB" file={revisedFile} onChange={(file) => { setRevisedFile(file); setHistoryReviewed(false); }} />
       <FileField id={`${baseId}-action-sheet`} label="Accomplished Proposal Action Sheet (WMSU-RPDU-FR-007.00)" hint="Your point-by-point response in the Action Taken column" file={actionSheetFile} onChange={setActionSheetFile} />
+      </div>
       <fieldset className="space-y-3">
         <legend className="text-xs font-bold text-slate-700">Revision History (WMSU-RPDU-FR-009.01)</legend>
         <div className="flex flex-wrap gap-x-6 gap-y-2">
@@ -122,12 +125,15 @@ export function RevisionUploadForm({ proposal, onUpload }: RevisionUploadFormPro
         {draftError && <p role="alert" className="text-xs text-red-700">{draftError}</p>}
         <label className="flex min-h-11 cursor-pointer items-start gap-2 text-sm text-slate-700"><input type="checkbox" checked={historyReviewed} onChange={(event) => setHistoryReviewed(event.target.checked)} className="mt-1 accent-red-800" /><span>I reviewed every version and its remarks. Use the compiled history for this submission.</span></label>
       </div>}
-      <label className="flex min-h-11 cursor-pointer items-start gap-2 text-xs text-slate-700">
-        <input type="checkbox" checked={anonymityAttested} onChange={(event) => setAnonymityAttested(event.target.checked)} className="mt-0.5 accent-red-800" required />
+      <label className="flex cursor-pointer items-start gap-2 rounded-sm border border-slate-200 bg-slate-50 p-3 text-xs text-slate-700">
+        <input type="checkbox" checked={anonymityAttested} onChange={(event) => setAnonymityAttested(event.target.checked)} className="mt-0.5 shrink-0 accent-red-800" required />
         <span><span className="font-semibold text-slate-900">Anonymity attestation (required).</span> {ANONYMITY_ATTESTATION_LABEL} The revised manuscript goes to the panel as uploaded.</span>
       </label>
       {showErrors && errors.length > 0 && <ul role="alert" className="list-disc space-y-0.5 rounded-sm border border-red-200 bg-red-50 p-3 pl-7 text-xs text-red-800">{errors.map((item) => <li key={item}>{item}</li>)}</ul>}
-      <button type="submit" disabled={busy} className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-sm bg-[#C8102E] px-5 text-sm font-semibold text-white hover:bg-[#A00D26] disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"><Upload className="h-4 w-4" />Upload Revision {nextNumber}</button>
+      <div className="flex flex-col gap-2 border-t border-slate-100 pt-4 sm:flex-row sm:items-center sm:justify-between">
+        <p className="text-xs text-slate-500">All three files and the attestation are required. Uploading starts round {proposal.currentRound + 1}.</p>
+        <button type="submit" disabled={busy} className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-sm bg-[#C8102E] px-5 text-sm font-semibold text-white hover:bg-[#A00D26] disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto sm:shrink-0"><Upload className="h-4 w-4" />Upload Revision {nextNumber}</button>
+      </div>
       <ConfirmDialog isOpen={confirming} onClose={() => setConfirming(false)} onConfirm={send} loading={busy} title={`Upload Revision ${nextNumber}?`} confirmLabel="Upload" description={`This starts round ${proposal.currentRound + 1}. All three evaluators will review the revised manuscript.`} />
     </form>
   );

@@ -33,7 +33,7 @@ function PointRow({ point, entry, idBase, onChange }: PointRowProps) {
   const comment = entry?.comment ?? '';
   const showComment = commentOpen || comment.length > 0;
   return (
-    <li className="p-3 sm:flex sm:items-start sm:justify-between sm:gap-4">
+    <li className="p-3 sm:flex sm:items-start sm:justify-between sm:gap-4 lg:rounded-sm lg:border lg:border-slate-200 lg:bg-white">
       <div className="min-w-0 sm:flex-1">
         <p className="text-sm font-semibold text-slate-900">{point.label}</p>
         <p className="text-[11px] text-slate-500">{point.description}</p>
@@ -100,7 +100,7 @@ export function EvaluationScoringForm({ review, onSubmit }: EvaluationScoringFor
       {ASSESSMENT_GROUPS.map((group) => (
         <fieldset key={group.id}>
           <legend className="text-xs font-bold uppercase tracking-wider text-slate-500">{group.label}</legend>
-          <ul className="mt-2 divide-y divide-slate-100 rounded-sm border border-slate-200 bg-white">
+          <ul className="mt-2 divide-y divide-slate-100 rounded-sm border border-slate-200 bg-white lg:grid lg:grid-cols-2 lg:gap-3 lg:divide-y-0 lg:border-0 lg:bg-transparent">
             {pointsInGroup(group.id).map((point) => (
               <PointRow key={point.id} point={point} entry={checklist[point.id]} idBase={`${baseId}-${point.id}`} onChange={(patch) => updatePoint(point.id, patch)} />
             ))}
@@ -129,8 +129,10 @@ export function EvaluationScoringForm({ review, onSubmit }: EvaluationScoringFor
         <textarea id={`${baseId}-justification`} value={justification} onChange={(e) => setJustification(e.target.value)} rows={5} maxLength={MAX_JUSTIFICATION_LENGTH} placeholder="Explain the recommended action (at least 20 characters)." className={`mt-1 w-full p-3 ${INPUT}`} />
       </div>
 
+      <div className="grid gap-4 lg:grid-cols-2">
       <FileField id={`${baseId}-assessment`} label="Assessment form" file={assessmentFile} onChange={setAssessmentFile} />
       <FileField id={`${baseId}-sheet`} label="Action sheet" file={actionSheetFile} onChange={setActionSheetFile} />
+      </div>
 
       {showErrors && errors.length > 0 && <ul role="alert" className="list-disc space-y-0.5 rounded-sm border border-red-200 bg-red-50 p-3 pl-7 text-xs text-red-800">{errors.map((item) => <li key={item}>{item}</li>)}</ul>}
 

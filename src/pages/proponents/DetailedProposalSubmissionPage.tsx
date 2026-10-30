@@ -12,7 +12,7 @@ import type { PendingConcept } from '../../types';
 
 function ConceptStageList({ titleId, title, concepts }: { titleId: string; title: string; concepts: PendingConcept[] }) {
   return (
-    <section aria-labelledby={titleId} className="rounded-sm border border-slate-200 bg-white p-5">
+    <section aria-labelledby={titleId} className="rounded-sm border border-slate-200 bg-white p-4 shadow-xs sm:p-5">
       <h2 id={titleId} className="text-sm font-bold text-slate-900">{title}</h2>
       <ul className="mt-2 divide-y divide-slate-100">
         {concepts.map((concept) => (
@@ -32,13 +32,13 @@ export function DetailedProposalSubmissionPage() {
   const waiting = pendingConcepts.filter((c) => c.stage === 'AWAITING_AIHR' || c.stage === 'QUEUED_FOR_EN_BANC');
   const closed = pendingConcepts.filter((c) => c.stage === 'AIHR_FAILED' || c.stage === 'NOT_APPROVED');
   return (
-    <section className="mx-auto max-w-5xl space-y-5">
+    <section className="mx-auto max-w-5xl space-y-4">
       <header>
-        <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">Detailed Proposal Submission Hub</h1>
-        <p className="mt-2 text-sm text-slate-600">Submit your detailed research proposal once your concept has passed preliminary screening. Submit before the Agency In-House Review.</p>
+        <h1 className="text-2xl font-bold text-slate-900">Detailed Proposal Submission Hub</h1>
+        <p className="mt-1 text-sm text-slate-600">Submit your detailed research proposal once your concept has passed preliminary screening, before the Agency In-House Review.</p>
       </header>
 
-      <section aria-labelledby="detailed-template-title" className="rounded-sm border border-slate-200 bg-white p-3 sm:p-4">
+      <section aria-labelledby="detailed-template-title" className="rounded-sm border border-slate-200 bg-white p-4 shadow-xs sm:p-5">
         <div>
           <h2 id="detailed-template-title" className="text-sm font-bold text-slate-900">Detailed Research Proposal Template</h2>
           <p className="mt-1 text-xs text-slate-500">Use the Detailed Research Proposal Template provided by RPDU. Upload your completed proposal as a PDF, Word, JPEG, PNG, WebP, or GIF file up to 15 MB.</p>
@@ -72,7 +72,7 @@ export function DetailedProposalSubmissionPage() {
           {closed.length > 0 && <ConceptStageList titleId="closed-concepts-title" title="Not proceeding this call" concepts={closed} />}
 
           {submitted.length > 0 && (
-            <section aria-labelledby="submitted-details-title" className="rounded-sm border border-slate-200 bg-white p-5">
+            <section aria-labelledby="submitted-details-title" className="rounded-sm border border-slate-200 bg-white p-4 shadow-xs sm:p-5">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <h2 id="submitted-details-title" className="text-sm font-bold text-slate-900">Submitted detailed proposals</h2>
                 <Link to="/proponent/revisions" className="inline-flex min-h-11 items-center gap-2 text-xs font-semibold text-[#C8102E]">Evaluation & Revisions<ArrowRight className="h-4 w-4" /></Link>

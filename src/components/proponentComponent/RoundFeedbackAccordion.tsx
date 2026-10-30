@@ -32,9 +32,9 @@ export function RoundFeedbackAccordion({ feedback, defaultOpen = false }: RoundF
           <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">Comments by assessment point</h4>
           <p className="mt-1 text-xs text-slate-500">Answer each item on your accomplished action sheet. Points every evaluator marked YES without comment are not listed.</p>
           {byPoint.length === 0 ? <p className="mt-2 text-xs text-slate-500">No comments on individual assessment points this round.</p> : (
-            <div className="mt-3 space-y-3">
+            <div className="mt-3 space-y-3 lg:columns-2 lg:gap-x-6 lg:space-y-0">
               {byPoint.map(({ group, points }) => (
-                <div key={group.id}>
+                <div key={group.id} className="break-inside-avoid lg:mb-3">
                   <h5 className="text-[11px] font-bold uppercase tracking-wider text-slate-500">{group.label}</h5>
                   <ul className="mt-1 divide-y divide-slate-100">
                     {points.map(({ point, notes }) => (

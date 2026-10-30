@@ -79,20 +79,23 @@ export function ActionSheetBuilderModal({ isOpen, onClose, proposal, initial, ro
         </dl>
 
         {ASSESSMENT_GROUPS.map((group) => (
-          <fieldset key={group.id} className="space-y-4">
-            <legend className="mb-2 font-brand text-sm font-bold text-slate-900">{group.label}</legend>
+          <fieldset key={group.id}>
+            <legend className="mb-3 font-brand text-sm font-bold text-slate-900">{group.label}</legend>
+            {/* Two columns on desktop halve the scrolling; each cell is a column flex so the textareas line up across a row. */}
+            <div className="space-y-4 lg:grid lg:grid-cols-2 lg:gap-x-6 lg:gap-y-4 lg:space-y-0">
             {pointsInGroup(group.id).map((point) => {
               const fieldId = `action-sheet-${point.id}`;
               const invalid = lengthOf(point.id) > MAX_ACTION_SHEET_COMMENT_LENGTH;
               return (
-                <div key={point.id}>
+                <div key={point.id} className="flex flex-col">
                   <label htmlFor={fieldId} className="block text-sm font-semibold text-slate-900">{ACTION_SHEET_NUMBERING[point.id] ?? point.label}</label>
-                  <p id={`${fieldId}-desc`} className="mb-1.5 text-xs text-slate-500">{point.description}</p>
+                  <p id={`${fieldId}-desc`} className="mb-1.5 flex-1 text-xs text-slate-500">{point.description}</p>
                   <textarea id={fieldId} rows={3} value={points[point.id] ?? ''} onChange={(event) => setPoints((prev) => ({ ...prev, [point.id]: event.target.value }))} aria-describedby={`${fieldId}-desc ${fieldId}-count`} aria-invalid={invalid} className={textareaClass(invalid)} />
                   <div id={`${fieldId}-count`} className="mt-1 text-right"><Counter length={lengthOf(point.id)} max={MAX_ACTION_SHEET_COMMENT_LENGTH} /></div>
                 </div>
               );
             })}
+            </div>
           </fieldset>
         ))}
 
