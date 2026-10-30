@@ -39,7 +39,7 @@ export function ProposalTemplateList({ folder }: { folder: TemplateFolder }) {
         <li key={template.url} className="flex flex-wrap items-center justify-between gap-3 py-2">
           <span className="flex min-w-0 items-center gap-2 break-all text-xs font-medium text-slate-700"><FileText className="h-4 w-4 shrink-0 text-slate-400" />{template.name}</span>
           <span className="flex shrink-0 items-center gap-4">
-            <a href={template.url} target="_blank" rel="noreferrer" className="inline-flex min-h-8 items-center gap-1 text-xs font-semibold text-[#C8102E] hover:underline">View<ArrowUpRight className="h-3.5 w-3.5" /></a>
+            <a href={template.viewUrl} target="_blank" rel="noreferrer" className="inline-flex min-h-8 items-center gap-1 text-xs font-semibold text-[#C8102E] hover:underline">View<ArrowUpRight className="h-3.5 w-3.5" /></a>
             <a href={template.downloadUrl} className="inline-flex min-h-8 items-center gap-1 text-xs font-semibold text-[#C8102E] hover:underline">Download<ArrowDownToLine className="h-3.5 w-3.5" /></a>
           </span>
         </li>

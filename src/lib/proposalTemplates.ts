@@ -1,7 +1,15 @@
 import { supabase } from './supabase';
 
 export type TemplateFolder = 'detailed-proposals' | 'external-funding';
-export interface ProposalTemplate { name: string; url: string; downloadUrl: string }
+export interface ProposalTemplate { name: string; url: string; downloadUrl: string; viewUrl: string }
+
+// Browsers cannot render Office files inline, so "View" routes them through Microsoft's Office viewer.
+// The templates bucket is public, which is what the viewer needs to fetch the file.
+const OFFICE_FILE = /\.(docx?|xlsx?|pptx?)$/i;
+const OFFICE_VIEWER = 'https://view.officeapps.live.com/op/view.aspx?src=';
+
+export const viewUrlFor = (name: string, publicUrl: string) =>
+  OFFICE_FILE.test(name) ? `${OFFICE_VIEWER}${encodeURIComponent(publicUrl)}` : publicUrl;
 
 // Cache successful listings and share pending requests until the page is reloaded.
 const listings = new Map<TemplateFolder, Promise<ProposalTemplate[]>>();
@@ -18,10 +26,12 @@ export function loadProposalTemplates(folder: TemplateFolder): Promise<ProposalT
     if (error) throw error;
     return (data ?? []).filter((file) => file.id && file.name !== '.emptyFolderPlaceholder').map((file) => {
       const path = `${folder}/${file.name}`;
+      const url = bucket.getPublicUrl(path).data.publicUrl;
       return {
         name: file.name,
-        url: bucket.getPublicUrl(path).data.publicUrl,
+        url,
         downloadUrl: bucket.getPublicUrl(path, { download: true }).data.publicUrl,
+        viewUrl: viewUrlFor(file.name, url),
       };
     });
   }).catch((error: unknown) => {
