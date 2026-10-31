@@ -1,6 +1,19 @@
 import { useEffect, useRef, useState } from 'react';
 import { Download, ExternalLink, Minus, Plus, Printer } from 'lucide-react';
-import { openDocxPreviewTab, sanitizeRenderedLinks } from '../../lib/documentPreview';
+import { documentViewerHref } from '../../lib/documentPreview';
+
+const SAFE_LINK = /^(https?:|mailto:|#)/i;
+
+const sanitizeRenderedLinks = (root: ParentNode) => {
+  root.querySelectorAll('a[href]').forEach((link) => {
+    const href = link.getAttribute('href') ?? '';
+    if (!SAFE_LINK.test(href)) link.removeAttribute('href');
+    else if (!href.startsWith('#')) {
+      link.setAttribute('target', '_blank');
+      link.setAttribute('rel', 'noopener noreferrer');
+    }
+  });
+};
 
 interface DocxPreviewProps {
   /** Signed https URL or data URL of a .docx file. */
@@ -88,15 +101,16 @@ export function DocxPreview({ url, title, fileName, className = 'h-[60vh] min-h-
         </div>
         <div className="flex items-center gap-1.5">
           {!isFullPage && (
-            <button
-              type="button"
-              onClick={() => void openDocxPreviewTab(url, fileName || title)}
-              className="inline-flex h-7 items-center gap-1 rounded px-2 text-xs font-medium text-slate-200 hover:bg-white/10 cursor-pointer"
+            <a
+              href={documentViewerHref(url, fileName || title)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex h-7 items-center gap-1 rounded px-2 text-xs font-medium text-slate-200 hover:bg-white/10"
               title="Open preview in new tab"
             >
               <ExternalLink className="h-3.5 w-3.5" />
               <span className="hidden sm:inline">Full view</span>
-            </button>
+            </a>
           )}
           <a
             href={url}

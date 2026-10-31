@@ -1,18 +1,5 @@
 export type DocumentPreviewKind = 'pdf' | 'image' | 'docx' | 'doc' | 'download';
 
-const SAFE_LINK = /^(https?:|mailto:|#)/i;
-
-export const sanitizeRenderedLinks = (root: ParentNode) => {
-  root.querySelectorAll('a[href]').forEach((link) => {
-    const href = link.getAttribute('href') ?? '';
-    if (!SAFE_LINK.test(href)) link.removeAttribute('href');
-    else if (!href.startsWith('#')) {
-      link.setAttribute('target', '_blank');
-      link.setAttribute('rel', 'noopener noreferrer');
-    }
-  });
-};
-
 /** Pick the preview for a file by its extension: PDFs and images render natively, .docx renders through docx-preview, legacy .doc can only be downloaded. */
 export function documentPreviewKind(fileName: string): DocumentPreviewKind {
   if (/\.pdf$/i.test(fileName)) return 'pdf';
@@ -45,12 +32,4 @@ export function documentViewerHref(url: string | null | undefined, fileName?: st
     return `/preview/document?${params.toString()}`;
   }
   return url;
-}
-
-/**
- * Opens a document preview in a new browser tab.
- */
-export function openDocxPreviewTab(url: string, fileName = 'Document.docx'): void {
-  const href = documentViewerHref(url, fileName);
-  window.open(href, '_blank', 'noopener,noreferrer');
 }
