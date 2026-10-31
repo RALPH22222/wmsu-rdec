@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Download, ExternalLink, FileText } from 'lucide-react';
 import { documentPreview } from '../../lib/documentPreview';
+import { DocxPreview } from './DocxPreview';
 
 interface DocumentViewerProps {
   url: string | null | undefined;
@@ -9,7 +10,7 @@ interface DocumentViewerProps {
   className?: string;
 }
 
-/** Preview PDFs and standard images; keep Open/Download available for Word documents and failed previews. */
+/** Preview PDFs, standard images, and .docx files; keep Open/Download available for legacy .doc, other files, and failed previews. */
 export function DocumentViewer({ url: rawUrl, title, emptyMessage, className = '' }: DocumentViewerProps) {
   const preview = documentPreview(rawUrl);
   const [loadedUrl, setLoadedUrl] = useState<string | null>(null);
@@ -34,6 +35,10 @@ export function DocumentViewer({ url: rawUrl, title, emptyMessage, className = '
       </div>
       {failed ? (
         <p role="alert" className="p-8 text-center text-sm text-slate-600">Preview could not load. Refresh the proposal, or use Open or Download.</p>
+      ) : kind === 'docx' ? (
+        <DocxPreview url={url} title={title} />
+      ) : kind === 'doc' ? (
+        <div className="p-8 text-center text-sm text-slate-500">Preview is available for .docx; download to open this .doc.</div>
       ) : kind !== 'download' ? (
         <div className="relative h-[60vh] min-h-80 bg-slate-50">
           {!loaded && (
@@ -49,7 +54,7 @@ export function DocumentViewer({ url: rawUrl, title, emptyMessage, className = '
           )}
         </div>
       ) : (
-        <div className="p-8 text-center text-sm text-slate-500">Preview is available for PDF, JPEG, PNG, WebP, and GIF files. Use Open or Download for Word documents.</div>
+        <div className="p-8 text-center text-sm text-slate-500">Preview is available for PDF, Word (.docx), JPEG, PNG, WebP, and GIF files. Use Open or Download for this file.</div>
       )}
       <p className="border-t border-slate-200 px-3 py-2 text-xs text-slate-500">If the preview is blank, refresh the proposal or use Open.</p>
     </div>

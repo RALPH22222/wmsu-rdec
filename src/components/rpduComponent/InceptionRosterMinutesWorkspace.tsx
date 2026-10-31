@@ -1,11 +1,10 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import {
   Users,
   FileText,
   Upload,
   CheckCircle2,
   XCircle,
-  Clock,
   AlertCircle,
   Plus,
   Trash2,
@@ -15,8 +14,9 @@ import {
   ExternalLink,
   ClipboardCheck,
   FileCheck2,
-  ChevronLeft,
-  ChevronRight,
+  Loader2,
+  UserPlus,
+  X,
 } from 'lucide-react';
 import type {
   InceptionMeeting,
@@ -32,6 +32,11 @@ import {
   removeInceptionMinutes,
 } from '../../lib/inceptionApi';
 import { API_BASE_URL } from '../../config/apiConfig';
+import { formatDateTime, formatFileSize } from '../../lib/format';
+import { Pagination } from '../ui/Pagination';
+import { TONE_CLASSES } from '../ui/toneClasses';
+import type { StatusTone } from '../../lib/proposalPipeline';
+import { ATTENDANCE_META } from './inception/inceptionDisplay';
 
 interface InceptionRosterMinutesWorkspaceProps {
   meeting: InceptionMeeting;
@@ -39,12 +44,13 @@ interface InceptionRosterMinutesWorkspaceProps {
   onMeetingUpdated: (updated: InceptionMeeting) => void;
 }
 
-const formatBytes = (bytes?: number) => {
-  if (!bytes || bytes <= 0) return 'Document attached';
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
-};
+const ATTENDEES_PER_PAGE = 3;
+const ATTENDANCE_CHOICES: InceptionAttendanceStatus[] = ['present', 'excused', 'absent'];
+
+const describeSize = (bytes?: number) => (bytes && bytes > 0 ? formatFileSize(bytes) : 'Document attached');
+
+const errorMessage = (err: unknown, fallback: string) =>
+  err instanceof Error && err.message ? err.message : fallback;
 
 const resolveDocumentHref = (doc?: InceptionMinutesDocument | null): string | null => {
   if (!doc) return null;
@@ -58,6 +64,67 @@ const resolveDocumentHref = (doc?: InceptionMinutesDocument | null): string | nu
   if (doc.dataUrl) return doc.dataUrl;
   return null;
 };
+
+/** Fields that matter for "unsaved changes" (ids and flags are bookkeeping). */
+const rosterFingerprint = (rows: InceptionRollCallEntry[]) =>
+  JSON.stringify(
+    rows.map((r) => [r.name, r.role, r.affiliation || '', r.status, r.status === 'present' ? r.timeIn || '' : '', r.remarks || ''])
+  );
+
+// ----- Shared control styles --------------------------------------------------------------------
+const inputClass =
+  'w-full min-h-11 px-3 py-2 bg-white border border-slate-300 rounded-sm text-base sm:text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-[#C8102E] focus:border-[#C8102E]';
+const labelClass = 'block text-xs font-semibold text-slate-600 mb-1';
+const secondaryButton =
+  'min-h-11 px-3.5 py-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 rounded-sm text-xs font-semibold inline-flex items-center justify-center gap-1.5 cursor-pointer transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C8102E]';
+const primaryButton =
+  'min-h-11 px-4 py-2 bg-[#C8102E] hover:bg-[#A00D26] text-white rounded-sm text-xs font-bold inline-flex items-center justify-center gap-1.5 cursor-pointer transition-colors shadow-xs disabled:opacity-60 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#C8102E]';
+const dangerIconButton =
+  'min-h-11 min-w-11 inline-flex items-center justify-center rounded-sm text-slate-400 hover:text-red-600 hover:bg-red-50 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-slate-400 cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C8102E]';
+
+// ----- Small presentational pieces ----------------------------------------------------------------
+
+const SaveStateChip: React.FC<{ tone: StatusTone; busy?: boolean; children: React.ReactNode }> = ({ tone, busy, children }) => (
+  <span
+    className={`inline-flex items-center gap-1.5 rounded-sm border px-2 py-0.5 text-[11px] font-bold whitespace-nowrap ${TONE_CLASSES[tone].badge}`}
+  >
+    {busy ? (
+      <Loader2 className="w-3 h-3 animate-spin" aria-hidden="true" />
+    ) : (
+      <span className={`w-1.5 h-1.5 rounded-full ${TONE_CLASSES[tone].dot}`} aria-hidden="true" />
+    )}
+    {children}
+  </span>
+);
+
+const AttendanceToggle: React.FC<{
+  value: InceptionAttendanceStatus;
+  name: string;
+  onChange: (status: InceptionAttendanceStatus) => void;
+}> = ({ value, name, onChange }) => (
+  <div
+    className="grid grid-cols-3 gap-0.5 rounded-sm border border-slate-200 bg-slate-50 p-0.5 w-full"
+    role="group"
+    aria-label={`Attendance for ${name || 'attendee'}`}
+  >
+    {ATTENDANCE_CHOICES.map((choice) => {
+      const active = value === choice;
+      return (
+        <button
+          key={choice}
+          type="button"
+          onClick={() => onChange(choice)}
+          aria-pressed={active}
+          className={`min-h-10 px-2 rounded-xs text-xs font-bold cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C8102E] ${
+            active ? `${TONE_CLASSES[ATTENDANCE_META[choice].tone].solid} shadow-2xs` : 'text-slate-600 hover:bg-white hover:text-slate-900'
+          }`}
+        >
+          {ATTENDANCE_META[choice].label}
+        </button>
+      );
+    })}
+  </div>
+);
 
 export const InceptionRosterMinutesWorkspace: React.FC<InceptionRosterMinutesWorkspaceProps> = ({
   meeting,
@@ -81,22 +148,29 @@ export const InceptionRosterMinutesWorkspace: React.FC<InceptionRosterMinutesWor
   const [isSavingMinutes, setIsSavingMinutes] = useState(false);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
-  // Pagination for Attendees (max 3 per page)
+  // Pagination for Attendees (3 per page)
   const [rosterPage, setRosterPage] = useState(1);
-  const ATTENDEES_PER_PAGE = 3;
 
-  useEffect(() => {
+  // Re-sync local drafts whenever the saved meeting changes (adjusting state during render rather
+  // than in an effect). Feedback and the page only reset when a different meeting is opened.
+  const syncKey = [meeting.id, meeting.updatedAt, meeting.rosterLoggedAt, meeting.minutesUploadedAt].join('|');
+  const [syncedKey, setSyncedKey] = useState(syncKey);
+  const [syncedMeetingId, setSyncedMeetingId] = useState(meeting.id);
+  if (syncedKey !== syncKey) {
+    setSyncedKey(syncKey);
     setRollCall(buildDefaultRollCall(meeting));
     setMinutesDoc(meeting.minutesPdf || null);
     setSelectedFile(null);
-  }, [meeting.id, meeting.updatedAt, meeting.rosterLoggedAt, meeting.minutesUploadedAt]);
-
-  useEffect(() => {
-    setFeedback(null);
-    setRosterPage(1);
-  }, [meeting.id]);
+    if (syncedMeetingId !== meeting.id) {
+      setSyncedMeetingId(meeting.id);
+      setFeedback(null);
+      setRosterPage(1);
+    }
+  }
 
   const attendanceSummary = useMemo(() => summarizeRollCall(rollCall), [rollCall]);
+  const savedRoster = useMemo(() => buildDefaultRollCall(meeting), [meeting]);
+  const rosterDirty = useMemo(() => rosterFingerprint(rollCall) !== rosterFingerprint(savedRoster), [rollCall, savedRoster]);
 
   const totalRosterPages = Math.max(1, Math.ceil(rollCall.length / ATTENDEES_PER_PAGE));
   const currentRosterPage = Math.min(rosterPage, totalRosterPages);
@@ -164,11 +238,9 @@ export const InceptionRosterMinutesWorkspace: React.FC<InceptionRosterMinutesWor
       remarks: '',
       isCustom: true,
     };
-    setRollCall((prev) => {
-      const next = [...prev, newEntry];
-      setRosterPage(Math.ceil(next.length / ATTENDEES_PER_PAGE));
-      return next;
-    });
+    const next = [...rollCall, newEntry];
+    setRollCall(next);
+    setRosterPage(Math.ceil(next.length / ATTENDEES_PER_PAGE));
     setNewAttendeeName('');
     setNewAttendeeRole('');
     setNewAttendeeAffiliation('');
@@ -240,8 +312,8 @@ export const InceptionRosterMinutesWorkspace: React.FC<InceptionRosterMinutesWor
         type: 'success',
         message: `Attendee roll-call saved (${finalSummary.present} present, ${finalSummary.excused} excused, ${finalSummary.absent} absent).`,
       });
-    } catch (err: any) {
-      setFeedback({ type: 'error', message: err.message || 'Unable to save attendee roll-call.' });
+    } catch (err) {
+      setFeedback({ type: 'error', message: errorMessage(err, 'Unable to save attendee roll-call.') });
     } finally {
       setIsSavingRoster(false);
     }
@@ -395,8 +467,8 @@ export const InceptionRosterMinutesWorkspace: React.FC<InceptionRosterMinutesWor
           ? 'Official minutes saved and Inception Meeting marked as Completed.'
           : 'Official minutes/resolutions document saved to Inception Meeting record.',
       });
-    } catch (err: any) {
-      setFeedback({ type: 'error', message: err.message || 'Unable to save official minutes.' });
+    } catch (err) {
+      setFeedback({ type: 'error', message: errorMessage(err, 'Unable to save official minutes.') });
     } finally {
       setIsSavingMinutes(false);
     }
@@ -473,207 +545,200 @@ export const InceptionRosterMinutesWorkspace: React.FC<InceptionRosterMinutesWor
     }
   };
 
+  // ----- Derived save states -------------------------------------------------------------------
+  const rosterState: { tone: StatusTone; label: string; busy?: boolean } = isSavingRoster
+    ? { tone: 'blue', label: 'Saving…', busy: true }
+    : rosterDirty
+      ? { tone: 'amber', label: 'Unsaved changes' }
+      : meeting.rosterLoggedAt
+        ? { tone: 'emerald', label: 'Saved' }
+        : { tone: 'slate', label: 'Not saved yet' };
+
+  const minutesSavedAt = minutesDoc ? meeting.minutesUploadedAt || minutesDoc.uploadedAt : null;
+  const minutesState: { tone: StatusTone; label: string; busy?: boolean } = isSavingMinutes
+    ? { tone: 'blue', label: 'Saving…', busy: true }
+    : selectedFile
+      ? { tone: 'amber', label: 'Not saved yet' }
+      : minutesDoc && meeting.minutesPdf
+        ? { tone: 'emerald', label: 'Saved' }
+        : minutesDoc
+          ? { tone: 'amber', label: 'Not saved yet' }
+          : { tone: 'slate', label: 'No document' };
+
+  const summaryChips: { key: InceptionAttendanceStatus; count: number }[] = [
+    { key: 'present', count: attendanceSummary.present },
+    { key: 'excused', count: attendanceSummary.excused },
+    { key: 'absent', count: attendanceSummary.absent },
+    { key: 'pending', count: attendanceSummary.pending },
+  ];
+
   return (
     <div className="space-y-6">
       {/* Feedback Banner */}
       {feedback && (
         <div
-          role="status"
-          className={`p-4 rounded-md border flex items-center justify-between gap-3 text-xs sm:text-sm font-medium ${
+          role={feedback.type === 'error' ? 'alert' : 'status'}
+          className={`p-3 sm:p-4 rounded-sm border flex items-start justify-between gap-3 text-sm ${
             feedback.type === 'success'
               ? 'bg-emerald-50 border-emerald-200 text-emerald-900'
-              : 'bg-rose-50 border-rose-200 text-rose-900'
+              : 'bg-red-50 border-red-200 text-red-900'
           }`}
         >
-          <div className="flex items-center gap-2.5 min-w-0">
+          <div className="flex items-start gap-2.5 min-w-0 pt-0.5">
             {feedback.type === 'success' ? (
-              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" aria-hidden="true" />
+              <CheckCircle2 className="w-4 h-4 mt-0.5 text-emerald-600 shrink-0" aria-hidden="true" />
             ) : (
-              <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" aria-hidden="true" />
+              <AlertCircle className="w-4 h-4 mt-0.5 text-red-600 shrink-0" aria-hidden="true" />
             )}
-            <span className="break-words">{feedback.message}</span>
+            <span className="break-words font-medium">{feedback.message}</span>
           </div>
           <button
             type="button"
             onClick={() => setFeedback(null)}
-            className="text-xs font-bold underline shrink-0 cursor-pointer px-2 py-1"
+            aria-label="Dismiss message"
+            className="min-h-9 min-w-9 -my-1 -mr-1 inline-flex items-center justify-center rounded-sm shrink-0 cursor-pointer hover:bg-black/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C8102E]"
           >
-            Dismiss
+            <X className="w-4 h-4" aria-hidden="true" />
           </button>
         </div>
       )}
 
       {/* SECTION: ATTENDEE ROLL-CALL ROSTER */}
-      <section className="bg-white p-6 rounded-md border border-slate-200 shadow-xs space-y-5" aria-labelledby="roster-heading">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
-          <div>
+      <section className="bg-white border border-slate-200 rounded-sm shadow-xs" aria-labelledby="roster-heading">
+        {/* Card header */}
+        <div className="p-4 sm:p-5 border-b border-slate-100 flex flex-col lg:flex-row lg:items-start justify-between gap-4">
+          <div className="min-w-0 space-y-2">
             <div className="flex flex-wrap items-center gap-2">
-              <h3 id="roster-heading" className="text-sm font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
+              <h2 id="roster-heading" className="text-base font-bold text-slate-900 flex items-center gap-2">
                 <Users className="w-4 h-4 text-[#C8102E]" aria-hidden="true" />
-                Attendee Roll-Call Roster
-              </h3>
-              <div className="flex flex-wrap items-center gap-1.5 text-xs">
-                <span className="px-2 py-0.5 rounded-sm font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200">
-                  {attendanceSummary.present} / {attendanceSummary.total} Present
-                </span>
-                {attendanceSummary.excused > 0 && (
-                  <span className="px-2 py-0.5 rounded-sm font-semibold bg-blue-50 text-blue-800 border border-blue-200">
-                    {attendanceSummary.excused} Excused
-                  </span>
-                )}
-                {attendanceSummary.absent > 0 && (
-                  <span className="px-2 py-0.5 rounded-sm font-semibold bg-rose-50 text-rose-800 border border-rose-200">
-                    {attendanceSummary.absent} Absent
-                  </span>
-                )}
-                {attendanceSummary.pending > 0 && (
-                  <span className="px-2 py-0.5 rounded-sm font-semibold bg-slate-100 text-slate-700 border border-slate-200">
-                    {attendanceSummary.pending} Pending
-                  </span>
-                )}
-              </div>
+                Attendee roll-call
+              </h2>
+              <SaveStateChip tone={rosterState.tone} busy={rosterState.busy}>{rosterState.label}</SaveStateChip>
             </div>
-            <p className="text-xs text-slate-600 mt-0.5 max-w-[65ch]">
-              Log the attendance status, arrival time, and remarks for each designated Study Leader, Co-Researcher, and RPDU/RDEC official.
+            <p className="text-sm text-slate-600 max-w-[65ch]">
+              Record attendance, time in, and remarks for each Study Leader, Co-Researcher, and RPDU/RDEC official.
             </p>
+            <ul className="flex flex-wrap items-center gap-1.5" aria-label="Attendance summary">
+              {summaryChips.map(({ key, count }) =>
+                key === 'present' || count > 0 ? (
+                  <li
+                    key={key}
+                    className={`inline-flex items-center gap-1 rounded-sm border px-2 py-0.5 text-[11px] font-bold ${TONE_CLASSES[ATTENDANCE_META[key].tone].badge}`}
+                  >
+                    {key === 'present' ? `${count} / ${attendanceSummary.total}` : count} {ATTENDANCE_META[key].label}
+                  </li>
+                ) : null
+              )}
+            </ul>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto shrink-0">
-            <button
-              type="button"
-              onClick={() => handleMarkAllStatus('present')}
-              className="min-h-11 px-3 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border border-emerald-200 rounded-sm text-xs font-bold cursor-pointer transition-colors inline-flex items-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C8102E]"
-            >
-              <Check className="w-3.5 h-3.5 text-emerald-700" aria-hidden="true" />
-              Mark All Present
+          <div className="grid grid-cols-2 gap-2 w-full lg:w-auto lg:flex lg:shrink-0">
+            <button type="button" onClick={() => handleMarkAllStatus('present')} className={secondaryButton}>
+              <Check className="w-4 h-4 text-emerald-600" aria-hidden="true" />
+              Mark all present
             </button>
-            <button
-              type="button"
-              onClick={() => handleMarkAllStatus('pending')}
-              className="min-h-11 px-3 py-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-sm text-xs font-semibold cursor-pointer transition-colors inline-flex items-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C8102E]"
-            >
-              <RotateCcw className="w-3.5 h-3.5 text-slate-500" aria-hidden="true" />
-              Reset Roll-Call
+            <button type="button" onClick={() => handleMarkAllStatus('pending')} className={secondaryButton}>
+              <RotateCcw className="w-4 h-4 text-slate-500" aria-hidden="true" />
+              Reset roll-call
             </button>
           </div>
         </div>
 
-        {/* Roll-Call Table */}
-        <div className="border border-slate-200 rounded-md overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50 text-[11px] uppercase tracking-wider font-bold text-slate-600 border-b border-slate-200">
-                <tr>
-                  <th className="py-3 px-3">Attendee &amp; Role</th>
-                  <th className="py-3 px-3">College / Office</th>
-                  <th className="py-3 px-3">Roll-Call Status</th>
-                  <th className="py-3 px-3 w-32">Time-In</th>
-                  <th className="py-3 px-3">Remarks / Proxy</th>
-                  <th className="py-3 px-2 w-12 text-center">Remove</th>
+        <div className="p-4 sm:p-5 space-y-4">
+          {/* Desktop: table */}
+          <div className="hidden xl:block border border-slate-200 rounded-sm">
+            <table className="w-full table-fixed text-left text-sm">
+              <caption className="sr-only">Attendee roll-call, page {currentRosterPage} of {totalRosterPages}</caption>
+              <colgroup>
+                <col className="w-[20%]" />
+                <col className="w-[22%]" />
+                <col className="w-[210px]" />
+                <col className="w-[172px]" />
+                <col />
+                <col className="w-[56px]" />
+              </colgroup>
+              <thead className="bg-slate-50 border-b border-slate-200">
+                <tr className="text-[11px] uppercase tracking-wider font-bold text-slate-500">
+                  <th scope="col" className="py-2.5 px-3">Name</th>
+                  <th scope="col" className="py-2.5 px-3">Role / affiliation</th>
+                  <th scope="col" className="py-2.5 px-3">Attendance</th>
+                  <th scope="col" className="py-2.5 px-3">Time in</th>
+                  <th scope="col" className="py-2.5 px-3">Remarks</th>
+                  <th scope="col" className="py-2.5 px-2 text-center"><span className="sr-only">Actions</span></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {paginatedRollCall.map((entry, pIdx) => {
                   const itemNumber = startRosterIdx + pIdx + 1;
                   return (
-                    <tr key={entry.id} className="hover:bg-slate-50/60 transition-colors">
-                      <td className="py-3 px-3 align-top min-w-[180px]">
+                    <tr key={entry.id} className="align-top">
+                      <td className="py-3 px-3">
                         <input
                           type="text"
                           aria-label={`Attendee ${itemNumber} name`}
                           value={entry.name}
                           onChange={(e) => handleFieldChange(entry.id, 'name', e.target.value)}
-                          className="w-full font-bold text-slate-900 bg-transparent border-b border-transparent focus:border-slate-300 focus:bg-white px-1 py-0.5 rounded-xs text-base sm:text-xs focus:outline-none focus:ring-1 focus:ring-[#C8102E]"
+                          className={`${inputClass} font-semibold`}
                         />
-                        <span className="text-[11px] text-slate-500 block px-1 mt-0.5" title={entry.role}>
-                          {entry.role}
-                        </span>
                       </td>
-                      <td className="py-3 px-3 align-top min-w-[150px]">
+                      <td className="py-3 px-3">
+                        <p className="text-xs font-semibold text-slate-700 line-clamp-2 break-words min-h-5" title={entry.role}>
+                          {entry.role}
+                        </p>
                         <input
                           type="text"
                           aria-label={`Attendee ${itemNumber} affiliation`}
                           value={entry.affiliation || ''}
                           onChange={(e) => handleFieldChange(entry.id, 'affiliation', e.target.value)}
-                          placeholder="College or unit..."
-                          className="w-full text-slate-700 bg-transparent border-b border-transparent focus:border-slate-300 focus:bg-white px-1 py-0.5 rounded-xs text-base sm:text-xs focus:outline-none focus:ring-1 focus:ring-[#C8102E]"
+                          placeholder="College or office"
+                          className={`${inputClass} mt-1.5`}
                         />
                       </td>
-                      <td className="py-3 px-3 align-top whitespace-nowrap">
-                        <div className="inline-flex items-center rounded-sm border border-slate-200 bg-slate-50 p-0.5 gap-0.5" role="group" aria-label={`Attendance status for ${entry.name}`}>
-                          <button
-                            type="button"
-                            onClick={() => handleStatusChange(entry.id, 'present')}
-                            className={`px-2.5 py-1.5 rounded-xs text-[11px] font-bold cursor-pointer transition-colors ${
-                              entry.status === 'present'
-                                ? 'bg-emerald-700 text-white shadow-2xs'
-                                : 'text-slate-600 hover:bg-white hover:text-slate-900'
-                            }`}
-                          >
-                            Present
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleStatusChange(entry.id, 'excused')}
-                            className={`px-2.5 py-1.5 rounded-xs text-[11px] font-bold cursor-pointer transition-colors ${
-                              entry.status === 'excused'
-                                ? 'bg-blue-700 text-white shadow-2xs'
-                                : 'text-slate-600 hover:bg-white hover:text-slate-900'
-                            }`}
-                          >
-                            Excused
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleStatusChange(entry.id, 'absent')}
-                            className={`px-2.5 py-1.5 rounded-xs text-[11px] font-bold cursor-pointer transition-colors ${
-                              entry.status === 'absent'
-                                ? 'bg-rose-700 text-white shadow-2xs'
-                                : 'text-slate-600 hover:bg-white hover:text-slate-900'
-                            }`}
-                          >
-                            Absent
-                          </button>
-                        </div>
+                      <td className="py-3 px-3">
+                        <AttendanceToggle
+                          value={entry.status}
+                          name={entry.name}
+                          onChange={(status) => handleStatusChange(entry.id, status)}
+                        />
                       </td>
-                      <td className="py-3 px-3 align-top">
+                      <td className="py-3 px-3">
                         {entry.status === 'present' ? (
                           <input
                             type="time"
                             aria-label={`Time in for ${entry.name}`}
                             value={entry.timeIn || ''}
                             onChange={(e) => handleFieldChange(entry.id, 'timeIn', e.target.value)}
-                            className="w-full px-2 py-1 bg-white border border-slate-200 rounded-sm text-base sm:text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#C8102E]"
+                            className={`${inputClass} w-full`}
                           />
                         ) : (
                           <span
-                            className="inline-flex items-center px-2.5 py-1 bg-slate-50 border border-slate-200 rounded-sm text-xs text-slate-400 w-full select-none"
-                            title="Time-In is only recorded for attendees marked Present"
+                            className="min-h-11 flex items-center px-3 text-sm text-slate-400"
+                            title="Time in is only recorded for attendees marked Present"
                           >
                             &mdash;
                           </span>
                         )}
                       </td>
-                      <td className="py-3 px-3 align-top min-w-[175px]">
+                      <td className="py-3 px-3">
                         <input
                           type="text"
                           aria-label={`Remarks for ${entry.name}`}
                           value={entry.remarks || ''}
                           onChange={(e) => handleFieldChange(entry.id, 'remarks', e.target.value)}
-                          placeholder="Add remarks or proxy..."
-                          className="w-full px-2.5 py-1 bg-white border border-slate-200 rounded-sm text-base sm:text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-[#C8102E]"
+                          placeholder="Remarks or proxy"
+                          className={inputClass}
                         />
                       </td>
-                      <td className="py-3 px-2 align-top text-center">
+                      <td className="py-3 px-2 text-center">
                         <button
                           type="button"
                           onClick={() => handleRemoveAttendee(entry.id)}
                           disabled={rollCall.length <= 1}
-                          className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 disabled:opacity-40 disabled:cursor-not-allowed rounded-sm cursor-pointer transition-colors inline-flex items-center justify-center"
-                          title="Remove participant from roster"
+                          className={dangerIconButton}
+                          title="Remove from roster"
                           aria-label={`Remove ${entry.name} from roster`}
                         >
-                          <Trash2 className="w-3.5 h-3.5" aria-hidden="true" />
+                          <Trash2 className="w-4 h-4" aria-hidden="true" />
                         </button>
                       </td>
                     </tr>
@@ -682,277 +747,291 @@ export const InceptionRosterMinutesWorkspace: React.FC<InceptionRosterMinutesWor
               </tbody>
             </table>
           </div>
+
+          {/* Below 1280px: stacked cards */}
+          <ul className="xl:hidden space-y-3" aria-label="Attendee roll-call">
+            {paginatedRollCall.map((entry, pIdx) => {
+              const itemNumber = startRosterIdx + pIdx + 1;
+              const fieldId = `rc-${entry.id}`;
+              return (
+                <li key={entry.id} className="border border-slate-200 rounded-sm p-3 sm:p-4 space-y-3">
+                  <div className="flex items-start gap-2">
+                    <div className="min-w-0 flex-1">
+                      <label htmlFor={`${fieldId}-name`} className={labelClass}>Name</label>
+                      <input
+                        id={`${fieldId}-name`}
+                        type="text"
+                        aria-label={`Attendee ${itemNumber} name`}
+                        value={entry.name}
+                        onChange={(e) => handleFieldChange(entry.id, 'name', e.target.value)}
+                        className={`${inputClass} font-semibold`}
+                      />
+                      <p className="text-xs text-slate-500 mt-1 break-words">{entry.role}</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveAttendee(entry.id)}
+                      disabled={rollCall.length <= 1}
+                      className={`${dangerIconButton} mt-5 shrink-0`}
+                      title="Remove from roster"
+                      aria-label={`Remove ${entry.name} from roster`}
+                    >
+                      <Trash2 className="w-4 h-4" aria-hidden="true" />
+                    </button>
+                  </div>
+
+                  <div>
+                    <label htmlFor={`${fieldId}-affiliation`} className={labelClass}>College / office</label>
+                    <input
+                      id={`${fieldId}-affiliation`}
+                      type="text"
+                      value={entry.affiliation || ''}
+                      onChange={(e) => handleFieldChange(entry.id, 'affiliation', e.target.value)}
+                      placeholder="College or office"
+                      className={inputClass}
+                    />
+                  </div>
+
+                  <div>
+                    <span className={labelClass}>Attendance</span>
+                    <AttendanceToggle
+                      value={entry.status}
+                      name={entry.name}
+                      onChange={(status) => handleStatusChange(entry.id, status)}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-[160px_1fr] gap-3">
+                    <div>
+                      <label htmlFor={`${fieldId}-time`} className={labelClass}>Time in</label>
+                      {entry.status === 'present' ? (
+                        <input
+                          id={`${fieldId}-time`}
+                          type="time"
+                          value={entry.timeIn || ''}
+                          onChange={(e) => handleFieldChange(entry.id, 'timeIn', e.target.value)}
+                          className={inputClass}
+                        />
+                      ) : (
+                        <p id={`${fieldId}-time`} className="min-h-11 flex items-center px-3 bg-slate-50 border border-slate-200 rounded-sm text-xs text-slate-500">
+                          Only for attendees marked Present
+                        </p>
+                      )}
+                    </div>
+                    <div>
+                      <label htmlFor={`${fieldId}-remarks`} className={labelClass}>Remarks</label>
+                      <input
+                        id={`${fieldId}-remarks`}
+                        type="text"
+                        value={entry.remarks || ''}
+                        onChange={(e) => handleFieldChange(entry.id, 'remarks', e.target.value)}
+                        placeholder="Remarks or proxy"
+                        className={inputClass}
+                      />
+                    </div>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+
+          <Pagination
+            page={currentRosterPage}
+            totalItems={rollCall.length}
+            onPageChange={setRosterPage}
+            pageSize={ATTENDEES_PER_PAGE}
+            itemLabel="attendees"
+            label="Roster pages"
+          />
+
+          {/* Add participant */}
+          <div className="p-3 sm:p-4 bg-slate-50 border border-slate-200 rounded-sm">
+            <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2 mb-3">
+              <UserPlus className="w-4 h-4 text-slate-500" aria-hidden="true" />
+              Add a participant
+            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[1.2fr_1fr_1fr_auto] gap-3 items-end">
+              <div>
+                <label htmlFor="new-attendee-name" className={labelClass}>Full name *</label>
+                <input
+                  id="new-attendee-name"
+                  type="text"
+                  value={newAttendeeName}
+                  onChange={(e) => setNewAttendeeName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleAddAttendee();
+                    }
+                  }}
+                  placeholder="e.g. Dr. Ramon Lim"
+                  className={inputClass}
+                />
+              </div>
+              <div>
+                <label htmlFor="new-attendee-role" className={labelClass}>Role / designation</label>
+                <input
+                  id="new-attendee-role"
+                  type="text"
+                  value={newAttendeeRole}
+                  onChange={(e) => setNewAttendeeRole(e.target.value)}
+                  placeholder="e.g. Co-Researcher"
+                  className={inputClass}
+                />
+              </div>
+              <div>
+                <label htmlFor="new-attendee-affiliation" className={labelClass}>College / office</label>
+                <input
+                  id="new-attendee-affiliation"
+                  type="text"
+                  value={newAttendeeAffiliation}
+                  onChange={(e) => setNewAttendeeAffiliation(e.target.value)}
+                  placeholder="e.g. College of Engineering"
+                  className={inputClass}
+                />
+              </div>
+              <button type="button" onClick={handleAddAttendee} className={`${secondaryButton} w-full lg:w-auto`}>
+                <Plus className="w-4 h-4" aria-hidden="true" />
+                Add to roster
+              </button>
+            </div>
+          </div>
         </div>
 
-        {/* Attendee Pagination Controls (Max 3 per page) */}
-        {rollCall.length > ATTENDEES_PER_PAGE && (
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-md text-xs">
-            <span className="text-slate-500 font-medium">
-              Showing <strong className="text-slate-800">{startRosterIdx + 1}</strong> to{' '}
-              <strong className="text-slate-800">
-                {Math.min(startRosterIdx + ATTENDEES_PER_PAGE, rollCall.length)}
-              </strong> of <strong className="text-slate-800">{rollCall.length}</strong> attendees
-            </span>
-            <div className="flex items-center gap-1.5 self-end sm:self-auto">
-              <button
-                type="button"
-                onClick={() => setRosterPage((p) => Math.max(1, p - 1))}
-                disabled={currentRosterPage <= 1}
-                className="px-2.5 py-1.5 bg-white border border-slate-200 rounded-sm font-semibold text-slate-700 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors inline-flex items-center gap-1 cursor-pointer"
-                aria-label="Previous attendees"
-              >
-                <ChevronLeft className="w-3.5 h-3.5" aria-hidden="true" /> Prev
-              </button>
-              <span className="px-2 font-bold text-slate-700">
-                Page {currentRosterPage} of {totalRosterPages}
-              </span>
-              <button
-                type="button"
-                onClick={() => setRosterPage((p) => Math.min(totalRosterPages, p + 1))}
-                disabled={currentRosterPage >= totalRosterPages}
-                className="px-2.5 py-1.5 bg-white border border-slate-200 rounded-sm font-semibold text-slate-700 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors inline-flex items-center gap-1 cursor-pointer"
-                aria-label="Next attendees"
-              >
-                Next <ChevronRight className="w-3.5 h-3.5" aria-hidden="true" />
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Add Participant Row */}
-        <div className="p-4 bg-slate-50 border border-slate-200 rounded-md space-y-3">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-700 block">
-            Add Participant to Roll-Call Roster
-          </span>
-          <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end">
-            <div className="sm:col-span-4">
-              <label htmlFor="new-attendee-name" className="block text-[11px] font-semibold text-slate-600 mb-1">
-                Full Name *
-              </label>
-              <input
-                id="new-attendee-name"
-                type="text"
-                value={newAttendeeName}
-                onChange={(e) => setNewAttendeeName(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    handleAddAttendee();
-                  }
-                }}
-                placeholder="e.g. Dr. Ramon Lim"
-                className="w-full px-3 py-2 bg-white border border-slate-300 rounded-sm text-base sm:text-xs text-slate-900 focus:outline-none focus:ring-1 focus:ring-[#C8102E]"
-              />
-            </div>
-            <div className="sm:col-span-3">
-              <label htmlFor="new-attendee-role" className="block text-[11px] font-semibold text-slate-600 mb-1">
-                Role / Designation
-              </label>
-              <input
-                id="new-attendee-role"
-                type="text"
-                value={newAttendeeRole}
-                onChange={(e) => setNewAttendeeRole(e.target.value)}
-                placeholder="e.g. Co-Researcher / RPDU Staff"
-                className="w-full px-3 py-2 bg-white border border-slate-300 rounded-sm text-base sm:text-xs text-slate-900 focus:outline-none focus:ring-1 focus:ring-[#C8102E]"
-              />
-            </div>
-            <div className="sm:col-span-3">
-              <label htmlFor="new-attendee-affiliation" className="block text-[11px] font-semibold text-slate-600 mb-1">
-                College / Office
-              </label>
-              <input
-                id="new-attendee-affiliation"
-                type="text"
-                value={newAttendeeAffiliation}
-                onChange={(e) => setNewAttendeeAffiliation(e.target.value)}
-                placeholder="e.g. College of Engineering"
-                className="w-full px-3 py-2 bg-white border border-slate-300 rounded-sm text-base sm:text-xs text-slate-900 focus:outline-none focus:ring-1 focus:ring-[#C8102E]"
-              />
-            </div>
-            <div className="sm:col-span-2">
-              <button
-                type="button"
-                onClick={handleAddAttendee}
-                className="w-full min-h-11 px-3 py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-sm cursor-pointer transition-colors inline-flex items-center justify-center gap-1.5"
-              >
-                <Plus className="w-3.5 h-3.5" aria-hidden="true" />
-                Add Row
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Save Roll-Call Footer */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2 border-t border-slate-100">
-          <div className="text-xs text-slate-500 flex items-center gap-1.5">
-            <Clock className="w-3.5 h-3.5 text-slate-400" aria-hidden="true" />
-            {meeting.rosterLoggedAt ? (
-              <span>Last updated: <strong className="text-slate-700">{new Date(meeting.rosterLoggedAt).toLocaleString()}</strong></span>
-            ) : (
-              <span>Roll-call has not been saved yet.</span>
-            )}
-          </div>
+        {/* Card footer: save */}
+        <div className="px-4 py-3 sm:px-5 border-t border-slate-100 bg-slate-50/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <p className="text-xs text-slate-500" aria-live="polite">
+            {rosterDirty
+              ? 'You have unsaved roll-call changes.'
+              : meeting.rosterLoggedAt
+                ? <>Last saved <span className="font-semibold text-slate-700">{formatDateTime(meeting.rosterLoggedAt)}</span></>
+                : 'The roll-call has not been saved yet.'}
+          </p>
           <button
             type="button"
             onClick={handleSaveRoster}
             disabled={isSavingRoster}
-            className="min-h-11 px-5 py-2.5 bg-slate-900 hover:bg-slate-800 disabled:opacity-60 disabled:cursor-not-allowed text-white font-bold text-xs rounded-sm shadow-2xs cursor-pointer transition-colors inline-flex items-center justify-center gap-2 self-start sm:self-auto"
+            className={`${primaryButton} w-full sm:w-auto`}
           >
             {isSavingRoster ? (
-              <RotateCcw className="w-3.5 h-3.5 animate-spin" aria-hidden="true" />
+              <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />
             ) : (
-              <ClipboardCheck className="w-3.5 h-3.5" aria-hidden="true" />
+              <ClipboardCheck className="w-4 h-4" aria-hidden="true" />
             )}
-            {isSavingRoster ? 'Saving Roll-Call...' : 'Save Roll-Call Roster'}
+            {isSavingRoster ? 'Saving roll-call…' : 'Save roll-call'}
           </button>
         </div>
       </section>
 
-      {/* SECTION: OFFICIAL MINUTES & RESOLUTIONS UPLOAD */}
-      <section className="bg-white p-6 rounded-md border border-slate-200 shadow-xs space-y-5" aria-labelledby="minutes-heading">
-        <div className="border-b border-slate-100 pb-3">
-          <h3 id="minutes-heading" className="text-sm font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
-            <FileText className="w-4 h-4 text-[#C8102E]" aria-hidden="true" />
-            Official Minutes &amp; Resolutions of the Inception Meeting
-          </h3>
-          <p className="text-xs text-slate-600 mt-0.5 max-w-[65ch]">
-            Upload the signed official minutes and resolutions document (.pdf, .doc, .docx) of the Inception Meeting.
+      {/* SECTION: OFFICIAL MINUTES & RESOLUTIONS */}
+      <section className="bg-white border border-slate-200 rounded-sm shadow-xs" aria-labelledby="minutes-heading">
+        <div className="p-4 sm:p-5 border-b border-slate-100 space-y-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <h2 id="minutes-heading" className="text-base font-bold text-slate-900 flex items-center gap-2">
+              <FileText className="w-4 h-4 text-[#C8102E]" aria-hidden="true" />
+              Minutes &amp; resolutions
+            </h2>
+            <SaveStateChip tone={minutesState.tone} busy={minutesState.busy}>{minutesState.label}</SaveStateChip>
+          </div>
+          <p className="text-sm text-slate-600 max-w-[65ch]">
+            Upload the signed official minutes and resolutions of the inception meeting (PDF or Word, up to 15 MB).
           </p>
         </div>
 
-        {/* File Upload Box */}
-        <div className="space-y-3">
-          <label htmlFor="inception-minutes-upload" className="block text-xs font-bold uppercase tracking-wider text-slate-700">
-            Official Minutes / Resolutions Document (PDF or Word, max 15 MB)
-          </label>
-
+        <div className="p-4 sm:p-5">
           {minutesDoc ? (
-            <div className="p-4 bg-emerald-50/60 border border-emerald-200 rounded-md flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="p-3 sm:p-4 bg-white border border-slate-200 rounded-sm flex flex-col lg:flex-row lg:items-center justify-between gap-3">
               <div className="flex items-start gap-3 min-w-0">
-                <div className="w-10 h-10 rounded-sm bg-emerald-100 text-emerald-800 flex items-center justify-center shrink-0 border border-emerald-200">
+                <div className="w-10 h-10 rounded-sm bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0 border border-emerald-200">
                   <FileCheck2 className="w-5 h-5" aria-hidden="true" />
                 </div>
                 <div className="min-w-0">
-                  <p className="font-bold text-slate-900 text-xs sm:text-sm truncate" title={minutesDoc.name}>
+                  <p className="font-semibold text-slate-900 text-sm truncate" title={minutesDoc.name}>
                     {minutesDoc.name}
                   </p>
-                  <p className="text-[11px] text-slate-600 mt-0.5">
-                    {formatBytes(minutesDoc.size)} &bull; Uploaded{' '}
-                    {minutesDoc.uploadedAt ? new Date(minutesDoc.uploadedAt).toLocaleString() : 'just now'}
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    {describeSize(minutesDoc.size)} &middot; Uploaded{' '}
+                    {minutesDoc.uploadedAt ? formatDateTime(minutesDoc.uploadedAt) : 'just now'}
                   </p>
                 </div>
               </div>
 
-              <div className="flex flex-wrap items-center gap-2 shrink-0">
+              <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2 shrink-0">
                 {documentHref && (
                   <>
-                    <button
-                      type="button"
-                      onClick={handleViewMinutes}
-                      className="min-h-11 px-3 py-2 bg-white hover:bg-slate-50 text-slate-800 border border-slate-200 rounded-sm text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer transition-colors"
-                    >
-                      <ExternalLink className="w-3.5 h-3.5 text-[#C8102E]" aria-hidden="true" />
+                    <button type="button" onClick={handleViewMinutes} className={secondaryButton}>
+                      <ExternalLink className="w-4 h-4 text-[#C8102E]" aria-hidden="true" />
                       View
                     </button>
-                    <button
-                      type="button"
-                      onClick={handleDownloadMinutes}
-                      className="min-h-11 px-3 py-2 bg-white hover:bg-slate-50 text-slate-800 border border-slate-200 rounded-sm text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer transition-colors"
-                    >
-                      <Download className="w-3.5 h-3.5 text-slate-600" aria-hidden="true" />
+                    <button type="button" onClick={handleDownloadMinutes} className={secondaryButton}>
+                      <Download className="w-4 h-4 text-slate-500" aria-hidden="true" />
                       Download
                     </button>
                   </>
                 )}
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="min-h-11 px-3 py-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-sm text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer transition-colors"
-                >
-                  <Upload className="w-3.5 h-3.5" aria-hidden="true" />
+                <button type="button" onClick={() => fileInputRef.current?.click()} className={secondaryButton}>
+                  <Upload className="w-4 h-4 text-slate-500" aria-hidden="true" />
                   Replace
                 </button>
                 <button
                   type="button"
                   onClick={handleRemoveMinutesDoc}
                   disabled={isSavingMinutes}
-                  className="min-h-11 px-3 py-2 bg-white hover:bg-rose-50 text-rose-700 border border-rose-200 rounded-sm text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer transition-colors"
+                  className={`${secondaryButton} text-red-700 border-red-200 hover:bg-red-50`}
                 >
-                  <XCircle className="w-3.5 h-3.5" aria-hidden="true" />
+                  <XCircle className="w-4 h-4" aria-hidden="true" />
                   Remove
                 </button>
               </div>
             </div>
           ) : (
-            <div
+            <button
+              type="button"
               onClick={() => fileInputRef.current?.click()}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
-                  fileInputRef.current?.click();
-                }
-              }}
-              role="button"
-              tabIndex={0}
-              className="p-6 border-2 border-dashed border-slate-300 hover:border-[#C8102E] rounded-md bg-slate-50/70 hover:bg-red-50/20 text-center cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C8102E]"
+              className="w-full p-6 border-2 border-dashed border-slate-300 hover:border-[#C8102E] rounded-sm bg-slate-50/70 hover:bg-red-50/30 text-center cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C8102E]"
             >
               <Upload className="w-7 h-7 text-[#C8102E] mx-auto mb-2" aria-hidden="true" />
-              <p className="text-xs sm:text-sm font-bold text-slate-800">
-                Click to upload Official Inception Meeting Minutes / Resolutions
-              </p>
-              <p className="text-[11px] text-slate-500 mt-1">
-                Accepted formats: PDF (.pdf), Word (.doc, .docx) &bull; Maximum size: 15 MB
-              </p>
-            </div>
+              <span className="block text-sm font-bold text-slate-800">Upload the official minutes / resolutions</span>
+              <span className="block text-xs text-slate-500 mt-1">PDF (.pdf) or Word (.doc, .docx) &middot; up to 15 MB</span>
+            </button>
           )}
 
           <input
             ref={fileInputRef}
             id="inception-minutes-upload"
             type="file"
+            aria-label="Official minutes / resolutions document"
             accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
             onChange={handleFileSelect}
             className="sr-only"
           />
         </div>
 
-        {/* Save Minutes & Complete Actions */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-3 border-t border-slate-200">
-          <div className="text-xs text-slate-500 flex items-center gap-1.5">
-            <Clock className="w-3.5 h-3.5 text-slate-400" aria-hidden="true" />
-            {minutesDoc && (meeting.minutesUploadedAt || minutesDoc.uploadedAt) ? (
-              <span>
-                Last updated:{' '}
-                <strong className="text-slate-700">
-                  {new Date((meeting.minutesUploadedAt || minutesDoc.uploadedAt)!).toLocaleString()}
-                </strong>
-              </span>
-            ) : (
-              <span>Upload the signed official minutes/resolutions file to complete inception meeting documentation.</span>
-            )}
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2.5">
+        <div className="px-4 py-3 sm:px-5 border-t border-slate-100 bg-slate-50/60 flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+          <p className="text-xs text-slate-500" aria-live="polite">
+            {minutesSavedAt
+              ? <>Last saved <span className="font-semibold text-slate-700">{formatDateTime(minutesSavedAt)}</span></>
+              : 'Upload the signed minutes to complete the meeting record.'}
+          </p>
+          <div className="grid grid-cols-1 sm:flex sm:flex-wrap sm:justify-end gap-2">
             <button
               type="button"
               onClick={() => handleSaveMinutes(false)}
               disabled={isSavingMinutes}
-              className="min-h-11 px-4 py-2.5 bg-white hover:bg-slate-50 disabled:opacity-60 disabled:cursor-not-allowed text-slate-800 border border-slate-300 font-bold text-xs rounded-sm cursor-pointer transition-colors inline-flex items-center gap-2"
+              className={secondaryButton}
             >
-              {isSavingMinutes && <RotateCcw className="w-3.5 h-3.5 animate-spin" aria-hidden="true" />}
-              Save Minutes Document
+              {isSavingMinutes && <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />}
+              Save minutes
             </button>
-
             {meeting.status !== 'completed' && (
               <button
                 type="button"
                 onClick={() => handleSaveMinutes(true)}
                 disabled={isSavingMinutes}
-                className="min-h-11 px-5 py-2.5 bg-[#C8102E] hover:bg-[#A00D26] disabled:opacity-60 disabled:cursor-not-allowed text-white font-bold text-xs rounded-sm shadow-xs cursor-pointer transition-colors inline-flex items-center gap-2"
+                className={primaryButton}
               >
                 <CheckCircle2 className="w-4 h-4" aria-hidden="true" />
-                Save &amp; Mark Meeting Completed
+                Save &amp; mark meeting completed
               </button>
             )}
           </div>

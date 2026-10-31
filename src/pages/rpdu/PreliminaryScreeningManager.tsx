@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   ClipboardCheck,
@@ -18,6 +18,8 @@ import { useCallForProposals } from '../../context/CallForProposalsContext';
 import type { ConceptProposal, ScreeningStatus } from '../../types';
 import { ScreeningFeedback } from '../../components/rpduComponent/ScreeningFeedback';
 import { ProposalConsolidation } from '../../components/rpduComponent/ProposalConsolidation';
+import { Pagination } from '../../components/ui/Pagination';
+import { paginate } from '../../lib/pagination';
 
 interface PreliminaryScreeningManagerProps {
   role?: 'rpdu' | 'admin';
@@ -42,6 +44,10 @@ export const PreliminaryScreeningManager: React.FC<PreliminaryScreeningManagerPr
   const [thematicFilter, setThematicFilter] = useState<string>(typeof restored?.thematicFilter === 'string' ? restored.thematicFilter : 'all');
   const [collegeFilter, setCollegeFilter] = useState<string>(typeof restored?.collegeFilter === 'string' ? restored.collegeFilter : 'all');
   const [viewMode, setViewMode] = useState<'cards' | 'table'>(restored?.viewMode === 'table' ? 'table' : 'cards');
+  // The page belongs to one combination of filters; any search or filter change derives page 1 instead of resetting state in an effect.
+  const filterKey = JSON.stringify([searchQuery, statusFilter, thematicFilter, collegeFilter]);
+  const [pageState, setPageState] = useState(() => ({ key: filterKey, page: typeof restored?.page === 'number' ? restored.page : 1 }));
+  const listTopRef = useRef<HTMLDivElement>(null);
 
   // Derived Statistics
   const stats = useMemo(() => {
@@ -83,7 +89,14 @@ export const PreliminaryScreeningManager: React.FC<PreliminaryScreeningManagerPr
     });
   }, [conceptProposals, statusFilter, thematicFilter, collegeFilter, searchQuery, view]);
 
-  const screeningList = { searchQuery, statusFilter, thematicFilter, collegeFilter, viewMode };
+  const { page, items: pagedProposals } = paginate(filteredProposals, pageState.key === filterKey ? pageState.page : 1);
+
+  const handlePageChange = (next: number) => {
+    setPageState({ key: filterKey, page: next });
+    listTopRef.current?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+  };
+
+  const screeningList = { searchQuery, statusFilter, thematicFilter, collegeFilter, viewMode, page };
 
   const handleSummaryFilter = (status: 'all' | ScreeningStatus) => {
     setStatusFilter(status);
@@ -372,8 +385,8 @@ export const PreliminaryScreeningManager: React.FC<PreliminaryScreeningManagerPr
       {/* Main Proposals Presentation: Card View */}
 
       {view === 'proposals' && viewMode === 'cards' && (
-        <div className="grid grid-cols-1 gap-4">
-          {filteredProposals.map((proposal) => {
+        <div ref={listTopRef} className="grid scroll-mt-4 grid-cols-1 gap-4">
+          {pagedProposals.map((proposal) => {
             const isPassed = proposal.screeningStatus === 'passed';
             const isFailed = proposal.screeningStatus === 'failed';
             const isPending = proposal.screeningStatus === 'pending';
@@ -479,7 +492,7 @@ export const PreliminaryScreeningManager: React.FC<PreliminaryScreeningManagerPr
 
       {/* Main Proposals Presentation: Compact Table View */}
       {view === 'proposals' && viewMode === 'table' && (
-        <div className="bg-white rounded-md border border-slate-200 overflow-x-auto shadow-2xs">
+        <div ref={listTopRef} className="scroll-mt-4 bg-white rounded-md border border-slate-200 overflow-x-auto shadow-2xs">
           <table className="w-full text-left text-xs">
             <thead className="bg-slate-50 text-slate-600 uppercase font-bold text-[10px] border-b border-slate-200 tracking-wider">
               <tr>
@@ -492,7 +505,7 @@ export const PreliminaryScreeningManager: React.FC<PreliminaryScreeningManagerPr
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {filteredProposals.map((proposal) => {
+              {pagedProposals.map((proposal) => {
                 const isPassed = proposal.screeningStatus === 'passed';
                 const isFailed = proposal.screeningStatus === 'failed';
 
@@ -573,6 +586,10 @@ export const PreliminaryScreeningManager: React.FC<PreliminaryScreeningManagerPr
           </table>
 
         </div>
+      )}
+
+      {view === 'proposals' && (
+        <Pagination page={page} totalItems={filteredProposals.length} onPageChange={handlePageChange} itemLabel="proposals" label="Screening proposals pages" />
       )}
 
       {/* Empty State */}

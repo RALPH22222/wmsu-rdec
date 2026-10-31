@@ -7,6 +7,8 @@ import { getScreeningProposal, resetScreeningProposal, saveScreeningProposal } f
 import { formatScreeningComments, readScreeningComments, screeningCommentSections } from '../../lib/screeningComments';
 import type { ConceptProposal, ScreeningSectionComments, ScreeningReviewDetails } from '../../types';
 import { ScreeningLetterWorkflow } from '../../components/rpduComponent/ScreeningLetterWorkflow';
+import { DocxPreview } from '../../components/ui/DocxPreview';
+import { documentPreviewKind } from '../../lib/documentPreview';
 
 const emptyReview: ScreeningReviewDetails = { rpduHead: '', rdecDirector: '', associateDirector: '', deanEndorsed: false, rcEndorsed: false };
 const participants = [{ key: 'rpduHead', label: 'RPDU Head' }, { key: 'rdecDirector', label: 'RDEC Director' }, { key: 'associateDirector', label: 'Associate Director' }] as const;
@@ -81,6 +83,7 @@ export function ScreeningReviewPage({ role }: { role: 'rpdu' | 'admin' }) {
 
   const activeFile = proposal?.attachments.find((file) => file.category === activeCategory);
   const previewLoading = activeFile?.dataUrl !== previewedFile;
+  const activeKind = !activeFile ? 'download' : activeFile.type.toUpperCase() === 'PDF' ? 'pdf' : documentPreviewKind(activeFile.name);
 
   const save = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -207,10 +210,10 @@ export function ScreeningReviewPage({ role }: { role: 'rpdu' | 'admin' }) {
                     <a href={activeFile.dataUrl} download={activeFile.name} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 hover:underline"><Download size={13} /> Download</a>
                   </div>
                 </div>
-                {activeFile.type.toUpperCase() === 'PDF' ? <div className="relative h-[70vh] min-h-96 bg-slate-50 lg:h-auto lg:min-h-0 lg:flex-1">
+                {activeKind === 'pdf' ? <div className="relative h-[70vh] min-h-96 bg-slate-50 lg:h-auto lg:min-h-0 lg:flex-1">
                   {previewLoading && <div role="status" className="absolute inset-0 p-6"><span className="sr-only">Loading uploaded file</span><div aria-hidden="true" className="h-full space-y-5 rounded-sm border border-slate-200 bg-white p-6 motion-safe:animate-pulse"><div className="h-5 w-2/3 rounded bg-slate-100" /><div className="h-3 w-full rounded bg-slate-100" /><div className="h-3 w-5/6 rounded bg-slate-100" /><div className="h-3 w-full rounded bg-slate-100" /></div></div>}
                   <iframe key={activeFile.dataUrl} src={activeFile.dataUrl} title={`Uploaded ${activeCategory === 'concept_proposal' ? 'concept proposal' : 'endorsement form'}`} onLoad={() => setPreviewedFile(activeFile.dataUrl || '')} className={`h-full w-full border-0 ${previewLoading ? 'opacity-0' : ''}`} />
-                </div> : <div className="p-10 text-center text-sm text-slate-500 lg:flex-1">This {activeFile.type} file can be reviewed using Open file or Download.</div>}
+                </div> : activeKind === 'docx' ? <DocxPreview key={activeFile.dataUrl} url={activeFile.dataUrl} fileName={activeFile.name} title={`Uploaded ${activeCategory === 'concept_proposal' ? 'concept proposal' : 'endorsement form'}`} className="h-[70vh] min-h-96 lg:h-auto lg:min-h-0 lg:flex-1" /> : activeKind === 'doc' ? <div className="p-10 text-center text-sm text-slate-500 lg:flex-1">Preview is available for .docx; download to open this .doc.</div> : <div className="p-10 text-center text-sm text-slate-500 lg:flex-1">This {activeFile.type} file can be reviewed using Open file or Download.</div>}
                 <p className="shrink-0 border-t border-slate-200 px-4 py-3 text-xs text-slate-500">If the preview is unavailable, use Open file to review the uploaded document.</p>
               </> : <div className="p-10 text-center text-sm text-slate-500 lg:flex-1">No {activeCategory === 'concept_proposal' ? 'concept proposal' : 'endorsement form'} file is available for this submission.</div>}
             </section>
