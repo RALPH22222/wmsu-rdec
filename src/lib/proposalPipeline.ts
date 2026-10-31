@@ -8,6 +8,12 @@ export const MAX_COMMENT_LENGTH = 2000;
 export const MAX_UPLOAD_BYTES = 15 * 1024 * 1024;
 export const ACCEPTED_DOCUMENT_TYPES = '.pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document';
 export const ACCEPTED_PREVIEW_DOCUMENT_TYPES = `${ACCEPTED_DOCUMENT_TYPES},.jpg,.jpeg,.png,.webp,.gif,image/jpeg,image/png,image/webp,image/gif`;
+
+export function detailedProposalFileError(file: { name: string; size: number }): string {
+  if (!/\.(pdf|docx?)$/i.test(file.name)) return 'Choose a PDF (.pdf) or Word document (.doc or .docx).';
+  if (file.size > MAX_UPLOAD_BYTES) return 'The file must be 15 MB or smaller.';
+  return '';
+}
 export const MAX_CLARIFICATION_LENGTH = 2000;
 export const MAX_DECLINE_NOTE_LENGTH = 2000;
 export const MAX_ACTION_SHEET_COMMENT_LENGTH = 7000;

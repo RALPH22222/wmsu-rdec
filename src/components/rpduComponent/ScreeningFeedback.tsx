@@ -5,7 +5,7 @@ import { formatScreeningComments, readScreeningComments, screeningCommentSection
 import { saveScreeningProposal } from '../../lib/screeningApi';
 import type { ConceptProposal, ScreeningSectionComments } from '../../types';
 
-export function ScreeningFeedback({ proposal, onSaved, readOnly = false, defaultOpen = false }: { proposal: ConceptProposal; onSaved?: () => Promise<void>; readOnly?: boolean; defaultOpen?: boolean }) {
+export function ScreeningFeedback({ proposal, onSaved, readOnly = false, defaultOpen = false, size = 'sm' }: { proposal: ConceptProposal; onSaved?: () => Promise<void>; readOnly?: boolean; defaultOpen?: boolean; size?: 'sm' | 'md' }) {
   const { user, session, profile } = useAuth();
   const showReviewer = profile?.role === 'RPDU' || profile?.role === 'ADMIN';
   const [draft, setDraft] = useState<{ overall: string; sections: ScreeningSectionComments } | null>(null);
@@ -13,6 +13,9 @@ export function ScreeningFeedback({ proposal, onSaved, readOnly = false, default
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const isPassed = proposal.screeningStatus === 'passed';
+  const bodySize = size === 'md' ? 'text-base' : 'text-sm';
+  const detailSize = size === 'md' ? 'text-sm' : 'text-xs';
+  const labelSize = size === 'md' ? 'text-base' : 'text-xs';
   const reviewedByYou = Boolean(user?.id && proposal.screenedById === user.id);
   const feedback = readScreeningComments(proposal.screeningRemarks);
   const sections = { ...proposal.sectionComments, ...feedback.sections };
@@ -57,20 +60,20 @@ export function ScreeningFeedback({ proposal, onSaved, readOnly = false, default
     <details aria-label="Screening feedback" open={defaultOpen} className="group/feedback mt-3 min-w-0 overflow-hidden rounded-sm border border-slate-200">
       <summary className="grid cursor-pointer list-none grid-cols-[minmax(0,1fr)_auto] items-start gap-x-2 gap-y-2 bg-slate-50 px-3 py-3 hover:bg-slate-100 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[#C8102E] sm:grid-cols-[minmax(0,1fr)_minmax(0,auto)_auto] sm:gap-x-3 sm:px-4 [&::-webkit-details-marker]:hidden">
         <div className="min-w-0">
-          <span className="flex flex-wrap items-center gap-2 text-sm font-semibold text-slate-800">
+          <span className={`flex flex-wrap items-center gap-2 font-semibold text-slate-800 ${size === 'md' ? 'text-lg' : 'text-sm'}`}>
             <span className="flex min-w-0 items-start gap-2">
               {isPassed ? <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" /> : <XCircle className="mt-0.5 h-4 w-4 shrink-0 text-red-600" />}
               <span className="min-w-0 [overflow-wrap:anywhere]">Screening feedback</span>
             </span>
-            {savedComments.length > 0 && <span className="text-xs font-normal text-slate-500">{savedComments.length} {savedComments.length === 1 ? 'comment' : 'comments'}</span>}
+            {savedComments.length > 0 && <span className={`${detailSize} font-normal text-slate-500`}>{savedComments.length} {savedComments.length === 1 ? 'comment' : 'comments'}</span>}
           </span>
-          <span className="mt-1 block text-xs text-slate-500">
+          <span className={`mt-1 block text-slate-500 ${detailSize}`}>
             <span className="group-open/feedback:hidden">Show comments</span>
             <span className="hidden group-open/feedback:inline">Hide all comments</span>
           </span>
         </div>
         {((showReviewer && (reviewedByYou || proposal.screenedBy)) || proposal.screenedAt) && (
-          <span className="col-start-1 row-start-2 min-w-0 text-xs leading-5 text-slate-500 [overflow-wrap:anywhere] sm:col-start-2 sm:row-start-1">
+          <span className={`col-start-1 row-start-2 min-w-0 leading-5 text-slate-500 [overflow-wrap:anywhere] sm:col-start-2 sm:row-start-1 ${detailSize}`}>
             {showReviewer && (reviewedByYou || proposal.screenedBy) && <span className="block font-medium text-slate-700">Reviewed by {reviewedByYou ? 'you' : proposal.screenedBy}</span>}
             {proposal.screenedAt && <span>Reviewed {proposal.screenedAt}</span>}
           </span>
@@ -80,14 +83,14 @@ export function ScreeningFeedback({ proposal, onSaved, readOnly = false, default
       <form onSubmit={save} className="border-t border-slate-200 bg-white">
         <fieldset disabled={saving} className="min-w-0">
           <legend className="sr-only">Screening comments</legend>
-          {draft && <p className="px-3 pt-3 text-xs leading-5 text-slate-500 sm:px-4">Edit your comments below. The {isPassed ? 'Pass' : 'Fail'} decision will be kept.</p>}
+          {draft && <p className={`px-3 pt-3 leading-5 text-slate-500 sm:px-4 ${detailSize}`}>Edit your comments below. The {isPassed ? 'Pass' : 'Fail'} decision will be kept.</p>}
           <div className="divide-y divide-slate-100">
             {comments.map(({ key, label, text }) => (
               <details key={`${draft ? 'edit' : 'view'}-${key}`} open={draft && key === 'overall' ? true : undefined} className="group min-w-0">
                 <summary className="flex min-h-11 cursor-pointer list-none items-start gap-2 px-3 py-3 hover:bg-slate-50 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[#C8102E] sm:gap-3 sm:px-4 [&::-webkit-details-marker]:hidden">
                   <div className="min-w-0 flex-1">
-                    <span className="text-xs font-semibold text-slate-800 [overflow-wrap:anywhere]">{label}</span>
-                    <p className="mt-1 line-clamp-2 text-xs leading-5 text-slate-500 [overflow-wrap:anywhere] group-open:hidden sm:line-clamp-1">{text || 'No comment added.'}</p>
+                    <span className={`font-semibold text-slate-800 [overflow-wrap:anywhere] ${labelSize}`}>{label}</span>
+                    <p className={`mt-1 line-clamp-2 leading-relaxed text-slate-500 [overflow-wrap:anywhere] group-open:hidden sm:line-clamp-1 ${detailSize}`}>{text || 'No comment added.'}</p>
                   </div>
                   <ChevronDown aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0 text-slate-400 transition-transform group-open:rotate-180" />
                 </summary>
@@ -99,12 +102,12 @@ export function ScreeningFeedback({ proposal, onSaved, readOnly = false, default
                       setDraft((previous) => previous && (key === 'overall'
                         ? { ...previous, overall: value }
                         : { ...previous, sections: { ...previous.sections, [key]: value } }));
-                    }} className="block w-full min-w-0 max-w-full resize-y rounded-sm border border-slate-300 p-3 text-base leading-7 text-slate-700 [overflow-wrap:anywhere] focus:border-[#C8102E] focus:outline-none focus:ring-1 focus:ring-[#C8102E] sm:text-sm" />
-                  </label> : <p className="max-w-prose whitespace-pre-wrap text-sm leading-7 text-slate-700 [overflow-wrap:anywhere]">{text}</p>}
+                    }} className={`block w-full min-w-0 max-w-full resize-y rounded-sm border border-slate-300 p-3 text-base leading-7 text-slate-700 [overflow-wrap:anywhere] focus:border-[#C8102E] focus:outline-none focus:ring-1 focus:ring-[#C8102E] ${size === 'sm' ? 'sm:text-sm' : ''}`} />
+                  </label> : <p className={`max-w-prose whitespace-pre-wrap leading-7 text-slate-700 [overflow-wrap:anywhere] ${bodySize}`}>{text}</p>}
                 </div>
               </details>
             ))}
-            {comments.length === 0 && <p className="px-3 py-3 text-sm text-slate-500 sm:px-4">No comments recorded.</p>}
+            {comments.length === 0 && <p className={`px-3 py-3 text-slate-500 sm:px-4 ${bodySize}`}>No comments recorded.</p>}
           </div>
           {error && <p role="alert" className="px-3 pb-3 text-sm text-red-700 [overflow-wrap:anywhere] sm:px-4">{error}</p>}
           {notice && <p role="status" className="px-3 pb-3 text-sm text-emerald-700 sm:px-4">{notice}</p>}

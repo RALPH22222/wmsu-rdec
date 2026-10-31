@@ -18,8 +18,20 @@ import {
   nextStepFor,
   pointsInGroup,
   validateSubmissionDraft,
+  detailedProposalFileError,
+  MAX_UPLOAD_BYTES,
 } from './proposalPipeline.ts';
 import type { ChecklistDraft } from '../types/index.ts';
+
+test('detailed manuscripts accept only PDF and Word extensions within the existing 15 MB limit', () => {
+  for (const name of ['proposal.pdf', 'proposal.doc', 'proposal.docx', 'proposal.PDF', 'proposal.DOCX']) {
+    assert.equal(detailedProposalFileError({ name, size: MAX_UPLOAD_BYTES }), '');
+  }
+  for (const name of ['scan.jpg', 'scan.png', 'scan.webp', 'scan.gif', 'proposal.pdf.exe', 'proposal.zip', 'proposal']) {
+    assert.match(detailedProposalFileError({ name, size: 1024 }), /PDF.*Word/);
+  }
+  assert.match(detailedProposalFileError({ name: 'proposal.pdf', size: MAX_UPLOAD_BYTES + 1 }), /15 MB/);
+});
 
 const fullChecklist = (overrides: ChecklistDraft = {}): ChecklistDraft =>
   Object.fromEntries(ASSESSMENT_POINTS.map((point) => [point.id, { present: 'YES', pageRef: 'p. 3, par. 2', comment: '', ...(overrides[point.id] ?? {}) }]));

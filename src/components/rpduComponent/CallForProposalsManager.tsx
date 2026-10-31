@@ -125,7 +125,7 @@ export const CallForProposalsManager: React.FC = () => {
         );
       case 'DRAFT':
         return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-none text-xs font-bold bg-blue-100 text-blue-800 border border-blue-200">
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-none text-xs font-bold bg-red-50 text-[#C8102E] border border-red-200">
             DRAFT
           </span>
         );

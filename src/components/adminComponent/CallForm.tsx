@@ -365,7 +365,7 @@ export const CallForm: React.FC<CallFormProps> = ({
                       }}
                       className={`py-2 px-3 text-center text-xs font-bold rounded-lg transition-all border cursor-pointer ${
                         status === 'DRAFT'
-                          ? 'bg-blue-600 text-white border-blue-600 shadow-2xs'
+                          ? 'bg-[#C8102E] text-white border-[#C8102E] shadow-2xs'
                           : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
                       }`}
                     >
@@ -546,7 +546,7 @@ export const CallForm: React.FC<CallFormProps> = ({
                                       setPriorityAreas(priorityAreas.filter(t => t !== topic));
                                     }
                                   }}
-                                  className="w-3.5 h-3.5 text-[#C8102E] border-slate-300 rounded focus:ring-[#C8102E] cursor-pointer"
+                                  className="w-3.5 h-3.5 accent-[#C8102E] border-slate-300 rounded focus:ring-[#C8102E] cursor-pointer"
                                 />
                               </div>
                               <span className="text-[11px] font-medium text-slate-600 group-hover:text-slate-900 transition-colors leading-tight">
