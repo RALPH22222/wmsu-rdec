@@ -8,7 +8,7 @@ import { formatScreeningComments, readScreeningComments, screeningCommentSection
 import type { ConceptProposal, ScreeningSectionComments, ScreeningReviewDetails } from '../../types';
 import { ScreeningLetterWorkflow } from '../../components/rpduComponent/ScreeningLetterWorkflow';
 import { DocxPreview } from '../../components/ui/DocxPreview';
-import { documentPreviewKind } from '../../lib/documentPreview';
+import { documentPreviewKind, documentViewerHref } from '../../lib/documentPreview';
 
 const emptyReview: ScreeningReviewDetails = { rpduHead: '', rdecDirector: '', associateDirector: '', deanEndorsed: false, rcEndorsed: false };
 const participants = [{ key: 'rpduHead', label: 'RPDU Head' }, { key: 'rdecDirector', label: 'RDEC Director' }, { key: 'associateDirector', label: 'Associate Director' }] as const;
@@ -206,7 +206,14 @@ export function ScreeningReviewPage({ role }: { role: 'rpdu' | 'admin' }) {
                 <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-slate-200 bg-slate-50 px-4 py-3">
                   <div className="flex min-w-0 items-center gap-2"><FileText size={16} className="shrink-0 text-slate-500" /><span className="break-all text-xs font-medium text-slate-700">{activeFile.name}</span><span className="text-xs text-slate-500">{activeFile.type}</span></div>
                   <div className="flex gap-3 text-xs font-semibold text-[#C8102E]">
-                    <a href={activeFile.dataUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 hover:underline"><ExternalLink size={13} /> Open file</a>
+                    <a
+                      href={documentViewerHref(activeFile.dataUrl, activeFile.name)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 hover:underline"
+                    >
+                      <ExternalLink size={13} /> Open file
+                    </a>
                     <a href={activeFile.dataUrl} download={activeFile.name} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 hover:underline"><Download size={13} /> Download</a>
                   </div>
                 </div>

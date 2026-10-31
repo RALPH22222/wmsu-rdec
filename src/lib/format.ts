@@ -48,3 +48,25 @@ export const initialsOf = (name: string): string =>
     .slice(0, 2)
     .map((part) => part[0]?.toUpperCase() ?? '')
     .join('');
+
+/** Capitalizes the first alphabetic character at the start of a text input while preserving the rest. */
+export const capitalizeFirstLetter = (value: string): string =>
+  value.replace(/^(\s*)([a-z])/, (_, leading: string, first: string) => `${leading}${first.toUpperCase()}`);
+
+const EXPECTED_MIME_BY_EXT: Record<string, string> = {
+  '.pdf': 'application/pdf',
+  '.doc': 'application/msword',
+  '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+};
+
+export const DOCUMENT_UPLOAD_ACCEPT =
+  '.pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+
+/** Validates that a file has a .pdf, .doc, or .docx extension and a matching (or generic/empty) browser MIME type. */
+export const isValidProposalDocumentFile = (file: { name: string; type?: string }): boolean => {
+  const lower = (file.name || '').trim().toLowerCase();
+  const ext = Object.keys(EXPECTED_MIME_BY_EXT).find((item) => lower.endsWith(item));
+  if (!ext) return false;
+  const mime = (file.type || '').trim().toLowerCase();
+  return !mime || mime === 'application/octet-stream' || mime === EXPECTED_MIME_BY_EXT[ext];
+};

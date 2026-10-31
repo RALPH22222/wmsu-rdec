@@ -1,6 +1,14 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { daysUntil, formatDate, formatFileSize, initialsOf, isOverdue } from './format.ts';
+import {
+  capitalizeFirstLetter,
+  daysUntil,
+  formatDate,
+  formatFileSize,
+  initialsOf,
+  isOverdue,
+  isValidProposalDocumentFile,
+} from './format.ts';
 
 test('formatDate shows a date-only string on its own calendar day in any time zone', () => {
   const label = formatDate('2026-10-14');
@@ -31,4 +39,26 @@ test('formatFileSize uses B below 1 KB, KB below 1 MB, and MB above', () => {
   assert.equal(formatFileSize(125), '125 B');
   assert.equal(formatFileSize(49_357), '48.2 KB');
   assert.equal(formatFileSize(1_258_291), '1.20 MB');
+});
+
+test('capitalizeFirstLetter uppercases the first leading letter without altering the rest', () => {
+  assert.equal(capitalizeFirstLetter('ai-powered foliar disease detection'), 'Ai-powered foliar disease detection');
+  assert.equal(capitalizeFirstLetter('  smart agriculture system'), '  Smart agriculture system');
+  assert.equal(capitalizeFirstLetter('Already Capitalized'), 'Already Capitalized');
+  assert.equal(capitalizeFirstLetter(''), '');
+});
+
+test('isValidProposalDocumentFile accepts PDF, DOC, and DOCX files and rejects unsupported types', () => {
+  assert.equal(isValidProposalDocumentFile({ name: 'proposal.pdf', type: 'application/pdf' }), true);
+  assert.equal(isValidProposalDocumentFile({ name: 'endorsement.doc', type: 'application/msword' }), true);
+  assert.equal(
+    isValidProposalDocumentFile({
+      name: 'endorsement.docx',
+      type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    }),
+    true
+  );
+  assert.equal(isValidProposalDocumentFile({ name: 'endorsement.docx', type: '' }), true);
+  assert.equal(isValidProposalDocumentFile({ name: 'notes.txt', type: 'text/plain' }), false);
+  assert.equal(isValidProposalDocumentFile({ name: 'fake.pdf', type: 'image/png' }), false);
 });

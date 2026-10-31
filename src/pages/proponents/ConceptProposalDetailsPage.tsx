@@ -4,7 +4,9 @@ import { ArrowLeft, Download, ExternalLink, FileText } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useAsyncResource } from '../../hooks/useAsyncResource';
 import { getConceptProposalByIdApi } from '../../lib/conceptProposalApi';
+import { documentPreviewKind, documentViewerHref } from '../../lib/documentPreview';
 import { ScreeningFeedback } from '../../components/rpduComponent/ScreeningFeedback';
+import { DocxPreview } from '../../components/ui/DocxPreview';
 import type { ConceptProposalAttachment } from '../../types';
 
 function SubmittedFiles({ attachments }: { attachments: ConceptProposalAttachment[] }) {
@@ -12,6 +14,7 @@ function SubmittedFiles({ attachments }: { attachments: ConceptProposalAttachmen
   const [loadedUrl, setLoadedUrl] = useState<string | null>(null);
   const file = attachments.find((attachment) => attachment.category === category);
   const label = file?.label || (category === 'college_memo' ? 'college endorsement memo' : category === 'concept_proposal' ? 'concept proposal' : 'endorsement form');
+  const previewKind = !file ? 'download' : file.type.toUpperCase() === 'PDF' ? 'pdf' : file.type.toUpperCase() === 'DOCX' ? 'docx' : documentPreviewKind(file.name);
   return (
     <section aria-label="Submitted documents" className="min-w-0 overflow-hidden rounded-sm border border-slate-200 bg-white">
       <div className="flex flex-wrap gap-2 border-b border-slate-200 p-3">
@@ -25,14 +28,21 @@ function SubmittedFiles({ attachments }: { attachments: ConceptProposalAttachmen
         <div className="flex flex-col gap-2 border-b border-slate-200 bg-slate-50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
           <p className="flex min-w-0 items-center gap-2 text-base text-slate-700"><FileText className="h-5 w-5 shrink-0 text-slate-400" /><span className="min-w-0 [overflow-wrap:anywhere]">{file.name}</span></p>
           <div className="flex shrink-0 flex-wrap gap-4 text-base font-semibold text-[#C8102E]">
-            <a href={file.dataUrl} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-12 items-center gap-2 hover:underline"><ExternalLink className="h-5 w-5" />Open file</a>
+            <a
+              href={documentViewerHref(file.dataUrl, file.name)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex min-h-12 items-center gap-2 hover:underline"
+            >
+              <ExternalLink className="h-5 w-5" />Open file
+            </a>
             <a href={file.dataUrl} download={file.name} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-12 items-center gap-2 hover:underline"><Download className="h-5 w-5" />Download</a>
           </div>
         </div>
-        {file.type.toUpperCase() === 'PDF' ? <div className="relative h-[65vh] min-h-80 bg-slate-50">
+        {previewKind === 'pdf' ? <div className="relative h-[65vh] min-h-80 bg-slate-50">
           {loadedUrl !== file.dataUrl && <div role="status" className="absolute inset-0 p-5"><span className="sr-only">Loading {label} preview</span><div aria-hidden="true" className="h-full space-y-4 rounded-sm border border-slate-200 bg-white p-5 motion-safe:animate-pulse"><div className="h-5 w-2/3 rounded bg-slate-100" /><div className="h-3 w-full rounded bg-slate-100" /><div className="h-3 w-5/6 rounded bg-slate-100" /></div></div>}
           <iframe key={file.dataUrl} src={file.dataUrl} title={`Submitted ${label}`} onLoad={() => setLoadedUrl(file.dataUrl || null)} className={`h-full w-full border-0 ${loadedUrl === file.dataUrl ? '' : 'opacity-0'}`} />
-        </div> : <p className="p-6 text-base leading-relaxed text-slate-500">Use Open file or Download to read this {file.type} document.</p>}
+        </div> : previewKind === 'docx' ? <DocxPreview key={file.dataUrl} url={file.dataUrl} fileName={file.name} title={`Submitted ${label}`} className="h-[65vh] min-h-80" /> : <p className="p-6 text-base leading-relaxed text-slate-500">Use Open file or Download to read this {file.type} document.</p>}
         <p className="border-t border-slate-200 px-4 py-3 text-sm leading-relaxed text-slate-500">If the preview is unavailable, use Open file to read your document.</p>
       </> : <p className="p-6 text-base text-slate-500">No {label} file is available for this submission.</p>}
     </section>

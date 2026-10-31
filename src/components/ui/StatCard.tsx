@@ -27,7 +27,7 @@ export const StatCard: React.FC<StatCardProps> = ({ label, value, hint, icon: Ic
   const content = (
     <>
       <span className="flex items-center justify-between gap-3">
-        <span className="text-xs font-bold uppercase tracking-wider text-slate-400">{label}</span>
+        <span className="text-xs sm:text-[13px] font-bold uppercase tracking-wider text-slate-600 leading-snug">{label}</span>
         <span className={`w-9 h-9 rounded-sm flex items-center justify-center shrink-0 ${iconClasses}`}>
           <Icon className="w-5 h-5" />
         </span>

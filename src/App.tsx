@@ -48,6 +48,7 @@ import { RpduBudgetAllocationPage } from './pages/rpdu/RpduBudgetAllocationPage'
 import { RpduBudgetAllocationReviewPage } from './pages/rpdu/RpduBudgetAllocationReviewPage';
 import Login from './pages/auth/Login';
 import Register from './pages/auth/Register';
+import { DocumentPreviewPage } from './pages/DocumentPreviewPage';
 import { Toast } from './components/Toast';
 import { ProtectedRoute } from './components/ProtectedRoute';
 
@@ -96,6 +97,9 @@ export function App() {
           <GlobalToast />
 
           <Routes>
+            {/* Standalone Document Viewer for new tab previews (.docx, .pdf) */}
+            <Route path="/preview/document" element={<DocumentPreviewPage />} />
+
             {/* Public Portal Layout with Navbar & Footer */}
             <Route element={<PublicLayout onSignInClick={handleSignIn} />}>
               <Route path="/" element={<HomePage onSignInClick={handleSignIn} />} />

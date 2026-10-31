@@ -27,6 +27,11 @@ import { useAuth } from '../../context/AuthContext';
 import { checkConceptProposalTitleApi, ConceptProposalTitleExistsError } from '../../lib/conceptProposalApi';
 import type { ConceptProposal } from '../../types';
 import { paginateConceptProposals } from '../../lib/conceptProposalPagination';
+import {
+  capitalizeFirstLetter,
+  DOCUMENT_UPLOAD_ACCEPT,
+  isValidProposalDocumentFile,
+} from '../../lib/format';
 
 interface UploadedFile {
   file: File;
@@ -193,15 +198,29 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
   ) => {
     if (!files || files.length === 0) return;
     const file = files[0];
+    const errorKey = category === 'endorsement_pdf' ? 'endorsement' : 'conceptFile';
 
-    if (category === 'endorsement_pdf') {
-      if (!file.name.toLowerCase().endsWith('.pdf') || file.type !== 'application/pdf') {
-        setErrors((prev) => ({
-          ...prev,
-          endorsement: 'The Dean and Research Coordinator Endorsement Form must be in PDF format.',
-        }));
-        return;
-      }
+    if (!isValidProposalDocumentFile(file)) {
+      const errMsg =
+        category === 'endorsement_pdf'
+          ? 'The Dean and Research Coordinator Endorsement Form must be in PDF or Word format (.pdf, .doc, .docx).'
+          : 'The Concept Proposal document must be in PDF or Word format (.pdf, .doc, .docx).';
+      setErrors((prev) => ({
+        ...prev,
+        [errorKey]: errMsg,
+      }));
+      showToast(errMsg);
+      return;
+    }
+
+    if (file.size === 0) {
+      const errMsg = `File "${file.name}" is empty. Please choose a valid PDF or Word document.`;
+      setErrors((prev) => ({
+        ...prev,
+        [errorKey]: errMsg,
+      }));
+      showToast(errMsg);
+      return;
     }
 
     // Enforce 15MB file size limit
@@ -211,7 +230,7 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
       const errMsg = `File "${file.name}" (${sizeMb} MB) exceeds the 15MB file size limit. Please choose a smaller file.`;
       setErrors((prev) => ({
         ...prev,
-        [category === 'endorsement_pdf' ? 'endorsement' : 'conceptFile']: errMsg,
+        [errorKey]: errMsg,
       }));
       showToast(errMsg);
       return;
@@ -220,7 +239,7 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
     const fileSizeFormatted =
       file.size > 1024 * 1024
         ? `${(file.size / (1024 * 1024)).toFixed(1)} MB`
-        : `${Math.round(file.size / 1024)} KB`;
+        : `${Math.max(1, Math.round(file.size / 1024))} KB`;
 
     const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
@@ -239,7 +258,7 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
         delete next.endorsement;
         return next;
       });
-      showToast(`Uploaded endorsement PDF: ${file.name}`);
+      showToast(`Uploaded endorsement file: ${file.name}`);
     } else {
       setConceptProposalFile(fileInfo);
       setErrors((prev) => {
@@ -272,7 +291,7 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
     }
 
     if (!endorsementPdf) {
-      errs.endorsement = 'Please upload your official College Dean and Research Coordinator Endorsement PDF (max 15MB).';
+      errs.endorsement = 'Please upload your official College Dean and Research Coordinator Endorsement document (PDF or Word format, max 15MB).';
     }
 
     setErrors(errs);
@@ -379,7 +398,7 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
             Concept Proposal Submission
           </h2>
           <p className="text-base sm:text-lg leading-relaxed text-slate-600 mt-3">
-            Select your research agenda, enter your proposal title, and upload your Concept Proposal and Endorsement PDF.
+            Select your research agenda, enter your proposal title, and upload your Concept Proposal and Endorsement documents.
           </p>
         </div>
 
@@ -594,12 +613,13 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
               <textarea
                 rows={2}
                 maxLength={255}
+                autoCapitalize="sentences"
                 value={proposalTitle}
                 readOnly={checkingTitle || submitting}
                 aria-invalid={Boolean(errors.title)}
                 aria-describedby={errors.title ? titleErrorId : undefined}
                 onChange={(e) => {
-                  setProposalTitle(e.target.value);
+                  setProposalTitle(capitalizeFirstLetter(e.target.value));
                   if (errors.title) {
                     setErrors((prev) => {
                       const next = { ...prev };
@@ -687,9 +707,12 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
                   <input
                     id={conceptDocInputId}
                     type="file"
-                    accept=".pdf,.doc,.docx"
+                    accept={DOCUMENT_UPLOAD_ACCEPT}
                     className="hidden"
-                    onChange={(e) => handleFileUpload(e.target.files, 'concept_proposal')}
+                    onChange={(e) => {
+                      handleFileUpload(e.target.files, 'concept_proposal');
+                      e.target.value = '';
+                    }}
                   />
                   <div className="w-9 h-9 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center mx-auto mb-2 border border-slate-200">
                     <Upload className="w-4 h-4" />
@@ -705,7 +728,7 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
             </div>
           </div>
 
-          {/* STEP 3: UPLOAD ENDORSEMENT PDF */}
+          {/* STEP 3: UPLOAD ENDORSEMENT DOCUMENT */}
           <div className="bg-white rounded-sm border border-slate-200/90 shadow-2xs p-5 sm:p-6 space-y-5">
             <div className="flex items-center justify-between gap-3 border-b border-slate-100 pb-4">
               <div className="flex items-center gap-2">
@@ -714,10 +737,10 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
                 </span>
                 <div>
                   <h3 className="text-xl font-bold text-slate-900">
-                    Upload Endorsement PDF
+                    Upload Endorsement Form
                   </h3>
                   <p className="text-base leading-relaxed text-slate-500">
-                    Upload the endorsement form (WMSU-RDEC-FR-001.00) with both College Dean and Research Coordinator endorsements in one PDF. No separate college memo upload is needed.
+                    Upload the endorsement form (WMSU-RDEC-FR-001.00) with both College Dean and Research Coordinator endorsements in one PDF or Word file. No separate college memo upload is needed.
                   </p>
                 </div>
               </div>
@@ -730,11 +753,11 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
               <label className="text-base font-bold text-slate-800 flex flex-wrap items-center justify-between gap-2">
                 <span className="flex items-center gap-1.5">
                   <FileCheck className="w-4 h-4 text-slate-500" />
-                  <span>College Dean and Research Coordinator Endorsement PDF</span>
+                  <span>College Dean and Research Coordinator Endorsement (PDF or Word)</span>
                   <span className="text-red-500">*</span>
                 </span>
                 <span className="text-sm text-slate-400 font-medium">
-                  PDF format required
+                  PDF, DOC, or DOCX
                 </span>
               </label>
 
@@ -749,7 +772,7 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
                 <div className="p-3 bg-white rounded-sm border border-slate-200 flex items-center justify-between shadow-2xs">
                   <div className="flex items-center gap-3 min-w-0">
                     <div className="w-9 h-9 rounded bg-slate-100 text-slate-700 border border-slate-200/80 flex items-center justify-center font-bold text-sm shrink-0">
-                      PDF
+                      {endorsementPdf.type}
                     </div>
                     <div className="min-w-0">
                       <div className="flex items-center gap-1.5">
@@ -796,9 +819,12 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
                   <input
                     id={endorsementInputId}
                     type="file"
-                    accept=".pdf,application/pdf"
+                    accept={DOCUMENT_UPLOAD_ACCEPT}
                     className="hidden"
-                    onChange={(e) => handleFileUpload(e.target.files, 'endorsement_pdf')}
+                    onChange={(e) => {
+                      handleFileUpload(e.target.files, 'endorsement_pdf');
+                      e.target.value = '';
+                    }}
                   />
                   <div className="w-9 h-9 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center mx-auto mb-2 border border-slate-200">
                     <Upload className="w-4 h-4" />
@@ -807,7 +833,7 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
                     Click to browse or drag &amp; drop Dean and Research Coordinator Endorsement Form
                   </p>
                   <p className="text-sm text-slate-500 mt-1">
-                    Accepts official signed PDF file up to 15 MB.
+                    Accepts official signed endorsement in PDF, DOC, or DOCX format (Max 15MB).
                   </p>
                 </div>
               )}
@@ -909,8 +935,9 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
                 <Search className="w-5 h-5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                 <input
                   type="text"
+                  autoCapitalize="sentences"
                   value={submissionSearchQuery}
-                  onChange={(e) => { setSubmissionSearchQuery(e.target.value); setSubmissionPage(1); }}
+                  onChange={(e) => { setSubmissionSearchQuery(capitalizeFirstLetter(e.target.value)); setSubmissionPage(1); }}
                   placeholder="Search proposal title or agenda..."
                   aria-label="Search submitted concept proposals"
                   className="min-h-12 w-full pl-10 pr-3 py-3 rounded-sm border border-slate-200 text-base focus:outline-none focus:ring-2 focus:ring-[#C8102E]"
@@ -1175,7 +1202,7 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
                     <div className="p-2.5 bg-white border border-slate-200 rounded-sm flex items-center justify-between text-xs">
                       <div className="flex items-center gap-2.5 min-w-0">
                         <div className="w-7 h-7 rounded bg-slate-100 text-slate-700 flex items-center justify-center font-bold text-[10px] shrink-0 border border-slate-200">
-                          PDF
+                          {endorsementPdf.type}
                         </div>
                         <div className="min-w-0">
                           <div className="flex items-center gap-1.5">
