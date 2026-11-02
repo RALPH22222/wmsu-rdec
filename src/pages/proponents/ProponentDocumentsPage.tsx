@@ -67,10 +67,10 @@ const resolveFileUrl = (url: string | null) => {
   return `${API_BASE_URL.replace(/\/api\/?$/, '')}${url.startsWith('/') ? '' : '/'}${url}`;
 };
 
-/** Link to the notarized PDF, or '' when there is none (or the stored value is not a file URL). */
+/** Link to the uploaded notarized PDF, or '' when there is none (or the stored value is raw HTML). */
 const notarizedUrlFor = (proposal: ProposalContractItem): string => {
   const url = proposal.contract?.contractFileUrl;
-  if (!proposal.contract?.isNotarized || !url || url.trim().startsWith('<')) return '';
+  if (!url || url.trim().startsWith('<')) return '';
   return resolveFileUrl(url);
 };
 
@@ -305,7 +305,7 @@ export default function ProponentDocumentsPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Failed to submit notarized copy.');
 
-      setUploadSuccess('Notarized document submitted successfully.');
+      setUploadSuccess('Notarized contract submitted for RPDU review.');
       setSelectedFile(null);
       if (fileInputRef.current) fileInputRef.current.value = '';
       reload();
@@ -389,17 +389,23 @@ export default function ProponentDocumentsPage() {
       const isNotarized = Boolean(item.contract?.isNotarized);
       const itemBudget = Number(item.finalApprovedBudget || item.proposedBudget || 0);
       const notarizedUrl = notarizedUrlFor(item);
+      const isPendingReview = !isNotarized && Boolean(item.contract?.hasNotarizedFile || notarizedUrl);
+      const contractStatus = isNotarized
+        ? ({ label: 'Notarized', tone: 'emerald' } as const)
+        : isPendingReview
+          ? ({ label: 'Pending RPDU review', tone: 'blue' } as const)
+          : ({ label: 'Awaiting notarization', tone: 'amber' } as const);
       return (
         <DocumentRow
           key={entry.key}
           icon={FileSignature}
           code={CONTRACT_TEMPLATE_CODE}
           title="Professional Service Contract"
-          status={isNotarized ? { label: 'Notarized', tone: 'emerald' } : { label: 'Awaiting notarization', tone: 'amber' }}
+          status={contractStatus}
           meta={
             <>
               <span>Budget <span className="font-mono font-semibold text-slate-700">{formatPeso(itemBudget)}</span></span>
-              {isNotarized && item.contract?.submittedAt && <span>Submitted {formatDate(item.contract.submittedAt)}</span>}
+              {(isNotarized || isPendingReview) && item.contract?.submittedAt && <span>Submitted {formatDate(item.contract.submittedAt)}</span>}
             </>
           }
           actions={
@@ -409,8 +415,8 @@ export default function ProponentDocumentsPage() {
                   <ExternalLink aria-hidden="true" className="h-4 w-4" /> Notarized PDF
                 </a>
               )}
-              <button type="button" onClick={() => selectPscProposal(item)} className={isNotarized ? DOC_BUTTON : DOC_BUTTON_PRIMARY}>
-                {isNotarized ? 'Open contract' : 'Prepare & submit'}
+              <button type="button" onClick={() => selectPscProposal(item)} className={isNotarized || isPendingReview ? DOC_BUTTON : DOC_BUTTON_PRIMARY}>
+                {isNotarized || isPendingReview ? 'Open contract' : 'Prepare & submit'}
                 <ArrowRight aria-hidden="true" className="h-4 w-4" />
               </button>
             </>

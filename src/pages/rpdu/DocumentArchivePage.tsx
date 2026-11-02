@@ -12,6 +12,10 @@ import {
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { API_BASE_URL } from '../../config/apiConfig';
 import { useAuth } from '../../context/AuthContext';
+import { Pagination } from '../../components/ui/Pagination';
+import { paginate } from '../../lib/pagination';
+
+const ARCHIVE_PAGE_SIZE = 10;
 
 type Template =
   | 'WMSU-RPDU-LET-001.01'
@@ -55,6 +59,8 @@ type IssuedDocument = {
   template_code: string;
   letter_date?: string;
   is_notarized?: boolean;
+  has_notarized_file?: boolean;
+  notarized_status?: 'AWAITING_UPLOAD' | 'PENDING_REVIEW' | 'VERIFIED';
   template_variables: {
     title: string;
     recipientName: string;
@@ -76,6 +82,7 @@ export function DocumentArchivePage({ role = 'rpdu' }: DocumentArchivePageProps)
   const [issuedDocs, setIssuedDocs] = useState<IssuedDocument[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [verifyingId, setVerifyingId] = useState<string | null>(null);
 
   // Initial filter from query params
   const initialFilter = useMemo(() => {
@@ -88,6 +95,8 @@ export function DocumentArchivePage({ role = 'rpdu' }: DocumentArchivePageProps)
 
   const [archiveFilter, setArchiveFilter] = useState<'ALL' | 'CERTIFICATE' | 'CONTRACT' | 'LETTERS'>(initialFilter);
   const [archiveSearch, setArchiveSearch] = useState('');
+  const filterKey = `${archiveFilter}|${archiveSearch.trim().toLowerCase()}`;
+  const [pageState, setPageState] = useState({ key: filterKey, page: 1 });
 
   // Load issued documents
   const fetchIssuedDocs = async (showLoading = true) => {
@@ -121,6 +130,32 @@ export function DocumentArchivePage({ role = 'rpdu' }: DocumentArchivePageProps)
 
   const handleOpenPreview = (item: IssuedDocument) => {
     navigate(`/${role}/archive/preview/${item.id}`, { state: { doc: item } });
+  };
+
+  const handleAcceptNotarized = async (e: React.MouseEvent, item: IssuedDocument) => {
+    e.stopPropagation();
+    if (!session?.access_token || verifyingId) return;
+    setVerifyingId(item.id);
+    setError('');
+    try {
+      const res = await fetch(`${API_BASE_URL}/letters/issued/${item.id}/verify-notarized`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json.message || 'Could not accept notarized contract.');
+      setIssuedDocs((prev) =>
+        prev.map((doc) =>
+          doc.id === item.id
+            ? { ...doc, is_notarized: true, has_notarized_file: true, notarized_status: 'VERIFIED' }
+            : doc
+        )
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not accept notarized contract.');
+    } finally {
+      setVerifyingId(null);
+    }
   };
 
   // Filter tab change helper
@@ -179,6 +214,16 @@ export function DocumentArchivePage({ role = 'rpdu' }: DocumentArchivePageProps)
       return title.includes(q) || name.includes(q) || code.includes(q) || contractNum.includes(q);
     });
   }, [issuedDocs, archiveFilter, archiveSearch]);
+
+  const { page, items: pagedIssuedDocs } = paginate(
+    filteredIssuedDocs,
+    pageState.key === filterKey ? pageState.page : 1,
+    ARCHIVE_PAGE_SIZE
+  );
+
+  const handlePageChange = (next: number) => {
+    setPageState({ key: filterKey, page: next });
+  };
 
   if (loadingProfile || (roleAllowed && loading)) {
     return (
@@ -337,10 +382,15 @@ export function DocumentArchivePage({ role = 'rpdu' }: DocumentArchivePageProps)
         </div>
       ) : (
         /* GRID OF DOCUMENT CARDS */
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {filteredIssuedDocs.map((item) => {
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {pagedIssuedDocs.map((item) => {
             const isPsc = isContractTemplate(item.template_code);
             const isCotr = item.template_code === CERTIFICATE;
+            const isPendingNotarizedReview =
+              isPsc &&
+              !item.is_notarized &&
+              Boolean(item.has_notarized_file || item.notarized_status === 'PENDING_REVIEW');
             const formattedDate = new Date(item.issued_at).toLocaleDateString('en-PH', {
               timeZone: 'Asia/Manila',
               year: 'numeric',
@@ -350,11 +400,20 @@ export function DocumentArchivePage({ role = 'rpdu' }: DocumentArchivePageProps)
             return (
               <div
                 key={item.id}
-                className="rounded-md border bg-white p-5 shadow-2xs hover:shadow-xs transition-all flex flex-col justify-between border-slate-200 hover:border-slate-300"
+                role="button"
+                tabIndex={0}
+                onClick={() => handleOpenPreview(item)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    handleOpenPreview(item);
+                  }
+                }}
+                className="group rounded-md border bg-white p-5 shadow-2xs hover:shadow-md transition-all flex flex-col justify-between border-slate-200 hover:border-[#C8102E]/40 cursor-pointer focus-visible:outline-2 focus-visible:outline-[#C8102E]"
               >
                 <div>
                   <div className="flex items-center justify-between gap-2 mb-2 flex-wrap">
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex items-center gap-1.5 flex-wrap">
                       <span
                         className={`inline-flex items-center px-2.5 py-0.5 rounded-sm text-[10px] font-bold border ${
                           isPsc
@@ -371,12 +430,18 @@ export function DocumentArchivePage({ role = 'rpdu' }: DocumentArchivePageProps)
                           className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border ${
                             item.is_notarized
                               ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                              : isPendingNotarizedReview
+                              ? 'bg-amber-50 text-amber-800 border-amber-200'
                               : 'bg-slate-100 text-slate-700 border-slate-200'
                           }`}
                         >
                           {item.is_notarized ? (
                             <>
-                              <CheckCircle2 className="w-3 h-3 text-emerald-600" /> Notarized Copy Submitted
+                              <CheckCircle2 className="w-3 h-3 text-emerald-600" /> Notarized Copy Accepted
+                            </>
+                          ) : isPendingNotarizedReview ? (
+                            <>
+                              <Clock className="w-3 h-3 text-amber-600" /> Pending RPDU Review
                             </>
                           ) : (
                             <>
@@ -389,10 +454,7 @@ export function DocumentArchivePage({ role = 'rpdu' }: DocumentArchivePageProps)
                     <span className="text-[11px] text-slate-400 font-medium">Issued {formattedDate}</span>
                   </div>
 
-                  <h3
-                    onClick={() => handleOpenPreview(item)}
-                    className="text-sm font-bold text-slate-900 line-clamp-2 leading-snug cursor-pointer hover:text-[#C8102E] transition-colors"
-                  >
+                  <h3 className="text-sm font-bold text-slate-900 line-clamp-2 leading-snug group-hover:text-[#C8102E] transition-colors">
                     {item.template_variables?.title || 'Research Proposal'}
                   </h3>
 
@@ -402,10 +464,24 @@ export function DocumentArchivePage({ role = 'rpdu' }: DocumentArchivePageProps)
                   </p>
                 </div>
 
-                <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
+                <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-end gap-2 flex-wrap">
+                  {isPendingNotarizedReview && (
+                    <button
+                      type="button"
+                      disabled={verifyingId === item.id}
+                      onClick={(e) => handleAcceptNotarized(e, item)}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-md transition-colors cursor-pointer disabled:opacity-50"
+                    >
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                      {verifyingId === item.id ? 'Accepting...' : 'Accept Notarized Copy'}
+                    </button>
+                  )}
                   <button
                     type="button"
-                    onClick={() => handleOpenPreview(item)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleOpenPreview(item);
+                    }}
                     className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-[#C8102E] hover:text-[#A00D26] hover:bg-red-50/60 rounded-md transition-colors cursor-pointer"
                   >
                     <Printer className="w-3.5 h-3.5" /> View &amp; Print Document
@@ -414,6 +490,15 @@ export function DocumentArchivePage({ role = 'rpdu' }: DocumentArchivePageProps)
               </div>
             );
           })}
+          </div>
+          <Pagination
+            page={page}
+            totalItems={filteredIssuedDocs.length}
+            pageSize={ARCHIVE_PAGE_SIZE}
+            onPageChange={handlePageChange}
+            itemLabel="documents"
+            label="Issued documents archive pages"
+          />
         </div>
       )}
     </div>

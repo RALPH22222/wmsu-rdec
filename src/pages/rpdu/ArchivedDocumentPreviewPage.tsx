@@ -10,6 +10,8 @@ import {
   FileText,
   AlertCircle,
   ExternalLink,
+  CheckCircle2,
+  Clock,
 } from 'lucide-react';
 import { API_BASE_URL } from '../../config/apiConfig';
 import { useAuth } from '../../context/AuthContext';
@@ -20,6 +22,8 @@ interface IssuedDocItem {
   rendered_html?: string;
   issued_at?: string;
   is_notarized?: boolean;
+  has_notarized_file?: boolean;
+  notarized_status?: 'AWAITING_UPLOAD' | 'PENDING_REVIEW' | 'VERIFIED';
   template_variables?: {
     title?: string;
     recipientName?: string;
@@ -42,6 +46,8 @@ export function ArchivedDocumentPreviewPage({ role }: ArchivedDocumentPreviewPag
 
   const [loading, setLoading] = useState(true);
   const [downloading, setDownloading] = useState(false);
+  const [verifying, setVerifying] = useState(false);
+  const [verifySuccess, setVerifySuccess] = useState('');
   const [error, setError] = useState('');
   const [docData, setDocData] = useState<IssuedDocItem | null>(null);
 
@@ -106,8 +112,45 @@ export function ArchivedDocumentPreviewPage({ role }: ArchivedDocumentPreviewPag
   const isPsc =
     docData?.template_code === 'WMSU-RPDU-PSC-001.00' ||
     docData?.template_code === 'WMSU-RPDU-CA-001.01' ||
-    Boolean(docData?.is_notarized);
+    Boolean(docData?.is_notarized) ||
+    Boolean(docData?.has_notarized_file);
+  const isPendingNotarizedReview =
+    isPsc &&
+    !docData?.is_notarized &&
+    Boolean(docData?.has_notarized_file || docData?.notarized_status === 'PENDING_REVIEW' || isDirectPdfUrl);
   const isScreeningLetter = docData?.template_code === 'WMSU-RPDU-LET-001.01';
+
+  const handleAcceptNotarized = async () => {
+    if (!id || !session?.access_token || verifying) return;
+    setVerifying(true);
+    setError('');
+    setVerifySuccess('');
+    try {
+      const res = await fetch(`${API_BASE_URL}/letters/issued/${id}/verify-notarized`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json.message || 'Failed to accept notarized contract.');
+      setDocData((prev) =>
+        prev
+          ? {
+              ...prev,
+              is_notarized: true,
+              has_notarized_file: true,
+              notarized_status: 'VERIFIED',
+            }
+          : prev
+      );
+      setVerifySuccess('Notarized contract accepted and verified.');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Error accepting notarized contract.');
+    } finally {
+      setVerifying(false);
+    }
+  };
 
   const docTypeName = isCotr
     ? 'Certificate of Technical Review (COTR)'
@@ -220,7 +263,19 @@ export function ArchivedDocumentPreviewPage({ role }: ArchivedDocumentPreviewPag
           </div>
 
           {/* Action buttons */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            {isPendingNotarizedReview && (
+              <button
+                type="button"
+                onClick={handleAcceptNotarized}
+                disabled={loading || verifying}
+                className="inline-flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-2 text-xs font-bold rounded-md cursor-pointer disabled:opacity-50 transition-colors shadow-xs"
+              >
+                <CheckCircle2 size={14} />
+                {verifying ? 'Accepting...' : 'Accept Notarized Copy'}
+              </button>
+            )}
+
             {resolvedPdfUrl && (
               <a
                 href={resolvedPdfUrl}
@@ -285,7 +340,32 @@ export function ArchivedDocumentPreviewPage({ role }: ArchivedDocumentPreviewPag
                   <strong className="text-slate-900">{formattedDate}</strong>
                 </div>
               )}
+              {isPsc && (
+                <div>
+                  <span className="text-slate-500">Notarization Status:</span>{' '}
+                  {docData.is_notarized ? (
+                    <span className="inline-flex items-center gap-1 ml-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                      <CheckCircle2 size={12} className="text-emerald-600" /> Notarized Copy Accepted
+                    </span>
+                  ) : isPendingNotarizedReview ? (
+                    <span className="inline-flex items-center gap-1 ml-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-50 text-amber-800 border border-amber-200">
+                      <Clock size={12} className="text-amber-600" /> Pending RPDU Review
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 ml-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-slate-100 text-slate-700 border border-slate-200">
+                      <Clock size={12} className="text-slate-500" /> Awaiting Notarized Copy
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
+          </div>
+        )}
+
+        {verifySuccess && (
+          <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-md text-emerald-800 text-xs font-semibold flex items-center gap-2">
+            <CheckCircle2 size={16} className="shrink-0 text-emerald-600" />
+            <span>{verifySuccess}</span>
           </div>
         )}
 

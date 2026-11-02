@@ -6,9 +6,13 @@ import { STAGE_ORDER } from '../../lib/aihrMeta';
 import { useAihrConcepts } from '../../hooks/useAihrConcepts';
 import { StatCard } from '../../components/ui/StatCard';
 import { EmptyState } from '../../components/ui/EmptyState';
+import { Pagination } from '../../components/ui/Pagination';
+import { paginate } from '../../lib/pagination';
 import { AihrConceptRow } from '../../components/rpduComponent/AihrConceptRow';
 import { AihrVerdictModal } from '../../components/rpduComponent/modals/AihrVerdictModal';
 import { EnBancDecisionModal } from '../../components/rpduComponent/modals/EnBancDecisionModal';
+
+const AIHR_PAGE_SIZE = 5;
 
 interface AihrDeliberationPageProps { role?: 'rpdu' | 'admin' }
 
@@ -45,6 +49,8 @@ export function AihrDeliberationPage({ role = 'rpdu' }: AihrDeliberationPageProp
   const [stageFilter, setStageFilter] = useState<AihrStage[] | null>(null);
   const [verdictFor, setVerdictFor] = useState<string | null>(null);
   const [decisionFor, setDecisionFor] = useState<string | null>(null);
+  const filterKey = `${tab}|${query.trim().toLowerCase()}|${stageFilter ? stageFilter.join(',') : ''}`;
+  const [pageState, setPageState] = useState({ key: filterKey, page: 1 });
 
   const counts = useMemo(() => {
     const byStage = new Map<AihrStage, number>();
@@ -60,6 +66,16 @@ export function AihrDeliberationPage({ role = 'rpdu' }: AihrDeliberationPageProp
     if (tab === 'enbanc') return enBancQueue.filter(matches).sort(queuedFirst);
     return concepts.filter((item) => (!stageFilter || stageFilter.includes(item.stage)) && matches(item)).sort(byStageThenTitle);
   }, [concepts, enBancQueue, query, stageFilter, tab]);
+
+  const { page, items: pagedConcepts } = paginate(
+    visible,
+    pageState.key === filterKey ? pageState.page : 1,
+    AIHR_PAGE_SIZE
+  );
+
+  const handlePageChange = (next: number) => {
+    setPageState({ key: filterKey, page: next });
+  };
 
   const activeStageCard = useMemo(
     () => (tab === 'results' && stageFilter ? STAGE_CARDS.find((card) => card.stages === stageFilter) ?? null : null),
@@ -195,11 +211,21 @@ export function AihrDeliberationPage({ role = 'rpdu' }: AihrDeliberationPageProp
             <EmptyState icon={Gavel} title="No proposals waiting for en banc deliberation" description="Concepts conditionally approved at the AIHR appear here." />
           )
         ) : (
-          <ul className="space-y-4">
-            {visible.map((concept) => (
-              <AihrConceptRow key={concept.id} concept={concept} role={role} onLogVerdict={(item) => setVerdictFor(item.id)} onDeliberate={(item) => setDecisionFor(item.id)} />
-            ))}
-          </ul>
+          <div className="space-y-4">
+            <ul className="space-y-4">
+              {pagedConcepts.map((concept) => (
+                <AihrConceptRow key={concept.id} concept={concept} role={role} onLogVerdict={(item) => setVerdictFor(item.id)} onDeliberate={(item) => setDecisionFor(item.id)} />
+              ))}
+            </ul>
+            <Pagination
+              page={page}
+              totalItems={visible.length}
+              pageSize={AIHR_PAGE_SIZE}
+              onPageChange={handlePageChange}
+              itemLabel="proposals"
+              label="AIHR and En Banc proposals pages"
+            />
+          </div>
         )}
       </div>
 

@@ -10,6 +10,8 @@ export interface ContractData {
   coResearchers: string;
 }
 
+export type NotarizedContractStatus = 'AWAITING_UPLOAD' | 'PENDING_REVIEW' | 'VERIFIED';
+
 export interface ProposalContractItem {
   conceptId: string;
   title: string;
@@ -24,7 +26,9 @@ export interface ProposalContractItem {
   contract: {
     id: string;
     contractFileUrl: string | null;
+    hasNotarizedFile?: boolean;
     isNotarized: boolean;
+    notarizedStatus?: NotarizedContractStatus;
     submittedAt: string | null;
   } | null;
 }

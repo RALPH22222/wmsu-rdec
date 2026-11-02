@@ -39,7 +39,14 @@ export function ContractWorkspace({
   onBack, onViewPreview, onFileChange, onSubmit,
 }: ContractWorkspaceProps) {
   const isNotarized = Boolean(proposal.contract?.isNotarized);
+  const hasNotarizedFile = Boolean(proposal.contract?.hasNotarizedFile || notarizedUrl);
+  const isPendingReview = !isNotarized && hasNotarizedFile;
   const submittedAt = proposal.contract?.submittedAt;
+  const statusChip = isNotarized
+    ? ({ label: 'Notarized', tone: 'emerald' } as const)
+    : isPendingReview
+      ? ({ label: 'Pending RPDU review', tone: 'blue' } as const)
+      : ({ label: 'Awaiting notarization', tone: 'amber' } as const);
 
   return (
     <div className="mx-auto max-w-6xl space-y-6">
@@ -61,7 +68,7 @@ export function ContractWorkspace({
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="rounded-sm bg-slate-100 px-1.5 py-0.5 font-mono text-[11px] font-semibold text-slate-600">WMSU-RPDU-CA-001.01</span>
-                <DocumentStatusChip label={isNotarized ? 'Notarized' : 'Awaiting notarization'} tone={isNotarized ? 'emerald' : 'amber'} />
+                <DocumentStatusChip label={statusChip.label} tone={statusChip.tone} />
               </div>
               <p className="mt-2 text-[10px] font-bold uppercase tracking-wider text-[#C8102E]">Professional Service Contract</p>
               <h1 id="psc-page-title" className="break-words text-xl font-bold text-slate-900 sm:text-2xl">{proposal.title}</h1>
@@ -141,11 +148,20 @@ export function ContractWorkspace({
 
           <div className={`mt-4 rounded-sm border p-4 ${isNotarized ? 'border-emerald-200 bg-emerald-50' : 'border-amber-200 bg-amber-50'}`}>
             <p className={`flex items-center gap-2 text-sm font-bold ${isNotarized ? 'text-emerald-800' : 'text-amber-800'}`}>
-              {isNotarized
-                ? <><CheckCircle2 aria-hidden="true" className="h-4 w-4 shrink-0" /> Notarized document submitted</>
-                : <><Clock aria-hidden="true" className="h-4 w-4 shrink-0" /> Awaiting notarized copy</>}
+              {isNotarized ? (
+                <><CheckCircle2 aria-hidden="true" className="h-4 w-4 shrink-0" /> Notarized document accepted</>
+              ) : isPendingReview ? (
+                <><Clock aria-hidden="true" className="h-4 w-4 shrink-0" /> Submitted — Pending RPDU review</>
+              ) : (
+                <><Clock aria-hidden="true" className="h-4 w-4 shrink-0" /> Awaiting notarized copy</>
+              )}
             </p>
-            {isNotarized && submittedAt && (
+            {isPendingReview && (
+              <p className="mt-1 text-xs text-amber-800/90">
+                Your notarized copy has been uploaded and is awaiting review and acceptance by RPDU.
+              </p>
+            )}
+            {(isNotarized || isPendingReview) && submittedAt && (
               <p className="mt-1 text-xs text-slate-600">Submitted {formatDate(submittedAt)}</p>
             )}
             {notarizedUrl && (
@@ -163,7 +179,7 @@ export function ContractWorkspace({
           <form onSubmit={onSubmit} className="mt-4 flex flex-1 flex-col gap-3">
             <div>
               <label htmlFor="psc-notarized-file" className="mb-1.5 block text-xs font-semibold text-slate-700">
-                {isNotarized ? 'Replace notarized contract (PDF)' : 'Notarized contract (PDF)'}
+                {isNotarized || isPendingReview ? 'Replace notarized contract (PDF)' : 'Notarized contract (PDF)'}
               </label>
               <input
                 id="psc-notarized-file"
