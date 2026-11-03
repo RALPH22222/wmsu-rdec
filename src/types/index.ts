@@ -560,8 +560,17 @@ export interface ProponentAihrInvitation {
   canRequestProxy: boolean;
 }
 
+export interface AihrAttendanceRecord {
+  presentedOn: string;
+  status: 'PENDING' | 'PRESENT' | 'ABSENT' | 'EXCUSED';
+  attendeeName?: string | null;
+  attendeeRole?: string | null;
+  updatedAt?: string;
+}
+
 export interface AihrConcept {
   invitation: AihrInvitationRecord | null;
+  attendance?: AihrAttendanceRecord | null;
   canManageInvitation: boolean;
   canInviteProponent: boolean;
   verdictBlockedReason: string | null;

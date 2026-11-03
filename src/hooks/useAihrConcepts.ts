@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useCallForProposals } from '../context/CallForProposalsContext';
-import { getAihrConcepts, logVerdictApi, recordDecisionApi, withdrawDecisionApi, type DeliberationPayload, type VerdictPayload } from '../lib/aihrApi';
+import { getAihrConcepts, logVerdictApi, recordAttendanceApi, recordDecisionApi, withdrawDecisionApi, type DeliberationPayload, type VerdictPayload } from '../lib/aihrApi';
 import { OUTCOME_META, VERDICT_META } from '../lib/aihrMeta';
 import type { AihrConcept } from '../types';
 import { useAsyncResource } from './useAsyncResource';
@@ -55,5 +55,17 @@ export function useAihrConcepts() {
     }
   }, [token, setData, showToast]);
 
-  return { concepts: resource.data ?? [], loading: resource.loading, error: resource.error, refresh: resource.refresh, logVerdict, recordDecision, withdrawDecision };
+  const recordAttendance = useCallback(async (conceptId: string, status: 'PRESENT' | 'ABSENT' | 'PENDING') => {
+    try {
+      const { data } = await recordAttendanceApi(conceptId, status, token);
+      setData((prev) => (prev ? prev.map((item) => (item.id === conceptId ? { ...item, attendance: data } : item)) : prev));
+      showToast(`Attendance recorded: ${status === 'PRESENT' ? 'Present' : status === 'ABSENT' ? 'Absent' : 'Pending'}`);
+      return data;
+    } catch (failure) {
+      showToast(messageOf(failure, 'Unable to record attendance'));
+      throw failure;
+    }
+  }, [token, setData, showToast]);
+
+  return { concepts: resource.data ?? [], loading: resource.loading, error: resource.error, refresh: resource.refresh, logVerdict, recordDecision, withdrawDecision, recordAttendance };
 }

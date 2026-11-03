@@ -1,5 +1,5 @@
 import { API_ENDPOINTS } from '../config/apiConfig';
-import type { AihrConcept, AihrVerdict, EnBancOutcome } from '../types';
+import type { AihrAttendanceRecord, AihrConcept, AihrVerdict, EnBancOutcome } from '../types';
 import { request } from './apiRequest';
 
 export const getAihrConcepts = async (token?: string, signal?: AbortSignal): Promise<AihrConcept[]> =>
@@ -29,4 +29,10 @@ export const recordDecisionApi = async (conceptId: string, payload: Deliberation
 export const withdrawDecisionApi = async (conceptId: string, token?: string): Promise<{ concept: AihrConcept; warning: string | null }> => {
   const result = await request<AihrConcept>(API_ENDPOINTS.AIHR.DELIBERATION(conceptId), token, { method: 'DELETE' });
   return { concept: result.data, warning: result.warning ?? null };
+};
+export const recordAttendanceApi = async (conceptId: string, status: 'PRESENT' | 'ABSENT' | 'PENDING', token?: string): Promise<{ data: AihrAttendanceRecord }> => {
+  return request<AihrAttendanceRecord>(API_ENDPOINTS.AIHR.ATTENDANCE(conceptId), token, {
+    method: 'PUT',
+    body: JSON.stringify({ status }),
+  });
 };

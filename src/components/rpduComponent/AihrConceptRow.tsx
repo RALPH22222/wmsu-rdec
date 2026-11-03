@@ -234,7 +234,7 @@ export function AihrConceptRow({ concept, role, onLogVerdict, onDeliberate }: Ai
         </div>
       )}
 
-      {detailedProposal && <AihrAttendance conceptId={concept.id} />}
+      {detailedProposal && <AihrAttendance concept={concept} conceptId={concept.id} />}
     </li>
   );
 }
