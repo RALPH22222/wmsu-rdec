@@ -12,9 +12,9 @@ export function ActionSheetStrip({ proposal }: { proposal: ProponentProposal }) 
   if (sheet) {
     return (
       <div className="mb-3 rounded-sm border border-emerald-200 bg-emerald-50 p-3 sm:p-4">
-        <p className="text-base font-semibold text-emerald-900">Proposal Action Sheet (round {sheet.round}) · prepared {formatDate(sheet.preparedAt)}</p>
+        <p className="text-sm font-semibold text-emerald-900">Proposal Action Sheet (round {sheet.round}) · prepared {formatDate(sheet.preparedAt)}</p>
         <p className="mt-1 text-sm text-emerald-900">Fill in the Action Taken column and upload it below with your revised manuscript and revision history.</p>
-        <div className="mt-3"><DocumentLink href={sheet.fileUrl} label="Download action sheet (.docx)" size="md" /></div>
+        <div className="mt-3"><DocumentLink href={sheet.fileUrl} label="Download action sheet (.docx)" size="sm" /></div>
       </div>
     );
   }

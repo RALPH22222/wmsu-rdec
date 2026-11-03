@@ -6,7 +6,7 @@ export function ProposalTemplateList({ folder, size = 'sm' }: { folder: Template
   const [attempt, setAttempt] = useState(0);
   const [result, setResult] = useState<{ key: string; templates: ProposalTemplate[]; error: boolean } | null>(null);
   const key = `${folder}:${attempt}`;
-  const textSize = size === 'md' ? 'text-base' : 'text-xs';
+  const textSize = size === 'md' ? 'text-sm' : 'text-xs';
   const iconSize = size === 'md' ? 'h-5 w-5' : 'h-4 w-4';
 
   useEffect(() => {

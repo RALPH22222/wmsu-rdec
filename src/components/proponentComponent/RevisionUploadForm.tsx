@@ -16,8 +16,8 @@ function FileField({ id, label, hint, file, onChange }: { id: string; label: str
   return (
     // Column flex with the input pushed down so side-by-side fields keep their inputs level even when one label wraps.
     <div className="flex flex-col">
-      <label htmlFor={id} className="mb-2 block text-base font-bold text-slate-700">{label} <span className="mt-1 block text-sm font-normal leading-relaxed text-slate-500">{hint}</span></label>
-      <input id={id} type="file" accept={ACCEPTED_PREVIEW_DOCUMENT_TYPES} onChange={(e) => onChange(e.target.files?.[0] ?? null)} className="mt-auto block min-h-12 w-full min-w-0 rounded-sm bg-slate-50 text-base file:mr-3 file:min-h-12 file:border-0 file:bg-slate-100 file:px-4 file:text-base file:font-semibold" />
+      <label htmlFor={id} className="mb-2 block text-sm font-bold text-slate-700">{label} <span className="mt-1 block text-sm font-normal leading-relaxed text-slate-500">{hint}</span></label>
+      <input id={id} type="file" accept={ACCEPTED_PREVIEW_DOCUMENT_TYPES} onChange={(e) => onChange(e.target.files?.[0] ?? null)} className="mt-auto block min-h-11 w-full min-w-0 rounded-sm bg-slate-50 text-sm file:mr-3 file:min-h-11 file:border-0 file:bg-slate-100 file:px-4 file:text-sm file:font-semibold" />
       {file && <p className={`mt-1 text-sm ${tooBig ? 'text-red-700' : 'text-slate-500'}`}>{file.name} · {formatFileSize(file.size)}{tooBig ? ' — too large' : ''}</p>}
     </div>
   );
@@ -88,10 +88,10 @@ export function RevisionUploadForm({ proposal, onUpload }: RevisionUploadFormPro
       <FileField id={`${baseId}-action-sheet`} label="Accomplished Proposal Action Sheet (WMSU-RPDU-FR-007.00)" hint="Your point-by-point response in the Action Taken column" file={actionSheetFile} onChange={setActionSheetFile} />
       </div>
       <fieldset className="space-y-4">
-        <legend className="text-base font-bold text-slate-700">Revision History (WMSU-RPDU-FR-009.01)</legend>
+        <legend className="text-sm font-bold text-slate-700">Revision History (WMSU-RPDU-FR-009.01)</legend>
         <div className="flex flex-wrap gap-x-6 gap-y-2">
           {([['upload', 'Upload completed history'], ['compile', 'Compile from saved revisions']] as const).map(([mode, label]) => (
-            <label key={mode} className="inline-flex min-h-12 cursor-pointer items-center gap-2 text-base text-slate-700">
+            <label key={mode} className="inline-flex min-h-11 cursor-pointer items-center gap-2 text-sm text-slate-700">
               <input type="radio" name={`${baseId}-history-mode`} value={mode} checked={historyMode === mode} onChange={() => { setHistoryMode(mode); setHistoryReviewed(false); setDraftError(''); }} className="accent-red-800" />{label}
             </label>
           ))}
@@ -104,11 +104,11 @@ export function RevisionUploadForm({ proposal, onUpload }: RevisionUploadFormPro
                 <div className="space-y-1 text-sm text-slate-600">
                   <p className="font-semibold text-slate-900">Version {row.version}</p>
                   <p>{formatHistoryDate(row.submittedAt)}</p>
-                  <DocumentLink href={row.fileUrl} label="View manuscript" size="md" muted />
+                  <DocumentLink href={row.fileUrl} label="View manuscript" size="sm" muted />
                 </div>
                 <div>
                   <label htmlFor={`${baseId}-remarks-${row.id}`} className="block text-sm font-semibold text-slate-700">Remarks for version {row.version}</label>
-                  <textarea id={`${baseId}-remarks-${row.id}`} value={remarks[row.id] ?? ''} onChange={(event) => { setRemarks((previous) => ({ ...previous, [row.id]: event.target.value })); setHistoryReviewed(false); }} rows={2} maxLength={5000} required className="mt-1 w-full rounded-sm bg-slate-50 p-3 text-base text-slate-900 focus:outline-2 focus:outline-offset-2 focus:outline-red-800" />
+                  <textarea id={`${baseId}-remarks-${row.id}`} value={remarks[row.id] ?? ''} onChange={(event) => { setRemarks((previous) => ({ ...previous, [row.id]: event.target.value })); setHistoryReviewed(false); }} rows={2} maxLength={5000} required className="mt-1 w-full rounded-sm bg-slate-50 p-3 text-base sm:text-sm text-slate-900 focus:outline-2 focus:outline-offset-2 focus:outline-red-800" />
                 </div>
               </div>
             ))}
@@ -117,22 +117,22 @@ export function RevisionUploadForm({ proposal, onUpload }: RevisionUploadFormPro
         )}
       </fieldset>
       <div>
-        <label htmlFor={`${baseId}-notes`} className="block text-base font-bold text-slate-700">{historyMode === 'compile' ? `Version ${nextNumber} remarks / notes for the panel` : 'Notes for the panel'} <span className="text-sm font-normal text-slate-500">{historyMode === 'compile' ? 'required' : 'optional'}</span></label>
-        <textarea id={`${baseId}-notes`} value={notes} onChange={(e) => { setNotes(e.target.value); setHistoryReviewed(false); }} rows={3} maxLength={5000} required={historyMode === 'compile'} className="mt-1 w-full rounded-sm bg-slate-50 p-3 text-base text-slate-900 focus:outline-2 focus:outline-offset-2 focus:outline-red-800" />
+        <label htmlFor={`${baseId}-notes`} className="block text-sm font-bold text-slate-700">{historyMode === 'compile' ? `Version ${nextNumber} remarks / notes for the panel` : 'Notes for the panel'} <span className="text-sm font-normal text-slate-500">{historyMode === 'compile' ? 'required' : 'optional'}</span></label>
+        <textarea id={`${baseId}-notes`} value={notes} onChange={(e) => { setNotes(e.target.value); setHistoryReviewed(false); }} rows={3} maxLength={5000} required={historyMode === 'compile'} className="mt-1 w-full rounded-sm bg-slate-50 p-3 text-base sm:text-sm text-slate-900 focus:outline-2 focus:outline-offset-2 focus:outline-red-800" />
       </div>
       {historyMode === 'compile' && <div className="space-y-3">
-        <button type="button" onClick={downloadDraft} disabled={downloading || busy} className="inline-flex min-h-12 items-center gap-2 rounded-sm bg-slate-100 px-4 py-3 text-base font-semibold text-slate-800 hover:bg-slate-200 disabled:cursor-not-allowed disabled:opacity-50"><Download className="h-5 w-5 shrink-0" aria-hidden="true" />{downloading ? 'Preparing draft…' : 'Download editable history draft'}</button>
+        <button type="button" onClick={downloadDraft} disabled={downloading || busy} className="inline-flex min-h-11 items-center gap-2 rounded-sm bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-200 disabled:cursor-not-allowed disabled:opacity-50"><Download className="h-5 w-5 shrink-0" aria-hidden="true" />{downloading ? 'Preparing draft…' : 'Download editable history draft'}</button>
         {draftError && <p role="alert" className="text-sm text-red-700">{draftError}</p>}
-        <label className="flex min-h-12 cursor-pointer items-start gap-2 text-base text-slate-700"><input type="checkbox" checked={historyReviewed} onChange={(event) => setHistoryReviewed(event.target.checked)} className="mt-1 accent-red-800" /><span>I reviewed every version and its remarks. Use the compiled history for this submission.</span></label>
+        <label className="flex min-h-11 cursor-pointer items-start gap-2 text-sm text-slate-700"><input type="checkbox" checked={historyReviewed} onChange={(event) => setHistoryReviewed(event.target.checked)} className="mt-1 accent-red-800" /><span>I reviewed every version and its remarks. Use the compiled history for this submission.</span></label>
       </div>}
-      <label className="flex cursor-pointer items-start gap-3 rounded-sm border border-slate-200 bg-slate-50 p-4 text-base leading-relaxed text-slate-700">
+      <label className="flex cursor-pointer items-start gap-3 rounded-sm border border-slate-200 bg-slate-50 p-4 text-sm leading-relaxed text-slate-700">
         <input type="checkbox" checked={anonymityAttested} onChange={(event) => setAnonymityAttested(event.target.checked)} className="mt-1 h-5 w-5 shrink-0 accent-[#C8102E]" required />
         <span><span className="font-semibold text-slate-900">Anonymity attestation (required).</span> {ANONYMITY_ATTESTATION_LABEL} The revised manuscript goes to the panel as uploaded.</span>
       </label>
       {showErrors && errors.length > 0 && <ul role="alert" className="list-disc space-y-0.5 rounded-sm border border-red-200 bg-red-50 p-3 pl-7 text-sm text-red-800">{errors.map((item) => <li key={item}>{item}</li>)}</ul>}
       <div className="flex flex-col gap-2 border-t border-slate-100 pt-4 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-sm text-slate-500">All three files and the attestation are required. Uploading starts round {proposal.currentRound + 1}.</p>
-        <button type="submit" disabled={busy} className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-sm bg-[#C8102E] px-5 py-3 text-base font-semibold text-white hover:bg-[#A00D26] disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto sm:shrink-0"><Upload aria-hidden="true" className="h-5 w-5 shrink-0" />Upload Revision {nextNumber}</button>
+        <button type="submit" disabled={busy} className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-sm bg-[#C8102E] px-5 py-2 text-sm font-semibold text-white hover:bg-[#A00D26] disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto sm:shrink-0"><Upload aria-hidden="true" className="h-5 w-5 shrink-0" />Upload Revision {nextNumber}</button>
       </div>
       <ConfirmDialog isOpen={confirming} onClose={() => setConfirming(false)} onConfirm={send} loading={busy} title={`Upload Revision ${nextNumber}?`} confirmLabel="Upload" description={`This starts round ${proposal.currentRound + 1}. All three evaluators will review the revised manuscript.`} />
     </form>

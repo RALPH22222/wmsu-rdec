@@ -11,7 +11,7 @@ import { ProposalTemplateList } from '../../components/proponentComponent/Propos
 import type { PendingConcept } from '../../types';
 
 const CARD = 'rounded-sm border border-slate-200 bg-white p-5 shadow-xs sm:p-6';
-const TAB_BASE = 'inline-flex min-h-12 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-sm px-4 py-3 text-base font-semibold leading-tight focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#C8102E]';
+const TAB_BASE = 'inline-flex min-h-11 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-sm px-4 py-3 text-sm font-semibold leading-tight focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#C8102E]';
 const TAB_ACTIVE = 'bg-[#C8102E] text-white';
 const TAB_INACTIVE = 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50';
 
@@ -28,8 +28,8 @@ function ConceptStageList({ concepts }: { concepts: PendingConcept[] }) {
       {concepts.map((concept) => (
         <li key={concept.id} className="flex flex-col gap-3 py-5 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
           <div className="min-w-0">
-            <p className="border-l-4 border-[#C8102E] pl-3 break-words text-lg font-semibold leading-snug text-slate-900">{concept.title}</p>
-            <p className="mt-2 text-base leading-relaxed text-slate-600">{stageExplanation(concept.stage)}</p>
+            <p className="border-l-4 border-[#C8102E] pl-3 break-words text-base font-semibold leading-snug text-slate-900">{concept.title}</p>
+            <p className="mt-2 text-sm leading-relaxed text-slate-600">{stageExplanation(concept.stage)}</p>
           </div>
           <span className={`inline-flex shrink-0 items-center self-start rounded-sm border px-3 py-1.5 text-sm font-semibold ${concept.stage === 'AIHR_FAILED' || concept.stage === 'NOT_APPROVED' ? 'border-red-200 bg-red-50 text-red-700' : 'border-slate-200 bg-slate-50 text-slate-700'}`}>{STAGE_META[concept.stage].label}</span>
         </li>
@@ -70,15 +70,15 @@ export function DetailedProposalSubmissionPage() {
   };
 
   return (
-    <section className="mx-auto max-w-6xl space-y-6 text-base sm:space-y-8">
+    <section className="mx-auto max-w-6xl space-y-6 text-sm sm:space-y-8">
       <header>
-        <h1 className="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">Detailed Proposal Submission Hub</h1>
-        <p className="mt-3 max-w-3xl text-base leading-relaxed text-slate-600 sm:text-lg">Submit your detailed research proposal after passing preliminary screening, before the Agency In-House Review (AIHR).</p>
+        <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">Detailed Proposal Submission Hub</h1>
+        <p className="mt-3 max-w-3xl text-sm leading-relaxed text-slate-600 sm:text-base">Submit your detailed research proposal after passing preliminary screening, before the Agency In-House Review (AIHR).</p>
       </header>
 
       <section aria-labelledby="detailed-template-title" className={CARD}>
-        <h2 id="detailed-template-title" className="text-xl font-bold text-slate-900">Detailed Research Proposal Template</h2>
-        <p className="mt-2 text-base leading-relaxed text-slate-600">Download an RPDU template and complete your proposal. Upload a PDF (.pdf) or Word document (.doc or .docx), up to 15 MB.</p>
+        <h2 id="detailed-template-title" className="text-lg font-bold text-slate-900">Detailed Research Proposal Template</h2>
+        <p className="mt-2 text-sm leading-relaxed text-slate-600">Download an RPDU template and complete your proposal. Upload a PDF (.pdf) or Word document (.doc or .docx), up to 15 MB.</p>
         <ProposalTemplateList folder="detailed-proposals" size="md" />
       </section>
 
@@ -90,21 +90,21 @@ export function DetailedProposalSubmissionPage() {
           </div>
         </div>
       ) : error ? (
-        <div role="alert" className="flex flex-wrap items-center justify-between gap-4 rounded-sm border border-red-200 bg-red-50 p-5 text-base text-red-800">
-          <p className="min-w-0 break-words">{error}</p><button type="button" onClick={refresh} className="min-h-12 rounded-sm border border-red-300 px-4 text-base font-semibold hover:bg-red-100">Try again</button>
+        <div role="alert" className="flex flex-wrap items-center justify-between gap-4 rounded-sm border border-red-200 bg-red-50 p-5 text-sm text-red-800">
+          <p className="min-w-0 break-words">{error}</p><button type="button" onClick={refresh} className="min-h-11 rounded-sm border border-red-300 px-4 text-sm font-semibold hover:bg-red-100">Try again</button>
         </div>
       ) : (
         <>
           {eligibleConcepts.length > 0 && (
             <section aria-labelledby="ready-to-submit-title" className="space-y-4">
-              <h2 id="ready-to-submit-title" className="text-xl font-bold text-slate-900">Ready for detailed proposal submission</h2>
+              <h2 id="ready-to-submit-title" className="text-lg font-bold text-slate-900">Ready for detailed proposal submission</h2>
               {eligibleConcepts.map((concept) => <SubmitDetailedProposalCard key={concept.id} concept={concept} onSubmit={submitDetailedProposal} />)}
             </section>
           )}
 
           <section aria-labelledby="your-submissions-title" className="overflow-hidden rounded-sm border border-slate-200 bg-white shadow-xs">
             <div className="space-y-4 border-b border-slate-200 p-5 sm:p-6">
-              <div><h2 id="your-submissions-title" className="text-xl font-bold text-slate-900">Your submissions</h2><p className="mt-2 text-base leading-relaxed text-slate-600">Review your submitted files and follow the next stage of your proposal.</p></div>
+              <div><h2 id="your-submissions-title" className="text-lg font-bold text-slate-900">Your submissions</h2><p className="mt-2 text-sm leading-relaxed text-slate-600">Review your submitted files and follow the next stage of your proposal.</p></div>
               <div role="tablist" aria-label="Concept proposals by stage" onKeyDown={navigateTabs} className="-m-1 flex gap-2 overflow-x-auto p-1">
                 {TABS.map(tabButton)}
               </div>
@@ -112,15 +112,15 @@ export function DetailedProposalSubmissionPage() {
 
             <div id={`${ids}-panel`} role="tabpanel" aria-labelledby={`${ids}-tab-${tab}`} tabIndex={0} className="p-5 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[#C8102E] sm:p-6">
               {tab === 'submitted' && (submitted.length === 0 ? (
-                <EmptyState size="md" icon={Inbox} title="No detailed proposals submitted yet" description={eligibleConcepts.length > 0 ? 'Use the upload form above to submit your first detailed proposal.' : 'Your proposal will appear here after it passes preliminary screening and you submit the detailed manuscript.'} action={<Link to="/proponent" className="inline-flex min-h-12 items-center gap-2 rounded-sm border border-slate-200 px-4 text-base font-semibold text-[#C8102E] hover:bg-red-50">View concept proposals<ArrowRight className="h-5 w-5" /></Link>} />
+                <EmptyState size="md" icon={Inbox} title="No detailed proposals submitted yet" description={eligibleConcepts.length > 0 ? 'Use the upload form above to submit your first detailed proposal.' : 'Your proposal will appear here after it passes preliminary screening and you submit the detailed manuscript.'} action={<Link to="/proponent" className="inline-flex min-h-11 items-center gap-2 rounded-sm border border-slate-200 px-4 text-sm font-semibold text-[#C8102E] hover:bg-red-50">View concept proposals<ArrowRight className="h-5 w-5" /></Link>} />
               ) : (
                 <>
                   <div className="flex flex-wrap items-center justify-between gap-3">
-                    <p className="max-w-2xl text-base leading-relaxed text-slate-600">RPDU consolidates submitted manuscripts for AIHR. Technical review follows clearance.</p>
-                    <Link to="/proponent/revisions" className="inline-flex min-h-12 items-center gap-2 rounded-sm border border-slate-200 px-4 text-base font-semibold text-[#C8102E] hover:bg-red-50">Evaluation &amp; Revisions<ArrowRight className="h-5 w-5 shrink-0" /></Link>
+                    <p className="max-w-2xl text-sm leading-relaxed text-slate-600">RPDU consolidates submitted manuscripts for AIHR. Technical review follows clearance.</p>
+                    <Link to="/proponent/revisions" className="inline-flex min-h-11 items-center gap-2 rounded-sm border border-slate-200 px-4 text-sm font-semibold text-[#C8102E] hover:bg-red-50">Evaluation &amp; Revisions<ArrowRight className="h-5 w-5 shrink-0" /></Link>
                   </div>
                   <ul className="mt-5 divide-y divide-slate-200 border-t border-slate-200">
-                    {submitted.map((proposal) => <li key={proposal.id} className="py-6 first:pt-5 last:pb-0"><h3 className="border-l-4 border-[#C8102E] pl-3 break-words text-xl font-bold leading-snug text-slate-900">{proposal.title}</h3><p className="mt-2 text-sm text-slate-500">Submitted {formatDate(proposal.submittedAt)}</p><PostAihrManuscript proposal={proposal} onSaved={refresh} /></li>)}
+                    {submitted.map((proposal) => <li key={proposal.id} className="py-6 first:pt-5 last:pb-0"><h3 className="border-l-4 border-[#C8102E] pl-3 break-words text-lg font-bold leading-snug text-slate-900">{proposal.title}</h3><p className="mt-2 text-sm text-slate-500">Submitted {formatDate(proposal.submittedAt)}</p><PostAihrManuscript proposal={proposal} onSaved={refresh} /></li>)}
                   </ul>
                 </>
               ))}
@@ -129,7 +129,7 @@ export function DetailedProposalSubmissionPage() {
                 <EmptyState size="md" icon={Clock3} title="Nothing waiting on RPDU" description="Proposals appear here while RPDU records the AIHR result and any required en banc decision." />
               ) : (
                 <>
-                  <p className="text-base leading-relaxed text-slate-600">RPDU is completing the Agency In-House Review or en banc deliberation for these proposals.</p>
+                  <p className="text-sm leading-relaxed text-slate-600">RPDU is completing the Agency In-House Review or en banc deliberation for these proposals.</p>
                   <ConceptStageList concepts={waiting} />
                 </>
               ))}
@@ -138,7 +138,7 @@ export function DetailedProposalSubmissionPage() {
                 <EmptyState size="md" icon={XCircle} title="No proposals marked as not proceeding" description="Proposals that did not qualify at AIHR or were not approved by the en banc are listed here." />
               ) : (
                 <>
-                  <p className="text-base leading-relaxed text-slate-600">These proposals are not proceeding in this call. RPDU can revisit a verdict if needed.</p>
+                  <p className="text-sm leading-relaxed text-slate-600">These proposals are not proceeding in this call. RPDU can revisit a verdict if needed.</p>
                   <ConceptStageList concepts={closed} />
                 </>
               ))}
