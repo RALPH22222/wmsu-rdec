@@ -87,6 +87,10 @@ export const API_ENDPOINTS = {
 
   // AIHR verdicts and en banc deliberation (RPDU / Admin)
   AIHR: {
+    MY_INVITATIONS: `${API_BASE_URL}/aihr/invitations/mine`,
+    PROXY: (id: string) => `${API_BASE_URL}/aihr/concepts/${encodeURIComponent(id)}/proxy`,
+    PROXY_DECISION: (id: string) => `${API_BASE_URL}/aihr/proxy-requests/${encodeURIComponent(id)}`,
+    INVITATION: (id: string) => `${API_BASE_URL}/aihr/concepts/${encodeURIComponent(id)}/invitation`,
     CONCEPTS: `${API_BASE_URL}/aihr/concepts`,
     VERDICT: (id: string) => `${API_BASE_URL}/aihr/concepts/${encodeURIComponent(id)}/verdict`,
     DELIBERATION: (id: string) => `${API_BASE_URL}/aihr/concepts/${encodeURIComponent(id)}/deliberation`,

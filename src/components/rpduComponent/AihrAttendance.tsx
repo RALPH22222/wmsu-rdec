@@ -3,7 +3,6 @@ import { ChevronDown, Plus, Trash2, Users } from 'lucide-react';
 import { API_ENDPOINTS } from '../../config/apiConfig';
 import { useAuth } from '../../context/AuthContext';
 import { request } from '../../lib/apiRequest';
-import { isAllowedMeetingDate, manilaToday } from '../../lib/manilaDate';
 
 type Participant = { id: string; name: string; role: string; affiliation: string; status: string; note: string };
 type Attendance = { presented_on: string; participants: Participant[]; updated_at: string; updated_by: string };
@@ -29,7 +28,6 @@ export function AihrAttendance({ conceptId }: { conceptId: string }) {
   const [saved, setSaved] = useState<Attendance | null>(null);
   const [date, setDate] = useState('');
   const [rows, setRows] = useState<Participant[]>([]);
-  const todayStr = manilaToday();
 
   const url = API_ENDPOINTS.AIHR.VERDICT(conceptId).replace(/verdict$/, 'attendance');
   const load = async () => {
@@ -41,8 +39,8 @@ export function AihrAttendance({ conceptId }: { conceptId: string }) {
     finally { setBusy(false); }
   };
   const save = async () => {
-    if (date && !isAllowedMeetingDate(date, saved?.presented_on)) {
-      setError('Presentation date cannot be in the past.');
+    if (!date) {
+      setError('Enter the presentation date. Past dates are allowed for completed AIHR sessions.');
       return;
     }
     setBusy(true); setError('');
@@ -93,7 +91,6 @@ export function AihrAttendance({ conceptId }: { conceptId: string }) {
                     <span>Presentation date</span>
                     <input
                       type="date"
-                      min={todayStr}
                       value={date}
                       onChange={(e) => setDate(e.target.value)}
                       className={inputClass}

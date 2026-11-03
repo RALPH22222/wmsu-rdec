@@ -74,7 +74,7 @@ export function AihrConceptRow({ concept, role, onLogVerdict, onDeliberate }: Ai
   };
   const stage = STAGE_META[concept.stage];
   const { aihr, enBanc, detailedProposal } = concept;
-  const hasActions = concept.canLogVerdict || concept.canDeliberate;
+  const hasActions = Boolean(detailedProposal) || concept.canDeliberate;
 
   return (
     <li className="rounded-sm border border-slate-200 bg-white p-5 shadow-xs transition-all hover:border-slate-300 sm:p-6">
@@ -120,8 +120,8 @@ export function AihrConceptRow({ concept, role, onLogVerdict, onDeliberate }: Ai
 
         {hasActions && (
           <div className="flex flex-col gap-2.5 sm:shrink-0 sm:flex-row">
-            {concept.canLogVerdict && (
-              <button type="button" onClick={() => onLogVerdict(concept)} className={aihr ? SECONDARY_BUTTON : BRAND_BUTTON}>
+            {detailedProposal && (
+              <button type="button" disabled={!concept.canLogVerdict} title={concept.verdictBlockedReason || undefined} onClick={() => onLogVerdict(concept)} className={aihr ? SECONDARY_BUTTON : BRAND_BUTTON}>
                 <ClipboardPen className="h-4 w-4 shrink-0" /> {aihr ? 'Update verdict' : 'Log AIHR verdict'}
               </button>
             )}
@@ -133,6 +133,9 @@ export function AihrConceptRow({ concept, role, onLogVerdict, onDeliberate }: Ai
           </div>
         )}
       </div>
+
+      {concept.verdictBlockedReason && <p className="mt-4 text-base text-slate-600">{concept.verdictBlockedReason}</p>}
+      {concept.canInviteProponent && <Link to={`/${role}/aihr-invitations`} className={`${SECONDARY_BUTTON} mt-4`}><Mail aria-hidden="true" className="h-4 w-4" />Manage AIHR invitations</Link>}
 
       {/* Recorded Pipeline Sections */}
       {(aihr || enBanc || detailedProposal || concept.aihr?.verdict === 'PASS') && (

@@ -5,7 +5,6 @@ import type { VerdictPayload } from '../../../lib/aihrApi';
 import { QUALIFYING_SCORE, VERDICT_META } from '../../../lib/aihrMeta';
 import { ACCEPTED_DOCUMENT_TYPES, MAX_UPLOAD_BYTES } from '../../../lib/proposalPipeline';
 import { formatFileSize } from '../../../lib/format';
-import { isAllowedMeetingDate, manilaToday } from '../../../lib/manilaDate';
 import { ModalShell } from '../../ui/ModalShell';
 import { DocumentLink } from '../../ui/DocumentLink';
 import { TONE_CLASSES } from '../../ui/toneClasses';
@@ -31,8 +30,8 @@ const validate = (concept: AihrConcept, verdict: AihrVerdict | null, score: stri
     const value = Number(trimmed);
     if (!Number.isFinite(value) || value < 0 || value > 100) errors.score = 'Score must be a number from 0 to 100';
   }
-  if (presentedOn.trim() && !isAllowedMeetingDate(presentedOn.trim(), concept.aihr?.presentedOn)) {
-    errors.date = 'Presentation date cannot be in the past';
+  if (!concept.canLogVerdict || !concept.invitation || presentedOn !== concept.invitation.event_date) {
+    errors.date = concept.verdictBlockedReason || 'The presentation date must match the sent AIHR invitation.';
   }
   if (remarks.trim().length > MAX_REMARKS_LENGTH) errors.remarks = 'Remarks must be at most 5000 characters';
   if (!concept.aihr && !file) errors.file = 'Attach the AIHR result summary (WMSU-RPDU-FR-003.00)';
@@ -46,13 +45,12 @@ function VerdictForm({ concept, isOpen, onClose, onSubmit }: AihrVerdictModalPro
   const ids = useId();
   const [verdict, setVerdict] = useState<AihrVerdict | null>(concept.aihr?.verdict ?? null);
   const [score, setScore] = useState(concept.aihr?.score?.toString() ?? '');
-  const [presentedOn, setPresentedOn] = useState(concept.aihr?.presentedOn ?? '');
+  const presentedOn = concept.invitation?.event_date ?? '';
   const [remarks, setRemarks] = useState(concept.aihr?.remarks ?? '');
   const [file, setFile] = useState<File | null>(null);
   const [showErrors, setShowErrors] = useState(false);
   const [busy, setBusy] = useState(false);
   const [warning, setWarning] = useState<string | null>(null);
-  const todayStr = manilaToday();
 
   const errors = validate(concept, verdict, score, presentedOn, remarks, file);
   const visibleErrors = showErrors ? errors : {};
@@ -123,8 +121,9 @@ function VerdictForm({ concept, isOpen, onClose, onSubmit }: AihrVerdictModalPro
           {errorText('score')}
         </div>
         <div className="space-y-1.5">
-          <label htmlFor={`${ids}-date`} className="text-sm font-semibold text-slate-800">Presentation date <span className="font-normal text-slate-500">(optional)</span></label>
-          <input id={`${ids}-date`} type="date" min={todayStr} value={presentedOn} onChange={(e) => setPresentedOn(e.target.value)} aria-invalid={Boolean(visibleErrors.date)} aria-describedby={describedBy('date')} className={inputClass(Boolean(visibleErrors.date))} />
+          <label htmlFor={`${ids}-date`} className="text-sm font-semibold text-slate-800">Scheduled AIHR date</label>
+          <input id={`${ids}-date`} type="date" readOnly value={presentedOn} aria-invalid={Boolean(visibleErrors.date)} aria-describedby={describedBy('date', `${ids}-date-hint`)} className={inputClass(Boolean(visibleErrors.date))} />
+          <p id={`${ids}-date-hint`} className="text-sm text-slate-600">From the sent invitation. Results may be recorded on this date or later.</p>
           {errorText('date')}
         </div>
       </div>

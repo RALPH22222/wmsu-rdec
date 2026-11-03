@@ -12,12 +12,14 @@ interface PaginationProps {
   /** Accessible name of the navigation landmark. */
   label?: string;
   className?: string;
+  /** Keep pagination controls visible even when total items fit on a single page. */
+  alwaysShowNav?: boolean;
 }
 
 const buttonBase = 'inline-flex min-h-11 min-w-11 items-center justify-center rounded-sm text-xs font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#C8102E]';
 
 /** Client-side pager: "Showing 1–10 of 23" caption, previous/next, and page numbers with ellipses (numbers collapse to "Page x of y" on phones). */
-export function Pagination({ page, totalItems, onPageChange, pageSize = DEFAULT_PAGE_SIZE, itemLabel = 'items', label = 'Pagination', className = '' }: PaginationProps) {
+export function Pagination({ page, totalItems, onPageChange, pageSize = DEFAULT_PAGE_SIZE, itemLabel = 'items', label = 'Pagination', className = '', alwaysShowNav = false }: PaginationProps) {
   if (totalItems <= 0) return null;
   const totalPages = pageCount(totalItems, pageSize);
   const current = clampPage(page, totalItems, pageSize);
@@ -29,7 +31,7 @@ export function Pagination({ page, totalItems, onPageChange, pageSize = DEFAULT_
       <p className="text-center text-xs text-slate-500 sm:text-left" aria-live="polite">
         Showing <span className="font-semibold text-slate-700">{from}–{to}</span> of <span className="font-semibold text-slate-700">{totalItems}</span> {itemLabel}
       </p>
-      {totalPages > 1 && (
+      {(totalPages > 1 || alwaysShowNav) && (
         <nav aria-label={label} className="flex items-center justify-between gap-1 sm:justify-end">
           <button type="button" onClick={() => onPageChange(current - 1)} disabled={current === 1} aria-label="Previous page" className={`${buttonBase} gap-1 border border-slate-200 bg-white px-3 text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40`}>
             <ChevronLeft className="h-4 w-4" aria-hidden="true" /><span className="hidden sm:inline">Previous</span>

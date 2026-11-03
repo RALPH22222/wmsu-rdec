@@ -17,6 +17,8 @@ import { RpduDashboard } from './pages/rpdu/RpduDashboard';
 import { CallFormPage } from './pages/CallFormPage';
 import { EvaluatorAssignmentPage } from './pages/rpdu/EvaluatorAssignmentPage';
 import { AihrDeliberationPage } from './pages/rpdu/AihrDeliberationPage';
+import { AihrInvitationsPage } from './pages/rpdu/AihrInvitationsPage';
+import { ProponentAihrInvitationsPage } from './pages/proponent/AihrInvitationsPage';
 import { MemoPage } from './pages/rpdu/MemoPage';
 import ProponentDashboard from './pages/proponents/ProponentDashboard';
 import { ConceptProposalDetailsPage } from './pages/proponents/ConceptProposalDetailsPage';
@@ -117,6 +119,7 @@ export function App() {
                 <Route path="/proponent/submit" element={<ProponentDashboard />} />
                 <Route path="/proponent/proposals/:proposalId" element={<ConceptProposalDetailsPage />} />
                 <Route path="/proponent/detailed-proposals" element={<DetailedProposalSubmissionPage />} />
+                <Route path="/proponent/aihr-invitations" element={<ProponentAihrInvitationsPage />} />
                 <Route path="/proponent/external-funding" element={<ExternalFundingRequestPage />} />
                 <Route path="/proponent/budget" element={<BudgetAllocationPage />} />
                 <Route path="/proponent/memos" element={<ProponentMemosPage />} />
@@ -152,6 +155,7 @@ export function App() {
                 <Route path="/admin/screening/consolidation" element={<PreliminaryScreeningPage role="admin" view="consolidation" />} />
                 <Route path="/admin/screening/:proposalId" element={<ScreeningReviewPage role="admin" />} />
                 <Route path="/admin/aihr" element={<AihrDeliberationPage role="admin" />} />
+                <Route path="/admin/aihr-invitations" element={<AihrInvitationsPage role="admin" />} />
                 <Route path="/admin/memos" element={<MemoPage role="admin" />} />
                 <Route path="/admin/letters">
                   <Route index element={<AdminLetterDeskPage />} />
@@ -179,6 +183,7 @@ export function App() {
                 <Route path="/rpdu/screening/:proposalId" element={<ScreeningReviewPage role="rpdu" />} />
                 <Route path="/rpdu/passed-proposals" element={<Navigate to="/rpdu/screening" replace />} />
                 <Route path="/rpdu/aihr" element={<AihrDeliberationPage role="rpdu" />} />
+                <Route path="/rpdu/aihr-invitations" element={<AihrInvitationsPage role="rpdu" />} />
                 <Route path="/rpdu/memos" element={<MemoPage role="rpdu" />} />
                 <Route path="/rpdu/letters">
                   <Route index element={<LetterDeskPage />} />

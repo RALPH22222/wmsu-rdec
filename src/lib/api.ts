@@ -18,6 +18,7 @@ export interface UserProfileData {
   department_id?: number | null;
   sex?: SexType | null;
   role: string;
+  is_rpdu_head?: boolean | null;
   created_at?: string;
   is_eligible_to_submit?: boolean;
   portal_access?: {

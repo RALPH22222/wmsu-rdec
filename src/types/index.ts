@@ -522,13 +522,55 @@ export interface EnBancDecision {
   notice: EnBancNotice | null;
 }
 
+export interface AihrInvitationRecord {
+  proponent_id: string | null;
+  proxy_requests?: AihrProxyRequest[];
+  concept_proposal_id: string;
+  title: string;
+  event_date: string;
+  event_time: string;
+  venue: string;
+  version: string;
+  recipients: { name: string; email: string; status: 'not_sent' | 'sending' | 'sent' | 'failed' | 'uncertain'; sentAt: string | null; messageId: string | null }[];
+}
+
+export interface AihrProxyRequest {
+  reason_text: string;
+  reason_file_url: string | null;
+  reason_file_name: string | null;
+  reason_file_size: number | null;
+  id: string;
+  concept_proposal_id: string;
+  requested_by: string;
+  proxy_name: string;
+  proxy_position: string;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  requested_at: string;
+  decided_by: string | null;
+  decided_at: string | null;
+}
+
+export interface ProponentAihrInvitation {
+  conceptId: string;
+  title: string;
+  eventDate: string;
+  eventTime: string;
+  venue: string;
+  proxyRequests: AihrProxyRequest[];
+  canRequestProxy: boolean;
+}
+
 export interface AihrConcept {
+  invitation: AihrInvitationRecord | null;
+  canManageInvitation: boolean;
+  canInviteProponent: boolean;
+  verdictBlockedReason: string | null;
   qualificationNotice?: EnBancNotice | null;
   id: string;
   title: string;
   researchAgenda: string;
   proposedBudget: number;
-  proponent: { id: string; name: string; department: string | null };
+  proponent: { id: string; name: string; email: string | null; department: string | null };
   screenedAt: string | null;
   stage: AihrStage;
   aihr: AihrResult | null;

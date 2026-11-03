@@ -21,6 +21,8 @@ import { ProposalConsolidation } from '../../components/rpduComponent/ProposalCo
 import { Pagination } from '../../components/ui/Pagination';
 import { paginate } from '../../lib/pagination';
 
+const SCREENING_PAGE_SIZE = 10;
+
 interface PreliminaryScreeningManagerProps {
   role?: 'rpdu' | 'admin';
   view?: 'proposals' | 'consolidation';
@@ -89,7 +91,7 @@ export const PreliminaryScreeningManager: React.FC<PreliminaryScreeningManagerPr
     });
   }, [conceptProposals, statusFilter, thematicFilter, collegeFilter, searchQuery, view]);
 
-  const { page, items: pagedProposals } = paginate(filteredProposals, pageState.key === filterKey ? pageState.page : 1);
+  const { page, items: pagedProposals } = paginate(filteredProposals, pageState.key === filterKey ? pageState.page : 1, SCREENING_PAGE_SIZE);
 
   const handlePageChange = (next: number) => {
     setPageState({ key: filterKey, page: next });
@@ -589,7 +591,7 @@ export const PreliminaryScreeningManager: React.FC<PreliminaryScreeningManagerPr
       )}
 
       {view === 'proposals' && (
-        <Pagination page={page} totalItems={filteredProposals.length} onPageChange={handlePageChange} itemLabel="proposals" label="Screening proposals pages" />
+        <Pagination page={page} totalItems={filteredProposals.length} pageSize={SCREENING_PAGE_SIZE} onPageChange={handlePageChange} itemLabel="proposals" label="Screening proposals pages" alwaysShowNav />
       )}
 
       {/* Empty State */}
