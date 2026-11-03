@@ -72,9 +72,9 @@ export const ProponentSidebar: React.FC<ProponentSidebarProps> = ({
   };
 
   const navItems = [
-    { name: 'AIHR Invitations', path: '/proponent/aihr-invitations', icon: Mail, active: isAihrActive },
     { name: 'Concept Proposal', path: '/proponent', icon: FileText, active: isProposalActive },
     { name: 'Detailed Proposal', path: '/proponent/detailed-proposals', icon: FileUp, active: isDetailedProposalActive },
+    { name: 'AIHR Invitations', path: '/proponent/aihr-invitations', icon: Mail, active: isAihrActive },
     { name: 'External Funding', path: '/proponent/external-funding', icon: Handshake, active: isExternalFundingActive },
     { name: 'Budget Allocation', path: '/proponent/budget', icon: DollarSign, active: isBudgetActive },
     { name: 'Memorandums', path: '/proponent/memos', icon: ScrollText, active: isMemosActive },
