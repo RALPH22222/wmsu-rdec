@@ -16,7 +16,7 @@ import { ActionSheetStrip } from '../../components/proponentComponent/ActionShee
 import { ClarificationThread } from '../../components/ui/ClarificationThread';
 
 const Card = ({ title, children }: { title: string; children: ReactNode }) => (
-  <section><h3 className="mb-5 border-b border-slate-100 pb-3 text-xl font-bold text-slate-800">{title}</h3><div className="space-y-5">{children}</div></section>
+  <section><h3 className="mb-5 border-b border-slate-100 pb-3 text-lg font-bold text-slate-800">{title}</h3><div className="space-y-5">{children}</div></section>
 );
 
 const TABS = [
@@ -48,13 +48,13 @@ export function RevisionHistoryPage() {
   };
 
   return (
-    <section className="mx-auto max-w-6xl space-y-6 text-base sm:space-y-8">
+    <section className="mx-auto max-w-6xl space-y-6 text-sm sm:space-y-8">
       <header>
         <div className="flex flex-wrap items-center justify-between gap-4">
-          <h1 className="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">Evaluation &amp; Revisions</h1>
-          <Link to="/proponent/detailed-proposals" className="inline-flex min-h-12 items-center rounded-sm bg-[#C8102E] px-4 py-3 text-base font-semibold text-white hover:bg-[#A00D26]">Submit detailed proposal</Link>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">Evaluation &amp; Revisions</h1>
+          <Link to="/proponent/detailed-proposals" className="inline-flex min-h-11 items-center rounded-sm bg-[#C8102E] px-4 py-2 text-sm font-semibold text-white hover:bg-[#A00D26]">Submit detailed proposal</Link>
         </div>
-        <p className="mt-3 max-w-3xl text-base leading-relaxed text-slate-600 sm:text-lg">Read evaluator feedback, submit requested revisions, and track your proposal’s manuscript and review history.</p>
+        <p className="mt-3 max-w-3xl text-sm leading-relaxed text-slate-600 sm:text-base">Read evaluator feedback, submit requested revisions, and track your proposal’s manuscript and review history.</p>
       </header>
       {loading ? (
         <div role="status" aria-busy="true">
@@ -77,17 +77,17 @@ export function RevisionHistoryPage() {
           </div>
         </div>
       ) : <>
-      {error && <p role="alert" className="flex flex-col gap-2 rounded-sm border border-red-200 bg-red-50 p-4 text-base text-red-800 sm:flex-row sm:items-center sm:justify-between">{error}<button type="button" onClick={refresh} className="min-h-12 rounded-sm border border-red-300 px-4 text-base font-semibold">Retry</button></p>}
+      {error && <p role="alert" className="flex flex-col gap-2 rounded-sm border border-red-200 bg-red-50 p-4 text-sm text-red-800 sm:flex-row sm:items-center sm:justify-between">{error}<button type="button" onClick={refresh} className="min-h-11 rounded-sm border border-red-300 px-4 text-sm font-semibold">Retry</button></p>}
 
-      {eligibleConcepts.length > 0 && <p className="rounded-sm border border-amber-200 bg-amber-50 p-4 text-base leading-relaxed text-amber-900">{eligibleConcepts.length} {eligibleConcepts.length === 1 ? 'concept proposal is' : 'concept proposals are'} ready for detailed proposal submission. <Link to="/proponent/detailed-proposals" className="font-semibold text-[#C8102E] underline">Open the submission hub</Link>.</p>}
+      {eligibleConcepts.length > 0 && <p className="rounded-sm border border-amber-200 bg-amber-50 p-4 text-sm leading-relaxed text-amber-900">{eligibleConcepts.length} {eligibleConcepts.length === 1 ? 'concept proposal is' : 'concept proposals are'} ready for detailed proposal submission. <Link to="/proponent/detailed-proposals" className="font-semibold text-[#C8102E] underline">Open the submission hub</Link>.</p>}
 
       {proposals.length === 0 ? (
         !error && <EmptyState size="md" icon={FileSearch} title="No detailed proposals yet" description="Submit your detailed proposal in the submission hub after preliminary screening. Evaluator feedback and requested revisions will appear here." />
       ) : (
         <div className="space-y-6">
           {proposals.length > 1 && <div className="rounded-sm border border-slate-200 bg-white p-5 sm:p-6">
-            <label htmlFor={`${ids}-proposal`} className="mb-2 block text-base font-semibold text-slate-700">Select a proposal</label>
-            <select id={`${ids}-proposal`} value={selected?.id ?? ''} onChange={(event) => { setSelectedId(event.target.value); setActiveTab('feedback'); }} className="min-h-12 w-full min-w-0 rounded-sm border border-slate-300 bg-white px-3 py-2 text-base text-slate-800 focus:border-[#C8102E] focus:outline-none focus:ring-2 focus:ring-[#C8102E]/20">
+            <label htmlFor={`${ids}-proposal`} className="mb-2 block text-sm font-semibold text-slate-700">Select a proposal</label>
+            <select id={`${ids}-proposal`} value={selected?.id ?? ''} onChange={(event) => { setSelectedId(event.target.value); setActiveTab('feedback'); }} className="min-h-11 w-full min-w-0 rounded-sm border border-slate-300 bg-white px-3 py-2 text-base sm:text-sm text-slate-800 focus:border-[#C8102E] focus:outline-none focus:ring-2 focus:ring-[#C8102E]/20">
               {proposals.map((item) => <option key={item.id} value={item.id}>{item.code} · {item.title}</option>)}
             </select>
           </div>}
@@ -95,13 +95,13 @@ export function RevisionHistoryPage() {
           {selected && (
             <div key={selected.id} className="min-w-0 space-y-6">
               <header className="rounded-sm border border-slate-200 bg-white p-5 shadow-xs sm:p-6">
-                <div className="flex flex-wrap items-center gap-x-3 gap-y-2"><span className="font-mono text-sm font-bold text-slate-500">{selected.code}</span><ProposalStatusBadge proposal={selected} size="md" /><span className="text-sm text-slate-500">Round {selected.currentRound} · Submitted {formatDate(selected.submittedAt)}</span></div>
-                <h2 className="mt-4 border-l-4 border-[#C8102E] pl-3 break-words font-brand text-xl font-bold leading-snug text-slate-900 sm:text-2xl">{selected.title}</h2>
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-2"><span className="font-mono text-sm font-bold text-slate-500">{selected.code}</span><ProposalStatusBadge proposal={selected} size="sm" /><span className="text-sm text-slate-500">Round {selected.currentRound} · Submitted {formatDate(selected.submittedAt)}</span></div>
+                <h2 className="mt-4 border-l-4 border-[#C8102E] pl-3 break-words font-brand text-lg font-bold leading-snug text-slate-900 sm:text-xl">{selected.title}</h2>
                 <div className="mt-5 flex flex-col gap-4 rounded-sm bg-slate-50 p-4 sm:flex-row sm:items-center sm:justify-between">
-                  <div><p className="text-base font-semibold text-slate-800">Next action</p><p className="mt-1 text-base leading-relaxed text-slate-700">{selected.preReviewStage ? stageExplanation(selected.preReviewStage) : nextStepFor(selected.status, 'proponent')}</p></div>
-                  {selected.canUploadRevision && <button type="button" onClick={() => selectTab('revision')} className="inline-flex min-h-12 shrink-0 items-center justify-center gap-2 rounded-sm bg-[#C8102E] px-4 py-3 text-base font-semibold text-white hover:bg-[#A00D26] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#C8102E]"><Upload aria-hidden="true" className="h-5 w-5" />Submit revision</button>}
+                  <div><p className="text-sm font-semibold text-slate-800">Next action</p><p className="mt-1 text-sm leading-relaxed text-slate-700">{selected.preReviewStage ? stageExplanation(selected.preReviewStage) : nextStepFor(selected.status, 'proponent')}</p></div>
+                  {selected.canUploadRevision && <button type="button" onClick={() => selectTab('revision')} className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-sm bg-[#C8102E] px-4 py-3 text-sm font-semibold text-white hover:bg-[#A00D26] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#C8102E]"><Upload aria-hidden="true" className="h-5 w-5" />Submit revision</button>}
                 </div>
-                <p className={`mt-4 flex items-start gap-2 text-base leading-relaxed ${selected.anonymity.attestedAt ? 'text-emerald-700' : 'text-amber-700'}`}>
+                <p className={`mt-4 flex items-start gap-2 text-sm leading-relaxed ${selected.anonymity.attestedAt ? 'text-emerald-700' : 'text-amber-700'}`}>
                   <ShieldCheck className="mt-1 h-5 w-5 shrink-0" aria-hidden="true" />
                   {selected.anonymity.attestedAt
                     ? <span>Anonymity attested {formatDateTime(selected.anonymity.attestedAt)}: the manuscript on file names no proponent, college, or research team.</span>
@@ -112,7 +112,7 @@ export function RevisionHistoryPage() {
 
               <section aria-label="Proposal review details" className="min-w-0 overflow-hidden rounded-sm border border-slate-200 bg-white shadow-xs">
                 <div role="tablist" aria-label="Evaluation and revision sections" onKeyDown={navigateTabs} className="flex gap-2 overflow-x-auto border-b border-slate-200 bg-slate-50 p-3 sm:p-4">
-                  {TABS.map(({ key, label, icon: Icon }) => <button key={key} type="button" role="tab" id={`${ids}-tab-${key}`} aria-selected={activeTab === key} aria-controls={`${ids}-panel-${key}`} tabIndex={activeTab === key ? 0 : -1} onClick={() => setActiveTab(key)} className={`inline-flex min-h-12 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-sm px-4 py-3 text-base font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#C8102E] ${activeTab === key ? 'bg-[#C8102E] text-white' : 'text-slate-600 hover:bg-slate-200'}`}><Icon aria-hidden="true" className="h-5 w-5" />{label}</button>)}
+                  {TABS.map(({ key, label, icon: Icon }) => <button key={key} type="button" role="tab" id={`${ids}-tab-${key}`} aria-selected={activeTab === key} aria-controls={`${ids}-panel-${key}`} tabIndex={activeTab === key ? 0 : -1} onClick={() => setActiveTab(key)} className={`inline-flex min-h-11 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-sm px-4 py-3 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#C8102E] ${activeTab === key ? 'bg-[#C8102E] text-white' : 'text-slate-600 hover:bg-slate-200'}`}><Icon aria-hidden="true" className="h-5 w-5" />{label}</button>)}
                 </div>
 
                 {/* Keep panels mounted so changing tabs preserves selected files and unsent clarification drafts. */}
@@ -120,11 +120,11 @@ export function RevisionHistoryPage() {
                   <div className="space-y-8">
                     <Card title="Evaluator feedback">
                       <ActionSheetStrip proposal={selected} />
-                      {selected.feedback.length === 0 ? <p className="text-base leading-relaxed text-slate-500">Feedback is released when a review round closes.</p>
+                      {selected.feedback.length === 0 ? <p className="text-sm leading-relaxed text-slate-500">Feedback is released when a review round closes.</p>
                         : <div className="space-y-5">{[...selected.feedback].reverse().map((round, index) => <RoundFeedbackAccordion key={round.round} feedback={round} defaultOpen={index === 0} />)}</div>}
                     </Card>
                     {(selected.clarifications.length > 0 || selected.canClarify) && <Card title="Clarifications with RPDU">
-                      <ClarificationThread size="md" messages={selected.clarifications} currentRound={selected.currentRound} canPost={selected.canClarify} viewer="PROPONENT" onPost={async (round, body) => { await clarify(selected.id, round, body); }} />
+                      <ClarificationThread size="sm" messages={selected.clarifications} currentRound={selected.currentRound} canPost={selected.canClarify} viewer="PROPONENT" onPost={async (round, body) => { await clarify(selected.id, round, body); }} />
                     </Card>}
                   </div>
                 </div>
@@ -133,11 +133,11 @@ export function RevisionHistoryPage() {
                   {selected.canUploadRevision ? <Card title="Submit your revision">
                     <ActionSheetStrip proposal={selected} />
                     <RevisionUploadForm key={selected.currentRound} proposal={selected} onUpload={uploadRevision} />
-                  </Card> : <EmptyState size="md" icon={FileSearch} title="No revision upload is required right now" description={selected.preReviewStage ? stageExplanation(selected.preReviewStage) : nextStepFor(selected.status, 'proponent')} action={<button type="button" onClick={() => selectTab('feedback')} className="min-h-12 rounded-sm border border-slate-200 px-4 text-base font-semibold text-[#C8102E] hover:bg-red-50">View feedback</button>} />}
+                  </Card> : <EmptyState size="md" icon={FileSearch} title="No revision upload is required right now" description={selected.preReviewStage ? stageExplanation(selected.preReviewStage) : nextStepFor(selected.status, 'proponent')} action={<button type="button" onClick={() => selectTab('feedback')} className="min-h-11 rounded-sm border border-slate-200 px-4 text-sm font-semibold text-[#C8102E] hover:bg-red-50">View feedback</button>} />}
                 </div>
 
                 <div id={`${ids}-panel-history`} role="tabpanel" aria-labelledby={`${ids}-tab-history`} hidden={activeTab !== 'history'} tabIndex={0} className="p-5 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[#C8102E] sm:p-6">
-                  <div className="space-y-8"><Card title="Manuscript history"><RevisionTimeline proposal={selected} /></Card><Card title="Status history"><HistoryList size="md" entries={selected.history} /></Card></div>
+                  <div className="space-y-8"><Card title="Manuscript history"><RevisionTimeline proposal={selected} /></Card><Card title="Status history"><HistoryList size="sm" entries={selected.history} /></Card></div>
                 </div>
               </section>
             </div>
