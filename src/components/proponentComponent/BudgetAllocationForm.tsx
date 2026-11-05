@@ -74,40 +74,60 @@ const DEFAULT_STANDARD_LIB_ITEMS: Omit<LibLineItem, 'year1' | 'year2' | 'total'>
   { id: 'eo-ict', classType: 'EO', description: 'ICT Equipment', isStandard: true },
 ];
 
-// Helper to calculate official honoraria based on rates and duration (12 vs 24 months):
-// - Project Leader: ₱4,500/quarter × 4 quarters = ₱18,000/yr
-// - Co-Researchers: count × ₱2,000/quarter × 4 quarters = count × ₱8,000/yr
-// - Project Staff: count × ₱1,500/quarter × 4 quarters = count × ₱6,000/yr
-// - When Teaching De-loading is selected, all PS honoraria are ₱0.00
+// Unit rate per disbursement for standard PS roles:
+// - Project Leader: ₱4,500
+// - Co-Researchers: count × ₱2,000
+// - Project Staff: count × ₱1,500
+const getPsUnitRate = (id: string, coResCount: number, staffCount: number): number => {
+  if (id === 'ps-pl') return 4500;
+  if (id === 'ps-co') return coResCount * 2000;
+  if (id === 'ps-staff') return staffCount * 1500;
+  return 0;
+};
+
+const computePsRow = (
+  id: string,
+  coResCount: number,
+  staffCount: number,
+  isTwoYears: boolean,
+  compensationType: CompensationOption = 'Honoraria',
+  year1Freq = 4,
+  year2Freq = 4
+) => {
+  const safeY1Freq = Math.max(0, Math.trunc(Number.isFinite(year1Freq) ? year1Freq : 4));
+  const safeY2Freq = Math.max(0, Math.trunc(Number.isFinite(year2Freq) ? year2Freq : 4));
+  if (compensationType === 'Teaching De-loading') {
+    return {
+      year1Frequency: safeY1Freq,
+      year2Frequency: safeY2Freq,
+      year1: 0,
+      year2: 0,
+      total: 0,
+    };
+  }
+  const unitRate = getPsUnitRate(id, coResCount, staffCount);
+  const year1 = unitRate * safeY1Freq;
+  const year2 = isTwoYears ? unitRate * safeY2Freq : 0;
+  return {
+    year1Frequency: safeY1Freq,
+    year2Frequency: safeY2Freq,
+    year1,
+    year2,
+    total: year1 + year2,
+  };
+};
+
+// Helper to calculate official honoraria based on rates, frequency (default 4x/yr), and duration (12 vs 24 months):
 const calculateHonoraria = (
   coResCount: number,
   staffCount: number,
   isTwoYears: boolean,
   compensationType: CompensationOption = 'Honoraria'
 ) => {
-  if (compensationType === 'Teaching De-loading') {
-    return {
-      pl: { year1: 0, year2: 0, total: 0 },
-      co: { year1: 0, year2: 0, total: 0 },
-      staff: { year1: 0, year2: 0, total: 0 },
-    };
-  }
   return {
-    pl: {
-      year1: 18000,
-      year2: isTwoYears ? 18000 : 0,
-      total: isTwoYears ? 36000 : 18000,
-    },
-    co: {
-      year1: coResCount * 8000,
-      year2: isTwoYears ? coResCount * 8000 : 0,
-      total: isTwoYears ? coResCount * 16000 : coResCount * 8000,
-    },
-    staff: {
-      year1: staffCount * 6000,
-      year2: isTwoYears ? staffCount * 6000 : 0,
-      total: isTwoYears ? staffCount * 12000 : staffCount * 6000,
-    },
+    pl: computePsRow('ps-pl', coResCount, staffCount, isTwoYears, compensationType, 4, 4),
+    co: computePsRow('ps-co', coResCount, staffCount, isTwoYears, compensationType, 4, 4),
+    staff: computePsRow('ps-staff', coResCount, staffCount, isTwoYears, compensationType, 4, 4),
   };
 };
 
@@ -132,9 +152,26 @@ const normalizeLoadedItems = (
         item.description === 'Printing and Binding Expenses'
           ? 'Printing and Binding'
           : item.description;
-      if (item.id === 'ps-pl') return { ...item, description: desc, ...calc.pl };
-      if (item.id === 'ps-co') return { ...item, description: desc, ...calc.co };
-      if (item.id === 'ps-staff') return { ...item, description: desc, ...calc.staff };
+      if (item.id === 'ps-pl' || item.id === 'ps-co' || item.id === 'ps-staff') {
+        const unitRate = getPsUnitRate(item.id, coCount, staffCount);
+        const inferredY1 =
+          item.year1Frequency !== undefined
+            ? Number(item.year1Frequency)
+            : unitRate > 0 && Number(item.year1) >= 0
+            ? Math.round(Number(item.year1) / unitRate)
+            : 4;
+        const inferredY2 =
+          item.year2Frequency !== undefined
+            ? Number(item.year2Frequency)
+            : isTwoYears && unitRate > 0 && Number(item.year2) >= 0
+            ? Math.round(Number(item.year2) / unitRate)
+            : 4;
+        return {
+          ...item,
+          description: desc,
+          ...computePsRow(item.id, coCount, staffCount, isTwoYears, compensationType, inferredY1, inferredY2),
+        };
+      }
       if (item.classType === 'PS' && compensationType === 'Teaching De-loading') {
         return { ...item, description: desc, year1: 0, year2: 0, total: 0 };
       }
@@ -599,29 +636,28 @@ export const BudgetAllocationForm: React.FC = () => {
   // Auto-sync official honoraria rates whenever Co-Researchers, Project Staff, Duration, or Compensation Option changes
   useEffect(() => {
     if (isLocked) return;
-    const calc = calculateHonoraria(
-      coResearchersCount,
-      projectStaffCount,
-      isTwoYears,
-      metadata.compensationType
-    );
     setItems((prev) => {
       let changed = false;
       const updated = prev.map((item) => {
-        if (item.id === 'ps-pl') {
-          if (item.year1 !== calc.pl.year1 || item.year2 !== calc.pl.year2 || item.total !== calc.pl.total) {
+        if (item.id === 'ps-pl' || item.id === 'ps-co' || item.id === 'ps-staff') {
+          const nextRow = computePsRow(
+            item.id,
+            coResearchersCount,
+            projectStaffCount,
+            isTwoYears,
+            metadata.compensationType,
+            item.year1Frequency ?? 4,
+            item.year2Frequency ?? 4
+          );
+          if (
+            item.year1 !== nextRow.year1 ||
+            item.year2 !== nextRow.year2 ||
+            item.total !== nextRow.total ||
+            item.year1Frequency !== nextRow.year1Frequency ||
+            item.year2Frequency !== nextRow.year2Frequency
+          ) {
             changed = true;
-            return { ...item, ...calc.pl };
-          }
-        } else if (item.id === 'ps-co') {
-          if (item.year1 !== calc.co.year1 || item.year2 !== calc.co.year2 || item.total !== calc.co.total) {
-            changed = true;
-            return { ...item, ...calc.co };
-          }
-        } else if (item.id === 'ps-staff') {
-          if (item.year1 !== calc.staff.year1 || item.year2 !== calc.staff.year2 || item.total !== calc.staff.total) {
-            changed = true;
-            return { ...item, ...calc.staff };
+            return { ...item, ...nextRow };
           }
         } else if (item.classType === 'PS' && metadata.compensationType === 'Teaching De-loading') {
           if (item.year1 !== 0 || item.year2 !== 0 || item.total !== 0) {
@@ -637,6 +673,32 @@ export const BudgetAllocationForm: React.FC = () => {
       return changed ? updated : prev;
     });
   }, [coResearchersCount, projectStaffCount, isTwoYears, metadata.compensationType, isLocked]);
+
+  // Update how many times per year a PS role receives honoraria in Year 1 or Year 2
+  const handlePsFrequencyChange = (id: string, field: 'year1' | 'year2', rawValue: string) => {
+    if (isLocked) return;
+    if (field === 'year2' && !isTwoYears) return;
+    const parsedFreq = rawValue === '' ? 0 : Math.max(0, Math.trunc(Number(rawValue) || 0));
+    setItems((prev) =>
+      prev.map((item) => {
+        if (item.id !== id) return item;
+        const nextY1Freq = field === 'year1' ? parsedFreq : (item.year1Frequency ?? 4);
+        const nextY2Freq = field === 'year2' ? parsedFreq : (item.year2Frequency ?? 4);
+        return {
+          ...item,
+          ...computePsRow(
+            item.id,
+            coResearchersCount,
+            projectStaffCount,
+            isTwoYears,
+            metadata.compensationType,
+            nextY1Freq,
+            nextY2Freq
+          ),
+        };
+      })
+    );
+  };
 
   // Update line item amount (PS rows are auto-calculated and never manually editable)
   const handleAmountChange = (id: string, field: 'year1' | 'year2', value: number) => {
@@ -1467,9 +1529,9 @@ export const BudgetAllocationForm: React.FC = () => {
               <table className="w-full text-left text-xs text-slate-700 border-collapse">
                 <thead className="bg-slate-100/80 text-[11px] uppercase tracking-wider font-bold text-slate-600 border-b border-slate-200">
                   <tr>
-                    <th className="py-3 px-4 w-[48%]">ITEMS</th>
-                    <th className="py-3 px-2 text-right w-[17%] whitespace-nowrap">WMSU-GIA YEAR 1 (₱)</th>
-                    <th className="py-3 px-2 text-right w-[17%] whitespace-nowrap">
+                    <th className="py-3 px-4 w-[36%]">ITEMS</th>
+                    <th className="py-3 px-2 text-right w-[23%] whitespace-nowrap">WMSU-GIA YEAR 1 (₱)</th>
+                    <th className="py-3 px-2 text-right w-[23%] whitespace-nowrap">
                       WMSU-GIA YEAR 2 (₱)
                       {!isTwoYears && (
                         <span className="block text-[9px] font-normal normal-case text-slate-400">
@@ -1505,7 +1567,7 @@ export const BudgetAllocationForm: React.FC = () => {
                     <>
                       <tr className="bg-slate-50/40 text-[11px] font-semibold text-slate-500 italic">
                         <td colSpan={4} className="py-1 px-6">
-                          Honoraria (Quarterly disbursement per WMSU-RPDU guidelines)
+                          Honoraria
                         </td>
                       </tr>
                       {psItems.map((item) => {
@@ -1550,14 +1612,36 @@ export const BudgetAllocationForm: React.FC = () => {
                               )}
                             </td>
                             <td className="py-2 px-3 text-right">
-                              <input
-                                type="number"
-                                disabled
-                                readOnly
-                                value={item.year1}
-                                title="Auto-calculated from Study Leader, Co-Researchers, and Project Staff counts"
-                                className="w-full px-2 py-1 text-right text-xs border rounded-sm font-bold bg-slate-100 text-slate-600 border-slate-200 cursor-not-allowed select-none"
-                              />
+                              <div className="flex items-center justify-end gap-2.5">
+                                <label
+                                  title="Number of times received in Year 1"
+                                  className={`inline-flex items-center gap-0.5 rounded-sm border px-1.5 py-0.5 text-[11px] shrink-0 transition-colors ${
+                                    isLocked
+                                      ? 'border-slate-200 bg-slate-100 text-slate-500 cursor-not-allowed'
+                                      : 'border-slate-300 bg-white text-slate-800 focus-within:border-[#C8102E] focus-within:ring-1 focus-within:ring-[#C8102E]'
+                                  }`}
+                                >
+                                  <input
+                                    type="number"
+                                    min={0}
+                                    step={1}
+                                    disabled={isLocked}
+                                    aria-label={`${item.description} times received in Year 1`}
+                                    value={item.year1Frequency ?? 4}
+                                    onChange={(e) => handlePsFrequencyChange(item.id, 'year1', e.target.value)}
+                                    className="w-5 text-center text-[11px] font-bold text-slate-900 bg-transparent focus:outline-none disabled:cursor-not-allowed disabled:text-slate-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                  />
+                                  <span className="text-[10px] font-semibold text-slate-400 select-none">×/yr</span>
+                                </label>
+                                <input
+                                  type="number"
+                                  disabled
+                                  readOnly
+                                  value={item.year1}
+                                  title="Auto-calculated from monthly rate, personnel count, and Year 1 frequency"
+                                  className="w-20 px-2 py-1 text-right text-xs border rounded-sm font-bold bg-slate-100 text-slate-600 border-slate-200 cursor-not-allowed select-none"
+                                />
+                              </div>
                             </td>
                             <td className="py-2 px-3 text-right">
                               {!isTwoYears ? (
@@ -1571,14 +1655,36 @@ export const BudgetAllocationForm: React.FC = () => {
                                   className="w-full px-2 py-1 text-right text-xs border border-slate-200 rounded-sm font-semibold bg-slate-100 text-slate-400 cursor-not-allowed select-none"
                                 />
                               ) : (
-                                <input
-                                  type="number"
-                                  disabled
-                                  readOnly
-                                  value={item.year2}
-                                  title="Auto-calculated from Study Leader, Co-Researchers, and Project Staff counts"
-                                  className="w-full px-2 py-1 text-right text-xs border rounded-sm font-bold bg-slate-100 text-slate-600 border-slate-200 cursor-not-allowed select-none"
-                                />
+                                <div className="flex items-center justify-end gap-2.5">
+                                  <label
+                                    title="Number of times received in Year 2"
+                                    className={`inline-flex items-center gap-0.5 rounded-sm border px-1.5 py-0.5 text-[11px] shrink-0 transition-colors ${
+                                      isLocked
+                                        ? 'border-slate-200 bg-slate-100 text-slate-500 cursor-not-allowed'
+                                      : 'border-slate-300 bg-white text-slate-800 focus-within:border-[#C8102E] focus-within:ring-1 focus-within:ring-[#C8102E]'
+                                    }`}
+                                  >
+                                    <input
+                                      type="number"
+                                      min={0}
+                                      step={1}
+                                      disabled={isLocked}
+                                      aria-label={`${item.description} times received in Year 2`}
+                                      value={item.year2Frequency ?? 4}
+                                      onChange={(e) => handlePsFrequencyChange(item.id, 'year2', e.target.value)}
+                                      className="w-5 text-center text-[11px] font-bold text-slate-900 bg-transparent focus:outline-none disabled:cursor-not-allowed disabled:text-slate-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                    />
+                                    <span className="text-[10px] font-semibold text-slate-400 select-none">×/yr</span>
+                                  </label>
+                                  <input
+                                    type="number"
+                                    disabled
+                                    readOnly
+                                    value={item.year2}
+                                    title="Auto-calculated from monthly rate, personnel count, and Year 2 frequency"
+                                    className="w-20 px-2 py-1 text-right text-xs border rounded-sm font-bold bg-slate-100 text-slate-600 border-slate-200 cursor-not-allowed select-none"
+                                  />
+                                </div>
                               )}
                             </td>
                             <td className="py-2 px-4 text-right font-bold text-slate-900">

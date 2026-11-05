@@ -182,6 +182,8 @@ export interface LibLineItem {
   year1: number;
   year2: number;
   total: number;
+  year1Frequency?: number;
+  year2Frequency?: number;
   isStandard?: boolean;
   remarks?: string;
 }

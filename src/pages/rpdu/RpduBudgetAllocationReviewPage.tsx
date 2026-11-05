@@ -426,10 +426,20 @@ export const RpduBudgetAllocationReviewPage: React.FC = () => {
                     <tr key={item.id} className="hover:bg-slate-50">
                       <td className="py-2 px-4 pl-6 text-slate-800">{item.description}</td>
                       <td className="py-2 px-3 text-right text-slate-700 font-mono">
+                        {item.year1Frequency !== undefined && (
+                          <span className="mr-1.5 text-[10px] font-semibold text-slate-400">
+                            ({item.year1Frequency}×/yr)
+                          </span>
+                        )}
                         ₱{item.year1.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                       </td>
                       {isTwoYears && (
                         <td className="py-2 px-3 text-right text-slate-700 font-mono">
+                          {item.year2Frequency !== undefined && (
+                            <span className="mr-1.5 text-[10px] font-semibold text-slate-400">
+                              ({item.year2Frequency}×/yr)
+                            </span>
+                          )}
                           ₱{item.year2.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                         </td>
                       )}
