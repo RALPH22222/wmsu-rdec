@@ -5,7 +5,6 @@ import {
   Search,
   CheckCircle2,
   Clock,
-  Download,
   Eye,
   Building,
   User,
@@ -21,7 +20,7 @@ export const RpduBudgetAllocationPage: React.FC = () => {
   const [allocations, setAllocations] = useState<RpduBudgetAllocationItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'ALL' | 'PENDING' | 'APPROVED' | 'SIGNED'>('ALL');
+  const [statusFilter, setStatusFilter] = useState<'ALL' | 'PENDING' | 'APPROVED'>('ALL');
 
   const fetchAllocations = useCallback(async () => {
     if (!session?.access_token) return;
@@ -49,15 +48,9 @@ export const RpduBudgetAllocationPage: React.FC = () => {
     fetchAllocations();
   }, [fetchAllocations]);
 
-  // Helper to resolve the 3-stage status of an allocation
-  const getAllocationStage = (item: RpduBudgetAllocationItem): 'PENDING' | 'APPROVED' | 'SIGNED' => {
-    const hasSignedPdf = Boolean(
-      item.budgetPdfUrl && !String(item.budgetPdfUrl).includes('placeholder.wmsu.edu.ph')
-    );
-    if (item.reviewStatus === 'SIGNED' && hasSignedPdf) {
-      return 'SIGNED';
-    }
-    if (item.reviewStatus === 'APPROVED' || item.isApproved) {
+  // Helper to resolve the 2-stage status of an allocation
+  const getAllocationStage = (item: RpduBudgetAllocationItem): 'PENDING' | 'APPROVED' => {
+    if (item.isApproved || item.reviewStatus === 'APPROVED' || item.reviewStatus === 'SIGNED') {
       return 'APPROVED';
     }
     return 'PENDING';
@@ -68,8 +61,7 @@ export const RpduBudgetAllocationPage: React.FC = () => {
     const total = allocations.length;
     const pending = allocations.filter((a) => getAllocationStage(a) === 'PENDING').length;
     const approved = allocations.filter((a) => getAllocationStage(a) === 'APPROVED').length;
-    const signed = allocations.filter((a) => getAllocationStage(a) === 'SIGNED').length;
-    return { total, pending, approved, signed };
+    return { total, pending, approved };
   }, [allocations]);
 
   // Filtered allocations
@@ -155,18 +147,7 @@ export const RpduBudgetAllocationPage: React.FC = () => {
                   : 'bg-white text-slate-600 hover:text-slate-900 border border-slate-200'
               }`}
             >
-              Awaiting Signed PDF ({stats.approved})
-            </button>
-            <button
-              type="button"
-              onClick={() => setStatusFilter('SIGNED')}
-              className={`px-3 py-1.5 text-xs font-semibold rounded-sm transition-colors cursor-pointer ${
-                statusFilter === 'SIGNED'
-                  ? 'bg-slate-900 text-white font-bold'
-                  : 'bg-white text-slate-600 hover:text-slate-900 border border-slate-200'
-              }`}
-            >
-              Signed LIB Uploaded ({stats.signed})
+              Accepted ({stats.approved})
             </button>
           </div>
         </div>
@@ -191,12 +172,11 @@ export const RpduBudgetAllocationPage: React.FC = () => {
             <table className="w-full text-left text-xs text-slate-700 border-collapse">
               <thead className="bg-slate-50 text-[11px] uppercase tracking-wider font-bold text-slate-500 border-b border-slate-200">
                 <tr>
-                  <th className="py-3 px-4 w-[28%] min-w-[220px]">PROPOSAL</th>
-                  <th className="py-3 px-4 w-[24%] min-w-[180px]">PROPONENT &amp; COLLEGE</th>
-                  <th className="py-3 px-4 text-right w-[16%] min-w-[120px]">ALLOCATION (₱)</th>
-                  <th className="py-3 px-4 text-center w-[12%] min-w-[100px]">SIGNED PDF</th>
-                  <th className="py-3 px-4 text-center w-[12%] min-w-[110px]">STATUS</th>
-                  <th className="py-3 px-4 text-center w-[8%] min-w-[90px]">ACTION</th>
+                  <th className="py-3 px-4 w-[32%] min-w-[220px]">PROPOSAL</th>
+                  <th className="py-3 px-4 w-[26%] min-w-[180px]">PROPONENT &amp; COLLEGE</th>
+                  <th className="py-3 px-4 text-right w-[18%] min-w-[120px]">ALLOCATION (₱)</th>
+                  <th className="py-3 px-4 text-center w-[14%] min-w-[110px]">STATUS</th>
+                  <th className="py-3 px-4 text-center w-[10%] min-w-[90px]">ACTION</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 font-medium">
@@ -246,34 +226,11 @@ export const RpduBudgetAllocationPage: React.FC = () => {
                         </div>
                       </td>
 
-                      {/* Signed PDF Attachment */}
+                      {/* 2-Stage Review Status Badge */}
                       <td className="py-4 px-4 text-center">
-                        {item.budgetPdfUrl && !String(item.budgetPdfUrl).includes('placeholder.wmsu.edu.ph') ? (
-                          <a
-                            href={item.budgetPdfUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1.5 px-3 py-1 bg-red-50 text-[#C8102E] hover:bg-red-100 rounded text-xs font-bold border border-red-200 transition-colors"
-                            title="Download Signed PDF Document"
-                          >
-                            <Download className="w-3.5 h-3.5" /> Signed PDF
-                          </a>
-                        ) : (
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-slate-100 text-slate-500 rounded text-xs font-medium border border-slate-200">
-                            <Clock className="w-3 h-3 text-slate-400" /> No PDF Yet
-                          </span>
-                        )}
-                      </td>
-
-                      {/* 3-Stage Review Status Badge */}
-                      <td className="py-4 px-4 text-center">
-                        {getAllocationStage(item) === 'SIGNED' ? (
+                        {getAllocationStage(item) === 'APPROVED' ? (
                           <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 whitespace-nowrap">
-                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> Signed LIB Uploaded
-                          </span>
-                        ) : getAllocationStage(item) === 'APPROVED' ? (
-                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-sky-50 text-sky-700 border border-sky-200 whitespace-nowrap">
-                            <CheckCircle2 className="w-3.5 h-3.5 text-sky-600" /> Approved — Awaiting Signed PDF
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> Accepted
                           </span>
                         ) : (
                           <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200 whitespace-nowrap">

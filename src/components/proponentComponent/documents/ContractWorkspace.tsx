@@ -1,8 +1,8 @@
-import type { FormEvent, ReactNode, RefObject } from 'react';
-import { ArrowLeft, CheckCircle2, Clock, ExternalLink, Eye, FileSignature, Upload } from 'lucide-react';
+import type { ReactNode } from 'react';
+import { ArrowLeft, CheckCircle2, Eye, FileSignature, Printer } from 'lucide-react';
 import { formatDate } from '../../../lib/format';
 import { DocumentStatusChip } from './DocumentRow';
-import { DOC_BUTTON, DOC_BUTTON_PRIMARY } from './buttonClasses';
+import { DOC_BUTTON_PRIMARY } from './buttonClasses';
 import { formatPeso } from './types';
 import type { ContractData, ProposalContractItem } from './types';
 
@@ -10,16 +10,8 @@ interface ContractWorkspaceProps {
   proposal: ProposalContractItem;
   contractData: ContractData;
   displayBudget: number;
-  notarizedUrl: string;
-  fileInputRef: RefObject<HTMLInputElement | null>;
-  selectedFile: File | null;
-  uploading: boolean;
-  uploadError: string;
-  uploadSuccess: string;
   onBack: () => void;
   onViewPreview: () => void;
-  onFileChange: (file: File | null) => void;
-  onSubmit: (event: FormEvent) => void;
 }
 
 const CARD = 'rounded-sm border border-slate-200 bg-white shadow-xs';
@@ -33,20 +25,17 @@ function SummaryRow({ label, children }: { label: string; children: ReactNode })
   );
 }
 
-/** Full-page workspace for one Professional Service Contract: prepare the pre-filled copy, then submit the notarized one. */
+/** Full-page workspace for one Professional Service Contract: prepare the pre-filled copy and follow in-person signing instructions. */
 export function ContractWorkspace({
-  proposal, contractData, displayBudget, notarizedUrl, fileInputRef, selectedFile, uploading, uploadError, uploadSuccess,
-  onBack, onViewPreview, onFileChange, onSubmit,
+  proposal,
+  contractData,
+  displayBudget,
+  onBack,
+  onViewPreview,
 }: ContractWorkspaceProps) {
-  const isNotarized = Boolean(proposal.contract?.isNotarized);
-  const hasNotarizedFile = Boolean(proposal.contract?.hasNotarizedFile || notarizedUrl);
-  const isPendingReview = !isNotarized && hasNotarizedFile;
-  const submittedAt = proposal.contract?.submittedAt;
-  const statusChip = isNotarized
-    ? ({ label: 'Notarized', tone: 'emerald' } as const)
-    : isPendingReview
-      ? ({ label: 'Pending RPDU review', tone: 'blue' } as const)
-      : ({ label: 'Awaiting notarization', tone: 'amber' } as const);
+  const statusChip = proposal.contract
+    ? ({ label: 'Issued', tone: 'emerald' } as const)
+    : ({ label: 'Ready to print', tone: 'emerald' } as const);
 
   return (
     <div className="mx-auto max-w-6xl space-y-6">
@@ -79,11 +68,6 @@ export function ContractWorkspace({
               </dl>
             </div>
           </div>
-          {notarizedUrl && (
-            <a href={notarizedUrl} target="_blank" rel="noopener noreferrer" className={`${DOC_BUTTON} lg:shrink-0`}>
-              <ExternalLink aria-hidden="true" className="h-4 w-4" /> View Notarized PDF
-            </a>
-          )}
         </div>
       </header>
 
@@ -103,7 +87,7 @@ export function ContractWorkspace({
             <SummaryRow label="En Banc Approved Budget">
               <span className="inline-flex flex-wrap items-center gap-2 sm:justify-end">
                 <span className="inline-flex items-center gap-1 rounded-sm border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[11px] font-bold text-emerald-700">
-                  <CheckCircle2 aria-hidden="true" className="h-3 w-3" /> Signed LIB Uploaded
+                  <CheckCircle2 aria-hidden="true" className="h-3 w-3" /> LIB Accepted
                 </span>
                 <span className="font-mono text-emerald-700">{formatPeso(displayBudget)}</span>
               </span>
@@ -135,73 +119,50 @@ export function ContractWorkspace({
           </div>
         </section>
 
-        <section aria-labelledby="psc-submit-title" className={`${CARD} flex flex-col p-5 sm:p-6`}>
+        <section aria-labelledby="psc-inperson-title" className={`${CARD} flex flex-col p-5 sm:p-6`}>
           <div className="flex items-start gap-3">
             <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-900 text-xs font-bold text-white">2</span>
             <div className="min-w-0">
-              <h2 id="psc-submit-title" className="text-base font-bold text-slate-900">Submit the notarized copy</h2>
+              <h2 id="psc-inperson-title" className="text-base font-bold text-slate-900">Sign in person &amp; submit to RPDU</h2>
               <p className="mt-1 text-sm text-slate-600">
-                Upload your signed and notarized contract as a PDF bearing the notary seal and details.
+                Contract signing and notarization are completed physically in person—no PDF upload is required in the system.
               </p>
             </div>
           </div>
 
-          <div className={`mt-4 rounded-sm border p-4 ${isNotarized ? 'border-emerald-200 bg-emerald-50' : 'border-amber-200 bg-amber-50'}`}>
-            <p className={`flex items-center gap-2 text-sm font-bold ${isNotarized ? 'text-emerald-800' : 'text-amber-800'}`}>
-              {isNotarized ? (
-                <><CheckCircle2 aria-hidden="true" className="h-4 w-4 shrink-0" /> Notarized document accepted</>
-              ) : isPendingReview ? (
-                <><Clock aria-hidden="true" className="h-4 w-4 shrink-0" /> Submitted — Pending RPDU review</>
-              ) : (
-                <><Clock aria-hidden="true" className="h-4 w-4 shrink-0" /> Awaiting notarized copy</>
-              )}
-            </p>
-            {isPendingReview && (
-              <p className="mt-1 text-xs text-amber-800/90">
-                Your notarized copy has been uploaded and is awaiting review and acceptance by RPDU.
+          <ol className="mt-4 space-y-3 text-xs text-slate-700">
+            <li className="rounded-sm border border-slate-200 bg-slate-50 p-3.5">
+              <span className="block text-[10px] font-extrabold uppercase tracking-wider text-[#C8102E]">
+                Print the Pre-Filled PSC (6 Pages)
+              </span>
+              <p className="mt-1 leading-relaxed text-slate-600">
+                Open the pre-filled Professional Service Contract and print the complete 6-page document (<span className="font-mono font-semibold">WMSU-RPDU-CA-001.01</span>).
               </p>
-            )}
-            {(isNotarized || isPendingReview) && submittedAt && (
-              <p className="mt-1 text-xs text-slate-600">Submitted {formatDate(submittedAt)}</p>
-            )}
-            {notarizedUrl && (
-              <a
-                href={notarizedUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mt-2 inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-[#C8102E] hover:underline"
-              >
-                <ExternalLink aria-hidden="true" className="h-4 w-4" /> View submitted notarized PDF
-              </a>
-            )}
+            </li>
+            <li className="rounded-sm border border-slate-200 bg-slate-50 p-3.5">
+              <span className="block text-[10px] font-extrabold uppercase tracking-wider text-[#C8102E]">
+                Gather Wet-Ink Signatures in Person
+              </span>
+              <p className="mt-1 leading-relaxed text-slate-600">
+                Have the Study Leader, Co-Researchers (if applicable), Official Witnesses (RDEC Director and VP-RESEL), and the University President sign physically on Page 5.
+              </p>
+            </li>
+            <li className="rounded-sm border border-emerald-200 bg-emerald-50/70 p-3.5">
+              <span className="block text-[10px] font-extrabold uppercase tracking-wider text-emerald-800">
+                Turn Over Signed PSC to RPDU
+              </span>
+              <p className="mt-1 leading-relaxed text-emerald-900">
+                Submit the signed physical contract copies directly to the RPDU office in person. RPDU will handle the official notarization in person.
+              </p>
+            </li>
+          </ol>
+
+          <div className="mt-auto pt-5">
+            <button type="button" onClick={onViewPreview} className={DOC_BUTTON_PRIMARY}>
+              <Printer aria-hidden="true" className="h-4 w-4" />
+              Open &amp; Print Contract
+            </button>
           </div>
-
-          <form onSubmit={onSubmit} className="mt-4 flex flex-1 flex-col gap-3">
-            <div>
-              <label htmlFor="psc-notarized-file" className="mb-1.5 block text-xs font-semibold text-slate-700">
-                {isNotarized || isPendingReview ? 'Replace notarized contract (PDF)' : 'Notarized contract (PDF)'}
-              </label>
-              <input
-                id="psc-notarized-file"
-                ref={fileInputRef}
-                type="file"
-                accept="application/pdf"
-                onChange={(e) => onFileChange(e.target.files?.[0] || null)}
-                className="block w-full min-w-0 cursor-pointer rounded-sm border border-dashed border-slate-300 bg-slate-50 p-2 text-sm text-slate-600 file:mr-3 file:min-h-9 file:cursor-pointer file:rounded-sm file:border-0 file:bg-red-50 file:px-3 file:text-sm file:font-semibold file:text-[#C8102E] hover:file:bg-red-100"
-              />
-              <p className="mt-1 text-xs text-slate-500">PDF format only (up to 25 MB).</p>
-            </div>
-
-            {uploadError && <p role="alert" className="rounded-sm border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">{uploadError}</p>}
-            {uploadSuccess && <p role="status" className="rounded-sm border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-800">{uploadSuccess}</p>}
-
-            <div className="mt-auto pt-2">
-              <button type="submit" disabled={!selectedFile || uploading} className={DOC_BUTTON_PRIMARY}>
-                <Upload aria-hidden="true" className="h-4 w-4" />
-                {uploading ? 'Uploading...' : 'Submit Notarized Contract'}
-              </button>
-            </div>
-          </form>
         </section>
       </div>
     </div>

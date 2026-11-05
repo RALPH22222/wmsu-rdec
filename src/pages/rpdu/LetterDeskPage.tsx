@@ -181,11 +181,11 @@ export function LetterDeskPage() {
 
   const selectedSource = sources.find((item) => item.id === conceptId);
 
-  // For Professional Service Contracts (PSC), only show projects with a signed budget allocation
+  // For Professional Service Contracts (PSC), only show projects with an accepted budget allocation
   const choices = useMemo(() => {
     if (isContractTemplate(template)) {
       return sources.filter((item) =>
-        Boolean(item.hasSignedBudget ?? item.prerequisites?.lineItemBudgetSigned)
+        Boolean(item.isBudgetApproved ?? item.hasSignedBudget ?? item.prerequisites?.eligibleForContract)
       );
     }
     return sources;
@@ -327,6 +327,13 @@ export function LetterDeskPage() {
     setPreview(null);
     setNewlyIssuedId(null);
     try {
+      const emptyPscSignatures: Signatures = {
+        coordinator: '',
+        director: '',
+        vicePresident: '',
+        firstParty: '',
+        secondParty: '',
+      };
       const data = await api<Preview>('/preview', {
         templateCode: template,
         conceptId,
@@ -339,7 +346,7 @@ export function LetterDeskPage() {
             contractContext?.studyLeader ||
             'Study Leader',
         },
-        signatures,
+        signatures: isContractTemplate(template) ? emptyPscSignatures : signatures,
         headApprovalConfirmed,
         contractData: contractContext?.contractData,
       });
@@ -357,6 +364,13 @@ export function LetterDeskPage() {
     setBusy(true);
     setError('');
     try {
+      const emptyPscSignatures: Signatures = {
+        coordinator: '',
+        director: '',
+        vicePresident: '',
+        firstParty: '',
+        secondParty: '',
+      };
       const record = await api<{ id: string }>('/issue', {
         templateCode: template,
         conceptId,
@@ -369,7 +383,7 @@ export function LetterDeskPage() {
             contractContext?.studyLeader ||
             'Study Leader',
         },
-        signatures,
+        signatures: isContractTemplate(template) ? emptyPscSignatures : signatures,
         headApprovalConfirmed,
         digest: preview.digest,
         contractData: contractContext?.contractData,
@@ -687,7 +701,7 @@ export function LetterDeskPage() {
               </h2>
               <p className="mt-1 text-sm text-slate-600">
                 {isContractTemplate(template)
-                  ? 'Select a research proposal with a signed Line-Item Budget to automatically pull its Final Approved Budget, Proponent Name, and Proposal Title from the database into 11 PSC.pdf and 11 PSC.docx.'
+                  ? 'Select a research proposal with an accepted Line-Item Budget to automatically pull its Final Approved Budget, Proponent Name, and Proposal Title from the database into 11 PSC.pdf and 11 PSC.docx.'
                   : template === CERTIFICATE
                   ? 'Select the technically reviewed proposal to issue the clearance certificate.'
                   : 'Select the proposal record to address this official correspondence.'}
@@ -727,7 +741,7 @@ export function LetterDeskPage() {
             {!choices.length && (
               <p className="rounded-md border border-slate-200 bg-slate-50 p-4 text-sm leading-relaxed text-slate-600">
                 {isContractTemplate(template)
-                  ? 'No proposals with a signed Line-Item Budget (LIB) found yet. A project will appear here once its budget allocation is approved and the signed LIB PDF has been uploaded.'
+                  ? 'No proposals with an accepted Line-Item Budget (LIB) found yet. A project will appear here once its budget allocation is accepted by RPDU.'
                   : 'No research proposal records found in the database.'}
               </p>
             )}
@@ -951,74 +965,148 @@ export function LetterDeskPage() {
             )}
 
             <div className="space-y-6">
-              {/* FOR CONTRACT (PSC): INSTITUTIONAL SIGNATORIES & WITNESSES */}
+              {/* FOR CONTRACT (PSC): IN-PERSON SIGNING & CONFORME SIGNATORY VERIFICATION */}
               {isContractTemplate(template) ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {/* First Party: University President */}
-                  <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1" htmlFor="psc-first-party">
-                      University President (First Party) *
-                    </label>
-                    <input
-                      id="psc-first-party"
-                      maxLength={120}
-                      value={signatories.firstParty || ''}
-                      onChange={(event) => updateSignatory('firstParty', event.target.value)}
-                      placeholder="Dr. Ma. Carla A. Ochotorena"
-                      className="w-full rounded-md border border-slate-300 bg-white p-3 text-sm text-slate-900 font-semibold focus:border-[#C8102E] focus:outline-hidden"
-                    />
-                    <div className="mt-3">
-                      <SignatureField
-                        label="President Signature"
-                        value={signatures.firstParty || ''}
-                        onChange={(value) => updateSignature('firstParty', value)}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Witness 1: RDEC Director */}
-                  <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1" htmlFor="psc-director-witness">
-                      RDEC Director (Witness) *
-                    </label>
-                    <input
-                      id="psc-director-witness"
-                      maxLength={120}
-                      value={signatories.director}
-                      onChange={(event) => updateSignatory('director', event.target.value)}
-                      placeholder="Dr. Roberto M. Bernardo"
-                      className="w-full rounded-md border border-slate-300 bg-white p-3 text-sm text-slate-900 font-semibold focus:border-[#C8102E] focus:outline-hidden"
-                    />
-                    <div className="mt-3">
-                      <SignatureField
-                        label="Director Signature"
-                        value={signatures.director}
-                        onChange={(value) => updateSignature('director', value)}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Witness 2: VP RESEL */}
-                  <div className="md:col-span-2 flex justify-center">
-                    <div className="w-full md:w-[calc(50%-0.75rem)]">
-                      <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1" htmlFor="psc-vp-witness">
-                        Vice President, RESEL (Witness) *
-                      </label>
-                      <input
-                        id="psc-vp-witness"
-                        maxLength={120}
-                        value={signatories.vicePresident}
-                        onChange={(event) => updateSignatory('vicePresident', event.target.value)}
-                        placeholder="Dr. Joel G. Fernando"
-                        className="w-full rounded-md border border-slate-300 bg-white p-3 text-sm text-slate-900 font-semibold focus:border-[#C8102E] focus:outline-hidden"
-                      />
-                      <div className="mt-3">
-                        <SignatureField
-                          label="Vice President Signature"
-                          value={signatures.vicePresident}
-                          onChange={(value) => updateSignature('vicePresident', value)}
-                        />
+                <div className="space-y-6">
+                  {/* In-Person Signing Callout Banner */}
+                  <div className="rounded-lg border border-amber-200 bg-amber-50/90 p-4 text-sm text-amber-950">
+                    <div className="flex items-start gap-3">
+                      <div className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-amber-200/70 text-xs font-extrabold text-amber-900">
+                        !
                       </div>
+                      <div className="space-y-1">
+                        <p className="font-bold text-amber-950">
+                          In-Person Wet-Ink Signatures Required
+                        </p>
+                        <p className="text-xs leading-relaxed text-amber-900/90">
+                          Professional Service Contracts (<span className="font-mono font-semibold">WMSU-RPDU-CA-001.01</span>) are signed physically in person. Digital signatures are disabled for contracts—verify the printed names below so the generated 6-page document leaves clean signature blocks for wet-ink signing before being turned over to RPDU for in-person notarization.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Conforme Contracting Parties */}
+                  <div className="rounded-lg border border-slate-200 bg-slate-50/70 p-5 space-y-4">
+                    <div className="flex items-center justify-between border-b border-slate-200 pb-2.5">
+                      <span className="text-xs font-extrabold uppercase tracking-wider text-slate-800">
+                        1. Contracting Parties (CONFORME — Page 5 of 6)
+                      </span>
+                      <span className="rounded bg-slate-200/80 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-slate-700">
+                        Signed In Person
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                      {/* First Party: University President */}
+                      <div className="rounded-md border border-slate-200 bg-white p-4 space-y-2">
+                        <label className="block text-xs font-bold uppercase tracking-wider text-slate-700" htmlFor="psc-first-party">
+                          University President (First Party) *
+                        </label>
+                        <input
+                          id="psc-first-party"
+                          maxLength={120}
+                          value={signatories.firstParty || ''}
+                          onChange={(event) => updateSignatory('firstParty', event.target.value)}
+                          placeholder="Dr. Ma. Carla A. Ochotorena"
+                          className="w-full rounded-md border border-slate-300 bg-white p-2.5 text-sm text-slate-900 font-semibold focus:border-[#C8102E] focus:outline-hidden"
+                        />
+                        <p className="text-[11px] text-slate-500">
+                          Printed on the First Party signature line. Wet-ink signature &amp; date are affixed in person.
+                        </p>
+                      </div>
+
+                      {/* Second Party: Study Leader & Co-Researchers (Read-only from Proposal/LIB) */}
+                      <div className="rounded-md border border-slate-200 bg-white p-4 space-y-2">
+                        <span className="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                          Study Leader / Proponent (Second Party)
+                        </span>
+                        <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm font-bold text-slate-900">
+                          {contractContext?.studyLeader || selectedSource?.proponentName || signatories.secondParty || 'Study Leader'}
+                        </div>
+                        <p className="text-[11px] text-slate-500">
+                          {contractContext?.contractData?.coResearchers && contractContext.contractData.coResearchers !== 'None'
+                            ? `Includes Co-Researcher signature block(s): ${contractContext.contractData.coResearchers}. Signed in person.`
+                            : 'Auto-filled from the approved proposal. Wet-ink signature & date are affixed in person.'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Official Witnesses */}
+                  <div className="rounded-lg border border-slate-200 bg-slate-50/70 p-5 space-y-4">
+                    <div className="flex items-center justify-between border-b border-slate-200 pb-2.5">
+                      <span className="text-xs font-extrabold uppercase tracking-wider text-slate-800">
+                        2. Official Institutional Witnesses (Page 5 of 6)
+                      </span>
+                      <span className="rounded bg-slate-200/80 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-slate-700">
+                        Signed In Person
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                      {/* Witness 1: RDEC Director */}
+                      <div className="rounded-md border border-slate-200 bg-white p-4 space-y-2">
+                        <label className="block text-xs font-bold uppercase tracking-wider text-slate-700" htmlFor="psc-director-witness">
+                          RDEC Director (Witness) *
+                        </label>
+                        <input
+                          id="psc-director-witness"
+                          maxLength={120}
+                          value={signatories.director}
+                          onChange={(event) => updateSignatory('director', event.target.value)}
+                          placeholder="Dr. Roberto M. Bernardo"
+                          className="w-full rounded-md border border-slate-300 bg-white p-2.5 text-sm text-slate-900 font-semibold focus:border-[#C8102E] focus:outline-hidden"
+                        />
+                        <p className="text-[11px] text-slate-500">
+                          Director, RDEC witness block. Wet-ink signature &amp; date are affixed in person.
+                        </p>
+                      </div>
+
+                      {/* Witness 2: VP RESEL */}
+                      <div className="rounded-md border border-slate-200 bg-white p-4 space-y-2">
+                        <label className="block text-xs font-bold uppercase tracking-wider text-slate-700" htmlFor="psc-vp-witness">
+                          Vice President, RESEL (Witness) *
+                        </label>
+                        <input
+                          id="psc-vp-witness"
+                          maxLength={120}
+                          value={signatories.vicePresident}
+                          onChange={(event) => updateSignatory('vicePresident', event.target.value)}
+                          placeholder="Dr. Joel G. Fernando"
+                          className="w-full rounded-md border border-slate-300 bg-white p-2.5 text-sm text-slate-900 font-semibold focus:border-[#C8102E] focus:outline-hidden"
+                        />
+                        <p className="text-[11px] text-slate-500">
+                          Vice President for RESEL witness block. Wet-ink signature &amp; date are affixed in person.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* In-Person Execution Workflow Summary */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                    <div className="rounded-md border border-slate-200 bg-white p-3">
+                      <span className="font-extrabold text-[#C8102E] uppercase tracking-wider block text-[10px]">
+                        Print Pre-Filled PSC
+                      </span>
+                      <span className="mt-1 block text-slate-600 leading-relaxed">
+                        Issue or download the 6-page contract with blank wet-ink signature lines.
+                      </span>
+                    </div>
+                    <div className="rounded-md border border-slate-200 bg-white p-3">
+                      <span className="font-extrabold text-[#C8102E] uppercase tracking-wider block text-[10px]">
+                        In-Person Routing
+                      </span>
+                      <span className="mt-1 block text-slate-600 leading-relaxed">
+                        Proponent and WMSU officials sign physically across the Conforme and Witness blocks.
+                      </span>
+                    </div>
+                    <div className="rounded-md border border-slate-200 bg-white p-3">
+                      <span className="font-extrabold text-[#C8102E] uppercase tracking-wider block text-[10px]">
+                        Turn Over PSC to RPDU
+                      </span>
+                      <span className="mt-1 block text-slate-600 leading-relaxed">
+                        Once signed in person, the physical PSC is submitted to the RPDU office, which handles notarization in person.
+                      </span>
                     </div>
                   </div>
                 </div>

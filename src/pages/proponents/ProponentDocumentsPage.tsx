@@ -1,10 +1,9 @@
-import React, { useEffect, useId, useRef, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   MailCheck,
   FileCheck,
   FileSignature,
-  ExternalLink,
   Eye,
   Inbox,
   RotateCw,
@@ -61,19 +60,6 @@ const buildAutofilledContractData = (proposal: ProposalContractItem): ContractDa
   };
 };
 
-const resolveFileUrl = (url: string | null) => {
-  if (!url) return '';
-  if (url.startsWith('http://') || url.startsWith('https://')) return url;
-  return `${API_BASE_URL.replace(/\/api\/?$/, '')}${url.startsWith('/') ? '' : '/'}${url}`;
-};
-
-/** Link to the uploaded notarized PDF, or '' when there is none (or the stored value is raw HTML). */
-const notarizedUrlFor = (proposal: ProposalContractItem): string => {
-  const url = proposal.contract?.contractFileUrl;
-  if (!url || url.trim().startsWith('<')) return '';
-  return resolveFileUrl(url);
-};
-
 const timeOf = (iso: string | null | undefined): number => (iso ? Date.parse(iso) || 0 : 0);
 
 type DocumentEntry =
@@ -118,7 +104,6 @@ export default function ProponentDocumentsPage() {
   const accessToken = session?.access_token;
   const navigate = useNavigate();
   const [, setSearchParams] = useSearchParams();
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const ids = useId();
 
   const [loading, setLoading] = useState(true);
@@ -146,12 +131,6 @@ export default function ProponentDocumentsPage() {
     collegeDepartment: '',
     coResearchers: '',
   });
-
-  // Notarized contract upload state
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [uploading, setUploading] = useState(false);
-  const [uploadSuccess, setUploadSuccess] = useState('');
-  const [uploadError, setUploadError] = useState('');
 
   // Bumped by `reload` to refetch; the effect below owns every fetch.
   const [reloadTick, setReloadTick] = useState(0);
@@ -240,9 +219,6 @@ export default function ProponentDocumentsPage() {
   const selectPscProposal = (proposal: ProposalContractItem) => {
     setSelectedType('PSC');
     setSelectedId(proposal.conceptId);
-    setSelectedFile(null);
-    setUploadSuccess('');
-    setUploadError('');
 
     sessionStorage.setItem('last_selected_psc_id', proposal.conceptId);
     sessionStorage.removeItem(`psc_contract_data_${proposal.conceptId}`);
@@ -283,39 +259,6 @@ export default function ProponentDocumentsPage() {
     });
   };
 
-  const handleUploadNotarized = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!session?.access_token || !selectedId || !selectedFile) return;
-    setUploading(true);
-    setUploadError('');
-    setUploadSuccess('');
-    try {
-      const formData = new FormData();
-      formData.append('conceptId', selectedId);
-      formData.append('notarized_psc', selectedFile);
-
-      const res = await fetch(`${API_BASE_URL}/letters/mine/contracts/submit-notarized`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
-        body: formData,
-      });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || 'Failed to submit notarized copy.');
-
-      setUploadSuccess('Notarized contract submitted for RPDU review.');
-      setSelectedFile(null);
-      if (fileInputRef.current) fileInputRef.current.value = '';
-      reload();
-    } catch (err: unknown) {
-      setUploadError(err instanceof Error ? err.message : 'Error uploading file.');
-    } finally {
-      setUploading(false);
-    }
-  };
-
   const selectedProposal = proposals.find((p) => p.conceptId === selectedId);
   const totalCount = letters.length + clearances.length + proposals.length;
 
@@ -330,16 +273,8 @@ export default function ProponentDocumentsPage() {
         proposal={selectedProposal}
         contractData={contractData}
         displayBudget={displayBudget}
-        notarizedUrl={notarizedUrlFor(selectedProposal)}
-        fileInputRef={fileInputRef}
-        selectedFile={selectedFile}
-        uploading={uploading}
-        uploadError={uploadError}
-        uploadSuccess={uploadSuccess}
         onBack={handleCloseSelectedContract}
         onViewPreview={handleViewContractPreview}
-        onFileChange={setSelectedFile}
-        onSubmit={handleUploadNotarized}
       />
     );
   }
@@ -386,15 +321,10 @@ export default function ProponentDocumentsPage() {
   const renderEntry = (entry: DocumentEntry) => {
     if (entry.kind === 'PSC') {
       const item = entry.item;
-      const isNotarized = Boolean(item.contract?.isNotarized);
       const itemBudget = Number(item.finalApprovedBudget || item.proposedBudget || 0);
-      const notarizedUrl = notarizedUrlFor(item);
-      const isPendingReview = !isNotarized && Boolean(item.contract?.hasNotarizedFile || notarizedUrl);
-      const contractStatus = isNotarized
-        ? ({ label: 'Notarized', tone: 'emerald' } as const)
-        : isPendingReview
-          ? ({ label: 'Pending RPDU review', tone: 'blue' } as const)
-          : ({ label: 'Awaiting notarization', tone: 'amber' } as const);
+      const contractStatus = item.contract
+        ? ({ label: 'Issued', tone: 'emerald' } as const)
+        : ({ label: 'Ready to print', tone: 'emerald' } as const);
       return (
         <DocumentRow
           key={entry.key}
@@ -403,23 +333,13 @@ export default function ProponentDocumentsPage() {
           title="Professional Service Contract"
           status={contractStatus}
           meta={
-            <>
-              <span>Budget <span className="font-mono font-semibold text-slate-700">{formatPeso(itemBudget)}</span></span>
-              {(isNotarized || isPendingReview) && item.contract?.submittedAt && <span>Submitted {formatDate(item.contract.submittedAt)}</span>}
-            </>
+            <span>Budget <span className="font-mono font-semibold text-slate-700">{formatPeso(itemBudget)}</span></span>
           }
           actions={
-            <>
-              {notarizedUrl && (
-                <a href={notarizedUrl} target="_blank" rel="noopener noreferrer" className={DOC_BUTTON}>
-                  <ExternalLink aria-hidden="true" className="h-4 w-4" /> Notarized PDF
-                </a>
-              )}
-              <button type="button" onClick={() => selectPscProposal(item)} className={isNotarized || isPendingReview ? DOC_BUTTON : DOC_BUTTON_PRIMARY}>
-                {isNotarized || isPendingReview ? 'Open contract' : 'Prepare & submit'}
-                <ArrowRight aria-hidden="true" className="h-4 w-4" />
-              </button>
-            </>
+            <button type="button" onClick={() => selectPscProposal(item)} className={DOC_BUTTON_PRIMARY}>
+              Open contract
+              <ArrowRight aria-hidden="true" className="h-4 w-4" />
+            </button>
           }
         />
       );
@@ -452,7 +372,7 @@ export default function ProponentDocumentsPage() {
       <header>
         <h1 className="text-2xl font-bold text-slate-900">Documents</h1>
         <p className="mt-1 text-sm text-slate-600">
-          Read your official letters and clearance certificates, and prepare or submit your notarized Professional Service Contract.
+          Read your official letters and clearance certificates, and view or print your pre-filled Professional Service Contract for in-person signing.
         </p>
       </header>
 

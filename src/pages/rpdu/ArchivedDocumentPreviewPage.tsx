@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useParams, Link, useLocation } from 'react-router-dom';
 import {
   ArrowLeft,
+  ArrowRight,
   Printer,
   Download,
   MailCheck,
@@ -9,24 +10,39 @@ import {
   FileSignature,
   FileText,
   AlertCircle,
-  ExternalLink,
-  CheckCircle2,
   Clock,
+  CheckCircle2,
+  Loader2,
 } from 'lucide-react';
 import { API_BASE_URL } from '../../config/apiConfig';
 import { useAuth } from '../../context/AuthContext';
 
+interface ContractMeta {
+  contractNumber?: string;
+  durationMonths?: string;
+  contractAmount?: string;
+  compensationArrangement?: string;
+}
+
+type PscLifecycleStage = 'AWAITING_SIGNED' | 'SIGNED_RECEIVED' | 'ACKNOWLEDGED';
+
 interface IssuedDocItem {
   id: string;
+  concept_proposal_id?: string;
   template_code?: string;
   rendered_html?: string;
   issued_at?: string;
   is_notarized?: boolean;
   has_notarized_file?: boolean;
   notarized_status?: 'AWAITING_UPLOAD' | 'PENDING_REVIEW' | 'VERIFIED';
+  psc_stage?: PscLifecycleStage;
+  psc_stage_label?: string;
+  psc_stage_tone?: string;
+  can_proceed_to_inception?: boolean;
   template_variables?: {
     title?: string;
     recipientName?: string;
+    contractData?: ContractMeta;
     [key: string]: unknown;
   };
 }
@@ -46,17 +62,15 @@ export function ArchivedDocumentPreviewPage({ role }: ArchivedDocumentPreviewPag
 
   const [loading, setLoading] = useState(true);
   const [downloading, setDownloading] = useState(false);
-  const [verifying, setVerifying] = useState(false);
-  const [verifySuccess, setVerifySuccess] = useState('');
+  const [downloadingDocx, setDownloadingDocx] = useState(false);
   const [error, setError] = useState('');
   const [docData, setDocData] = useState<IssuedDocItem | null>(null);
 
   useEffect(() => {
     if (!id) return;
 
-    // Check location state first
     const stateDoc = (location.state as { doc?: IssuedDocItem })?.doc;
-    if (stateDoc?.rendered_html) {
+    if (stateDoc?.rendered_html && stateDoc.rendered_html.trim().startsWith('<')) {
       setDocData(stateDoc);
       setLoading(false);
       return;
@@ -101,12 +115,6 @@ export function ArchivedDocumentPreviewPage({ role }: ArchivedDocumentPreviewPag
   }, [id, session?.access_token, location.state]);
 
   const htmlOrUrl = docData?.rendered_html || '';
-  const isDirectPdfUrl = /^(https?:\/\/|\/uploads\/)/i.test(htmlOrUrl);
-  const resolvedPdfUrl = isDirectPdfUrl
-    ? (htmlOrUrl.startsWith('http://') || htmlOrUrl.startsWith('https://')
-        ? htmlOrUrl
-        : `${API_BASE_URL.replace(/\/api\/?$/, '')}${htmlOrUrl}`)
-    : '';
 
   const isCotr = docData?.template_code === 'WMSU-RPDU-CERT-001.00';
   const isPsc =
@@ -114,43 +122,7 @@ export function ArchivedDocumentPreviewPage({ role }: ArchivedDocumentPreviewPag
     docData?.template_code === 'WMSU-RPDU-CA-001.01' ||
     Boolean(docData?.is_notarized) ||
     Boolean(docData?.has_notarized_file);
-  const isPendingNotarizedReview =
-    isPsc &&
-    !docData?.is_notarized &&
-    Boolean(docData?.has_notarized_file || docData?.notarized_status === 'PENDING_REVIEW' || isDirectPdfUrl);
   const isScreeningLetter = docData?.template_code === 'WMSU-RPDU-LET-001.01';
-
-  const handleAcceptNotarized = async () => {
-    if (!id || !session?.access_token || verifying) return;
-    setVerifying(true);
-    setError('');
-    setVerifySuccess('');
-    try {
-      const res = await fetch(`${API_BASE_URL}/letters/issued/${id}/verify-notarized`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
-      });
-      const json = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(json.message || 'Failed to accept notarized contract.');
-      setDocData((prev) =>
-        prev
-          ? {
-              ...prev,
-              is_notarized: true,
-              has_notarized_file: true,
-              notarized_status: 'VERIFIED',
-            }
-          : prev
-      );
-      setVerifySuccess('Notarized contract accepted and verified.');
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Error accepting notarized contract.');
-    } finally {
-      setVerifying(false);
-    }
-  };
 
   const docTypeName = isCotr
     ? 'Certificate of Technical Review (COTR)'
@@ -170,23 +142,59 @@ export function ArchivedDocumentPreviewPage({ role }: ArchivedDocumentPreviewPag
     <FileText size={14} className="text-slate-600" />
   );
 
-  const handleDownloadPdf = async () => {
-    if (resolvedPdfUrl) {
-      const link = document.createElement('a');
-      link.href = resolvedPdfUrl;
-      link.download = `${docTypeName.replace(/[^a-zA-Z0-9_-]/g, '_')}.pdf`;
-      link.target = '_blank';
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      return;
-    }
+  const [updatingStatus, setUpdatingStatus] = useState(false);
 
+  const pscStage: PscLifecycleStage = docData?.psc_stage
+    ? docData.psc_stage
+    : docData?.is_notarized
+    ? 'ACKNOWLEDGED'
+    : docData?.notarized_status === 'PENDING_REVIEW'
+    ? 'SIGNED_RECEIVED'
+    : 'AWAITING_SIGNED';
+
+  const handleUpdatePscStatus = async (targetStatus: PscLifecycleStage) => {
+    if (!id || !session?.access_token || updatingStatus) return;
+    setUpdatingStatus(true);
+    setError('');
+    try {
+      const res = await fetch(`${API_BASE_URL}/letters/issued/${id}/psc-status`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ status: targetStatus }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.message || 'Failed to update contract status.');
+
+      setDocData((prev) =>
+        prev
+          ? {
+              ...prev,
+              is_notarized: targetStatus === 'ACKNOWLEDGED',
+              psc_stage: targetStatus,
+              psc_stage_label: json.data?.psc_stage_label,
+              can_proceed_to_inception: targetStatus === 'ACKNOWLEDGED',
+            }
+          : prev
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error updating contract status.');
+    } finally {
+      setUpdatingStatus(false);
+    }
+  };
+
+  const handleDownloadPdf = async () => {
     if (!session?.access_token || !htmlOrUrl || downloading) return;
     setDownloading(true);
     setError('');
     try {
-      const filename = `${docTypeName.replace(/[^a-zA-Z0-9_-]/g, '_')}.pdf`;
+      const tracking = docData?.template_variables?.contractData?.contractNumber || 'WMSU-RPDU-CA-001.01';
+      const filename = isPsc
+        ? `11_PSC_${tracking}.pdf`
+        : `${docTypeName.replace(/[^a-zA-Z0-9_-]/g, '_')}.pdf`;
 
       const res = await fetch(`${API_BASE_URL}/letters/download-pdf`, {
         method: 'POST',
@@ -221,6 +229,48 @@ export function ArchivedDocumentPreviewPage({ role }: ArchivedDocumentPreviewPag
     }
   };
 
+  const handleDownloadDocx = async () => {
+    if (!session?.access_token || !docData?.concept_proposal_id || downloadingDocx) return;
+    setDownloadingDocx(true);
+    setError('');
+    try {
+      const tracking = docData.template_variables?.contractData?.contractNumber || 'WMSU-RPDU-CA-001.01';
+      const filename = `11_PSC_${tracking}.docx`;
+
+      const res = await fetch(`${API_BASE_URL}/letters/download-docx`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          conceptId: docData.concept_proposal_id,
+          contractData: docData.template_variables?.contractData,
+          filename,
+        }),
+      });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.message || 'Failed to download 11 PSC.docx.');
+      }
+
+      const blob = await res.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(blobUrl);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Error downloading DOCX.');
+    } finally {
+      setDownloadingDocx(false);
+    }
+  };
+
   const handlePrint = () => {
     if (frameRef.current?.contentWindow) {
       frameRef.current.contentWindow.print();
@@ -237,6 +287,8 @@ export function ArchivedDocumentPreviewPage({ role }: ArchivedDocumentPreviewPag
         day: 'numeric',
       })
     : '';
+
+  const contractMeta = docData?.template_variables?.contractData;
 
   return (
     <div className="mx-auto max-w-7xl pb-12">
@@ -264,28 +316,32 @@ export function ArchivedDocumentPreviewPage({ role }: ArchivedDocumentPreviewPag
 
           {/* Action buttons */}
           <div className="flex items-center gap-2 flex-wrap">
-            {isPendingNotarizedReview && (
-              <button
-                type="button"
-                onClick={handleAcceptNotarized}
-                disabled={loading || verifying}
-                className="inline-flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-2 text-xs font-bold rounded-md cursor-pointer disabled:opacity-50 transition-colors shadow-xs"
-              >
-                <CheckCircle2 size={14} />
-                {verifying ? 'Accepting...' : 'Accept Notarized Copy'}
-              </button>
-            )}
+            {isPsc && pscStage !== 'ACKNOWLEDGED' && (
+              <div className="flex items-center gap-2 flex-wrap border-r border-slate-200 pr-2 mr-1">
+                {pscStage === 'AWAITING_SIGNED' && (
+                  <button
+                    type="button"
+                    disabled={loading || updatingStatus}
+                    onClick={() => handleUpdatePscStatus('SIGNED_RECEIVED')}
+                    className="inline-flex items-center gap-1.5 bg-sky-600 hover:bg-sky-700 text-white px-3.5 py-2 text-xs font-bold rounded cursor-pointer transition-colors shadow-2xs disabled:opacity-50"
+                  >
+                    {updatingStatus ? <Loader2 size={14} className="animate-spin" /> : <ArrowRight size={14} />}
+                    Mark Signed PSC Received
+                  </button>
+                )}
 
-            {resolvedPdfUrl && (
-              <a
-                href={resolvedPdfUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-md transition-colors"
-              >
-                <ExternalLink size={14} />
-                Open PDF
-              </a>
+                {pscStage === 'SIGNED_RECEIVED' && (
+                  <button
+                    type="button"
+                    disabled={loading || updatingStatus}
+                    onClick={() => handleUpdatePscStatus('ACKNOWLEDGED')}
+                    className="inline-flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-2 text-xs font-bold rounded cursor-pointer transition-colors shadow-2xs disabled:opacity-50"
+                  >
+                    {updatingStatus ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
+                    Acknowledge PSC (Page 6)
+                  </button>
+                )}
+              </div>
             )}
 
             <button
@@ -305,28 +361,71 @@ export function ArchivedDocumentPreviewPage({ role }: ArchivedDocumentPreviewPag
               className="inline-flex items-center gap-2 bg-[#C8102E] hover:bg-red-800 text-white px-4 py-2 text-xs font-bold rounded cursor-pointer disabled:opacity-50 transition-colors shadow-xs"
             >
               <Download size={14} className={downloading ? 'animate-bounce' : ''} />
-              {downloading ? 'Downloading...' : 'Download PDF'}
+              {downloading ? 'Downloading...' : isPsc ? 'Download 11 PSC.pdf' : 'Download PDF'}
             </button>
+
+            {isPsc && docData?.concept_proposal_id && (
+              <button
+                type="button"
+                onClick={handleDownloadDocx}
+                disabled={loading || downloadingDocx}
+                className="inline-flex items-center gap-2 bg-slate-900 hover:bg-slate-800 text-white px-4 py-2 text-xs font-bold rounded cursor-pointer disabled:opacity-50 transition-colors shadow-xs"
+              >
+                <Download size={14} className={downloadingDocx ? 'animate-bounce' : ''} />
+                {downloadingDocx ? 'Generating...' : 'Download 11 PSC.docx'}
+              </button>
+            )}
           </div>
         </div>
 
         {/* Document Meta Ribbon */}
         {docData && (
-          <div className="bg-slate-50 px-5 py-3 border border-slate-200 rounded-md flex flex-wrap items-center gap-4 text-xs">
+          <div className="bg-slate-50 px-5 py-3 border border-slate-200 rounded-md flex flex-wrap items-center justify-between gap-4 text-xs">
             <div className="flex flex-wrap items-center gap-4 text-slate-700">
-              {docData.template_code && (
+              {isPsc && contractMeta?.contractNumber ? (
                 <div>
-                  <span className="text-slate-500">Template Code:</span>{' '}
-                  <strong className="text-slate-900">{docData.template_code}</strong>
+                  <span className="text-slate-500">Contract No:</span>{' '}
+                  <strong className="text-slate-900">{contractMeta.contractNumber}</strong>
                 </div>
+              ) : (
+                docData.template_code && (
+                  <div>
+                    <span className="text-slate-500">Template Code:</span>{' '}
+                    <strong className="text-slate-900">{docData.template_code}</strong>
+                  </div>
+                )
               )}
               {docData.template_variables?.recipientName && (
                 <div>
-                  <span className="text-slate-500">Recipient / Study Leader:</span>{' '}
+                  <span className="text-slate-500">{isPsc ? 'Study Leader:' : 'Recipient / Study Leader:'}</span>{' '}
                   <strong className="text-slate-900">{docData.template_variables.recipientName}</strong>
                 </div>
               )}
-              {docData.template_variables?.title && (
+              {isPsc && contractMeta?.contractAmount && (
+                <div>
+                  <span className="text-slate-500">Final Approved Budget:</span>{' '}
+                  <strong className="text-[#C8102E] font-mono">
+                    ₱{(Number(contractMeta.contractAmount) || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                  </strong>
+                </div>
+              )}
+              {isPsc && contractMeta?.compensationArrangement && (
+                <div>
+                  <span className="text-slate-500">Compensation:</span>{' '}
+                  <strong className="text-slate-900">
+                    {contractMeta.compensationArrangement === 'Deloading'
+                      ? 'Teaching De-loading'
+                      : 'Research Honorarium'}
+                  </strong>
+                </div>
+              )}
+              {isPsc && contractMeta?.durationMonths && (
+                <div>
+                  <span className="text-slate-500">Duration:</span>{' '}
+                  <strong className="text-slate-900">{contractMeta.durationMonths} Months</strong>
+                </div>
+              )}
+              {!isPsc && docData.template_variables?.title && (
                 <div>
                   <span className="text-slate-500">Proposal:</span>{' '}
                   <strong className="text-slate-900 truncate max-w-sm inline-block align-bottom">
@@ -340,32 +439,35 @@ export function ArchivedDocumentPreviewPage({ role }: ArchivedDocumentPreviewPag
                   <strong className="text-slate-900">{formattedDate}</strong>
                 </div>
               )}
-              {isPsc && (
-                <div>
-                  <span className="text-slate-500">Notarization Status:</span>{' '}
-                  {docData.is_notarized ? (
-                    <span className="inline-flex items-center gap-1 ml-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
-                      <CheckCircle2 size={12} className="text-emerald-600" /> Notarized Copy Accepted
-                    </span>
-                  ) : isPendingNotarizedReview ? (
-                    <span className="inline-flex items-center gap-1 ml-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-50 text-amber-800 border border-amber-200">
-                      <Clock size={12} className="text-amber-600" /> Pending RPDU Review
-                    </span>
-                  ) : (
-                    <span className="inline-flex items-center gap-1 ml-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-slate-100 text-slate-700 border border-slate-200">
-                      <Clock size={12} className="text-slate-500" /> Awaiting Notarized Copy
-                    </span>
-                  )}
-                </div>
-              )}
             </div>
-          </div>
-        )}
 
-        {verifySuccess && (
-          <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-md text-emerald-800 text-xs font-semibold flex items-center gap-2">
-            <CheckCircle2 size={16} className="shrink-0 text-emerald-600" />
-            <span>{verifySuccess}</span>
+            {isPsc && (
+              <div className="flex items-center gap-2">
+                <span
+                  className={`inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-0.5 rounded-full border ${
+                    pscStage === 'ACKNOWLEDGED'
+                      ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
+                      : pscStage === 'SIGNED_RECEIVED'
+                      ? 'bg-sky-100 text-sky-800 border-sky-300'
+                      : 'bg-amber-100 text-amber-800 border-amber-300'
+                  }`}
+                >
+                  {pscStage === 'ACKNOWLEDGED' ? (
+                    <CheckCircle2 size={12} className="text-emerald-700" />
+                  ) : pscStage === 'SIGNED_RECEIVED' ? (
+                    <FileText size={12} className="text-sky-700" />
+                  ) : (
+                    <Clock size={12} className="text-amber-700" />
+                  )}
+                  {pscStage === 'ACKNOWLEDGED'
+                    ? 'Acknowledged (Page 6 Complete)'
+                    : pscStage === 'SIGNED_RECEIVED'
+                    ? 'Signed PSC Received'
+                    : 'Awaiting Signed PSC'}
+                </span>
+                <span className="text-[11px] text-slate-400">Pre-Filled Official Copy (6 Pages)</span>
+              </div>
+            )}
           </div>
         )}
 
@@ -388,13 +490,6 @@ export function ArchivedDocumentPreviewPage({ role }: ArchivedDocumentPreviewPag
             <div className="h-64 flex items-center justify-center text-xs text-slate-500">
               Document preview is unavailable.
             </div>
-          ) : resolvedPdfUrl ? (
-            <iframe
-              ref={frameRef}
-              title={docTypeName}
-              src={resolvedPdfUrl}
-              className="h-[850px] w-full bg-white border-0"
-            />
           ) : (
             <iframe
               ref={frameRef}

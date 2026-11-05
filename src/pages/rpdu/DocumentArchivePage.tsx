@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   Archive,
+  ArrowRight,
   CheckCircle2,
   Clock,
   FileText,
+  Loader2,
   Plus,
   Printer,
   Search,
@@ -52,6 +54,8 @@ type ContractData = {
   workPlan: string;
 };
 
+type PscLifecycleStage = 'AWAITING_SIGNED' | 'SIGNED_RECEIVED' | 'ACKNOWLEDGED';
+
 type IssuedDocument = {
   id: string;
   concept_proposal_id?: string;
@@ -61,12 +65,23 @@ type IssuedDocument = {
   is_notarized?: boolean;
   has_notarized_file?: boolean;
   notarized_status?: 'AWAITING_UPLOAD' | 'PENDING_REVIEW' | 'VERIFIED';
+  psc_stage?: PscLifecycleStage;
+  psc_stage_label?: string;
+  psc_stage_tone?: string;
+  can_proceed_to_inception?: boolean;
   template_variables: {
     title: string;
     recipientName: string;
     attachments?: Attachment[];
     contractData?: Partial<ContractData>;
   };
+};
+
+const getEffectivePscStage = (item: IssuedDocument): PscLifecycleStage => {
+  if (item.psc_stage) return item.psc_stage;
+  if (item.is_notarized) return 'ACKNOWLEDGED';
+  if (item.notarized_status === 'PENDING_REVIEW') return 'SIGNED_RECEIVED';
+  return 'AWAITING_SIGNED';
 };
 
 export interface DocumentArchivePageProps {
@@ -82,7 +97,6 @@ export function DocumentArchivePage({ role = 'rpdu' }: DocumentArchivePageProps)
   const [issuedDocs, setIssuedDocs] = useState<IssuedDocument[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [verifyingId, setVerifyingId] = useState<string | null>(null);
 
   // Initial filter from query params
   const initialFilter = useMemo(() => {
@@ -132,29 +146,46 @@ export function DocumentArchivePage({ role = 'rpdu' }: DocumentArchivePageProps)
     navigate(`/${role}/archive/preview/${item.id}`, { state: { doc: item } });
   };
 
-  const handleAcceptNotarized = async (e: React.MouseEvent, item: IssuedDocument) => {
+  const [updatingPscId, setUpdatingPscId] = useState<string | null>(null);
+
+  const handleUpdatePscStatus = async (
+    e: React.MouseEvent | React.ChangeEvent<HTMLSelectElement>,
+    docId: string,
+    targetStatus: PscLifecycleStage
+  ) => {
     e.stopPropagation();
-    if (!session?.access_token || verifyingId) return;
-    setVerifyingId(item.id);
-    setError('');
+    if (!session?.access_token || updatingPscId) return;
+
+    setUpdatingPscId(docId);
     try {
-      const res = await fetch(`${API_BASE_URL}/letters/issued/${item.id}/verify-notarized`, {
+      const response = await fetch(`${API_BASE_URL}/letters/issued/${docId}/psc-status`, {
         method: 'POST',
-        headers: { Authorization: `Bearer ${session.access_token}` },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ status: targetStatus }),
       });
-      const json = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(json.message || 'Could not accept notarized contract.');
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.message || 'Failed to update contract status.');
+
       setIssuedDocs((prev) =>
         prev.map((doc) =>
-          doc.id === item.id
-            ? { ...doc, is_notarized: true, has_notarized_file: true, notarized_status: 'VERIFIED' }
+          doc.id === docId
+            ? {
+                ...doc,
+                is_notarized: targetStatus === 'ACKNOWLEDGED',
+                psc_stage: targetStatus,
+                psc_stage_label: result.data?.psc_stage_label,
+                can_proceed_to_inception: targetStatus === 'ACKNOWLEDGED',
+              }
             : doc
         )
       );
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not accept notarized contract.');
+      alert(err instanceof Error ? err.message : 'Error updating contract status.');
     } finally {
-      setVerifyingId(null);
+      setUpdatingPscId(null);
     }
   };
 
@@ -387,10 +418,7 @@ export function DocumentArchivePage({ role = 'rpdu' }: DocumentArchivePageProps)
             {pagedIssuedDocs.map((item) => {
             const isPsc = isContractTemplate(item.template_code);
             const isCotr = item.template_code === CERTIFICATE;
-            const isPendingNotarizedReview =
-              isPsc &&
-              !item.is_notarized &&
-              Boolean(item.has_notarized_file || item.notarized_status === 'PENDING_REVIEW');
+            const pscStage = isPsc ? getEffectivePscStage(item) : 'AWAITING_SIGNED';
             const formattedDate = new Date(item.issued_at).toLocaleDateString('en-PH', {
               timeZone: 'Asia/Manila',
               year: 'numeric',
@@ -425,29 +453,29 @@ export function DocumentArchivePage({ role = 'rpdu' }: DocumentArchivePageProps)
                       >
                         {isPsc ? 'Contract (PSC)' : isCotr ? 'Certificate (COTR)' : 'Official Letter'}
                       </span>
+
                       {isPsc && (
                         <span
-                          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border ${
-                            item.is_notarized
+                          className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-sm text-[10px] font-bold border ${
+                            pscStage === 'ACKNOWLEDGED'
                               ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
-                              : isPendingNotarizedReview
-                              ? 'bg-amber-50 text-amber-800 border-amber-200'
-                              : 'bg-slate-100 text-slate-700 border-slate-200'
+                              : pscStage === 'SIGNED_RECEIVED'
+                              ? 'bg-sky-50 text-sky-800 border-sky-200'
+                              : 'bg-amber-50 text-amber-800 border-amber-200'
                           }`}
                         >
-                          {item.is_notarized ? (
-                            <>
-                              <CheckCircle2 className="w-3 h-3 text-emerald-600" /> Notarized Copy Accepted
-                            </>
-                          ) : isPendingNotarizedReview ? (
-                            <>
-                              <Clock className="w-3 h-3 text-amber-600" /> Pending RPDU Review
-                            </>
+                          {pscStage === 'ACKNOWLEDGED' ? (
+                            <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                          ) : pscStage === 'SIGNED_RECEIVED' ? (
+                            <FileText className="w-3 h-3 text-sky-600" />
                           ) : (
-                            <>
-                              <Clock className="w-3 h-3 text-slate-500" /> Awaiting Notarized Copy
-                            </>
+                            <Clock className="w-3 h-3 text-amber-600" />
                           )}
+                          {pscStage === 'ACKNOWLEDGED'
+                            ? 'Acknowledged (Page 6 Complete)'
+                            : pscStage === 'SIGNED_RECEIVED'
+                            ? 'Signed PSC Received'
+                            : 'Awaiting Signed PSC'}
                         </span>
                       )}
                     </div>
@@ -464,25 +492,52 @@ export function DocumentArchivePage({ role = 'rpdu' }: DocumentArchivePageProps)
                   </p>
                 </div>
 
-                <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-end gap-2 flex-wrap">
-                  {isPendingNotarizedReview && (
-                    <button
-                      type="button"
-                      disabled={verifyingId === item.id}
-                      onClick={(e) => handleAcceptNotarized(e, item)}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-md transition-colors cursor-pointer disabled:opacity-50"
-                    >
-                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                      {verifyingId === item.id ? 'Accepting...' : 'Accept Notarized Copy'}
-                    </button>
+                <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between gap-2 flex-wrap">
+                  {isPsc && pscStage !== 'ACKNOWLEDGED' ? (
+                    <div className="flex items-center gap-2 flex-wrap" onClick={(e) => e.stopPropagation()}>
+                      {pscStage === 'AWAITING_SIGNED' && (
+                        <button
+                          type="button"
+                          disabled={updatingPscId === item.id}
+                          onClick={(e) => handleUpdatePscStatus(e, item.id, 'SIGNED_RECEIVED')}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-sky-800 bg-sky-50 hover:bg-sky-100 border border-sky-200 rounded-md transition-colors cursor-pointer disabled:opacity-50"
+                        >
+                          {updatingPscId === item.id ? (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          ) : (
+                            <ArrowRight className="w-3.5 h-3.5" />
+                          )}
+                          Mark Signed PSC Received
+                        </button>
+                      )}
+
+                      {pscStage === 'SIGNED_RECEIVED' && (
+                        <button
+                          type="button"
+                          disabled={updatingPscId === item.id}
+                          onClick={(e) => handleUpdatePscStatus(e, item.id, 'ACKNOWLEDGED')}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-md transition-colors cursor-pointer disabled:opacity-50"
+                        >
+                          {updatingPscId === item.id ? (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          ) : (
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                          )}
+                          Acknowledge PSC (Page 6)
+                        </button>
+                      )}
+                    </div>
+                  ) : (
+                    <div />
                   )}
+
                   <button
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation();
                       handleOpenPreview(item);
                     }}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-[#C8102E] hover:text-[#A00D26] hover:bg-red-50/60 rounded-md transition-colors cursor-pointer"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-[#C8102E] hover:text-[#A00D26] hover:bg-red-50/60 rounded-md transition-colors cursor-pointer ml-auto"
                   >
                     <Printer className="w-3.5 h-3.5" /> View &amp; Print Document
                   </button>
