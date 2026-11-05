@@ -5,6 +5,7 @@ import {
   CalendarCheck,
   ClipboardCheck,
   Gavel,
+  FolderArchive,
   LogOut,
   Mail,
   ScrollText,
@@ -24,6 +25,7 @@ const navItems = [
   { name: 'Preliminary Screening', path: '/admin/screening', icon: ClipboardCheck },
   { name: 'AIHR & En Banc', path: '/admin/aihr', icon: Gavel },
   { name: 'AIHR Invitations', path: '/admin/aihr-invitations', icon: Mail },
+  { name: 'Outsourced Projects', path: '/admin/outsourced-projects', icon: FolderArchive },
   { name: 'Official Memorandums', path: '/admin/memos', icon: ScrollText },
   { name: 'Official Letters & Contracts', path: '/admin/letters', icon: Mail },
   { name: 'Issued Documents Archive', path: '/admin/archive', icon: Archive },
@@ -113,6 +115,7 @@ export function AdminSidebar({ mobileOpen = false, onCloseMobile }: AdminSidebar
                 (item.path === '/admin/archive' &&
                   (pathname.startsWith('/admin/archive') || pathname.startsWith('/admin/issued-documents'))) ||
                 (item.path === '/admin/letters' && pathname.startsWith('/admin/letters/')) ||
+                (item.path === '/admin/outsourced-projects' && pathname.startsWith('/admin/outsourced-projects/')) ||
                 (item.path === '/admin/screening' && pathname.startsWith('/admin/screening/')) ||
                 (item.path === '/admin' && pathname.startsWith('/admin/calls/'));
               const Icon = item.icon;

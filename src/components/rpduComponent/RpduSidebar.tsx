@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import {
   Archive,
+  FolderArchive,
   Calendar,
   CalendarCheck,
   ClipboardCheck,
@@ -27,6 +28,7 @@ const navItems = [
   { name: 'External Funding Requests', path: '/rpdu/external-funding', icon: Handshake },
   { name: 'AIHR & En Banc', path: '/rpdu/aihr', icon: Gavel },
   { name: 'AIHR Invitations', path: '/rpdu/aihr-invitations', icon: Mail },
+  { name: 'Outsourced Projects', path: '/rpdu/outsourced-projects', icon: FolderArchive },
   { name: 'Official Memorandums', path: '/rpdu/memos', icon: ScrollText },
   { name: 'Official Letters & Contracts', path: '/rpdu/letters', icon: Mail },
   { name: 'Issued Documents Archive', path: '/rpdu/archive', icon: Archive },
@@ -178,6 +180,7 @@ export function RpduSidebar({ mobileOpen = false, onCloseMobile }: RpduSidebarPr
                 (item.path === '/rpdu/archive' &&
                   (pathname.startsWith('/rpdu/archive') || pathname.startsWith('/rpdu/issued-documents'))) ||
                 (item.path === '/rpdu/letters' && pathname.startsWith('/rpdu/letters/')) ||
+                (item.path === '/rpdu/outsourced-projects' && pathname.startsWith('/rpdu/outsourced-projects/')) ||
                 (item.path === '/rpdu/screening' && pathname.startsWith('/rpdu/screening/')) ||
                 (item.path === '/rpdu' && pathname.startsWith('/rpdu/calls/'));
               const Icon = item.icon;

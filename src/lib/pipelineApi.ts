@@ -1,6 +1,6 @@
 import { API_ENDPOINTS } from '../config/apiConfig';
 import type {
-  ActionSheetPoints, BlindReview, Checklist, DeclineReason, EligibleConcept, EvaluatorProfile, FundingClassification, PendingConcept, PipelineEvaluator, ProponentProposal, ReviewRecommendation, RevisionHistoryDraft, RpduProposal,
+  ActionSheetPoints, BlindReview, Checklist, DeclineReason, EligibleConcept, EvaluatorProfile, FundingClassification, OutsourcedProject, PendingConcept, PipelineEvaluator, ProponentProposal, ReviewRecommendation, RevisionHistoryDraft, RpduProposal,
 } from '../types';
 import { request } from './apiRequest';
 
@@ -11,6 +11,12 @@ export const getPipelineProposals = async (token?: string, signal?: AbortSignal)
 
 export const getPipelineProposal = async (id: string, token?: string, signal?: AbortSignal): Promise<RpduProposal> =>
   (await request<RpduProposal>(API_ENDPOINTS.PIPELINE.PROPOSAL_BY_ID(id), token, {}, signal)).data;
+
+export const getOutsourcedProjects = async (token?: string, signal?: AbortSignal): Promise<OutsourcedProject[]> =>
+  (await request<OutsourcedProject[]>(API_ENDPOINTS.PIPELINE.OUTSOURCED_PROJECTS, token, {}, signal)).data;
+
+export const getOutsourcedProject = async (id: string, token?: string, signal?: AbortSignal): Promise<OutsourcedProject> =>
+  (await request<OutsourcedProject>(API_ENDPOINTS.PIPELINE.OUTSOURCED_PROJECT(id), token, {}, signal)).data;
 
 export const saveFundingClassificationApi = async (id: string, fundingClassification: FundingClassification, token?: string): Promise<RpduProposal> =>
   (await request<RpduProposal>(API_ENDPOINTS.PIPELINE.FUNDING_CLASSIFICATION(id), token, { method: 'PUT', body: JSON.stringify({ fundingClassification }) })).data;

@@ -1,6 +1,6 @@
 import { useId, useState } from 'react';
 import { AlertTriangle, ClipboardPen } from 'lucide-react';
-import type { AihrConcept, AihrVerdict } from '../../../types';
+import type { AihrConcept, AihrVerdictInput, FundingClassification } from '../../../types';
 import type { VerdictPayload } from '../../../lib/aihrApi';
 import { QUALIFYING_SCORE, VERDICT_META } from '../../../lib/aihrMeta';
 import { ACCEPTED_DOCUMENT_TYPES, MAX_UPLOAD_BYTES } from '../../../lib/proposalPipeline';
@@ -17,14 +17,15 @@ interface AihrVerdictModalProps {
 }
 
 const MAX_REMARKS_LENGTH = 5000;
-const VERDICTS = Object.keys(VERDICT_META) as AihrVerdict[];
+const VERDICTS: AihrVerdictInput[] = ['CONDITIONALLY_APPROVED', 'FAIL'];
 
-type Field = 'verdict' | 'score' | 'date' | 'remarks' | 'file';
+type Field = 'verdict' | 'fundingClassification' | 'score' | 'date' | 'remarks' | 'file';
 
 /** Mirrors the server's validation messages; the server re-checks every one. */
-const validate = (concept: AihrConcept, verdict: AihrVerdict | null, score: string, presentedOn: string, remarks: string, file: File | null): Partial<Record<Field, string>> => {
+const validate = (concept: AihrConcept, verdict: AihrVerdictInput | null, fundingClassification: FundingClassification | null, score: string, presentedOn: string, remarks: string, file: File | null): Partial<Record<Field, string>> => {
   const errors: Partial<Record<Field, string>> = {};
   if (!verdict) errors.verdict = 'Choose an AIHR verdict';
+  if (verdict === 'CONDITIONALLY_APPROVED' && !fundingClassification) errors.fundingClassification = 'Choose Institutional or Outsource';
   const trimmed = score.trim();
   if (trimmed) {
     const value = Number(trimmed);
@@ -43,7 +44,8 @@ const inputClass = (invalid: boolean) => `min-h-11 w-full rounded-sm border bg-w
 
 function VerdictForm({ concept, isOpen, onClose, onSubmit }: AihrVerdictModalProps & { concept: AihrConcept }) {
   const ids = useId();
-  const [verdict, setVerdict] = useState<AihrVerdict | null>(concept.aihr?.verdict ?? null);
+  const [verdict, setVerdict] = useState<AihrVerdictInput | null>(concept.aihr?.verdict === 'CONDITIONALLY_APPROVED' || concept.aihr?.verdict === 'FAIL' ? concept.aihr.verdict : null);
+  const [fundingClassification, setFundingClassification] = useState<FundingClassification | null>(concept.fundingClassification ?? null);
   const [score, setScore] = useState(concept.aihr?.score?.toString() ?? '');
   const presentedOn = concept.invitation?.event_date ?? '';
   const [remarks, setRemarks] = useState(concept.aihr?.remarks ?? '');
@@ -52,7 +54,7 @@ function VerdictForm({ concept, isOpen, onClose, onSubmit }: AihrVerdictModalPro
   const [busy, setBusy] = useState(false);
   const [warning, setWarning] = useState<string | null>(null);
 
-  const errors = validate(concept, verdict, score, presentedOn, remarks, file);
+  const errors = validate(concept, verdict, fundingClassification, score, presentedOn, remarks, file);
   const visibleErrors = showErrors ? errors : {};
   const numericScore = score.trim() ? Number(score) : null;
   const belowMark = numericScore !== null && Number.isFinite(numericScore) && numericScore < QUALIFYING_SCORE && verdict !== null && verdict !== 'FAIL';
@@ -62,7 +64,7 @@ function VerdictForm({ concept, isOpen, onClose, onSubmit }: AihrVerdictModalPro
     if (Object.keys(errors).length > 0 || !verdict) return;
     setBusy(true);
     try {
-      const result = await onSubmit(concept.id, { verdict, score, presentedOn, remarks, scoresheetFile: file });
+      const result = await onSubmit(concept.id, { verdict, fundingClassification: verdict === 'CONDITIONALLY_APPROVED' ? fundingClassification : null, score, presentedOn, remarks, scoresheetFile: file });
       if (result.warning) setWarning(result.warning);
       else onClose();
     } catch {
@@ -111,6 +113,22 @@ function VerdictForm({ concept, isOpen, onClose, onSubmit }: AihrVerdictModalPro
         </div>
         {errorText('verdict')}
       </fieldset>
+
+      {verdict === 'CONDITIONALLY_APPROVED' && (
+        <fieldset className="space-y-2" aria-describedby={describedBy('fundingClassification', `${ids}-funding-hint`)}>
+          <legend className="text-sm font-semibold text-slate-800">Processing route</legend>
+          <p id={`${ids}-funding-hint`} className="text-sm text-slate-600">Institutional proposals continue to en banc and internal processing. Outsourced proposals end in this system and move to outside endorsement.</p>
+          <div className="grid gap-2.5 sm:grid-cols-2">
+            {(['INSTITUTIONAL', 'OUTSOURCE'] as const).map((value) => (
+              <label key={value} className={`flex min-h-12 cursor-pointer items-start gap-2.5 rounded-sm border p-3.5 ${fundingClassification === value ? 'border-[#C8102E] bg-red-50' : 'border-slate-200 bg-white hover:bg-slate-50'}`}>
+                <input type="radio" name={`${ids}-funding`} checked={fundingClassification === value} onChange={() => setFundingClassification(value)} className="mt-0.5 h-4 w-4 accent-[#C8102E]" />
+                <span><span className="block text-sm font-bold text-slate-900">{value === 'INSTITUTIONAL' ? 'Institutional' : 'Outsource'}</span><span className="mt-0.5 block text-xs leading-relaxed text-slate-600">{value === 'INSTITUTIONAL' ? 'Continue through en banc and WMSU processing.' : 'End internal processing and compile existing documents for outside endorsement.'}</span></span>
+              </label>
+            ))}
+          </div>
+          {errorText('fundingClassification')}
+        </fieldset>
+      )}
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-1.5">

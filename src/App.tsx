@@ -34,6 +34,8 @@ import { DetailedProposalSubmissionPage } from './pages/proponents/DetailedPropo
 import { ExternalFundingRequestPage } from './pages/proponents/ExternalFundingRequestPage';
 import { ExternalFundingRequestsPage } from './pages/rpdu/ExternalFundingRequestsPage';
 import { PipelineProposalDetailPage } from './pages/rpdu/PipelineProposalDetailPage';
+import { OutsourcedProjectsPage } from './pages/rpdu/OutsourcedProjectsPage';
+import { OutsourcedProjectDetailPage } from './pages/rpdu/OutsourcedProjectDetailPage';
 import EvaluatorDashboard from './pages/evaluator/evaluatorDashboard';
 import { EvaluatorReviewsPage } from './pages/evaluator/EvaluatorReviewsPage';
 import { EvaluatorLettersPage } from './pages/evaluator/EvaluatorLettersPage';
@@ -156,6 +158,8 @@ export function App() {
                 <Route path="/admin/screening/:proposalId" element={<ScreeningReviewPage role="admin" />} />
                 <Route path="/admin/aihr" element={<AihrDeliberationPage role="admin" />} />
                 <Route path="/admin/aihr-invitations" element={<AihrInvitationsPage role="admin" />} />
+                <Route path="/admin/outsourced-projects" element={<OutsourcedProjectsPage />} />
+                <Route path="/admin/outsourced-projects/:id" element={<OutsourcedProjectDetailPage />} />
                 <Route path="/admin/memos" element={<MemoPage role="admin" />} />
                 <Route path="/admin/letters">
                   <Route index element={<AdminLetterDeskPage />} />
@@ -184,6 +188,8 @@ export function App() {
                 <Route path="/rpdu/passed-proposals" element={<Navigate to="/rpdu/screening" replace />} />
                 <Route path="/rpdu/aihr" element={<AihrDeliberationPage role="rpdu" />} />
                 <Route path="/rpdu/aihr-invitations" element={<AihrInvitationsPage role="rpdu" />} />
+                <Route path="/rpdu/outsourced-projects" element={<OutsourcedProjectsPage />} />
+                <Route path="/rpdu/outsourced-projects/:id" element={<OutsourcedProjectDetailPage />} />
                 <Route path="/rpdu/memos" element={<MemoPage role="rpdu" />} />
                 <Route path="/rpdu/letters">
                   <Route index element={<LetterDeskPage />} />

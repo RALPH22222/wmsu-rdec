@@ -264,7 +264,7 @@ export interface RpduBudgetAllocationItem {
 // Detailed Proposal Evaluation Pipeline — shapes returned by /api/pipeline
 // ============================================================================
 
-export type PipelineStatus = 'PENDING_ASSIGNMENT' | 'UNDER_REVIEW' | 'REVISION_REQUESTED' | 'APPROVED' | 'REJECTED' | 'FORWARDED_TO_REO';
+export type PipelineStatus = 'PENDING_ASSIGNMENT' | 'UNDER_REVIEW' | 'REVISION_REQUESTED' | 'APPROVED' | 'REJECTED' | 'FORWARDED_TO_REO' | 'OUTSOURCED';
 export type ReviewRecommendation = 'APPROVAL' | 'MINOR_MODIFICATIONS' | 'MAJOR_MODIFICATIONS' | 'DISAPPROVAL';
 export type ChecklistPresence = 'YES' | 'NA';
 export interface ChecklistEntry { present: ChecklistPresence; pageRef: string; comment: string }
@@ -498,8 +498,9 @@ export interface EligibleConcept {
 // ============================================================================
 
 export type AihrVerdict = 'PASS' | 'CONDITIONALLY_APPROVED' | 'FAIL';
+export type AihrVerdictInput = 'CONDITIONALLY_APPROVED' | 'FAIL';
 export type EnBancOutcome = 'APPROVED_FOR_IMPLEMENTATION' | 'NOT_APPROVED';
-export type AihrStage = 'AWAITING_DETAILED' | 'AWAITING_AIHR' | 'AIHR_FAILED' | 'QUEUED_FOR_EN_BANC' | 'NOT_APPROVED' | 'CLEARED' | 'DETAILED_SUBMITTED';
+export type AihrStage = 'AWAITING_DETAILED' | 'AWAITING_AIHR' | 'AIHR_FAILED' | 'OUTSOURCED' | 'QUEUED_FOR_EN_BANC' | 'NOT_APPROVED' | 'CLEARED' | 'DETAILED_SUBMITTED';
 
 export interface AihrResult {
   verdict: AihrVerdict;
@@ -585,8 +586,29 @@ export interface AihrConcept {
   aihr: AihrResult | null;
   enBanc: EnBancDecision | null;
   detailedProposal: { id: string; status: PipelineStatus; submittedAt: string; fileUrl: string } | null;
+  fundingClassification: FundingClassification | null;
   canLogVerdict: boolean;
   canDeliberate: boolean;
+}
+
+export interface OutsourcedProjectDocument {
+  kind: 'COLLEGE_ENDORSEMENT' | 'CONCEPT_PAPER' | 'COLLEGE_MEMO' | 'MANUSCRIPT_VERSION' | 'CURRENT_MANUSCRIPT' | 'AIHR_RESULT';
+  label: string;
+  name: string | null;
+  fileUrl: string;
+  submittedAt: string | null;
+}
+
+export interface OutsourcedProject {
+  id: string;
+  conceptProposalId: string;
+  title: string;
+  researchAgenda: string;
+  proposedBudget: number;
+  outsourcedAt: string;
+  proponent: { id: string | null; name: string; email: string; department: string };
+  aihr: { verdict: AihrVerdict; presentedOn: string | null; remarks: string } | null;
+  documents: OutsourcedProjectDocument[];
 }
 
 /** A passed concept the proponent cannot submit for yet; `stage` says why. */

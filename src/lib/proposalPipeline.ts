@@ -34,6 +34,7 @@ export const STATUS_META: Record<PipelineStatus, StatusMeta> = {
   APPROVED: { label: 'Approved', description: 'Cleared by the technical review panel', tone: 'emerald' },
   REJECTED: { label: 'Rejected', description: 'Not endorsed by the technical review panel', tone: 'red' },
   FORWARDED_TO_REO: { label: 'Forwarded to REO', description: 'Technical review complete; forwarded to the Research Ethics Office', tone: 'emerald' },
+  OUTSOURCED: { label: 'Outsourced', description: 'Endorsed outside the university workflow', tone: 'slate' },
 };
 
 /** The proponent's attestation wording; the same sentence the backend requires on every manuscript upload. */
@@ -43,7 +44,7 @@ export const ANONYMITY_ATTESTATION_LABEL = 'This manuscript contains no proponen
 export const anonymityGateReason = (panelSize: number, anonymityCheckedAt: string | null): string | null =>
   panelSize === MAX_EVALUATORS_PER_PROPOSAL - 1 && !anonymityCheckedAt ? 'Record the manuscript anonymity check before assigning the third evaluator' : null;
 
-export const isTerminalStatus = (status: PipelineStatus): boolean => status === 'APPROVED' || status === 'REJECTED' || status === 'FORWARDED_TO_REO';
+export const isTerminalStatus = (status: PipelineStatus): boolean => status === 'APPROVED' || status === 'REJECTED' || status === 'FORWARDED_TO_REO' || status === 'OUTSOURCED';
 
 // ---- Proposal Assessment Form (WMSU-RPDU-FR-005.00 / FR-006.00) -----------
 // Mirrors backend-wmsu-rdec/src/services/pipelineRules.js; the tests on both sides pin the ids and order.
@@ -170,6 +171,11 @@ const NEXT_STEP: Record<PipelineStatus, Record<PipelineAudience, string>> = {
     rpdu: 'Forwarded to the Research Ethics Office. No further pipeline action.',
     evaluator: 'Review complete. Thank you.',
     proponent: 'Your proposal has been forwarded to the Research Ethics Office. RPDU will contact you about the next steps.',
+  },
+  OUTSOURCED: {
+    rpdu: 'Internal processing is closed. Prepare the endorsement and remaining documents outside the system.',
+    evaluator: 'This proposal was routed outside the university workflow.',
+    proponent: 'RPDU routed this proposal for outside endorsement. Remaining document preparation occurs outside the system.',
   },
 };
 

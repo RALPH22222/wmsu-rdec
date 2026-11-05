@@ -10,14 +10,15 @@ export const STAGE_META: Record<AihrStage, StageMeta> = {
   CLEARED: { label: 'Cleared for technical review', description: 'AIHR and any required en banc approval are complete', tone: 'emerald' },
   DETAILED_SUBMITTED: { label: 'Technical review started', description: 'In the technical review pipeline', tone: 'blue' },
   AIHR_FAILED: { label: 'Did not qualify (AIHR)', description: 'Below the qualifying mark or failed at the AIHR presentation', tone: 'red' },
+  OUTSOURCED: { label: 'Outsourced', description: 'Conditionally approved and endorsed outside the university workflow', tone: 'slate' },
   NOT_APPROVED: { label: 'Not approved (en banc)', description: 'The en banc deliberation did not approve it for implementation', tone: 'red' },
 };
 
-export const STAGE_ORDER: AihrStage[] = ['AWAITING_DETAILED', 'AWAITING_AIHR', 'QUEUED_FOR_EN_BANC', 'CLEARED', 'DETAILED_SUBMITTED', 'AIHR_FAILED', 'NOT_APPROVED'];
+export const STAGE_ORDER: AihrStage[] = ['AWAITING_DETAILED', 'AWAITING_AIHR', 'QUEUED_FOR_EN_BANC', 'CLEARED', 'DETAILED_SUBMITTED', 'OUTSOURCED', 'AIHR_FAILED', 'NOT_APPROVED'];
 
 export const VERDICT_META: Record<AihrVerdict, { label: string; description: string; tone: StatusTone }> = {
-  PASS: { label: 'Pass', description: 'Qualified for implementation; clears the proposal for technical review', tone: 'emerald' },
-  CONDITIONALLY_APPROVED: { label: 'Conditionally approved', description: 'Goes to the en banc deliberation before implementation', tone: 'amber' },
+  PASS: { label: 'Legacy pass', description: 'Historical verdict retained for existing records', tone: 'emerald' },
+  CONDITIONALLY_APPROVED: { label: 'Conditionally approved', description: 'Route to institutional processing or outside endorsement', tone: 'amber' },
   FAIL: { label: 'Fail', description: 'Did not qualify for institutional funding this call', tone: 'red' },
 };
 
@@ -33,6 +34,7 @@ const EXPLANATION: Record<AihrStage, string> = {
   CLEARED: 'Cleared for technical review after AIHR and any required en banc approval.',
   DETAILED_SUBMITTED: 'The detailed proposal is in the technical review pipeline.',
   AIHR_FAILED: 'Did not qualify at the Agency In-House Review for this call.',
+  OUTSOURCED: 'Conditionally approved and routed for endorsement outside the university system. Internal processing has ended.',
   NOT_APPROVED: 'The en banc deliberation did not approve this proposal for implementation.',
 };
 /** One sentence for the proponent and the RPDU row. */
