@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
+import { isWmsuEmail } from '../../lib/registrationEmail';
 import { ArrowRight, ArrowLeft, User, Mail, Lock, Phone, Building2, CheckCircle2, ChevronDown, Eye, EyeOff } from 'lucide-react';
 import { LegalDocumentModal, type LegalDocumentType } from '../../components/LegalDocumentModal';
 
@@ -32,6 +33,8 @@ export default function Register() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [emailTouched, setEmailTouched] = useState(false);
+  const invalidEmail = emailTouched && !isWmsuEmail(formData.email);
 
   // Legal document modal state & viewing tracking
   const [legalModalOpen, setLegalModalOpen] = useState(false);
@@ -182,6 +185,13 @@ export default function Register() {
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     if (currentStep !== 3) return;
+
+    if (!isWmsuEmail(formData.email)) {
+      setEmailTouched(true);
+      setError('This email address cannot be used to register.');
+      document.getElementById('registration-email')?.focus();
+      return;
+    }
     
     if (!formData.agreeToTerms || !hasViewedAllLegalDocs) {
       setError('You must open, review, and agree to both the Terms of Service and Privacy Policy to register.');
@@ -197,7 +207,7 @@ export default function Register() {
     setError(null);
 
     const { error: signUpError } = await supabase.auth.signUp({
-      email: formData.email,
+      email: formData.email.trim().toLowerCase(),
       password: formData.password,
       options: {
         emailRedirectTo: `${window.location.origin}/login`,
@@ -516,18 +526,22 @@ export default function Register() {
                   <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-300">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                       <div className="relative">
-                        <label className="text-xs uppercase tracking-wider text-slate-600 block mb-2 font-medium">
-                          Email Address *
+                        <label htmlFor="registration-email" className="text-xs uppercase tracking-wider text-slate-600 block mb-2 font-medium">
+                          WMSU Email Address *
                         </label>
                         <div className="flex items-center">
                           <Mail className="w-5 h-5 text-slate-400 absolute left-0" strokeWidth={1.5} />
                           <input
+                            id="registration-email"
                             type="email"
                             name="email"
                             required
                             value={formData.email}
                             onChange={handleChange}
-                            placeholder="Enter your email"
+                            onBlur={() => setEmailTouched(true)}
+                            aria-invalid={invalidEmail}
+                            autoComplete="email"
+                            placeholder="@wmsu.edu.ph"
                             className="w-full bg-transparent border-b border-slate-300 py-2 pl-8 focus:outline-none focus:border-[#C8102E] transition-colors text-slate-900 text-sm placeholder-slate-400"
                           />
                         </div>

@@ -53,13 +53,13 @@ export function EvaluatorSidebar({ mobileOpen = false, onCloseMobile }: Evaluato
       )}
 
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-72 max-w-[85vw] flex-col justify-between border-r border-emerald-200/80 bg-emerald-50/40 text-slate-800 transition-transform duration-300 ease-in-out lg:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-50 flex w-72 max-w-[85vw] flex-col justify-between border-r border-slate-200 bg-slate-50 text-slate-800 transition-transform duration-300 ease-in-out lg:translate-x-0 ${
           mobileOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full'
         }`}
       >
         <div>
           {/* Top Header / Branding */}
-          <div className="border-b border-emerald-200/80 bg-white/70 p-5">
+          <div className="border-b border-slate-200/80 bg-white/70 p-5">
             <div className="flex items-center justify-between">
               <Link to="/" className="flex items-center gap-2.5">
                 <div className="flex shrink-0 items-center -space-x-2">
@@ -74,7 +74,7 @@ export function EvaluatorSidebar({ mobileOpen = false, onCloseMobile }: Evaluato
                   <span className="block text-base font-extrabold uppercase tracking-tight text-slate-900 sm:text-lg">
                     WMSU <span className="text-brand">RDEC</span>
                   </span>
-                  <span className="inline-block rounded-xs border border-emerald-300 bg-emerald-100 px-1.5 py-0.2 text-[9px] font-black uppercase tracking-wider text-emerald-900">
+                  <span className="inline-block rounded-xs border border-slate-300 bg-slate-200/80 px-1.5 py-0.2 text-[9px] font-black uppercase tracking-wider text-slate-800">
                     Evaluator Desk
                   </span>
                 </div>
@@ -92,26 +92,27 @@ export function EvaluatorSidebar({ mobileOpen = false, onCloseMobile }: Evaluato
 
           {/* Navigation Section */}
           <nav className="flex-1 space-y-1 overflow-y-auto px-3.5 py-4" aria-label="Evaluator navigation">
-            <div className="px-3 pb-2 text-[10px] font-bold uppercase tracking-wider text-emerald-900/60">
+            <div className="px-3 pb-2 text-[10px] font-bold uppercase tracking-wider text-slate-400">
               Evaluator Workspace
             </div>
             {navItems.map((item) => {
-              const active = location.pathname === item.path;
+              const active = location.pathname === item.path || (item.path !== '/evaluator' && location.pathname.startsWith(`${item.path}/`));
               const Icon = item.icon;
               return (
                 <Link
                   key={item.path}
                   to={item.path}
                   onClick={onCloseMobile}
+                  aria-current={active ? 'page' : undefined}
                   className={`group flex items-center gap-3 rounded-sm px-3.5 py-2.5 text-xs font-semibold transition-all border ${
                     active
-                      ? 'border-emerald-700 bg-emerald-700 text-white shadow-2xs'
-                      : 'border-transparent text-slate-700 hover:border-emerald-200 hover:bg-white/80 hover:text-slate-900'
+                      ? 'border-[#C8102E] bg-[#C8102E] text-white shadow-2xs'
+                      : 'border-transparent text-slate-700 hover:border-slate-200 hover:bg-white/80 hover:text-slate-900'
                   }`}
                 >
                   <Icon
                     className={`h-4 w-4 shrink-0 transition-colors ${
-                      active ? 'text-white' : 'text-slate-400 group-hover:text-emerald-700'
+                      active ? 'text-white' : 'text-slate-400 group-hover:text-[#C8102E]'
                     }`}
                   />
                   <span className="truncate">{item.name}</span>
@@ -122,8 +123,8 @@ export function EvaluatorSidebar({ mobileOpen = false, onCloseMobile }: Evaluato
         </div>
 
         {/* Bottom User Profile Section */}
-        <div className="border-t border-emerald-200/80 bg-emerald-100/40 p-3.5">
-          <div className="flex items-center justify-between gap-3 rounded-sm border border-emerald-200 bg-white p-3 shadow-2xs">
+        <div className="border-t border-slate-200 bg-slate-100/70 p-3.5">
+          <div className="flex items-center justify-between gap-3 rounded-sm border border-slate-200 bg-white p-3 shadow-2xs">
             <Link
               to="/evaluator/profile"
               onClick={onCloseMobile}
@@ -133,8 +134,8 @@ export function EvaluatorSidebar({ mobileOpen = false, onCloseMobile }: Evaluato
               <div
                 className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-sm border font-bold text-xs transition-colors ${
                   location.pathname === '/evaluator/profile'
-                    ? 'border-emerald-700 bg-emerald-700 text-white'
-                    : 'border-emerald-300 bg-emerald-100 text-emerald-900 group-hover:border-emerald-400'
+                    ? 'border-[#C8102E] bg-[#C8102E] text-white'
+                    : 'border-slate-200 bg-slate-100 text-slate-700 group-hover:border-red-200'
                 }`}
               >
                 <User className="h-5 w-5" strokeWidth={1.75} />
@@ -150,7 +151,7 @@ export function EvaluatorSidebar({ mobileOpen = false, onCloseMobile }: Evaluato
                     <p className="truncate text-sm font-bold leading-snug text-slate-900" title={fullName}>
                       {fullName}
                     </p>
-                    <p className="mt-0.5 truncate text-xs font-medium text-emerald-900">
+                    <p className="mt-0.5 truncate text-xs font-medium text-slate-600">
                       Technical Evaluator
                     </p>
                   </>
