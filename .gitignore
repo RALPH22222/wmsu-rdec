@@ -28,4 +28,4 @@ dist-ssr
 
 # Local RPDU verification harness and private read-only snapshots
 .rpdu-*
-AGENTS.md
+
