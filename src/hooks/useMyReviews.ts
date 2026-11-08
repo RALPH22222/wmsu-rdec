@@ -27,7 +27,13 @@ export function useMyReview(reviewId: string | undefined) {
       const { review, roundOutcome } = await submitReviewApi(reviewId, payload, token);
       setData(review);
       const outcomeLabel = roundOutcome ? STATUS_META[roundOutcome as PipelineStatus]?.label : null;
-      showToast(outcomeLabel ? `Evaluation submitted — round closed: ${outcomeLabel}` : 'Evaluation submitted');
+      showToast(
+        outcomeLabel
+          ? `Evaluation submitted — round closed: ${outcomeLabel}`
+          : review.proposalStatus === 'AWAITING_SUMMARY'
+            ? 'Evaluation submitted — the panel is complete; the RPDU Head will compile the summary.'
+            : 'Evaluation submitted',
+      );
       return { roundOutcome };
     } catch (failure) {
       showToast(failure instanceof Error ? failure.message : 'Unable to submit the evaluation');

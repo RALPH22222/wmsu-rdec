@@ -10,6 +10,7 @@ import { PipelineStepper } from '../../components/ui/PipelineStepper';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { HistoryList } from '../../components/ui/HistoryList';
 import { RoundFeedbackAccordion } from '../../components/proponentComponent/RoundFeedbackAccordion';
+import { RoundSummaryAccordion } from '../../components/proponentComponent/RoundSummaryAccordion';
 import { RevisionUploadForm } from '../../components/proponentComponent/RevisionUploadForm';
 import { RevisionTimeline } from '../../components/proponentComponent/RevisionTimeline';
 import { ActionSheetStrip } from '../../components/proponentComponent/ActionSheetStrip';
@@ -118,10 +119,22 @@ export function RevisionHistoryPage() {
                 {/* Keep panels mounted so changing tabs preserves selected files and unsent clarification drafts. */}
                 <div id={`${ids}-panel-feedback`} role="tabpanel" aria-labelledby={`${ids}-tab-feedback`} hidden={activeTab !== 'feedback'} tabIndex={0} className="p-5 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[#C8102E] sm:p-6">
                   <div className="space-y-8">
-                    <Card title="Evaluator feedback">
+                    <Card title="Panel feedback">
                       <ActionSheetStrip proposal={selected} />
-                      {selected.feedback.length === 0 ? <p className="text-sm leading-relaxed text-slate-500">Feedback is released when a review round closes.</p>
-                        : <div className="space-y-5">{[...selected.feedback].reverse().map((round, index) => <RoundFeedbackAccordion key={round.round} feedback={round} defaultOpen={index === 0} />)}</div>}
+                      {(() => {
+                        const summaries = [...selected.summaries].sort((a, b) => b.round - a.round);
+                        const summarized = new Set(summaries.map((summary) => summary.round));
+                        const legacy = selected.feedback.filter((round) => !summarized.has(round.round)).sort((a, b) => b.round - a.round);
+                        if (summaries.length === 0 && legacy.length === 0) {
+                          return <p className="text-sm leading-relaxed text-slate-500">{selected.status === 'AWAITING_SUMMARY' ? "All three evaluations are in. Results are released when the RPDU Head publishes the round's evaluation summary." : "Results are released when the RPDU Head publishes the round's evaluation summary."}</p>;
+                        }
+                        return (
+                          <div className="space-y-5">
+                            {summaries.map((summary, index) => <RoundSummaryAccordion key={`summary-${summary.round}`} summary={summary} defaultOpen={index === 0} />)}
+                            {legacy.map((round, index) => <RoundFeedbackAccordion key={`feedback-${round.round}`} feedback={round} defaultOpen={summaries.length === 0 && index === 0} />)}
+                          </div>
+                        );
+                      })()}
                     </Card>
                     {(selected.clarifications.length > 0 || selected.canClarify) && <Card title="Clarifications with RPDU">
                       <ClarificationThread size="sm" messages={selected.clarifications} currentRound={selected.currentRound} canPost={selected.canClarify} viewer="PROPONENT" onPost={async (round, body) => { await clarify(selected.id, round, body); }} />

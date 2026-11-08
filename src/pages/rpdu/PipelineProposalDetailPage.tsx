@@ -18,6 +18,7 @@ import { RevisionComparator } from '../../components/rpduComponent/RevisionCompa
 import { TechnicalReviewGateway } from '../../components/rpduComponent/TechnicalReviewGateway';
 import { DeclinedInvitations } from '../../components/rpduComponent/DeclinedInvitations';
 import { ActionSheetCard } from '../../components/rpduComponent/ActionSheetCard';
+import { RoundSummaryCard } from '../../components/rpduComponent/RoundSummaryCard';
 import { ClarificationThread } from '../../components/ui/ClarificationThread';
 import { FundingClassificationField } from '../../components/rpduComponent/FundingClassificationField';
 import { ManuscriptAnonymityCard } from '../../components/rpduComponent/ManuscriptAnonymityCard';
@@ -30,7 +31,7 @@ const Card = ({ title, badge, children }: { title: string; badge?: ReactNode; ch
 
 /** Rendered keyed by the route id, so a stale response for a previous id can never write into this proposal. */
 function DetailBody({ id, role }: { id: string | undefined; role: 'rpdu' | 'admin' }) {
-  const { proposal, loading, error, refresh, unassign, checkRevision, checkAnonymity, forward, buildActionSheet, clarify, checkNda, saveFundingClassification } = useRpduProposal(id);
+  const { proposal, loading, error, refresh, unassign, checkRevision, checkAnonymity, forward, buildActionSheet, saveSummary, publishSummary, clarify, checkNda, saveFundingClassification } = useRpduProposal(id);
   const backHref = `/${role}/evaluations`;
 
   if (loading) return <section className="mx-auto max-w-5xl space-y-3" aria-label="Loading proposal"><div className="h-20 animate-pulse rounded-sm bg-slate-100" /><div className="h-40 animate-pulse rounded-sm bg-slate-100" /></section>;
@@ -54,7 +55,7 @@ function DetailBody({ id, role }: { id: string | undefined; role: 'rpdu' | 'admi
         <div className="flex flex-wrap items-center gap-2"><span className="font-mono text-[11px] font-bold text-slate-500">{proposal.code}</span><ProposalStatusBadge proposal={proposal} size="md" /><span className="text-xs text-slate-500">Round {proposal.currentRound}</span></div>
         <h2 className="mt-2 break-words font-brand text-lg font-bold text-slate-900">{proposal.title}</h2>
         <p className="mt-1 text-xs text-slate-500">{proposal.proponent.name} · {proposal.proponent.department || 'No department'} · Submitted {formatDate(proposal.submittedAt)}</p>
-        <p className="mt-3 rounded-sm bg-slate-50 p-3 text-xs text-slate-700">{proposal.preReviewStage ? stageExplanation(proposal.preReviewStage) : nextStepFor(proposal.status, 'rpdu')}</p>
+        <p className="mt-3 rounded-sm bg-slate-50 p-3 text-xs text-slate-700">{proposal.preReviewStage ? stageExplanation(proposal.preReviewStage) : nextStepFor(proposal.status, 'rpdu', proposal.currentRound)}</p>
         {!proposal.preReviewStage && <div className="mt-4"><PipelineStepper status={proposal.status} currentRound={proposal.currentRound} compact /></div>}
         <div className="mt-4 flex flex-wrap gap-2"><DocumentLink href={proposal.manuscriptUrl} label={proposal.manuscriptUrl ? 'Current manuscript' : 'Manuscript'} />{latestRevision && <DocumentLink href={latestRevision.revisedFileUrl} label={`Revision ${latestRevision.revisionNumber}`} muted />}</div>
       </header>
@@ -79,6 +80,12 @@ function DetailBody({ id, role }: { id: string | undefined; role: 'rpdu' | 'admi
           : <Link to={backHref} className="mt-3 inline-flex min-h-11 items-center text-xs font-semibold text-[#C8102E]">Assign evaluators from the list →</Link>)}
         <DeclinedInvitations declines={proposal.declines} />
       </Card>
+
+      {(proposal.status === 'AWAITING_SUMMARY' || proposal.summaries.length > 0) && (
+        <Card title="Evaluation summary">
+          <RoundSummaryCard proposal={proposal} onSave={saveSummary} onPublish={publishSummary} />
+        </Card>
+      )}
 
       {(proposal.canBuildActionSheet || proposal.actionSheets.length > 0) && (
         <Card title="Proposal Action Sheet">

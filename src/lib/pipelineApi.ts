@@ -88,6 +88,18 @@ export interface ActionSheetInput { points: ActionSheetPoints; otherComments: st
 export const buildActionSheetApi = async (proposalId: string, round: number, input: ActionSheetInput, token?: string): Promise<RpduProposal> =>
   (await request<RpduProposal>(API_ENDPOINTS.PIPELINE.ACTION_SHEET(proposalId, round), token, { method: 'PUT', body: JSON.stringify(input) })).data;
 
+export interface SummaryInput { points: ActionSheetPoints; remarks: string; coverNote: string }
+
+/** Saves (or updates) the round's evaluation summary draft. */
+export const saveSummaryApi = async (proposalId: string, round: number, input: SummaryInput, token?: string): Promise<RpduProposal> =>
+  (await request<RpduProposal>(API_ENDPOINTS.PIPELINE.SUMMARY(proposalId, round), token, { method: 'PUT', body: JSON.stringify(input) })).data;
+
+/** RPDU Head / ADMIN: publishes the round's evaluation summary, which applies the round outcome and releases it to the proponent. */
+export const publishSummaryApi = async (proposalId: string, round: number, input: SummaryInput, token?: string): Promise<{ proposal: RpduProposal; warning: string | null }> => {
+  const result = await request<RpduProposal>(API_ENDPOINTS.PIPELINE.SUMMARY_PUBLISH(proposalId, round), token, { method: 'POST', body: JSON.stringify(input) });
+  return { proposal: result.data, warning: result.warning ?? null };
+};
+
 export const postClarificationApi = async (proposalId: string, round: number, body: string, token?: string): Promise<RpduProposal> =>
   (await request<RpduProposal>(API_ENDPOINTS.PIPELINE.CLARIFICATIONS(proposalId), token, { method: 'POST', body: JSON.stringify({ round, body: body.trim() }) })).data;
 

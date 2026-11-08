@@ -1,8 +1,9 @@
 import { useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useCallForProposals } from '../context/CallForProposalsContext';
-import { assignEvaluatorApi, buildActionSheetApi, checkAnonymityApi, checkNdaApi, checkRevisionApi, forwardToReoApi, getPipelineEvaluators, getPipelineProposal, getPipelineProposals, postClarificationApi, saveFundingClassificationApi, unassignEvaluatorApi } from '../lib/pipelineApi';
-import type { ActionSheetInput } from '../lib/pipelineApi';
+import { assignEvaluatorApi, buildActionSheetApi, checkAnonymityApi, checkNdaApi, checkRevisionApi, forwardToReoApi, getPipelineEvaluators, getPipelineProposal, getPipelineProposals, postClarificationApi, publishSummaryApi, saveFundingClassificationApi, saveSummaryApi, unassignEvaluatorApi } from '../lib/pipelineApi';
+import type { ActionSheetInput, SummaryInput } from '../lib/pipelineApi';
+import { STATUS_META } from '../lib/proposalPipeline';
 import type { FundingClassification, PipelineEvaluator, RpduProposal } from '../types';
 import { useAsyncResource } from './useAsyncResource';
 
@@ -129,6 +130,34 @@ export function useRpduProposal(id: string | undefined) {
     }
   }, [id, token, setData, showToast, reread]);
 
+  const saveSummary = useCallback(async (round: number, input: SummaryInput) => {
+    if (!id) return;
+    try {
+      const proposal = await saveSummaryApi(id, round, input, token);
+      setData(proposal);
+      showToast(`Round ${round} summary draft saved`);
+    } catch (failure) {
+      showToast(failure instanceof Error ? failure.message : 'Unable to save the summary draft');
+      reread();
+      throw failure;
+    }
+  }, [id, token, setData, showToast, reread]);
+
+  /** Publishing applies the round outcome. The toast is single-slot, so a server warning replaces the success toast. */
+  const publishSummary = useCallback(async (round: number, input: SummaryInput) => {
+    if (!id) return;
+    try {
+      const { proposal, warning } = await publishSummaryApi(id, round, input, token);
+      setData(proposal);
+      showToast(`Round ${round} evaluation summary published — ${STATUS_META[proposal.status].label}`);
+      if (warning) showToast(warning);
+    } catch (failure) {
+      showToast(failure instanceof Error ? failure.message : 'Unable to publish the evaluation summary');
+      reread();
+      throw failure;
+    }
+  }, [id, token, setData, showToast, reread]);
+
   const clarify = useCallback(async (round: number, body: string) => {
     if (!id) return;
     try {
@@ -168,5 +197,5 @@ export function useRpduProposal(id: string | undefined) {
     }
   }, [id, token, setData, showToast, reread]);
 
-  return { proposal: resource.data, loading: resource.loading, error: resource.error, refresh: resource.refresh, replace: resource.setData, unassign, checkRevision, checkAnonymity, forward, buildActionSheet, clarify, checkNda, saveFundingClassification };
+  return { proposal: resource.data, loading: resource.loading, error: resource.error, refresh: resource.refresh, replace: resource.setData, unassign, checkRevision, checkAnonymity, forward, buildActionSheet, saveSummary, publishSummary, clarify, checkNda, saveFundingClassification };
 }

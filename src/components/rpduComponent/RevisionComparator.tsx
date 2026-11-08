@@ -2,7 +2,7 @@ import { useId, useState, type KeyboardEvent } from 'react';
 import { CheckCircle2, ClipboardCheck, Lock, Undo2 } from 'lucide-react';
 import type { ProponentFeedbackEvaluation, RpduProposal } from '../../types';
 import { groupFeedbackByPoint } from '../../lib/feedbackByPoint';
-import { formatDate, formatDateTime } from '../../lib/format';
+import { formatDate, formatDateTime, formatPageRef } from '../../lib/format';
 import { DocumentViewer } from '../ui/DocumentViewer';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 
@@ -171,7 +171,7 @@ export function RevisionComparator({ proposal, onCheck }: RevisionComparatorProp
                                       <span className="font-semibold text-slate-900">{blindLabel}:</span>{' '}
                                       {entry.present === 'NA' && <span className="text-slate-500">Marked N/A{entry.comment.trim() ? ' · ' : ''}</span>}
                                       {entry.comment.trim() && <span className="whitespace-pre-wrap">{entry.comment}</span>}
-                                      {entry.pageRef.trim() && <span className="text-slate-500"> (p. {entry.pageRef})</span>}
+                                      {entry.pageRef.trim() && <span className="text-slate-500"> ({formatPageRef(entry.pageRef)})</span>}
                                     </li>
                                   ))}
                                 </ul>

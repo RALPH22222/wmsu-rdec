@@ -20,6 +20,7 @@ export const MAX_CLARIFICATION_LENGTH = 2000;
 export const MAX_DECLINE_NOTE_LENGTH = 2000;
 export const MAX_ACTION_SHEET_COMMENT_LENGTH = 7000;
 export const MAX_OTHER_COMMENTS_LENGTH = 5000;
+export const MAX_COVER_NOTE_LENGTH = 2000;
 
 export type StatusTone = 'slate' | 'blue' | 'amber' | 'emerald' | 'red';
 
@@ -32,6 +33,7 @@ export interface StatusMeta {
 export const STATUS_META: Record<PipelineStatus, StatusMeta> = {
   PENDING_ASSIGNMENT: { label: 'Awaiting Evaluators', description: 'Fewer than three evaluators assigned', tone: 'slate' },
   UNDER_REVIEW: { label: 'Under Review', description: 'Technical review in progress', tone: 'blue' },
+  AWAITING_SUMMARY: { label: 'Evaluations being summarised', description: 'All evaluations are in; the RPDU Head is compiling the summary', tone: 'slate' },
   REVISION_REQUESTED: { label: 'Revision Requested', description: 'Proponent must upload a revised manuscript', tone: 'amber' },
   APPROVED: { label: 'Approved', description: 'Cleared by the technical review panel', tone: 'emerald' },
   REJECTED: { label: 'Rejected', description: 'Not endorsed by the technical review panel', tone: 'red' },
@@ -152,7 +154,12 @@ const NEXT_STEP: Record<PipelineStatus, Record<PipelineAudience, string>> = {
   UNDER_REVIEW: {
     rpdu: 'Waiting for all three evaluations for this round.',
     evaluator: 'Submit your evaluation for this round.',
-    proponent: 'The panel is evaluating your manuscript. Feedback is released when the round closes.',
+    proponent: "The panel is evaluating your manuscript. Results are released when the RPDU Head publishes the round's evaluation summary.",
+  },
+  AWAITING_SUMMARY: {
+    rpdu: 'Compile and publish the round {round} evaluation summary.',
+    evaluator: "Your evaluation is in. The RPDU Head is compiling the panel's summary.",
+    proponent: 'The RPDU Head is compiling the evaluation summary; results are released when it is published.',
   },
   REVISION_REQUESTED: {
     rpdu: 'Waiting for the proponent to upload a revision.',
@@ -181,7 +188,9 @@ const NEXT_STEP: Record<PipelineStatus, Record<PipelineAudience, string>> = {
   },
 };
 
-export const nextStepFor = (status: PipelineStatus, audience: PipelineAudience): string => NEXT_STEP[status][audience];
+/** `round` fills the `{round}` placeholder (only the RPDU AWAITING_SUMMARY step uses it). */
+export const nextStepFor = (status: PipelineStatus, audience: PipelineAudience, round?: number): string =>
+  NEXT_STEP[status][audience].replace('{round}', String(round ?? ''));
 
 // ---- Flow 7.1 invitation response and 7.3 Proposal Action Sheet (WMSU-RPDU-FR-007.00) ----
 

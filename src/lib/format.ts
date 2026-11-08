@@ -79,3 +79,9 @@ export const isValidProposalDocumentFile = (file: { name: string; type?: string 
   const mime = (file.type || '').trim().toLowerCase();
   return !mime || mime === 'application/octet-stream' || mime === EXPECTED_MIME_BY_EXT[ext];
 };
+
+/** Labels an evaluator's page reference: a stored value that already starts with "p." (e.g. "p. 2", "p.12", "P 3") is shown as-is, anything else gets "p. ". */
+export const formatPageRef = (pageRef: string): string => {
+  const ref = pageRef.trim();
+  return /^p\.?\s*\d/i.test(ref) ? ref : `p. ${ref}`;
+};

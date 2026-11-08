@@ -4,7 +4,7 @@ import { DocumentLink } from '../ui/DocumentLink';
 
 /**
  * The Proposal Action Sheet (WMSU-RPDU-FR-007.00) RPDU prepared for the current round, shown at the top of the
- * proponent's "Evaluator feedback" card. It never blocks the revision upload.
+ * proponent's "Panel feedback" card. It never blocks the revision upload.
  */
 export function ActionSheetStrip({ proposal }: { proposal: ProponentProposal }) {
   const sheet = proposal.actionSheets.find((item) => item.round === proposal.currentRound);
@@ -20,7 +20,7 @@ export function ActionSheetStrip({ proposal }: { proposal: ProponentProposal }) 
   }
 
   if (proposal.status === 'REVISION_REQUESTED') {
-    return <p className="mb-3 rounded-sm border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">RPDU is preparing the Proposal Action Sheet for this round. The comments below are the same ones it will contain.</p>;
+    return <p className="mb-3 rounded-sm border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">RPDU is preparing the Proposal Action Sheet for this round from the panel's consolidated comments.</p>;
   }
 
   return null;

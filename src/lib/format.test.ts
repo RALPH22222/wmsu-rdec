@@ -6,6 +6,7 @@ import {
   formatDate,
   formatSubmissionDateTime,
   formatFileSize,
+  formatPageRef,
   initialsOf,
   isOverdue,
   isValidProposalDocumentFile,
@@ -69,4 +70,14 @@ test('isValidProposalDocumentFile accepts PDF, DOC, and DOCX files and rejects u
   assert.equal(isValidProposalDocumentFile({ name: 'endorsement.docx', type: '' }), true);
   assert.equal(isValidProposalDocumentFile({ name: 'notes.txt', type: 'text/plain' }), false);
   assert.equal(isValidProposalDocumentFile({ name: 'fake.pdf', type: 'image/png' }), false);
+});
+
+test('formatPageRef prefixes a bare page reference and leaves an already-prefixed one alone', () => {
+  assert.equal(formatPageRef('2'), 'p. 2');
+  assert.equal(formatPageRef('12-14'), 'p. 12-14');
+  assert.equal(formatPageRef('p. 2'), 'p. 2');
+  assert.equal(formatPageRef('p.12'), 'p.12');
+  assert.equal(formatPageRef('P 3'), 'P 3');
+  assert.equal(formatPageRef('  p. 5 '), 'p. 5');
+  assert.equal(formatPageRef('pages 4'), 'p. pages 4');
 });

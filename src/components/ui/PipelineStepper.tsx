@@ -23,7 +23,7 @@ function buildSteps(status: PipelineStatus, currentRound: number): Step[] {
   const revisionsDone = currentRound - 1;
 
   const reviewState: StepState =
-    status === 'UNDER_REVIEW' ? 'active' : decided || status === 'REVISION_REQUESTED' ? 'complete' : 'upcoming';
+    status === 'UNDER_REVIEW' || status === 'AWAITING_SUMMARY' ? 'active' : decided || status === 'REVISION_REQUESTED' ? 'complete' : 'upcoming';
 
   const revisionState: StepState =
     status === 'REVISION_REQUESTED' ? 'active' : currentRound > 1 ? 'complete' : 'upcoming';
@@ -40,8 +40,10 @@ function buildSteps(status: PipelineStatus, currentRound: number): Step[] {
       key: 'review',
       label: currentRound > 1 ? `Technical Review · Round ${currentRound}` : 'Technical Review',
       description:
-        reviewState === 'active'
-          ? 'Technical review in progress'
+        status === 'AWAITING_SUMMARY'
+          ? 'Evaluations in; summary being compiled'
+          : reviewState === 'active'
+            ? 'Technical review in progress'
           : reviewState === 'complete'
             ? 'Evaluations received'
             : 'Technical review',

@@ -86,6 +86,8 @@ export const API_ENDPOINTS = {
     ANONYMITY: (id: string) => `${API_BASE_URL}/pipeline/proposals/${encodeURIComponent(id)}/anonymity`,
     MY_REVIEW_RESPONSE: (id: string) => `${API_BASE_URL}/pipeline/my-reviews/${encodeURIComponent(id)}/response`,
     ACTION_SHEET: (proposalId: string, round: number) => `${API_BASE_URL}/pipeline/proposals/${encodeURIComponent(proposalId)}/action-sheets/${encodeURIComponent(String(round))}`,
+    SUMMARY: (proposalId: string, round: number) => `${API_BASE_URL}/pipeline/proposals/${encodeURIComponent(proposalId)}/summaries/${encodeURIComponent(String(round))}`,
+    SUMMARY_PUBLISH: (proposalId: string, round: number) => `${API_BASE_URL}/pipeline/proposals/${encodeURIComponent(proposalId)}/summaries/${encodeURIComponent(String(round))}/publish`,
     CLARIFICATIONS: (proposalId: string) => `${API_BASE_URL}/pipeline/proposals/${encodeURIComponent(proposalId)}/clarifications`,
     MY_PROPOSAL_CLARIFICATIONS: (proposalId: string) => `${API_BASE_URL}/pipeline/my-proposals/${encodeURIComponent(proposalId)}/clarifications`,
   },

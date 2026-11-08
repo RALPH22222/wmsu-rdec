@@ -9,7 +9,7 @@ import { AssignEvaluatorModal } from '../../components/rpduComponent/modals/Assi
 
 interface EvaluatorAssignmentPageProps { role?: 'rpdu' | 'admin' }
 
-const STATUS_ORDER: PipelineStatus[] = ['PENDING_ASSIGNMENT', 'UNDER_REVIEW', 'REVISION_REQUESTED', 'APPROVED', 'REJECTED', 'FORWARDED_TO_REO'];
+const STATUS_ORDER: PipelineStatus[] = ['PENDING_ASSIGNMENT', 'UNDER_REVIEW', 'AWAITING_SUMMARY', 'REVISION_REQUESTED', 'APPROVED', 'REJECTED', 'FORWARDED_TO_REO'];
 
 export function EvaluatorAssignmentPage({ role = 'rpdu' }: EvaluatorAssignmentPageProps) {
   const { proposals, evaluators, loading, error, refresh, assign } = useRpduPipeline();

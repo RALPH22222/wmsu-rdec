@@ -267,7 +267,7 @@ export interface RpduBudgetAllocationItem {
 // Detailed Proposal Evaluation Pipeline — shapes returned by /api/pipeline
 // ============================================================================
 
-export type PipelineStatus = 'PENDING_ASSIGNMENT' | 'UNDER_REVIEW' | 'REVISION_REQUESTED' | 'APPROVED' | 'REJECTED' | 'FORWARDED_TO_REO' | 'OUTSOURCED';
+export type PipelineStatus = 'PENDING_ASSIGNMENT' | 'UNDER_REVIEW' | 'AWAITING_SUMMARY' | 'REVISION_REQUESTED' | 'APPROVED' | 'REJECTED' | 'FORWARDED_TO_REO' | 'OUTSOURCED';
 export type ReviewRecommendation = 'APPROVAL' | 'MINOR_MODIFICATIONS' | 'MAJOR_MODIFICATIONS' | 'DISAPPROVAL';
 export type ChecklistPresence = 'YES' | 'NA';
 export interface ChecklistEntry { present: ChecklistPresence; pageRef: string; comment: string }
@@ -354,6 +354,12 @@ export type ActionSheetPoints = Record<string, string>;
 export interface ActionSheetSeed { round: number; points: ActionSheetPoints; otherComments: string }
 /** A generated Proposal Action Sheet (WMSU-RPDU-FR-007.00) for one round. RPDU view. */
 export interface ActionSheet { round: number; points: ActionSheetPoints; otherComments: string; fileUrl: string; preparedBy: string; preparedAt: string; updatedAt: string }
+/** One seat's recommendation in a round summary, by blind label; null for a seat without a submission (RPDU drafts only). */
+export interface SummaryRecommendation { blindLabel: string; recommendation: ReviewRecommendation | null }
+/** The RPDU Head's compiled evaluation summary for one round (RPDU view): a draft until published. */
+export interface RoundSummary { round: number; outcome: PipelineStatus | null; recommendations: SummaryRecommendation[]; points: ActionSheetPoints; remarks: string; coverNote: string; fileUrl: string | null; publishedBy: string | null; publishedAt: string | null; updatedAt: string; isPublished: boolean }
+/** A published evaluation summary as the proponent receives it. */
+export interface ProponentRoundSummary { round: number; outcome: PipelineStatus; recommendations: SummaryRecommendation[]; points: ActionSheetPoints; remarks: string; coverNote: string; fileUrl: string | null; publishedAt: string }
 /** The proponent's view of a generated action sheet: the document is the deliverable. */
 export interface ProponentActionSheet { round: number; fileUrl: string; preparedAt: string }
 export type ClarificationAuthor = 'PROPONENT' | 'RPDU';
@@ -416,6 +422,15 @@ export interface RpduProposal {
   canClarify: boolean;
   /** Proponent messages in the current round not yet answered by RPDU. */
   awaitingReply: number;
+  /** Compiled evaluation summaries, one per round (drafts and published). */
+  summaries: RoundSummary[];
+  /** Pre-filled consolidation of the current round for the summary form; null when no summary can be saved. */
+  summarySeed: { round: number; points: ActionSheetPoints; remarks: string } | null;
+  canSaveSummary: boolean;
+  /** The caller may publish a summary (RPDU Head or ADMIN). */
+  canPublishSummary?: boolean;
+  /** The outcome the current round's recommendations resolve to; null until the panel is complete. */
+  computedOutcome: PipelineStatus | null;
 }
 
 export interface EvaluatorProfile {
@@ -495,6 +510,8 @@ export interface ProponentProposal {
   actionSheets: ProponentActionSheet[];
   clarifications: ClarificationMessage[];
   canClarify: boolean;
+  /** Published evaluation summaries, one per round. */
+  summaries: ProponentRoundSummary[];
 }
 
 export interface EligibleConcept {
