@@ -1,5 +1,6 @@
+import { NotificationBell } from '../components/NotificationBell';
 import { useState } from 'react';
-import { Bell, ChevronRight, Menu } from 'lucide-react';
+import { ChevronRight, Menu } from 'lucide-react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { EvaluatorSidebar } from '../components/evaluatorComponent/EvaluatorSidebar';
 
@@ -23,7 +24,7 @@ export function EvaluatorLayout() {
           <h1 className="truncate text-sm font-semibold tracking-tight text-slate-800 sm:text-base lg:text-lg">{title}</h1>
         </div>
       </div>
-      <button type="button" aria-label="Notifications" className="shrink-0 cursor-pointer rounded-xl p-2 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800"><Bell size={20} /></button>
+      <NotificationBell />
     </header>
     <main className="w-full max-w-full flex-1 overflow-x-clip p-3.5 sm:p-6 lg:p-8"><Outlet /></main>
     </div>

@@ -1,6 +1,7 @@
+import { NotificationBell } from '../components/NotificationBell';
 import React, { useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
-import { Menu, Bell, ChevronRight } from 'lucide-react';
+import { Menu, ChevronRight } from 'lucide-react';
 import { RpduSidebar } from '../components/rpduComponent/RpduSidebar';
 
 export const RpduLayout: React.FC = () => {
@@ -81,15 +82,7 @@ export const RpduLayout: React.FC = () => {
 
           {/* Right Header: Notifications Only */}
           <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-            <button
-              type="button"
-              className="relative p-2 rounded-xl text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition-colors cursor-pointer"
-              title="Notifications"
-              aria-label="Notifications"
-            >
-              <Bell className="w-5 h-5" />
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-[#C8102E]" />
-            </button>
+            <NotificationBell />
           </div>
         </header>
 

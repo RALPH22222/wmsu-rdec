@@ -18,6 +18,10 @@ export const API_BASE_URL: string =
 
 // Registry of all API endpoints across the application
 export const API_ENDPOINTS = {
+  NOTIFICATIONS: {
+    LIST: `${API_BASE_URL}/notifications`,
+    READ: `${API_BASE_URL}/notifications/read`,
+  },
   // Common / Shared Endpoints
   COMMON: {
     HEALTH: `${API_BASE_URL}/health`,
