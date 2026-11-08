@@ -1183,290 +1183,296 @@ export const BudgetAllocationForm: React.FC = () => {
         ))}
       </datalist>
 
-      {/* Top Banner: Official Header & Proposal Selector */}
-      <div className="bg-white p-6 rounded-md border border-slate-200 shadow-xs space-y-5 print:hidden">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-5 border-b border-slate-100">
-          <div>
-            <h2 className="text-xl font-black text-slate-900 tracking-tight">
-              Project Line-Item Budget Allocation
-            </h2>
-            <p className="text-xs text-slate-500 mt-1 max-w-xl leading-relaxed">
-              Formulate the official multi-year Line-Item Budget (LIB) structured strictly by Personnel Services (PS), MOOE, and Equipment Outlay (EO) matching the WMSU-RPDU institutional format.
-            </p>
-            {hasTechnicalReview && (
-              <div className="flex flex-wrap items-center gap-2 mt-3">
-                <button
-                  type="button"
-                  onClick={() => setIsPrintPreviewOpen(true)}
-                  className="px-3 py-1.5 text-xs font-bold rounded-md border bg-white hover:bg-slate-50 text-slate-700 border-slate-300 shadow-2xs inline-flex items-center gap-1.5 transition-colors cursor-pointer"
-                >
-                  <Eye className="w-3.5 h-3.5 text-slate-600" /> Print Preview
-                </button>
-                <button
-                  type="button"
-                  onClick={handlePrintLib}
-                  disabled={hasEoValidationError}
-                  title={
-                    hasEoValidationError
-                      ? 'Fix Equipment Outlay minimum amount (₱49,999.00 per item) before printing'
-                      : 'Print official Line-Item Budget'
-                  }
-                  className={`px-3 py-1.5 text-xs font-bold rounded-md border shadow-2xs inline-flex items-center gap-1.5 transition-colors ${
-                    hasEoValidationError
-                      ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed'
-                      : 'bg-white hover:bg-slate-50 text-slate-800 border-slate-300 cursor-pointer'
-                  }`}
-                >
-                  <Printer className="w-3.5 h-3.5 text-[#C8102E]" /> Print LIB
-                </button>
-                <button
-                  type="button"
-                  onClick={handleDownloadLibPdf}
-                  disabled={hasEoValidationError || isDownloadingPdf}
-                  title={
-                    hasEoValidationError
-                      ? 'Fix Equipment Outlay minimum amount (₱49,999.00 per item) before downloading PDF'
-                      : 'Download official Line-Item Budget as PDF'
-                  }
-                  className={`px-3.5 py-1.5 text-xs font-bold rounded-md shadow-2xs inline-flex items-center gap-1.5 transition-colors ${
-                    hasEoValidationError || isDownloadingPdf
-                      ? 'bg-slate-200 text-slate-400 border border-slate-300 cursor-not-allowed'
-                      : 'bg-[#C8102E] hover:bg-[#A00D26] text-white cursor-pointer'
-                  }`}
-                >
-                  <Download className="w-3.5 h-3.5" />
-                  {isDownloadingPdf ? 'Generating PDF...' : 'Download LIB (PDF)'}
-                </button>
-              </div>
-            )}
-          </div>
-
-          {/* Badges: Total Allocated, Cap, Status */}
-          <div className="flex flex-wrap sm:flex-nowrap items-center gap-3 shrink-0">
-            <div className="text-right p-3 bg-slate-50 rounded-md border border-slate-200 min-w-[140px]">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
-                Total Allocated
-              </span>
-              <span className={`text-lg font-black ${isOverBudget ? 'text-rose-600' : 'text-[#C8102E]'}`}>
-                ₱{grandTotal.total.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-              </span>
-              <div className="text-[10px] text-slate-500 mt-0.5 font-medium">
-                Year 1: ₱{grandTotal.year1.toLocaleString()} &bull; Year 2: ₱{grandTotal.year2.toLocaleString()}
-              </div>
-            </div>
-
-            <div className="text-right p-3 bg-slate-50 rounded-md border border-slate-200 min-w-[140px]">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
-                {hasProposalApprovedBudget ? 'En Banc Approved Budget' : 'Call Budget Limit'}
-              </span>
-              <span className="text-lg font-black text-slate-900">
-                ₱{maxBudgetLimit.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-              </span>
-              <div
-                className="text-[10px] text-slate-500 mt-0.5 font-medium truncate max-w-[140px]"
-                title={hasProposalApprovedBudget ? matchedConcept?.title : matchedCall?.title || 'Call Limit'}
-              >
-                {hasProposalApprovedBudget ? 'Target LIB Amount' : matchedCall?.code || 'Call Cap'}
-              </div>
-            </div>
-
-            <div
-              className={`px-3 py-2 rounded-md border text-center min-w-[130px] flex flex-col justify-center shrink-0 self-stretch ${
-                submissionStatus === 'submitted'
-                  ? reviewStatus === 'APPROVED' || reviewStatus === 'SIGNED'
-                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                    : 'bg-amber-50 text-amber-700 border-amber-200'
-                  : 'bg-slate-50 text-slate-700 border-slate-200'
-              }`}
-            >
-              <span className="text-[10px] font-bold uppercase tracking-wider block text-slate-400">
-                Review Status
-              </span>
-              <span className="text-xs font-black flex items-center justify-center gap-1 mt-0.5 whitespace-nowrap">
-                {submissionStatus === 'submitted' ? (
-                  reviewStatus === 'APPROVED' || reviewStatus === 'SIGNED' ? (
-                    <>
-                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" /> Accepted
-                    </>
-                  ) : (
-                    <>
-                      <Clock className="w-3.5 h-3.5 text-amber-600 shrink-0" /> Pending Review
-                    </>
-                  )
-                ) : (
-                  <>
-                    <FileCheck className="w-3.5 h-3.5 text-slate-500 shrink-0" /> Draft
-                  </>
-                )}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Proposal Selector Row */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs items-end">
-          <div className="min-w-0" ref={proposalDropdownRef}>
-            <label className="font-bold text-slate-700 block mb-1">Associate with Proposal *</label>
-            <div className="relative w-full">
-              <button
-                type="button"
-                aria-haspopup="listbox"
-                aria-expanded={isProposalDropdownOpen}
-                disabled={eligibleProposals.length === 0}
-                onClick={() => setIsProposalDropdownOpen((prev) => !prev)}
-                className={`w-full h-[38px] px-3 py-2 bg-slate-50 border rounded-md font-medium text-left flex items-center justify-between gap-2 transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-60 ${
-                  isProposalDropdownOpen
-                    ? 'border-[#C8102E] ring-1 ring-[#C8102E] bg-white'
-                    : 'border-slate-200 hover:border-slate-300 focus:outline-none focus:border-[#C8102E] focus:ring-1 focus:ring-[#C8102E]'
-                }`}
-              >
-                <span className="truncate text-slate-800">
-                  {matchedConcept?.title ||
-                    (eligibleProposals.length > 0
-                      ? eligibleProposals[0].title
-                      : 'No proposals with a Certificate of Technical Review (COTR)')}
-                </span>
-                <ChevronDown
-                  className={`w-4 h-4 text-slate-500 shrink-0 transition-transform ${
-                    isProposalDropdownOpen ? 'rotate-180' : ''
-                  }`}
-                />
-              </button>
-
-              {isProposalDropdownOpen && eligibleProposals.length > 0 && (
-                <ul
-                  role="listbox"
-                  aria-label="Associate with Proposal"
-                  className="absolute left-0 right-0 top-full mt-1 z-30 w-full max-h-60 overflow-y-auto bg-white border border-slate-200 rounded-md shadow-lg py-1 divide-y divide-slate-100"
-                >
-                  {eligibleProposals.map((c) => {
-                    const isSelected = c.id === selectedProposalId;
-                    return (
-                      <li key={c.id} role="option" aria-selected={isSelected}>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setSelectedProposalId(c.id);
-                            setIsProposalDropdownOpen(false);
-                          }}
-                          title={c.title}
-                          className={`w-full text-left px-3 py-2 text-xs transition-colors flex items-center justify-between gap-2 cursor-pointer ${
-                            isSelected
-                              ? 'bg-[#C8102E]/10 text-[#C8102E] font-bold'
-                              : 'text-slate-800 font-medium hover:bg-slate-100'
-                          }`}
-                        >
-                          <span className="truncate">{c.title}</span>
-                          {isSelected && <CheckCircle2 className="w-3.5 h-3.5 text-[#C8102E] shrink-0" />}
-                        </button>
-                      </li>
-                    );
-                  })}
-                </ul>
+      {/* Top Banner: Official Header & Proposal Selector (expands to full-page white surface when no COTR) */}
+      <div
+        className={`bg-white rounded-md border border-slate-200 shadow-xs print:hidden ${
+          !hasTechnicalReview ? 'min-h-[calc(100vh-9rem)] flex flex-col' : 'p-6 space-y-5'
+        }`}
+      >
+        <div className={!hasTechnicalReview ? 'p-6 space-y-5' : 'space-y-5'}>
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-5 border-b border-slate-100">
+            <div>
+              <h2 className="text-xl font-black text-slate-900 tracking-tight">
+                Project Line-Item Budget Allocation
+              </h2>
+              <p className="text-xs text-slate-500 mt-1 max-w-xl leading-relaxed">
+                Formulate the official multi-year Line-Item Budget (LIB) structured strictly by Personnel Services (PS), MOOE, and Equipment Outlay (EO) matching the WMSU-RPDU institutional format.
+              </p>
+              {hasTechnicalReview && (
+                <div className="flex flex-wrap items-center gap-2 mt-3">
+                  <button
+                    type="button"
+                    onClick={() => setIsPrintPreviewOpen(true)}
+                    className="px-3 py-1.5 text-xs font-bold rounded-md border bg-white hover:bg-slate-50 text-slate-700 border-slate-300 shadow-2xs inline-flex items-center gap-1.5 transition-colors cursor-pointer"
+                  >
+                    <Eye className="w-3.5 h-3.5 text-slate-600" /> Print Preview
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handlePrintLib}
+                    disabled={hasEoValidationError}
+                    title={
+                      hasEoValidationError
+                        ? 'Fix Equipment Outlay minimum amount (₱49,999.00 per item) before printing'
+                        : 'Print official Line-Item Budget'
+                    }
+                    className={`px-3 py-1.5 text-xs font-bold rounded-md border shadow-2xs inline-flex items-center gap-1.5 transition-colors ${
+                      hasEoValidationError
+                        ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed'
+                        : 'bg-white hover:bg-slate-50 text-slate-800 border-slate-300 cursor-pointer'
+                    }`}
+                  >
+                    <Printer className="w-3.5 h-3.5 text-[#C8102E]" /> Print LIB
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleDownloadLibPdf}
+                    disabled={hasEoValidationError || isDownloadingPdf}
+                    title={
+                      hasEoValidationError
+                        ? 'Fix Equipment Outlay minimum amount (₱49,999.00 per item) before downloading PDF'
+                        : 'Download official Line-Item Budget as PDF'
+                    }
+                    className={`px-3.5 py-1.5 text-xs font-bold rounded-md shadow-2xs inline-flex items-center gap-1.5 transition-colors ${
+                      hasEoValidationError || isDownloadingPdf
+                        ? 'bg-slate-200 text-slate-400 border border-slate-300 cursor-not-allowed'
+                        : 'bg-[#C8102E] hover:bg-[#A00D26] text-white cursor-pointer'
+                    }`}
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    {isDownloadingPdf ? 'Generating PDF...' : 'Download LIB (PDF)'}
+                  </button>
+                </div>
               )}
             </div>
-          </div>
 
-          <div className="min-w-0">
-            <span className="font-bold text-slate-700 block mb-1 invisible select-none" aria-hidden="true">
-              Governing Call
-            </span>
-            <div className="flex items-center px-3 py-2 bg-slate-50 border border-slate-200 rounded-md text-xs h-[38px]">
-              <span className="font-bold text-slate-400 uppercase tracking-wider text-[10px] mr-2 shrink-0">
-                Governing Call:
-              </span>
-              <span className="font-semibold text-slate-800 truncate">
-                {matchedCall?.title || 'Institutional Research Grant'}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Review & Submission Status Notification Banner */}
-        {submissionStatus === 'submitted' &&
-          (reviewStatus === 'APPROVED' || reviewStatus === 'SIGNED' ? (
-            <div className="p-4 bg-emerald-50/90 border border-emerald-300 rounded-md text-xs text-emerald-950 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
-              <div className="flex items-start gap-3">
-                <div className="w-8 h-8 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0 mt-0.5 font-bold">
-                  <CheckCircle2 className="w-5 h-5" />
-                </div>
-                <div>
-                  <div className="font-extrabold text-emerald-900 text-sm flex items-center gap-2">
-                    <span>Budget Allocation Accepted by RPDU</span>
-                    <span className="bg-emerald-200/80 text-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
-                      Ready for In-Person Signatures
-                    </span>
-                  </div>
-                  <p className="mt-1 text-emerald-800 leading-relaxed text-xs">
-                    Your digital Line-Item Budget has been accepted by RPDU. You may now proceed to gather the required physical signatures in person.
-                  </p>
+            {/* Badges: Total Allocated, Cap, Status */}
+            <div className="flex flex-wrap sm:flex-nowrap items-center gap-3 shrink-0">
+              <div className="text-right p-3 bg-slate-50 rounded-md border border-slate-200 min-w-[140px]">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+                  Total Allocated
+                </span>
+                <span
+                  className={`text-lg font-black ${
+                    hasTechnicalReview && isOverBudget ? 'text-rose-600' : 'text-[#C8102E]'
+                  }`}
+                >
+                  ₱{(hasTechnicalReview ? grandTotal.total : 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                </span>
+                <div className="text-[10px] text-slate-500 mt-0.5 font-medium">
+                  Year 1: ₱{(hasTechnicalReview ? grandTotal.year1 : 0).toLocaleString()} &bull; Year 2: ₱
+                  {(hasTechnicalReview ? grandTotal.year2 : 0).toLocaleString()}
                 </div>
               </div>
-            </div>
-          ) : (
-            <div className="p-3 bg-amber-50/80 border border-amber-200 rounded-md text-xs text-amber-950 flex items-center gap-3 shadow-2xs">
-              <div className="w-7 h-7 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center shrink-0 font-bold">
-                <Clock className="w-4 h-4" />
+
+              <div className="text-right p-3 bg-slate-50 rounded-md border border-slate-200 min-w-[140px]">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+                  {hasProposalApprovedBudget ? 'En Banc Approved Budget' : 'Call Budget Limit'}
+                </span>
+                <span className="text-lg font-black text-slate-900">
+                  ₱{maxBudgetLimit.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                </span>
+                <div
+                  className="text-[10px] text-slate-500 mt-0.5 font-medium truncate max-w-[140px]"
+                  title={hasProposalApprovedBudget ? matchedConcept?.title : matchedCall?.title || 'Call Limit'}
+                >
+                  {hasProposalApprovedBudget ? 'Target LIB Amount' : matchedCall?.code || 'Call Cap'}
+                </div>
               </div>
-              <div className="font-bold text-amber-900 text-xs flex items-center gap-2">
-                <span>Allocation Submitted &mdash; Pending Review</span>
-                <span className="bg-amber-100 text-amber-800 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase">
-                  Pending Review
+
+              <div
+                className={`px-3 py-2 rounded-md border text-center min-w-[130px] flex flex-col justify-center shrink-0 self-stretch ${
+                  hasTechnicalReview && submissionStatus === 'submitted'
+                    ? reviewStatus === 'APPROVED' || reviewStatus === 'SIGNED'
+                      ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                      : 'bg-amber-50 text-amber-700 border-amber-200'
+                    : 'bg-slate-50 text-slate-700 border-slate-200'
+                }`}
+              >
+                <span className="text-[10px] font-bold uppercase tracking-wider block text-slate-400">
+                  Review Status
+                </span>
+                <span className="text-xs font-black flex items-center justify-center gap-1 mt-0.5 whitespace-nowrap">
+                  {hasTechnicalReview && submissionStatus === 'submitted' ? (
+                    reviewStatus === 'APPROVED' || reviewStatus === 'SIGNED' ? (
+                      <>
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" /> Accepted
+                      </>
+                    ) : (
+                      <>
+                        <Clock className="w-3.5 h-3.5 text-amber-600 shrink-0" /> Pending Review
+                      </>
+                    )
+                  ) : (
+                    <>
+                      <FileCheck className="w-3.5 h-3.5 text-slate-500 shrink-0" /> Draft
+                    </>
+                  )}
                 </span>
               </div>
             </div>
-          ))}
+          </div>
 
-        {/* Over-Budget Alert */}
-        {hasTechnicalReview && isOverBudget && (
-          <div className="p-3 bg-rose-50 border border-rose-200 rounded-md text-xs text-rose-800 flex items-start gap-2.5">
-            <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
-            <div>
-              <span className="font-bold">Budget Ceiling Exceeded:</span> Total line-item expenditures (₱
-              {grandTotal.total.toLocaleString('en-US', { minimumFractionDigits: 2 })}) exceed the approved budget limit of ₱
-              {maxBudgetLimit.toLocaleString('en-US', { minimumFractionDigits: 2 })}. Please adjust item amounts before submitting.
+          {/* Proposal Selector Row */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs items-end">
+            <div className="min-w-0" ref={proposalDropdownRef}>
+              <label className="font-bold text-slate-700 block mb-1">Associate with Proposal *</label>
+              <div className="relative w-full">
+                <button
+                  type="button"
+                  aria-haspopup="listbox"
+                  aria-expanded={isProposalDropdownOpen}
+                  disabled={eligibleProposals.length === 0}
+                  onClick={() => setIsProposalDropdownOpen((prev) => !prev)}
+                  className={`w-full h-[38px] px-3 py-2 bg-slate-50 border rounded-md font-medium text-left flex items-center justify-between gap-2 transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-60 ${
+                    isProposalDropdownOpen
+                      ? 'border-[#C8102E] ring-1 ring-[#C8102E] bg-white'
+                      : 'border-slate-200 hover:border-slate-300 focus:outline-none focus:border-[#C8102E] focus:ring-1 focus:ring-[#C8102E]'
+                  }`}
+                >
+                  <span className="truncate text-slate-800">
+                    {matchedConcept?.title ||
+                      (eligibleProposals.length > 0
+                        ? eligibleProposals[0].title
+                        : 'No proposals with a Certificate of Technical Review (COTR)')}
+                  </span>
+                  <ChevronDown
+                    className={`w-4 h-4 text-slate-500 shrink-0 transition-transform ${
+                      isProposalDropdownOpen ? 'rotate-180' : ''
+                    }`}
+                  />
+                </button>
+
+                {isProposalDropdownOpen && eligibleProposals.length > 0 && (
+                  <ul
+                    role="listbox"
+                    aria-label="Associate with Proposal"
+                    className="absolute left-0 right-0 top-full mt-1 z-30 w-full max-h-60 overflow-y-auto bg-white border border-slate-200 rounded-md shadow-lg py-1 divide-y divide-slate-100"
+                  >
+                    {eligibleProposals.map((c) => {
+                      const isSelected = c.id === selectedProposalId;
+                      return (
+                        <li key={c.id} role="option" aria-selected={isSelected}>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectedProposalId(c.id);
+                              setIsProposalDropdownOpen(false);
+                            }}
+                            title={c.title}
+                            className={`w-full text-left px-3 py-2 text-xs transition-colors flex items-center justify-between gap-2 cursor-pointer ${
+                              isSelected
+                                ? 'bg-[#C8102E]/10 text-[#C8102E] font-bold'
+                                : 'text-slate-800 font-medium hover:bg-slate-100'
+                            }`}
+                          >
+                            <span className="truncate">{c.title}</span>
+                            {isSelected && <CheckCircle2 className="w-3.5 h-3.5 text-[#C8102E] shrink-0" />}
+                          </button>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+              </div>
+            </div>
+
+            <div className="min-w-0">
+              <span className="font-bold text-slate-700 block mb-1 invisible select-none" aria-hidden="true">
+                Governing Call
+              </span>
+              <div className="flex items-center px-3 py-2 bg-slate-50 border border-slate-200 rounded-md text-xs h-[38px]">
+                <span className="font-bold text-slate-400 uppercase tracking-wider text-[10px] mr-2 shrink-0">
+                  Governing Call:
+                </span>
+                <span className="font-semibold text-slate-800 truncate">
+                  {matchedCall?.title || 'Institutional Research Grant'}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Review & Submission Status Notification Banner */}
+          {hasTechnicalReview &&
+            submissionStatus === 'submitted' &&
+            (reviewStatus === 'APPROVED' || reviewStatus === 'SIGNED' ? (
+              <div className="p-4 bg-emerald-50/90 border border-emerald-300 rounded-md text-xs text-emerald-950 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
+                <div className="flex items-start gap-3">
+                  <div className="w-8 h-8 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0 mt-0.5 font-bold">
+                    <CheckCircle2 className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <div className="font-extrabold text-emerald-900 text-sm flex items-center gap-2">
+                      <span>Budget Allocation Accepted by RPDU</span>
+                      <span className="bg-emerald-200/80 text-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
+                        Ready for In-Person Signatures
+                      </span>
+                    </div>
+                    <p className="mt-1 text-emerald-800 leading-relaxed text-xs">
+                      Your digital Line-Item Budget has been accepted by RPDU. You may now proceed to gather the required physical signatures in person.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="p-3 bg-amber-50/80 border border-amber-200 rounded-md text-xs text-amber-950 flex items-center gap-3 shadow-2xs">
+                <div className="w-7 h-7 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center shrink-0 font-bold">
+                  <Clock className="w-4 h-4" />
+                </div>
+                <div className="font-bold text-amber-900 text-xs flex items-center gap-2">
+                  <span>Allocation Submitted &mdash; Pending Review</span>
+                  <span className="bg-amber-100 text-amber-800 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase">
+                    Pending Review
+                  </span>
+                </div>
+              </div>
+            ))}
+
+          {/* Over-Budget Alert */}
+          {hasTechnicalReview && isOverBudget && (
+            <div className="p-3 bg-rose-50 border border-rose-200 rounded-md text-xs text-rose-800 flex items-start gap-2.5">
+              <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+              <div>
+                <span className="font-bold">Budget Ceiling Exceeded:</span> Total line-item expenditures (₱
+                {grandTotal.total.toLocaleString('en-US', { minimumFractionDigits: 2 })}) exceed the approved budget limit of ₱
+                {maxBudgetLimit.toLocaleString('en-US', { minimumFractionDigits: 2 })}. Please adjust item amounts before submitting.
+              </div>
+            </div>
+          )}
+        </div>
+
+        {!hasTechnicalReview && (
+          <div className="flex-1 flex flex-col items-center justify-center border-t border-slate-100 bg-white px-6 py-16 text-center space-y-4">
+            <div className="w-12 h-12 rounded-full bg-slate-50 border border-slate-200 text-slate-600 flex items-center justify-center mx-auto">
+              <Lock className="w-5 h-5" />
+            </div>
+            <div className="space-y-1.5 max-w-xl">
+              <h3 className="text-base font-black text-slate-900">
+                Line-Item Budget Unavailable &mdash; Technical Review Required
+              </h3>
+              <p className="text-xs text-slate-600 leading-relaxed">
+                You do not have any proposals that have completed Technical Review yet. A Certificate of Technical Review (COTR) is required before preparing a Line-Item Budget (LIB).
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+              <Link
+                to="/proponent/revisions"
+                className="inline-flex min-h-10 items-center gap-1.5 px-4 py-2 rounded-md text-xs font-bold bg-[#C8102E] hover:bg-[#A00D26] text-white shadow-xs transition-colors"
+              >
+                View Evaluation &amp; Revisions <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
+              <Link
+                to="/proponent/documents"
+                className="inline-flex min-h-10 items-center gap-1.5 px-4 py-2 rounded-md text-xs font-bold bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 shadow-xs transition-colors"
+              >
+                View Documents &amp; Clearances
+              </Link>
             </div>
           </div>
         )}
       </div>
 
-      {!hasTechnicalReview ? (
-        <div className="bg-white p-8 rounded-md border border-amber-200 shadow-xs text-center max-w-3xl mx-auto space-y-4">
-          <div className="w-12 h-12 rounded-full bg-amber-50 border border-amber-200 text-amber-700 flex items-center justify-center mx-auto">
-            <Lock className="w-6 h-6" />
-          </div>
-          <div className="space-y-1.5">
-            <h3 className="text-base font-black text-slate-900">
-              Line-Item Budget Unavailable &mdash; Technical Review Required
-            </h3>
-            <p className="text-xs text-slate-600 max-w-xl mx-auto leading-relaxed">
-              {matchedConcept ? (
-                <>
-                  <strong>&ldquo;{matchedConcept.title}&rdquo;</strong> has not completed Technical Review yet. You can only prepare and submit a Line-Item Budget (LIB) after your proposal passes Technical Evaluation and receives its Certificate of Technical Review (COTR).
-                </>
-              ) : (
-                <>
-                  You do not have any proposals that have completed Technical Review yet. A Certificate of Technical Review (COTR) is required before preparing a Line-Item Budget (LIB).
-                </>
-              )}
-            </p>
-          </div>
-          <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
-            <Link
-              to="/proponent/revisions"
-              className="inline-flex min-h-10 items-center gap-1.5 px-4 py-2 rounded-md text-xs font-bold bg-[#C8102E] hover:bg-[#A00D26] text-white shadow-xs transition-colors"
-            >
-              View Evaluation &amp; Revisions <ArrowRight className="w-3.5 h-3.5" />
-            </Link>
-            <Link
-              to="/proponent/documents"
-              className="inline-flex min-h-10 items-center gap-1.5 px-4 py-2 rounded-md text-xs font-bold bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 shadow-xs transition-colors"
-            >
-              View Documents &amp; Clearances
-            </Link>
-          </div>
-        </div>
-      ) : (
+      {hasTechnicalReview && (
       /* Main Grid: Left Column LIB Table, Right Column Sidebar */
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left Column (2 Cols): Project Metadata Header, 3-Class Table */}
