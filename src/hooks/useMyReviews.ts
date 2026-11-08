@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useCallForProposals } from '../context/CallForProposalsContext';
-import { getMyReview, getMyReviews, respondToInvitationApi, submitReviewApi, type InvitationResponse, type SubmitReviewPayload } from '../lib/pipelineApi';
+import { getMyReview, getMyReviews, respondToInvitationApi, submitReviewApi, uploadNdaApi, type InvitationResponse, type SubmitReviewPayload } from '../lib/pipelineApi';
 import { STATUS_META } from '../lib/proposalPipeline';
 import type { BlindReview, PipelineStatus } from '../types';
 import { useAsyncResource } from './useAsyncResource';
@@ -55,5 +55,17 @@ export function useMyReview(reviewId: string | undefined) {
     }
   }, [reviewId, token, setData, showToast]);
 
-  return { review: resource.data, loading: resource.loading, error: resource.error, refresh: resource.refresh, submit, respond };
+  /** Uploads the signed NDA; the manuscript stays hidden until RPDU verifies it. */
+  const uploadNda = useCallback(async (file: File): Promise<void> => {
+    if (!reviewId) throw new Error('No review selected.');
+    try {
+      setData(await uploadNdaApi(reviewId, file, token));
+      showToast('Signed NDA uploaded — RPDU will check it');
+    } catch (failure) {
+      showToast(failure instanceof Error ? failure.message : 'Unable to upload the signed NDA');
+      throw failure;
+    }
+  }, [reviewId, token, setData, showToast]);
+
+  return { review: resource.data, loading: resource.loading, error: resource.error, refresh: resource.refresh, submit, respond, uploadNda };
 }

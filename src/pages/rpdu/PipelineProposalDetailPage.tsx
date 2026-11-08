@@ -30,7 +30,7 @@ const Card = ({ title, badge, children }: { title: string; badge?: ReactNode; ch
 
 /** Rendered keyed by the route id, so a stale response for a previous id can never write into this proposal. */
 function DetailBody({ id, role }: { id: string | undefined; role: 'rpdu' | 'admin' }) {
-  const { proposal, loading, error, refresh, unassign, checkRevision, checkAnonymity, forward, buildActionSheet, clarify, saveFundingClassification } = useRpduProposal(id);
+  const { proposal, loading, error, refresh, unassign, checkRevision, checkAnonymity, forward, buildActionSheet, clarify, checkNda, saveFundingClassification } = useRpduProposal(id);
   const backHref = `/${role}/evaluations`;
 
   if (loading) return <section className="mx-auto max-w-5xl space-y-3" aria-label="Loading proposal"><div className="h-20 animate-pulse rounded-sm bg-slate-100" /><div className="h-40 animate-pulse rounded-sm bg-slate-100" /></section>;
@@ -73,7 +73,7 @@ function DetailBody({ id, role }: { id: string | undefined; role: 'rpdu' | 'admi
       <Card title="Review panel">
         <div className="mb-5"><FundingClassificationField key={proposal.fundingClassification ?? 'unclassified'} value={proposal.fundingClassification ?? null} canEdit={Boolean(proposal.canSetFundingClassification)} onSave={(value) => saveFundingClassification(proposal.id, value)} /></div>
         <PanelDots count={proposal.panel.length} className="mb-2" />
-        <ReviewPanelList externalProposalId={proposal.externalFundingRequestId ? proposal.id : undefined} panel={proposal.panel} canManageReviewers={Boolean(proposal.canManageReviewers)} onRemove={unassign} />
+        <ReviewPanelList externalProposalId={proposal.externalFundingRequestId ? proposal.id : undefined} panel={proposal.panel} canManageReviewers={Boolean(proposal.canManageReviewers)} onRemove={unassign} onCheckNda={checkNda} />
         {canAssignMore && (thirdSeatBlocked
           ? <p className="mt-3 flex items-start gap-1.5 rounded-sm border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800"><ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" /><span><span className="font-semibold">Third seat on hold.</span> {thirdSeatBlocked}. Record it in the Manuscript anonymity card above, then assign the last evaluator from the list.</span></p>
           : <Link to={backHref} className="mt-3 inline-flex min-h-11 items-center text-xs font-semibold text-[#C8102E]">Assign evaluators from the list →</Link>)}

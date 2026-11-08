@@ -288,7 +288,8 @@ export interface ManuscriptAnonymity extends ManuscriptAttestation { checkedAt: 
 export interface PipelineRevision {
   id: string;
   revisionNumber: number;
-  revisedFileUrl: string;
+  /** Null in the evaluator view until the seat's NDA is verified. */
+  revisedFileUrl: string | null;
   /** Accomplished Proposal Action Sheet (WMSU-RPDU-FR-007.00); null on revisions uploaded before it was required. */
   actionSheetFileUrl: string | null;
   revisionHistoryFileUrl: string | null;
@@ -332,6 +333,7 @@ export interface RpduReview {
   acceptedAt: string | null;
   canRemove: boolean;
   submissions: ReviewSubmission[];
+  nda: SeatNda;
 }
 
 // ---- Flow 7.1 invitation response, 7.3 Action Sheet, 7.4–7.5 clarifications --------------------
@@ -341,6 +343,12 @@ export type DeclineReason = 'CONFLICT_OF_INTEREST' | 'UNAVAILABLE' | 'OUTSIDE_EX
 export interface ReviewDecline { id: string; evaluatorId: string; evaluatorName: string; reason: DeclineReason; note: string; declinedAt: string }
 /** The evaluator's own invitation state. `letterId` is the issued WMSU-RPDU-LET-003.00 letter, when any. */
 export interface InvitationState { acceptedAt: string | null; canRespond: boolean; letterId: string | null }
+/** Evaluator NDA gate: the manuscript and revision files stay hidden until RPDU verifies the signed NDA. */
+export type NdaState = 'NOT_REQUIRED' | 'REQUIRED' | 'PENDING_CHECK' | 'REJECTED' | 'VERIFIED';
+/** The evaluator's own NDA state for a seat. */
+export interface EvaluatorNda { state: NdaState; fileUrl: string | null; uploadedAt: string | null; checkedAt: string | null; note: string; canUpload: boolean }
+/** RPDU view of a seat's NDA, with the checker's name and outcome. */
+export interface SeatNda extends Omit<EvaluatorNda, 'canUpload'> { checkedBy: string | null; outcome: 'VERIFIED' | 'REJECTED' | null; canCheck: boolean }
 /** Consolidated comment per assessment point id (see ASSESSMENT_POINTS); '' when nothing was noted. */
 export type ActionSheetPoints = Record<string, string>;
 export interface ActionSheetSeed { round: number; points: ActionSheetPoints; otherComments: string }
@@ -440,6 +448,7 @@ export interface BlindReview {
   submissions: ReviewSubmission[];
   history: { status: PipelineStatus; round: number; changedAt: string }[];
   invitation: InvitationState;
+  nda: EvaluatorNda;
 }
 
 export interface RevisionHistoryDraft {

@@ -45,6 +45,10 @@ const downloadDocument = async (url: string, fileName: string, token: string | u
 export const downloadAssessmentTemplate = (reviewId: string, token?: string): Promise<void> =>
   downloadDocument(API_ENDPOINTS.PIPELINE.ASSESSMENT_TEMPLATE(reviewId), 'Proposal Assessment Form.docx', token);
 
+/** The evaluator's NDA template; `code` is the proposal's blind code, used for the file name. */
+export const downloadNdaTemplate = (reviewId: string, code: string, token?: string): Promise<void> =>
+  downloadDocument(API_ENDPOINTS.PIPELINE.MY_REVIEW_NDA_TEMPLATE(reviewId), `NDA-${code}.docx`, token);
+
 export const downloadRevisionHistoryDraft = (proposalId: string, draft: RevisionHistoryDraft, token?: string): Promise<void> =>
   downloadDocument(API_ENDPOINTS.PIPELINE.REVISION_HISTORY_DRAFT(proposalId), 'Revision History Draft.docx', token, draft);
 
@@ -74,6 +78,10 @@ export const checkAnonymityApi = async (proposalId: string, checked: boolean, ex
 export const forwardToReoApi = async (proposalId: string, token?: string): Promise<RpduProposal> =>
   (await request<RpduProposal>(API_ENDPOINTS.PIPELINE.FORWARD(proposalId), token, { method: 'POST' })).data;
 
+/** RPDU verifies or rejects a seat's signed NDA; a rejection lets the evaluator re-upload. */
+export const checkNdaApi = async (reviewId: string, outcome: 'VERIFIED' | 'REJECTED', note: string, token?: string): Promise<RpduProposal> =>
+  (await request<RpduProposal>(API_ENDPOINTS.PIPELINE.REVIEW_NDA_CHECK(reviewId), token, { method: 'PUT', body: JSON.stringify({ outcome, note: note.trim() }) })).data;
+
 export interface ActionSheetInput { points: ActionSheetPoints; otherComments: string }
 
 /** Flow 7.3: generates (or regenerates) the round's Proposal Action Sheet .docx from the consolidated comments. */
@@ -97,6 +105,13 @@ export type InvitationResponse = { accept: true; declaration: true } | { accept:
 export const respondToInvitationApi = async (reviewId: string, response: InvitationResponse, token?: string): Promise<{ declined: true } | { declined: false; review: BlindReview }> => {
   const result = await request<BlindReview | { declined: true }>(API_ENDPOINTS.PIPELINE.MY_REVIEW_RESPONSE(reviewId), token, { method: 'POST', body: JSON.stringify(response) });
   return 'declined' in result.data && result.data.declined ? { declined: true } : { declined: false, review: result.data as BlindReview };
+};
+
+/** Uploads the evaluator's signed NDA (multipart field `nda`); RPDU must verify it before the files open. */
+export const uploadNdaApi = async (reviewId: string, file: File, token?: string): Promise<BlindReview> => {
+  const body = new FormData();
+  body.append('nda', file);
+  return (await request<BlindReview>(API_ENDPOINTS.PIPELINE.MY_REVIEW_NDA(reviewId), token, { method: 'POST', body })).data;
 };
 
 export interface SubmitReviewPayload {

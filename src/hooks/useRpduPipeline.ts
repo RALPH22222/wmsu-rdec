@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useCallForProposals } from '../context/CallForProposalsContext';
-import { assignEvaluatorApi, buildActionSheetApi, checkAnonymityApi, checkRevisionApi, forwardToReoApi, getPipelineEvaluators, getPipelineProposal, getPipelineProposals, postClarificationApi, saveFundingClassificationApi, unassignEvaluatorApi } from '../lib/pipelineApi';
+import { assignEvaluatorApi, buildActionSheetApi, checkAnonymityApi, checkNdaApi, checkRevisionApi, forwardToReoApi, getPipelineEvaluators, getPipelineProposal, getPipelineProposals, postClarificationApi, saveFundingClassificationApi, unassignEvaluatorApi } from '../lib/pipelineApi';
 import type { ActionSheetInput } from '../lib/pipelineApi';
 import type { FundingClassification, PipelineEvaluator, RpduProposal } from '../types';
 import { useAsyncResource } from './useAsyncResource';
@@ -142,6 +142,20 @@ export function useRpduProposal(id: string | undefined) {
     }
   }, [id, token, setData, showToast, reread]);
 
+  const checkNda = useCallback(async (reviewId: string, outcome: 'VERIFIED' | 'REJECTED', note: string): Promise<void> => {
+    if (!id) return;
+    try {
+      const proposal = await checkNdaApi(reviewId, outcome, note, token);
+      setData(proposal);
+      const seatLabel = proposal.panel.find((seat) => seat.id === reviewId)?.blindLabel ?? 'this evaluator';
+      showToast(outcome === 'VERIFIED' ? `NDA verified for ${seatLabel}` : 'NDA rejected — the evaluator can re-upload');
+    } catch (failure) {
+      showToast(failure instanceof Error ? failure.message : 'Unable to record the NDA check');
+      reread();
+      throw failure;
+    }
+  }, [id, token, setData, showToast, reread]);
+
   const saveFundingClassification = useCallback(async (proposalId: string, fundingClassification: FundingClassification) => {
     if (proposalId !== id) return;
     try {
@@ -154,5 +168,5 @@ export function useRpduProposal(id: string | undefined) {
     }
   }, [id, token, setData, showToast, reread]);
 
-  return { proposal: resource.data, loading: resource.loading, error: resource.error, refresh: resource.refresh, replace: resource.setData, unassign, checkRevision, checkAnonymity, forward, buildActionSheet, clarify, saveFundingClassification };
+  return { proposal: resource.data, loading: resource.loading, error: resource.error, refresh: resource.refresh, replace: resource.setData, unassign, checkRevision, checkAnonymity, forward, buildActionSheet, clarify, checkNda, saveFundingClassification };
 }

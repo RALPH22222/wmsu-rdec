@@ -3,6 +3,7 @@ import { ArrowRight, ClipboardList } from 'lucide-react';
 import { useMyReviews } from '../../hooks/useMyReviews';
 import { StatusBadge } from '../../components/ui/StatusBadge';
 import { EmptyState } from '../../components/ui/EmptyState';
+import { NdaChip } from '../../components/evaluatorComponent/NdaChip';
 
 export function EvaluatorReviewsPage() {
   const { reviews, loading, error, refresh } = useMyReviews();
@@ -22,17 +23,21 @@ export function EvaluatorReviewsPage() {
         : reviews.length === 0 ? (error ? null : <EmptyState size="md" icon={ClipboardList} title="No reviews assigned" description="New assignments appear here after RPDU adds you to a review panel." />)
         : (
           <ul className="divide-y divide-slate-100">
-            {reviews.map((review) => (
+            {reviews.map((review) => {
+              const ndaDue = review.nda.canUpload && (review.nda.state === 'REQUIRED' || review.nda.state === 'REJECTED');
+              const primary = review.invitation.canRespond || ndaDue || review.canSubmit;
+              return (
               <li key={review.id} className="flex flex-col gap-4 p-4 transition-colors hover:bg-slate-50/50 sm:flex-row sm:items-center sm:justify-between sm:p-5">
                 <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-2"><span className="font-mono text-[11px] font-bold text-slate-500">{review.code}</span><StatusBadge status={review.proposalStatus} />{review.invitation.canRespond && <span className="rounded-sm bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-800">Awaiting your response</span>}<span className="text-[11px] font-semibold text-slate-500">Round {review.currentRound} · You are {review.blindLabel}</span></div>
+                  <div className="flex flex-wrap items-center gap-2"><span className="font-mono text-[11px] font-bold text-slate-500">{review.code}</span><StatusBadge status={review.proposalStatus} /><NdaChip state={review.nda.state} />{review.invitation.canRespond && <span className="rounded-sm bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-800">Awaiting your response</span>}<span className="text-[11px] font-semibold text-slate-500">Round {review.currentRound} · You are {review.blindLabel}</span></div>
                   <h4 className="mt-2 break-words text-base font-bold leading-snug text-slate-900 [overflow-wrap:anywhere]">{review.title}</h4>
                 </div>
-                <Link to={`/evaluator/reviews/${review.id}`} className={`inline-flex min-h-11 items-center justify-center rounded-sm px-4 text-sm font-semibold sm:shrink-0 ${review.canSubmit || review.invitation.canRespond ? 'bg-[#C8102E] text-white hover:bg-[#A00D26]' : 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50'}`}>
-                  {review.invitation.canRespond ? 'Respond' : review.canSubmit ? 'Evaluate' : 'View'}<ArrowRight aria-hidden="true" className="ml-2 h-4 w-4 shrink-0" />
+                <Link to={`/evaluator/reviews/${review.id}`} className={`inline-flex min-h-11 items-center justify-center rounded-sm px-4 text-sm font-semibold sm:shrink-0 ${primary ? 'bg-[#C8102E] text-white hover:bg-[#A00D26]' : 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50'}`}>
+                  {review.invitation.canRespond ? 'Respond' : ndaDue ? 'Upload NDA' : review.canSubmit ? 'Evaluate' : 'View'}<ArrowRight aria-hidden="true" className="ml-2 h-4 w-4 shrink-0" />
                 </Link>
               </li>
-            ))}
+              );
+            })}
           </ul>
         )}
       </div>

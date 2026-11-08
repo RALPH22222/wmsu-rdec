@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Download, EyeOff } from 'lucide-react';
+import { ArrowLeft, Download, EyeOff, Lock } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useMyReview } from '../../hooks/useMyReviews';
 import { isTerminalStatus, nextStepFor } from '../../lib/proposalPipeline';
@@ -13,6 +13,7 @@ import { HistoryList } from '../../components/ui/HistoryList';
 import { EvaluationScoringForm } from '../../components/evaluatorComponent/EvaluationScoringForm';
 import { SubmissionSummary } from '../../components/evaluatorComponent/SubmissionSummary';
 import { InvitationCard } from '../../components/evaluatorComponent/InvitationCard';
+import { NdaCard } from '../../components/evaluatorComponent/NdaCard';
 import { downloadAssessmentTemplate, type InvitationResponse } from '../../lib/pipelineApi';
 
 const Card = ({ title, children }: { title: string; children: ReactNode }) => (
@@ -26,7 +27,7 @@ export function EvaluationPortalPage() {
 }
 
 function PortalBody({ reviewId }: { reviewId: string | undefined }) {
-  const { review, loading, error, submit, respond } = useMyReview(reviewId);
+  const { review, loading, error, submit, respond, uploadNda } = useMyReview(reviewId);
   const { session } = useAuth();
   const [downloading, setDownloading] = useState(false);
   const [downloadError, setDownloadError] = useState('');
@@ -45,7 +46,12 @@ function PortalBody({ reviewId }: { reviewId: string | undefined }) {
   const current = review.submissions.find((s) => s.round === review.currentRound);
   const earlier = review.submissions.filter((s) => s.round !== review.currentRound).sort((a, b) => b.round - a.round);
   const { canRespond, acceptedAt } = review.invitation;
-  const nextStep = canRespond && review.proposalStatus === 'UNDER_REVIEW'
+  const ndaVerified = review.nda.state === 'VERIFIED';
+  const manuscriptLocked = review.manuscriptUrl === null && !ndaVerified;
+  const ndaDue = review.nda.canUpload && (review.nda.state === 'REQUIRED' || review.nda.state === 'REJECTED');
+  const nextStep = acceptedAt && ndaDue
+    ?'Download, sign and upload the NDA; RPDU verifies it before the manuscript opens.'
+    : canRespond && review.proposalStatus === 'UNDER_REVIEW'
     ? 'Accept the invitation, then submit your evaluation for this round.'
     : nextStepFor(review.proposalStatus, 'evaluator');
   const latestRevision = review.revisions.length > 0 ? review.revisions.reduce((a, b) => (b.revisionNumber > a.revisionNumber ? b : a)) : null;
@@ -68,14 +74,17 @@ function PortalBody({ reviewId }: { reviewId: string | undefined }) {
         <p className="mt-1 flex items-start gap-2 text-xs text-slate-500"><EyeOff className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />Identities are withheld both ways: you see the research team only by code, and they see you only as Evaluator A, B or C.</p>
         <p className="mt-3 rounded-sm bg-slate-50 p-3 text-xs text-slate-700">{nextStep}</p>
         <div className="mt-4"><PipelineStepper status={review.proposalStatus} currentRound={review.currentRound} compact /></div>
-        <div className="mt-4 flex flex-wrap gap-2"><DocumentLink href={review.manuscriptUrl} label={review.manuscriptUrl ? 'Original manuscript' : 'Manuscript'} />{latestRevision && <DocumentLink href={latestRevision.revisedFileUrl} label={`Revision ${latestRevision.revisionNumber}`} muted />}</div>
+        {manuscriptLocked
+          ? <p className="mt-4 inline-flex items-center gap-1.5 rounded-sm bg-slate-100 px-3 py-2 text-xs text-slate-600"><Lock className="h-4 w-4" aria-hidden="true" />{acceptedAt ? 'Manuscript unlocks after RPDU verifies your NDA' : 'Manuscript unlocks after you accept the invitation and RPDU verifies your NDA'}</p>
+          : <div className="mt-4 flex flex-wrap gap-2"><DocumentLink href={review.manuscriptUrl} label={review.manuscriptUrl ? 'Original manuscript' : 'Manuscript'} />{latestRevision && <DocumentLink href={latestRevision.revisedFileUrl} label={`Revision ${latestRevision.revisionNumber}`} muted />}</div>}
         {acceptedAt && <p className="mt-2 text-xs text-slate-500">Invitation accepted {formatDate(acceptedAt)}</p>}
       </header>
 
       {canRespond && <InvitationCard review={review} onRespond={handleRespond} />}
+      <NdaCard review={review} onUpload={uploadNda} />
 
       <Card title={`Round ${review.currentRound} evaluation`}>
-        {acceptedAt && (
+        {acceptedAt && ndaVerified && (
           <div className="mb-4 space-y-2">
             {review.fundingClassification ? (
               <div className="flex flex-wrap items-center justify-between gap-3">
@@ -88,6 +97,7 @@ function PortalBody({ reviewId }: { reviewId: string | undefined }) {
         )}
         {current ? <SubmissionSummary submission={current} />
           : canRespond ? <p className="rounded-sm bg-amber-50 p-3 text-sm text-amber-800">Accept the invitation above to open the evaluation form.</p>
+          : !ndaVerified && acceptedAt ? <p className="rounded-sm bg-amber-50 p-3 text-sm text-amber-800">{review.nda.state === 'PENDING_CHECK' ? 'The evaluation form opens once RPDU verifies your NDA.' : 'Upload your signed NDA above to open the evaluation form.'}</p>
           : review.canSubmit ? <EvaluationScoringForm key={review.currentRound} review={review} onSubmit={submit} />
           : acceptedAt && !isTerminalStatus(review.proposalStatus) ? <p className="rounded-sm bg-slate-50 p-3 text-sm text-slate-600">The evaluation form opens when the review panel is complete and the round starts.</p>
           : <p className="rounded-sm bg-slate-50 p-3 text-sm text-slate-600">Evaluation is closed for this round.</p>}
