@@ -64,7 +64,7 @@ function DetailBody({ id, role }: { id: string | undefined; role: 'rpdu' | 'admi
         <DocumentViewer url={proposal.manuscriptUrl} title="Current manuscript" />
       </Card>
 
-      {!!proposal.manuscriptVersions?.length && <details className="bg-white p-4"><summary className="min-h-11 cursor-pointer text-sm font-semibold">Manuscript history</summary>{proposal.manuscriptVersions.map((version) => <div key={version.id} className="py-2"><DocumentLink href={version.fileUrl} label={`Version ${version.version} ? ${version.stage}${version.current ? ' ? Current' : ''}`} muted /></div>)}</details>}
+      {!!proposal.manuscriptVersions?.length && <details className="bg-white p-4"><summary className="min-h-11 cursor-pointer text-sm font-semibold">Manuscript history</summary>{proposal.manuscriptVersions.map((version) => <div key={version.id} className="py-2"><DocumentLink href={version.fileUrl} label={`Version ${version.version} · ${version.stage}${version.current ? ' · Current' : ''}`} muted /></div>)}</details>}
       {(proposal.status === 'APPROVED' || proposal.status === 'FORWARDED_TO_REO') && <TechnicalReviewGateway proposal={proposal} role={role} onForward={forward} />}
 
       <Card title="Manuscript anonymity" badge={proposal.anonymity.checkedAt ? <span className="rounded-sm bg-emerald-50 px-2 py-0.5 text-[11px] font-bold normal-case tracking-normal text-emerald-700">Checked</span> : <span className="rounded-sm bg-amber-50 px-2 py-0.5 text-[11px] font-bold normal-case tracking-normal text-amber-700">Not checked</span>}>
@@ -74,7 +74,7 @@ function DetailBody({ id, role }: { id: string | undefined; role: 'rpdu' | 'admi
       <Card title="Review panel">
         <div className="mb-5"><FundingClassificationField key={proposal.fundingClassification ?? 'unclassified'} value={proposal.fundingClassification ?? null} canEdit={Boolean(proposal.canSetFundingClassification)} onSave={(value) => saveFundingClassification(proposal.id, value)} /></div>
         <PanelDots count={proposal.panel.length} className="mb-2" />
-        <ReviewPanelList externalProposalId={proposal.externalFundingRequestId ? proposal.id : undefined} panel={proposal.panel} canManageReviewers={Boolean(proposal.canManageReviewers)} onRemove={unassign} onCheckNda={checkNda} />
+        <ReviewPanelList externalProposalId={proposal.externalFundingRequestId ? proposal.id : undefined} panel={proposal.panel} canManageReviewers={Boolean(proposal.canManageReviewers)} currentRound={proposal.currentRound} onRemove={unassign} onCheckNda={checkNda} />
         {canAssignMore && (thirdSeatBlocked
           ? <p className="mt-3 flex items-start gap-1.5 rounded-sm border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800"><ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" /><span><span className="font-semibold">Third seat on hold.</span> {thirdSeatBlocked}. Record it in the Manuscript anonymity card above, then assign the last evaluator from the list.</span></p>
           : <Link to={backHref} className="mt-3 inline-flex min-h-11 items-center text-xs font-semibold text-[#C8102E]">Assign evaluators from the list →</Link>)}
