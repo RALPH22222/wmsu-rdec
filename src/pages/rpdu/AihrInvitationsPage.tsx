@@ -109,7 +109,7 @@ export function AihrInvitationsPage({ role = 'rpdu' }: { role?: 'rpdu' | 'admin'
   };
 
   return <section className="space-y-6 text-slate-900">
-    <header className="flex flex-wrap items-start justify-between gap-4"><div><h1 className="text-2xl font-bold">AIHR Invitations</h1><p className="mt-2 max-w-3xl text-base text-slate-600">Invite proponents individually after receiving their detailed proposal, or invite everyone when the call is ready. Each sent invitation allows 2 days to confirm attendance, decline, or request a proxy.</p></div><Link to={`/${role}/aihr`} className={buttonClass}>AIHR results</Link></header>
+    <header className="flex flex-wrap items-start justify-between gap-4"><div><h1 className="text-2xl font-bold">AIHR Invitations</h1><p className="mt-2 max-w-3xl text-base text-slate-600">Invite proponents individually after receiving their detailed proposal, or invite everyone when the call is ready. Each sent invitation allows 2 days to accept the invitation or request a proxy.</p></div><Link to={`/${role}/aihr`} className={buttonClass}>AIHR results</Link></header>
     <button type="button" disabled={busy || loadingCalls || resource.loading} onClick={() => { resource.refresh(); void refreshCalls(); }} className={buttonClass}><RefreshCw aria-hidden="true" className="h-4 w-4" />Refresh invitations</button>
     {resource.error && <p role="alert" className="text-red-700">{resource.error} Use Refresh invitations to retry.</p>}
     {messages.length > 0 && <ul role="status" aria-live="polite" className="space-y-2 border border-slate-200 bg-slate-50 p-5 text-sm">{messages.map((message, index) => <li key={index} className="break-words">{message}</li>)}</ul>}

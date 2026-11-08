@@ -22,12 +22,12 @@ function Invitation({ invitation, onSaved }: { invitation: ProponentAihrInvitati
   const [busy, setBusy] = useState(false);
   const running = useRef(false);
   const [error, setError] = useState('');
-  const reply = async (response: 'CONFIRMED' | 'DECLINED') => {
+  const acceptInvitation = async () => {
     if (running.current) return;
     running.current = true; setBusy(true); setError('');
     try {
-      await request(API_ENDPOINTS.AIHR.REPLY_INVITATION(invitation.conceptId), session?.access_token, { method: 'POST', body: JSON.stringify({ response, expectedVersion: invitation.version }) });
-      onSaved(response === 'CONFIRMED' ? 'Your attendance is confirmed.' : 'You declined this invitation. Your proposal remains on record.');
+      await request(API_ENDPOINTS.AIHR.REPLY_INVITATION(invitation.conceptId), session?.access_token, { method: 'POST', body: JSON.stringify({ response: 'CONFIRMED', expectedVersion: invitation.version }) });
+      onSaved('Invitation accepted. Your attendance is confirmed.');
     } catch (failure) { setError(failure instanceof Error ? failure.message : 'Unable to record your reply. Refresh and try again.'); }
     finally { setBusy(false); running.current = false; }
   };
@@ -52,12 +52,12 @@ function Invitation({ invitation, onSaved }: { invitation: ProponentAihrInvitati
       <p className="font-semibold">{AIHR_REPLY_LABELS[invitation.response.status]}</p>
       {invitation.response.replyDeadline && <p className="text-sm text-slate-600">Reply by {formatSubmissionDateTime(invitation.response.replyDeadline)} (Philippine time). You have 2 days after the invitation is sent.</p>}
       {invitation.response.canReinvite && <p className="text-sm text-slate-600">The reply window has closed. Your proposal remains on record; RPDU can invite you again.</p>}
-      {invitation.canConfirmAttendance && <div className="flex flex-wrap gap-3 pt-2"><button type="button" disabled={busy} onClick={() => reply('CONFIRMED')} className={`${buttonClass} border-brand bg-brand text-white enabled:hover:bg-brand-dark`}>Confirm attendance</button><button type="button" disabled={busy} onClick={() => reply('DECLINED')} className={buttonClass}>Decline invitation</button></div>}
+      {invitation.canConfirmAttendance && <div className="pt-2"><button type="button" disabled={busy} onClick={acceptInvitation} className={`${buttonClass} border-brand bg-brand text-white enabled:hover:bg-brand-dark disabled:hover:bg-brand`}>{busy ? 'Working…' : 'Accept invitation'}</button></div>}
     </div>
     {error && <p role="alert" className="text-base text-red-700">{error}</p>}
-    <p className="text-base text-slate-600">As the project leader/proponent, confirm whether you will attend the Agency In-House Review. If you cannot attend, decline or nominate a proxy for RPDU approval. The review takes place outside the system.</p>
+    <p className="text-base text-slate-600">As the project leader/proponent, accept the invitation to confirm your attendance at the Agency In-House Review. If you cannot attend, request a proxy for RPDU approval. The review takes place outside the system.</p>
     <dl className="grid gap-4 text-base sm:grid-cols-3"><div><dt className="text-sm text-slate-600">Date</dt><dd className="mt-1 font-semibold">{invitation.eventDate}</dd></div><div><dt className="text-sm text-slate-600">Time (Manila)</dt><dd className="mt-1 font-semibold">{invitation.eventTime.slice(0, 5)}</dd></div><div className="min-w-0"><dt className="text-sm text-slate-600">Venue</dt><dd className="mt-1 break-words font-semibold">{invitation.venue}</dd></div></dl>
-    <p className="text-sm text-slate-600">Confirm attendance, decline, or request a proxy within the reply window. Coordinate with RPDU for presentation arrangements and evaluation materials.</p>
+    <p className="text-sm text-slate-600">Accept the invitation or request a proxy within the reply window. Coordinate with RPDU for presentation arrangements and evaluation materials.</p>
     {invitation.history.length > 0 && <details className="border-t border-slate-200 pt-4"><summary className="min-h-12 cursor-pointer py-3 font-semibold">Earlier invitations ({invitation.history.length})</summary><ul className="space-y-3">{invitation.history.map((old) => <li key={old.round} className="break-words text-sm text-slate-600">Invitation {old.round}: {old.eventDate} at {old.eventTime.slice(0,5)} · {old.venue}</li>)}</ul></details>}
     {invitation.proxyRequests.length > 0 && <section className="space-y-3 border-t border-slate-200 pt-4"><h3 className="text-lg font-semibold">Your proxy requests</h3><ul className="space-y-3">{invitation.proxyRequests.map((proxy) => <li key={proxy.id} className="space-y-1"><p className="text-sm text-slate-600">Invitation {proxy.invitation_round || 1}{(proxy.invitation_round || 1) !== invitation.response.round ? " - earlier invitation" : ""}</p><p className="break-words">{proxy.proxy_name} · {proxy.proxy_position}</p>{proxy.reason_text && <p className="whitespace-pre-wrap break-words text-sm text-slate-600">Reason: {proxy.reason_text}</p>}{proxy.reason_file_url && <DocumentLink href={proxy.reason_file_url} label="Open submitted reason PDF" muted />}<p className={`text-sm font-semibold ${proxy.status === 'APPROVED' ? 'text-emerald-800' : proxy.status === 'REJECTED' ? 'text-red-700' : 'text-amber-800'}`}>{(proxy.invitation_round || 1) !== invitation.response.round ? `Earlier invitation: ${proxy.status.toLowerCase()}. Approval does not carry over to the current invitation.` : proxy.status === 'APPROVED' ? 'Approved by RPDU — this proxy may represent you.' : proxy.status === 'REJECTED' ? 'Rejected by RPDU — this proxy is not approved.' : 'Pending RPDU approval — this proxy is not yet approved.'}</p></li>)}</ul></section>}
     {invitation.canRequestProxy && <details className="border-t border-slate-200 pt-4"><summary className="min-h-12 cursor-pointer py-3 font-semibold focus-visible:outline-2 focus-visible:outline-brand">Unable to attend? Request a proxy</summary><p className="mb-4 text-base text-slate-600">Enter the person who will represent you, their position, and why you cannot attend. Provide the reason as text or a PDF, or both. You remain responsible for attending until RPDU approves your proxy.</p><form onSubmit={submit} className="space-y-4"><fieldset disabled={busy} className="space-y-4"><legend className="sr-only">Proxy request</legend><div className="grid gap-4 sm:grid-cols-2"><label className="text-sm font-semibold">Proxy’s full name (required)<input required maxLength={200} value={proxyName} onChange={(e) => setProxyName(e.target.value)} className={inputClass} /></label><label className="text-sm font-semibold">Proxy’s position (required)<input required maxLength={200} value={proxyPosition} onChange={(e) => setProxyPosition(e.target.value)} className={inputClass} /></label></div><label className="block text-sm font-semibold">Reason you cannot attend<textarea value={reason} maxLength={5000} required={!reasonFile} rows={4} onChange={(event) => setReason(event.target.value)} aria-describedby={`${invitation.conceptId}-reason-help`} className={inputClass} /></label>
@@ -87,7 +87,7 @@ export function ProponentAihrInvitationsPage() {
           <div className="space-y-3 border border-slate-200 bg-slate-50 p-4">
             <div className="h-5 w-40 max-w-full rounded-sm bg-slate-200" />
             <div className="h-4 w-full max-w-lg rounded-sm bg-slate-200" />
-            <div className="flex flex-wrap gap-3 pt-2"><div className="h-12 w-44 max-w-full rounded-sm bg-slate-200" /><div className="h-12 w-40 max-w-full rounded-sm bg-slate-200" /></div>
+            <div className="pt-2"><div className="h-12 w-44 max-w-full rounded-sm bg-slate-200" /></div>
           </div>
           <div className="space-y-2"><div className="h-4 w-full rounded-sm bg-slate-100" /><div className="h-4 w-3/4 rounded-sm bg-slate-100" /></div>
           <div className="grid gap-4 sm:grid-cols-3">
