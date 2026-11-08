@@ -527,8 +527,13 @@ export interface EnBancDecision {
 }
 
 export interface AihrInvitationRecord {
+  round_number?: number;
+  confirmed_at?: string | null;
+  declined_at?: string | null;
+  history?: { round_number: number; event_date: string; event_time: string; venue: string; confirmed_at: string | null }[];
   proponent_id: string | null;
   proxy_requests?: AihrProxyRequest[];
+  proxy_history?: AihrProxyRequest[];
   concept_proposal_id: string;
   title: string;
   event_date: string;
@@ -539,6 +544,7 @@ export interface AihrInvitationRecord {
 }
 
 export interface AihrProxyRequest {
+  invitation_round?: number;
   reason_text: string;
   reason_file_url: string | null;
   reason_file_name: string | null;
@@ -555,6 +561,10 @@ export interface AihrProxyRequest {
 }
 
 export interface ProponentAihrInvitation {
+  version: string;
+  response: AihrInvitationResponse;
+  history: { round: number; eventDate: string; eventTime: string; venue: string; confirmedAt: string | null }[];
+  canConfirmAttendance: boolean;
   conceptId: string;
   title: string;
   eventDate: string;
@@ -573,6 +583,10 @@ export interface AihrAttendanceRecord {
 }
 
 export interface AihrConcept {
+  callId: string;
+  callTitle: string;
+  callReadiness?: { passed: number; submitted: number; ready: boolean };
+  invitationResponse?: AihrInvitationResponse;
   invitation: AihrInvitationRecord | null;
   attendance?: AihrAttendanceRecord | null;
   canManageInvitation: boolean;
@@ -592,6 +606,14 @@ export interface AihrConcept {
   fundingClassification: FundingClassification | null;
   canLogVerdict: boolean;
   canDeliberate: boolean;
+}
+
+export interface AihrInvitationResponse {
+  round: number;
+  replyDeadline: string | null;
+  status: 'NOT_SENT' | 'AWAITING_REPLY' | 'CONFIRMED' | 'DECLINED' | 'PROXY_PENDING' | 'PROXY_APPROVED' | 'PROXY_REJECTED' | 'NO_REPLY';
+  canReply: boolean;
+  canReinvite: boolean;
 }
 
 export interface OutsourcedProjectDocument {

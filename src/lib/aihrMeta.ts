@@ -52,3 +52,7 @@ export const NOTICE_EMAIL_META: Record<NoticeEmailStatus, { label: string; tone:
   sent: { label: 'Emailed', tone: 'emerald' },
   failed: { label: 'Email failed', tone: 'red' },
 };
+export const AIHR_REPLY_LABELS = {
+  NOT_SENT: 'Not sent', AWAITING_REPLY: 'Awaiting reply', CONFIRMED: 'Attendance confirmed', DECLINED: 'Invitation declined',
+  PROXY_PENDING: 'Proxy pending approval', PROXY_APPROVED: 'Proxy approved', PROXY_REJECTED: 'Proxy rejected', NO_REPLY: 'No reply within 2 days',
+};

@@ -65,32 +65,30 @@ export function RpduSidebar({ mobileOpen = false, onCloseMobile }: RpduSidebarPr
     }
   };
 
-  // Color & design mix from AGENTS.md:
-  // - RPDU Head: Warm amber-tinted background, Brand-Dark (#A00D26) active item with amber icon, amber avatar
-  // - RPDU Staff: Subtle Slate-50 background, Brand Red (#C8102E) active item with white icon, slate avatar
+  // Keep neutral sidebar surfaces; distinguish the head with a yellow badge and profile icon.
   const roleStyles = isHead
     ? {
-        sidebarBg: 'bg-amber-50/50',
-        sidebarBorder: 'border-amber-200/80',
+        sidebarBg: 'bg-slate-50',
+        sidebarBorder: 'border-slate-200',
         headerBg: 'bg-white/70',
-        headerBorder: 'border-amber-200/80',
+        headerBorder: 'border-slate-200/80',
         rolePillBg: 'bg-amber-100',
         rolePillBorder: 'border-amber-300',
         rolePillText: 'text-amber-900',
         rolePillLabel: 'RPDU Head',
-        sectionLabelColor: 'text-amber-900/60',
+        sectionLabelColor: 'text-slate-500',
         sectionLabel: 'RPDU Executive Desk',
-        navActive: 'border-[#A00D26] bg-[#A00D26] text-white shadow-2xs ring-1 ring-amber-400/40',
-        navActiveIcon: 'text-amber-300',
-        navHover: 'hover:border-amber-200 hover:bg-white/80 hover:text-slate-900',
-        footerBg: 'bg-amber-100/40',
-        footerBorder: 'border-amber-200/80',
-        cardBorder: 'border-amber-200',
+        navActive: 'border-brand-dark bg-brand-dark text-white shadow-2xs',
+        navActiveIcon: 'text-white',
+        navHover: 'hover:border-slate-200 hover:bg-white/80 hover:text-slate-900',
+        footerBg: 'bg-slate-100/70',
+        footerBorder: 'border-slate-200',
+        cardBorder: 'border-slate-200',
         cardBg: 'bg-white',
         avatarBg: 'bg-amber-100',
         avatarBorder: 'border-amber-300',
-        avatarText: 'text-amber-900',
-        profileSubtitle: 'text-amber-900',
+        avatarText: 'text-amber-800',
+        profileSubtitle: 'text-slate-600',
       }
     : {
         sidebarBg: 'bg-slate-50',
@@ -127,13 +125,13 @@ export function RpduSidebar({ mobileOpen = false, onCloseMobile }: RpduSidebarPr
         />
       )}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-72 max-w-[85vw] flex-col justify-between border-r ${roleStyles.sidebarBorder} ${roleStyles.sidebarBg} text-slate-800 transition-transform duration-300 ease-in-out lg:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-50 flex h-dvh w-72 max-w-[85vw] flex-col overflow-hidden border-r ${roleStyles.sidebarBorder} ${roleStyles.sidebarBg} text-slate-800 transition-transform duration-300 ease-in-out lg:translate-x-0 ${
           mobileOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full'
         }`}
       >
-        <div>
+        <div className="flex min-h-0 flex-1 flex-col">
           {/* Top Header / Branding */}
-          <div className={`border-b ${roleStyles.headerBorder} ${roleStyles.headerBg} p-5`}>
+          <div className={`shrink-0 border-b ${roleStyles.headerBorder} ${roleStyles.headerBg} p-5`}>
             <div className="flex items-center justify-between">
               <Link to="/" className="flex items-center gap-2.5">
                 <div className="flex shrink-0 items-center -space-x-2">
@@ -167,7 +165,7 @@ export function RpduSidebar({ mobileOpen = false, onCloseMobile }: RpduSidebarPr
           </div>
 
           {/* Navigation Section */}
-          <nav className="flex-1 space-y-1 overflow-y-auto px-3.5 py-4" aria-label="RPDU navigation">
+          <nav className="min-h-0 flex-1 space-y-1 overflow-y-auto overscroll-contain px-3.5 py-4" aria-label="RPDU navigation">
             <div className={`px-3 pb-2 text-[10px] font-bold uppercase tracking-wider ${roleStyles.sectionLabelColor}`}>
               {roleStyles.sectionLabel}
             </div>
@@ -208,7 +206,7 @@ export function RpduSidebar({ mobileOpen = false, onCloseMobile }: RpduSidebarPr
         </div>
 
         {/* Bottom User Profile Section */}
-        <div className={`border-t ${roleStyles.footerBorder} ${roleStyles.footerBg} p-3.5`}>
+        <div className={`shrink-0 border-t ${roleStyles.footerBorder} ${roleStyles.footerBg} p-3.5 pb-[max(0.875rem,env(safe-area-inset-bottom))]`}>
           <div
             className={`flex items-center justify-between gap-3 rounded-sm border ${roleStyles.cardBorder} ${roleStyles.cardBg} p-3 shadow-2xs`}
           >
@@ -241,7 +239,7 @@ export function RpduSidebar({ mobileOpen = false, onCloseMobile }: RpduSidebarPr
               onClick={() => setLogoutOpen(true)}
               title="Sign Out"
               aria-label="Sign Out"
-              className="shrink-0 cursor-pointer rounded-sm p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-brand"
+              className="inline-flex min-h-11 min-w-11 shrink-0 cursor-pointer items-center justify-center rounded-sm text-slate-500 transition-colors hover:bg-slate-100 hover:text-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
             >
               <LogOut className="h-5 w-5" />
             </button>
