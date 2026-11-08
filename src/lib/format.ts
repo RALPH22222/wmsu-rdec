@@ -21,6 +21,15 @@ export const formatDate = (iso: string): string =>
 export const formatDateTime = (iso: string): string =>
   toDate(iso).toLocaleString('en-PH', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 
+/** Submission timestamp in Philippine time, e.g. "Nov, 8, 2026 at 1:40PM". */
+export const formatSubmissionDateTime = (iso: string): string => {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return 'Not available';
+  const dateLabel = date.toLocaleDateString('en-US', { timeZone: 'Asia/Manila', month: 'short', day: 'numeric', year: 'numeric' }).replace(' ', ', ');
+  const timeLabel = date.toLocaleTimeString('en-US', { timeZone: 'Asia/Manila', hour: 'numeric', minute: '2-digit', hour12: true }).replace(/\s/g, '');
+  return `${dateLabel} at ${timeLabel}`;
+};
+
 export const isOverdue = (dueDateIso: string, now: Date = new Date()): boolean =>
   new Date(`${dueDateIso.slice(0, 10)}T23:59:59`) < now;
 

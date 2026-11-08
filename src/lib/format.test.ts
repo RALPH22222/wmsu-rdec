@@ -4,6 +4,7 @@ import {
   capitalizeFirstLetter,
   daysUntil,
   formatDate,
+  formatSubmissionDateTime,
   formatFileSize,
   initialsOf,
   isOverdue,
@@ -14,6 +15,13 @@ test('formatDate shows a date-only string on its own calendar day in any time zo
   const label = formatDate('2026-10-14');
   assert.ok(label.includes('14'), `expected day 14 in "${label}"`);
   assert.ok(label.includes('Oct'), `expected Oct in "${label}"`);
+});
+
+test('submission timestamps use Philippine dates and compact 12-hour time', () => {
+  assert.equal(formatSubmissionDateTime('2026-11-08T05:40:00Z'), 'Nov, 8, 2026 at 1:40PM');
+  assert.equal(formatSubmissionDateTime('2026-11-07T16:05:00Z'), 'Nov, 8, 2026 at 12:05AM');
+  assert.equal(formatSubmissionDateTime('2026-11-08T04:00:00Z'), 'Nov, 8, 2026 at 12:00PM');
+  assert.equal(formatSubmissionDateTime('invalid'), 'Not available');
 });
 
 test('isOverdue is false through the due day and true just after it', () => {

@@ -30,6 +30,7 @@ import type { ConceptProposal } from '../../types';
 import { paginateConceptProposals } from '../../lib/conceptProposalPagination';
 import {
   capitalizeFirstLetter,
+  formatSubmissionDateTime,
   DOCUMENT_UPLOAD_ACCEPT,
   isValidProposalDocumentFile,
 } from '../../lib/format';
@@ -1031,7 +1032,7 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
                         <div className="flex items-center gap-1.5 text-slate-700 font-semibold">
                           <Calendar className="w-3.5 h-3.5 text-[#C8102E]" />
                           <span>
-                            Submitted {item.submittedAt} {item.submittedTime && `at ${item.submittedTime}`}
+                            Submitted <time dateTime={item.submittedTimestamp || item.submittedAt}>{item.submittedTimestamp ? formatSubmissionDateTime(item.submittedTimestamp) : item.submittedAt}</time>
                           </span>
                         </div>
 

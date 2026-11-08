@@ -70,6 +70,7 @@ function formatProposal(row: ProposalRecord): ConceptProposal {
     department,
     submittedAt: row.submitted_at.split('T')[0],
     submittedTime: row.submitted_at.split('T')[1]?.slice(0, 5),
+    submittedTimestamp: row.submitted_at,
     screeningStatus: screening?.decision === 'PASS' ? 'passed' : screening?.decision === 'FAIL' ? 'failed' : 'pending',
     screeningRemarks: screening?.rejection_reason || '',
     screenedBy: screening?.reviewer ? [screening.reviewer.first_name, screening.reviewer.middle_name, screening.reviewer.last_name, screening.reviewer.suffix].filter(Boolean).join(' ') : undefined,
