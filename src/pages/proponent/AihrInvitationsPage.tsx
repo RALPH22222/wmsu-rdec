@@ -1,5 +1,5 @@
 import { useRef, useState, type FormEvent } from 'react';
-import { RefreshCw } from 'lucide-react';
+import { Download, RefreshCw } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useAsyncResource } from '../../hooks/useAsyncResource';
 import { API_ENDPOINTS } from '../../config/apiConfig';
@@ -57,6 +57,12 @@ function Invitation({ invitation, onSaved }: { invitation: ProponentAihrInvitati
     {error && <p role="alert" className="text-base text-red-700">{error}</p>}
     <p className="text-base text-slate-600">As the project leader/proponent, accept the invitation to confirm your attendance at the Agency In-House Review. If you cannot attend, request a proxy for RPDU approval. The review takes place outside the system.</p>
     <dl className="grid gap-4 text-base sm:grid-cols-3"><div><dt className="text-sm text-slate-600">Date</dt><dd className="mt-1 font-semibold">{invitation.eventDate}</dd></div><div><dt className="text-sm text-slate-600">Time (Manila)</dt><dd className="mt-1 font-semibold">{invitation.eventTime.slice(0, 5)}</dd></div><div className="min-w-0"><dt className="text-sm text-slate-600">Venue</dt><dd className="mt-1 break-words font-semibold">{invitation.venue}</dd></div></dl>
+    <section className="space-y-2 border-t border-slate-200 pt-4">
+      <h3 className="text-lg font-semibold">Presentation PPT template</h3>
+      <p className="text-base text-slate-600">Please follow the RPDU PowerPoint (PPT) template when preparing your AIHR presentation.</p>
+      <p id={`${invitation.conceptId}-ppt-template-help`} className="break-words text-sm text-slate-600"><span className="font-semibold text-slate-700">Template:</span> AIHR Presentation Template (placeholder). The official template link will be provided by RPDU.</p>
+      <div className="pt-2"><button type="button" disabled aria-describedby={`${invitation.conceptId}-ppt-template-help`} className={`${buttonClass} border-brand bg-brand text-white disabled:hover:bg-brand`}><Download aria-hidden="true" className="h-4 w-4" />Download PPT template</button></div>
+    </section>
     <p className="text-sm text-slate-600">Accept the invitation or request a proxy within the reply window. Coordinate with RPDU for presentation arrangements and evaluation materials.</p>
     {invitation.history.length > 0 && <details className="border-t border-slate-200 pt-4"><summary className="min-h-12 cursor-pointer py-3 font-semibold">Earlier invitations ({invitation.history.length})</summary><ul className="space-y-3">{invitation.history.map((old) => <li key={old.round} className="break-words text-sm text-slate-600">Invitation {old.round}: {old.eventDate} at {old.eventTime.slice(0,5)} · {old.venue}</li>)}</ul></details>}
     {invitation.proxyRequests.length > 0 && <section className="space-y-3 border-t border-slate-200 pt-4"><h3 className="text-lg font-semibold">Your proxy requests</h3><ul className="space-y-3">{invitation.proxyRequests.map((proxy) => <li key={proxy.id} className="space-y-1"><p className="text-sm text-slate-600">Invitation {proxy.invitation_round || 1}{(proxy.invitation_round || 1) !== invitation.response.round ? " - earlier invitation" : ""}</p><p className="break-words">{proxy.proxy_name} · {proxy.proxy_position}</p>{proxy.reason_text && <p className="whitespace-pre-wrap break-words text-sm text-slate-600">Reason: {proxy.reason_text}</p>}{proxy.reason_file_url && <DocumentLink href={proxy.reason_file_url} label="Open submitted reason PDF" muted />}<p className={`text-sm font-semibold ${proxy.status === 'APPROVED' ? 'text-emerald-800' : proxy.status === 'REJECTED' ? 'text-red-700' : 'text-amber-800'}`}>{(proxy.invitation_round || 1) !== invitation.response.round ? `Earlier invitation: ${proxy.status.toLowerCase()}. Approval does not carry over to the current invitation.` : proxy.status === 'APPROVED' ? 'Approved by RPDU — this proxy may represent you.' : proxy.status === 'REJECTED' ? 'Rejected by RPDU — this proxy is not approved.' : 'Pending RPDU approval — this proxy is not yet approved.'}</p></li>)}</ul></section>}
@@ -93,7 +99,7 @@ export function ProponentAihrInvitationsPage() {
           <div className="grid gap-4 sm:grid-cols-3">
             {[0, 1, 2].map((field) => <div key={field} className="space-y-2"><div className="h-4 w-20 rounded-sm bg-slate-100" /><div className="h-5 w-32 max-w-full rounded-sm bg-slate-200" /></div>)}
           </div>
-          <div className="border-t border-slate-200 pt-4"><div className="h-5 w-64 max-w-full rounded-sm bg-slate-100" /></div>
+          <div className="space-y-2 border-t border-slate-200 pt-4"><div className="h-5 w-64 max-w-full rounded-sm bg-slate-200" /><div className="h-4 w-full rounded-sm bg-slate-100" /><div className="h-4 w-3/4 rounded-sm bg-slate-100" /><div className="h-12 w-56 max-w-full rounded-sm bg-slate-200" /></div>
         </div>)}
       </div>
     </div>}
