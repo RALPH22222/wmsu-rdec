@@ -4,6 +4,7 @@ import {
   capitalizeFirstLetter,
   daysUntil,
   formatDate,
+  formatDateRange,
   formatSubmissionDateTime,
   formatFileSize,
   formatPageRef,
@@ -16,6 +17,11 @@ test('formatDate shows a date-only string on its own calendar day in any time zo
   const label = formatDate('2026-10-14');
   assert.ok(label.includes('14'), `expected day 14 in "${label}"`);
   assert.ok(label.includes('Oct'), `expected Oct in "${label}"`);
+});
+
+test('formatDateRange joins two calendar dates with an arrow', () => {
+  assert.equal(formatDateRange('2027-01-05', '2028-01-04'), `${formatDate('2027-01-05')} → ${formatDate('2028-01-04')}`);
+  assert.match(formatDateRange('2027-01-05', '2028-01-04'), /Jan 5, 2027 → Jan 4, 2028/);
 });
 
 test('submission timestamps use Philippine dates and compact 12-hour time', () => {

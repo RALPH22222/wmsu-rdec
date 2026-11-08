@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { API_BASE_URL } from '../../config/apiConfig';
 import { useAuth } from '../../context/AuthContext';
+import { formatDateRange } from '../../lib/format';
 
 interface ContractData {
   contractNumber: string;
@@ -28,6 +29,8 @@ interface PreviewResponseData {
   contractData: ContractData;
   title: string;
   recipientName: string;
+  projectPeriodSource?: 'rpdu' | 'lib';
+  hasProjectPeriod?: boolean;
 }
 
 export default function ContractPreviewPage() {
@@ -174,6 +177,12 @@ export default function ContractPreviewPage() {
     }
   };
 
+  // The server refuses the PSC downloads until RPDU sets the project period; printing waits for it too.
+  const periodReady = previewData
+    ? (previewData.hasProjectPeriod ?? previewData.projectPeriodSource === 'rpdu')
+    : true;
+  const periodBlockedTitle = periodReady ? undefined : 'RPDU has not set the project period yet';
+
   const handlePrint = () => {
     if (frameRef.current?.contentWindow) {
       frameRef.current.contentWindow.print();
@@ -210,7 +219,8 @@ export default function ContractPreviewPage() {
             <button
               type="button"
               onClick={handlePrint}
-              disabled={loading || !previewData?.html}
+              disabled={loading || !previewData?.html || !periodReady}
+              title={periodBlockedTitle}
               className="inline-flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 px-3.5 py-2 text-xs font-bold rounded cursor-pointer disabled:opacity-50 transition-colors"
             >
               <Printer size={14} />
@@ -220,7 +230,8 @@ export default function ContractPreviewPage() {
             <button
               type="button"
               onClick={handleDownloadPdf}
-              disabled={loading || downloading}
+              disabled={loading || downloading || !periodReady}
+              title={periodBlockedTitle}
               className="inline-flex items-center gap-2 bg-[#C8102E] hover:bg-red-800 text-white px-4 py-2 text-xs font-bold rounded cursor-pointer disabled:opacity-50 transition-colors shadow-xs"
             >
               <Download size={14} className={downloading ? 'animate-bounce' : ''} />
@@ -230,7 +241,8 @@ export default function ContractPreviewPage() {
             <button
               type="button"
               onClick={handleDownloadDocx}
-              disabled={loading || downloadingDocx}
+              disabled={loading || downloadingDocx || !periodReady}
+              title={periodBlockedTitle}
               className="inline-flex items-center gap-2 bg-slate-900 hover:bg-slate-800 text-white px-4 py-2 text-xs font-bold rounded cursor-pointer disabled:opacity-50 transition-colors shadow-xs"
             >
               <Download size={14} className={downloadingDocx ? 'animate-bounce' : ''} />
@@ -266,8 +278,17 @@ export default function ContractPreviewPage() {
                 </strong>
               </div>
               <div>
-                <span className="text-slate-500">Duration:</span>{' '}
-                <strong className="text-slate-900">{previewData.contractData?.durationMonths} Months</strong>
+                <span className="text-slate-500">Project period:</span>{' '}
+                {previewData.projectPeriodSource === 'rpdu' && previewData.contractData?.startDate && previewData.contractData?.endDate ? (
+                  <strong className="text-slate-900">
+                    {formatDateRange(previewData.contractData.startDate, previewData.contractData.endDate)}
+                    {' · '}
+                    {previewData.contractData.durationMonths}{' '}
+                    {Number(previewData.contractData.durationMonths) === 1 ? 'month' : 'months'}
+                  </strong>
+                ) : (
+                  <span className="text-slate-500">Not yet set by RPDU</span>
+                )}
               </div>
             </div>
 

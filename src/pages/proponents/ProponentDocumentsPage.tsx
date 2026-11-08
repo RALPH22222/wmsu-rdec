@@ -45,6 +45,7 @@ const buildAutofilledContractData = (proposal: ProposalContractItem): ContractDa
     return {
       ...proposal.contractData,
       contractAmount: String(finalAmt),
+      projectPeriodSource: proposal.projectPeriodSource ?? 'lib',
     };
   }
   return {

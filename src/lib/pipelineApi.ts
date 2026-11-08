@@ -72,6 +72,10 @@ export const checkRevisionApi = async (proposalId: string, revisionId: string, c
   (await request<RpduProposal>(API_ENDPOINTS.PIPELINE.REVISION_CHECK(proposalId, revisionId), token, { method: 'PUT', body: JSON.stringify({ checked, note: note.trim() }) })).data;
 
 /** RPDU's manuscript anonymity check (reversible); gates the third seat on the server. */
+/** RPDU sets (or changes) the project period the Professional Service Contract will use. */
+export const setProjectPeriodApi = async (proposalId: string, input: { startDate: string; durationMonths: number }, token?: string): Promise<RpduProposal> =>
+  (await request<RpduProposal>(API_ENDPOINTS.PIPELINE.PROJECT_PERIOD(proposalId), token, { method: 'PUT', body: JSON.stringify({ startDate: input.startDate, durationMonths: input.durationMonths }) })).data;
+
 export const checkAnonymityApi = async (proposalId: string, checked: boolean, expectedUpdatedAt: string | null, token?: string): Promise<RpduProposal> =>
   (await request<RpduProposal>(API_ENDPOINTS.PIPELINE.ANONYMITY(proposalId), token, { method: 'PUT', body: JSON.stringify({ checked, expectedUpdatedAt }) })).data;
 

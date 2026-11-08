@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { ArrowLeft, CheckCircle2, Eye, FileSignature, Printer } from 'lucide-react';
-import { formatDate } from '../../../lib/format';
+import { formatDateRange } from '../../../lib/format';
 import { DocumentStatusChip } from './DocumentRow';
 import { DOC_BUTTON_PRIMARY } from './buttonClasses';
 import { formatPeso } from './types';
@@ -33,9 +33,18 @@ export function ContractWorkspace({
   onBack,
   onViewPreview,
 }: ContractWorkspaceProps) {
+  // Only an RPDU-set period is authoritative; the LIB fallback dates drift with today's date, so they are hidden.
+  const periodSetByRpdu = (proposal.projectPeriodSource ?? contractData.projectPeriodSource) === 'rpdu'
+    && Boolean(contractData.startDate && contractData.endDate);
+  // The server refuses the PSC print/download until RPDU sets the period, so the actions wait for it too.
+  const periodReady = proposal.hasProjectPeriod !== false && periodSetByRpdu;
+  const periodBlockedTitle = periodReady ? undefined : 'RPDU has not set the project period yet';
   const statusChip = proposal.contract
     ? ({ label: 'Issued', tone: 'emerald' } as const)
-    : ({ label: 'Ready to print', tone: 'emerald' } as const);
+    : periodReady
+      ? ({ label: 'Ready to print', tone: 'emerald' } as const)
+      : ({ label: 'Awaiting project period', tone: 'amber' } as const);
+  const periodMonths = Number(contractData.durationMonths);
 
   return (
     <div className="mx-auto max-w-6xl space-y-6">
@@ -97,11 +106,17 @@ export function ContractWorkspace({
                 ? `Teaching De-loading (AY ${contractData.schoolYear || '2026–2027'})`
                 : 'Research Honorarium'}
             </SummaryRow>
-            <SummaryRow label="Project Duration">
-              {contractData.durationMonths || '12'} months
-              <span className="block text-xs font-normal text-slate-500">
-                {contractData.startDate ? formatDate(contractData.startDate) : '—'} to {contractData.endDate ? formatDate(contractData.endDate) : '—'}
-              </span>
+            <SummaryRow label="Project period">
+              {periodSetByRpdu ? (
+                <>
+                  {formatDateRange(contractData.startDate, contractData.endDate)}
+                  <span className="block text-xs font-normal text-slate-500">
+                    {periodMonths} {periodMonths === 1 ? 'month' : 'months'}
+                  </span>
+                </>
+              ) : (
+                <span className="font-normal text-slate-500">Not yet set by RPDU</span>
+              )}
             </SummaryRow>
             <SummaryRow label="Implementing College / Dept.">
               {contractData.collegeDepartment || proposal.department}
@@ -112,7 +127,11 @@ export function ContractWorkspace({
           </dl>
 
           <div className="mt-auto pt-5">
-            <button type="button" onClick={onViewPreview} className={DOC_BUTTON_PRIMARY}>
+            <button
+              type="button"
+              onClick={onViewPreview}
+              className={DOC_BUTTON_PRIMARY}
+            >
               <Eye aria-hidden="true" className="h-4 w-4" />
               View Pre-Filled Contract
             </button>
@@ -158,7 +177,13 @@ export function ContractWorkspace({
           </ol>
 
           <div className="mt-auto pt-5">
-            <button type="button" onClick={onViewPreview} className={DOC_BUTTON_PRIMARY}>
+            <button
+              type="button"
+              onClick={onViewPreview}
+              disabled={!periodReady}
+              title={periodBlockedTitle}
+              className={DOC_BUTTON_PRIMARY}
+            >
               <Printer aria-hidden="true" className="h-4 w-4" />
               Open &amp; Print Contract
             </button>

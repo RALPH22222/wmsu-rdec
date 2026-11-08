@@ -1,9 +1,10 @@
 import { useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useCallForProposals } from '../context/CallForProposalsContext';
-import { assignEvaluatorApi, buildActionSheetApi, checkAnonymityApi, checkNdaApi, checkRevisionApi, forwardToReoApi, getPipelineEvaluators, getPipelineProposal, getPipelineProposals, postClarificationApi, publishSummaryApi, saveFundingClassificationApi, saveSummaryApi, unassignEvaluatorApi } from '../lib/pipelineApi';
+import { assignEvaluatorApi, buildActionSheetApi, checkAnonymityApi, checkNdaApi, checkRevisionApi, forwardToReoApi, getPipelineEvaluators, getPipelineProposal, getPipelineProposals, postClarificationApi, publishSummaryApi, saveFundingClassificationApi, saveSummaryApi, setProjectPeriodApi, unassignEvaluatorApi } from '../lib/pipelineApi';
 import type { ActionSheetInput, SummaryInput } from '../lib/pipelineApi';
 import { STATUS_META } from '../lib/proposalPipeline';
+import { formatDateRange } from '../lib/format';
 import type { FundingClassification, PipelineEvaluator, RpduProposal } from '../types';
 import { useAsyncResource } from './useAsyncResource';
 
@@ -197,5 +198,19 @@ export function useRpduProposal(id: string | undefined) {
     }
   }, [id, token, setData, showToast, reread]);
 
-  return { proposal: resource.data, loading: resource.loading, error: resource.error, refresh: resource.refresh, replace: resource.setData, unassign, checkRevision, checkAnonymity, forward, buildActionSheet, saveSummary, publishSummary, clarify, checkNda, saveFundingClassification };
+  const setProjectPeriod = useCallback(async (input: { startDate: string; durationMonths: number }) => {
+    if (!id) return;
+    try {
+      const proposal = await setProjectPeriodApi(id, input, token);
+      setData(proposal);
+      const period = proposal.projectPeriod;
+      showToast(period ? `Project period set — ${formatDateRange(period.startDate, period.endDate)}` : 'Project period saved');
+    } catch (failure) {
+      showToast(failure instanceof Error ? failure.message : 'Unable to set the project period');
+      reread();
+      throw failure;
+    }
+  }, [id, token, setData, showToast, reread]);
+
+  return { proposal: resource.data, loading: resource.loading, error: resource.error, refresh: resource.refresh, replace: resource.setData, unassign, checkRevision, checkAnonymity, forward, buildActionSheet, saveSummary, publishSummary, clarify, checkNda, saveFundingClassification, setProjectPeriod };
 }

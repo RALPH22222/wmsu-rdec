@@ -9,9 +9,11 @@ import {
   FileText,
   Printer,
 } from 'lucide-react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useLocation, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { API_BASE_URL } from '../../config/apiConfig';
+import { formatDateRange } from '../../lib/format';
+import type { ProjectPeriod } from '../../types';
 import { SignatureField } from '../../components/rpduComponent/SignatureField';
 
 type Template =
@@ -79,6 +81,9 @@ type ContractData = {
 
 type ContractContext = {
   contractData: ContractData;
+  projectPeriod: Pick<ProjectPeriod, 'startDate' | 'durationMonths' | 'endDate'> | null;
+  projectPeriodSource: 'rpdu' | 'lib';
+  detailedProposalId: string | null;
   missingFields: string[];
   lockedFields: string[];
   studyLeader: string;
@@ -115,6 +120,8 @@ export function LetterDeskPage() {
   const requestedProposal = useRef(searchParams.get('proposal'));
 
   const { session, profile, loadingProfile } = useAuth();
+  const { pathname } = useLocation();
+  const evaluationsBase = pathname.startsWith('/admin') ? '/admin/evaluations' : '/rpdu/evaluations';
   const [sources, setSources] = useState<Source[]>([]);
 
   // Default template based on search params
@@ -136,6 +143,20 @@ export function LetterDeskPage() {
 
   const [contractContext, setContractContext] = useState<ContractContext | null>(null);
   const [contextLoading, setContextLoading] = useState(() => Boolean(searchParams.get('proposal')));
+  // The PSC cannot be prepared until RPDU sets the project period on the evaluation page.
+  const projectPeriodMissing = isContractTemplate(template) && Boolean(contractContext?.missingFields?.includes('projectPeriod'));
+  const projectPeriodHint = projectPeriodMissing ? 'Set the project duration first' : undefined;
+  // One-line reason beside the disabled Generate / Send PSC buttons, visible to touch users who never see a title tooltip.
+  const projectPeriodNotice = !projectPeriodMissing ? null : contractContext?.detailedProposalId ? (
+    <Link
+      to={`${evaluationsBase}/${contractContext.detailedProposalId}`}
+      className="text-xs font-semibold text-amber-700 underline hover:text-amber-800"
+    >
+      Set the project duration on the evaluation page first
+    </Link>
+  ) : (
+    <span className="text-xs font-semibold text-amber-700">Set the project duration on the evaluation page first</span>
+  );
 
   useEffect(() => {
     const t = searchParams.get('template');
@@ -832,11 +853,27 @@ export function LetterDeskPage() {
                   </div>
                   <div className="bg-white border border-slate-200 rounded p-2.5">
                     <span className="block text-[11px] font-bold text-slate-500">
-                      Project Duration (from LIB)
+                      Project period
                     </span>
-                    <span className="font-semibold text-slate-900 block mt-0.5">
-                      {contractContext.contractData.durationMonths || '12'} Months ({contractContext.contractData.startDate} to {contractContext.contractData.endDate})
-                    </span>
+                    {contractContext.projectPeriod ? (
+                      <span className="font-semibold text-slate-900 block mt-0.5">
+                        {formatDateRange(contractContext.projectPeriod.startDate, contractContext.projectPeriod.endDate)}
+                        {' · '}
+                        {contractContext.projectPeriod.durationMonths}{' '}
+                        {contractContext.projectPeriod.durationMonths === 1 ? 'month' : 'months'}
+                      </span>
+                    ) : contractContext.detailedProposalId ? (
+                      <Link
+                        to={`${evaluationsBase}/${contractContext.detailedProposalId}`}
+                        className="mt-0.5 block font-semibold text-amber-700 underline hover:text-amber-800"
+                      >
+                        Set the project duration on the evaluation page first
+                      </Link>
+                    ) : (
+                      <span className="mt-0.5 block font-semibold text-amber-700">
+                        Set the project duration on the evaluation page first
+                      </span>
+                    )}
                   </div>
                   <div className="bg-white border border-slate-200 rounded p-2.5">
                     <span className="block text-[11px] font-bold text-slate-500">
@@ -917,8 +954,10 @@ export function LetterDeskPage() {
                 disabled={
                   !choices.some((item) => (item.id || (item as any).conceptProposalId) === conceptId) ||
                   (isContractTemplate(template) && !contractContext) ||
+                  projectPeriodMissing ||
                   (template === INVITATION && !reviewId)
                 }
+                title={projectPeriodHint}
                 onClick={() => setStage(3)}
                 className="inline-flex items-center gap-2 bg-[#C8102E] hover:bg-[#A00D26] px-6 py-3 text-sm font-bold text-white rounded-md shadow-xs transition-colors cursor-pointer disabled:cursor-not-allowed disabled:bg-slate-300"
               >
@@ -1193,14 +1232,18 @@ export function LetterDeskPage() {
               >
                 <ArrowLeft size={16} /> Back to Recipient &amp; Details
               </button>
-              <button
-                type="button"
-                disabled={busy || !signatoriesReady}
-                onClick={previewLetter}
-                className="inline-flex items-center gap-2 bg-[#C8102E] hover:bg-[#A00D26] px-6 py-3 text-sm font-bold text-white rounded-md shadow-xs transition-colors cursor-pointer disabled:cursor-not-allowed disabled:bg-slate-300"
-              >
-                {busy ? 'Generating Document…' : 'Generate & Review Document'} <ArrowRight size={16} />
-              </button>
+              <div className="flex flex-col items-end gap-1.5 text-right">
+                <button
+                  type="button"
+                  disabled={busy || !signatoriesReady || projectPeriodMissing}
+                  title={projectPeriodHint}
+                  onClick={previewLetter}
+                  className="inline-flex items-center gap-2 bg-[#C8102E] hover:bg-[#A00D26] px-6 py-3 text-sm font-bold text-white rounded-md shadow-xs transition-colors cursor-pointer disabled:cursor-not-allowed disabled:bg-slate-300"
+                >
+                  {busy ? 'Generating Document…' : 'Generate & Review Document'} <ArrowRight size={16} />
+                </button>
+                {projectPeriodNotice}
+              </div>
             </div>
           </div>
         )}
@@ -1292,11 +1335,12 @@ export function LetterDeskPage() {
                 <ArrowLeft size={16} /> Back to Signatories
               </button>
 
-              <div className="flex items-center gap-3">
+              <div className="flex flex-col items-end gap-1.5 text-right">
                 <button
                   type="button"
                   onClick={issueLetter}
-                  disabled={busy || !preview || Boolean(newlyIssuedId)}
+                  disabled={busy || !preview || Boolean(newlyIssuedId) || projectPeriodMissing}
+                  title={projectPeriodHint}
                   className="inline-flex items-center gap-2 bg-[#C8102E] hover:bg-[#A00D26] px-7 py-3 text-sm font-bold text-white rounded-md shadow-xs transition-colors cursor-pointer disabled:cursor-not-allowed disabled:bg-slate-300"
                 >
                   {newlyIssuedId
@@ -1309,6 +1353,7 @@ export function LetterDeskPage() {
                     ? 'Issue & Archive Certificate (COTR)'
                     : 'Issue Official Letter'}
                 </button>
+                {projectPeriodNotice}
               </div>
             </div>
 

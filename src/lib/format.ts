@@ -18,6 +18,9 @@ const toDate = (iso: string): Date => {
 export const formatDate = (iso: string): string =>
   toDate(iso).toLocaleDateString('en-PH', { year: 'numeric', month: 'short', day: 'numeric' });
 
+/** A date span such as "Jan 5, 2027 → Jan 4, 2028". */
+export const formatDateRange = (start: string, end: string): string => `${formatDate(start)} → ${formatDate(end)}`;
+
 export const formatDateTime = (iso: string): string =>
   toDate(iso).toLocaleString('en-PH', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 

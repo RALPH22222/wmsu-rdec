@@ -384,7 +384,19 @@ export interface ScreeningReviewDetails {
 
 export type FundingClassification = 'INSTITUTIONAL' | 'OUTSOURCE';
 
+/** Project implementation period set by RPDU (end = start + N calendar months − 1 day). */
+export interface ProjectPeriod {
+  startDate: string;
+  durationMonths: number;
+  endDate: string;
+  setBy?: string | null;
+  setAt?: string | null;
+}
+
 export interface RpduProposal {
+  projectPeriod: ProjectPeriod | null;
+  canSetProjectPeriod: boolean;
+  contractNotarized: boolean;
   externalFundingRequestId?: string | null;
   manuscriptVersions?: ManuscriptVersion[];
   /** Only RPDU Head and ADMIN may record the Step 7.6 check. */
@@ -489,6 +501,7 @@ export interface ProponentRoundFeedback {
 export interface ManuscriptVersion { id: string; version: number; stage: string; fileUrl: string; submittedAt: string | null; current: boolean }
 
 export interface ProponentProposal {
+  projectPeriod: ProjectPeriod | null;
   manuscriptVersions?: ManuscriptVersion[];
   canUpdateAfterAihr?: boolean;
   aihrOutcome?: AihrVerdict | null;
