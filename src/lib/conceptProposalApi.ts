@@ -28,6 +28,13 @@ interface ScreeningRecord {
   reviewer?: { first_name: string; middle_name?: string; last_name: string; suffix?: string } | null;
 }
 
+interface DetailedProposalRelation {
+  id: string;
+  status?: string;
+  clearance?: { id: string; issued_at?: string }[] | { id: string; issued_at?: string } | null;
+  budget?: { id: string; is_approved?: boolean }[] | { id: string; is_approved?: boolean } | null;
+}
+
 interface ProposalRecord {
   id: string;
   call_id: string;
@@ -44,11 +51,21 @@ interface ProposalRecord {
   call?: { title: string };
   proponent?: { first_name: string; last_name: string; email: string; departments?: { name: string } };
   preliminary_screenings?: ScreeningRecord[] | ScreeningRecord | null;
+  detailed_proposals?: DetailedProposalRelation[] | DetailedProposalRelation | null;
 }
 
 function formatProposal(row: ProposalRecord): ConceptProposal {
   const researchAgendas = row.research_agendas?.length ? row.research_agendas : [row.custom_research_agenda || row.research_agenda];
   const screening = Array.isArray(row.preliminary_screenings) ? row.preliminary_screenings[0] : row.preliminary_screenings;
+  const detail = Array.isArray(row.detailed_proposals) ? row.detailed_proposals[0] : row.detailed_proposals;
+  const clearances = Array.isArray(detail?.clearance)
+    ? detail.clearance
+    : detail?.clearance
+      ? [detail.clearance]
+      : [];
+  const hasTechnicalClearance = Boolean(
+    clearances.length > 0 || detail?.status === 'FORWARDED_TO_REO'
+  );
   const department = row.proponent?.departments?.name || 'Unassigned';
   const fileUrl = (url: string) => url ? new URL(url, `${API_BASE_URL.replace(/\/api\/?$/, '')}/`).href : undefined;
   const attachment = (url: string, category: 'college_memo' | 'concept_proposal' | 'endorsement_pdf', label: string) => {
@@ -77,6 +94,7 @@ function formatProposal(row: ProposalRecord): ConceptProposal {
     screenedById: screening?.reviewed_by,
     screenedAt: screening?.reviewed_at ? new Date(screening.reviewed_at).toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' }) : undefined,
     screenedTimestamp: screening?.reviewed_at,
+    hasTechnicalClearance,
     budgetRequested: Number(row.proposed_budget || 0),
     researchAgendas,
     thematicArea: researchAgendas.join('; '),

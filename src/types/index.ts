@@ -146,6 +146,7 @@ export interface ConceptProposal {
   sectionComments?: ScreeningSectionComments;
   reviewDetails?: ScreeningReviewDetails | null;
   detailedProposal?: { fileUrl: string; submittedAt: string } | null;
+  hasTechnicalClearance?: boolean;
   screenedBy?: string;
   screenedById?: string;
   screenedAt?: string;
@@ -189,6 +190,17 @@ export interface LibLineItem {
   remarks?: string;
 }
 
+export interface LibSignatories {
+  studyLeaderName: string;
+  studyLeaderTitle: string;
+  notedByName: string;
+  notedByTitle: string;
+  recommendingApprovalName: string;
+  recommendingApprovalTitle: string;
+  approvedByName: string;
+  approvedByTitle: string;
+}
+
 export interface LibMetadata {
   title?: string;
   projectDuration: string;
@@ -197,47 +209,7 @@ export interface LibMetadata {
   projectStaff: string | string[];
   compensationType?: 'Honoraria' | 'Teaching De-loading';
   implementingDepartment: string;
-}
-
-export type CompensationOption = 'Honoraria' | 'Teaching De-loading';
-
-/** Editor-side LIB metadata: names as arrays, duration and compensation narrowed. */
-export interface LibMetadataState {
-  projectDuration: '1 Year' | '2 Years';
-  studyLeader: string;
-  coResearchers: string[];
-  projectStaff: string[];
-  compensationType: CompensationOption;
-  implementingDepartment: string;
-}
-
-export interface LibDraft {
-  items: LibLineItem[];
-  metadata: LibMetadataState;
-}
-
-export interface YearTotals {
-  year1: number;
-  year2: number;
-  total: number;
-}
-
-export interface LibTotals {
-  ps: YearTotals;
-  mooe: YearTotals;
-  eo: YearTotals;
-  grand: YearTotals;
-}
-
-export interface LibSignatories {
-  studyLeader: string;
-  studyLeaderTitle: string;
-  directorForResearch: string;
-  directorForResearchTitle: string;
-  vpResearchExtension: string;
-  vpResearchExtensionTitle: string;
-  universityPresident: string;
-  universityPresidentTitle: string;
+  signatories?: LibSignatories;
 }
 
 export interface HybridBudgetAllocation {
@@ -283,54 +255,14 @@ export interface RpduBudgetAllocationItem {
   routedForPresidentSignature?: boolean;
   routedAt?: string | null;
   isApproved: boolean;
-  reviewStatus: 'PENDING' | 'APPROVED' | 'SIGNED' | 'REJECTED' | 'REOPENED';
+  reviewStatus: 'PENDING' | 'APPROVED' | 'SIGNED' | 'REJECTED';
   reviewRemarks?: string;
   reviewedAt?: string | null;
   reviewerName?: string | null;
   budgetPdfUrl?: string | null;
   createdAt: string;
-  updatedAt: string;
   libItems: LibLineItem[];
   metadata: LibMetadata;
-}
-
-/** A saved LIB as `GET /api/proponent/budget-allocations/proposal/:id` returns it. */
-export interface BudgetAllocationDetail {
-  allocationId: string;
-  detailedProposalId: string;
-  totalApprovedAmount: number;
-  isApproved: boolean;
-  reviewStatus: 'PENDING' | 'APPROVED' | 'REOPENED';
-  reviewRemarks: string;
-  reviewedAt: string | null;
-  reviewerName: string | null;
-  budgetPdfUrl: string | null;
-  createdAt: string;
-  /** Null only on rows the database never stamped; pass it back as `expectedUpdatedAt`. */
-  updatedAt: string | null;
-  metadata: LibMetadata | null;
-  libItems: LibLineItem[];
-}
-
-/** One of the proponent's detailed proposals with its LIB, if RPDU has entered one. */
-export interface ProponentBudgetEntry {
-  detailedProposalId: string;
-  code: string;
-  title: string;
-  hasClearance: boolean;
-  allocation: BudgetAllocationDetail | null;
-}
-
-/** A detailed proposal RPDU may enter a LIB for (`GET /api/rpdu/budget-allocations/eligible`). */
-export interface EligibleBudgetProposal {
-  detailedProposalId: string;
-  code: string;
-  title: string;
-  proponentName: string;
-  department: string;
-  durationMonths: number | null;
-  projectDuration: '1 Year' | '2 Years' | null;
-  ceiling: number;
 }
 
 // ============================================================================
@@ -494,8 +426,6 @@ export interface RpduProposal {
   history: StatusHistoryEntry[];
   /** Certificate of Technical Review issued from the Letter Desk (a `technical_clearances` row). */
   clearance: { issuedAt: string } | null;
-  /** The proposal's Line-Item Budget allocation, once RPDU has saved one. */
-  budgetAllocationId: string | null;
   gateway: GatewayReadiness;
   /** Generated Proposal Action Sheets, one per round, oldest first. */
   actionSheets: ActionSheet[];

@@ -76,7 +76,7 @@ export const ProponentSidebar: React.FC<ProponentSidebarProps> = ({
     { name: 'Detailed Proposal', path: '/proponent/detailed-proposals', icon: FileUp, active: isDetailedProposalActive },
     { name: 'AIHR Invitations', path: '/proponent/aihr-invitations', icon: Mail, active: isAihrActive },
     { name: 'External Funding', path: '/proponent/external-funding', icon: Handshake, active: isExternalFundingActive },
-    { name: 'Budget (view)', path: '/proponent/budget', icon: DollarSign, active: isBudgetActive },
+    { name: 'Budget Allocation', path: '/proponent/budget', icon: DollarSign, active: isBudgetActive },
     { name: 'Memorandums', path: '/proponent/memos', icon: ScrollText, active: isMemosActive },
     { name: 'Documents & Contracts', path: '/proponent/documents', icon: FileSignature, active: isDocumentsActive },
     { name: 'Evaluation & Revisions', path: '/proponent/revisions', icon: History, active: isRevisionsActive },

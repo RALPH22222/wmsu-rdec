@@ -1,10 +1,6 @@
 export const formatCurrency = (amount: number): string =>
   `₱${amount.toLocaleString('en-PH', { maximumFractionDigits: 0 })}`;
 
-/** Peso amount with centavos, as the Line-Item Budget shows it (₱12,500.00). */
-export const formatPesoCents = (amount: number): string =>
-  `₱${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-
 const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
 
 /**

@@ -29,17 +29,12 @@ export const API_ENDPOINTS = {
     PROFILE: `${API_BASE_URL}/profile`,
     CONCEPT_PROPOSALS: `${API_BASE_URL}/proponent/concept-proposals`,
     BUDGET_ALLOCATIONS: `${API_BASE_URL}/proponent/budget-allocations`,
-    BUDGET_BY_PROPOSAL: (id: string) => `${API_BASE_URL}/proponent/budget-allocations/proposal/${id}`,
   },
 
   // RPDU Role Endpoints (Ready for expansion)
   RPDU: {
     SCREENING: `${API_BASE_URL}/screening/proposals`,
     BUDGET_ALLOCATIONS: `${API_BASE_URL}/rpdu/budget-allocations`,
-    BUDGET_ELIGIBLE: `${API_BASE_URL}/rpdu/budget-allocations/eligible`,
-    BUDGET_BY_ID: (id: string) => `${API_BASE_URL}/rpdu/budget-allocations/${id}`,
-    BUDGET_REVIEW: (id: string) => `${API_BASE_URL}/rpdu/budget-allocations/${id}/review`,
-    BUDGET_REOPEN: (id: string) => `${API_BASE_URL}/rpdu/budget-allocations/${id}/reopen`,
   },
 
   // Call for Proposals Endpoints
