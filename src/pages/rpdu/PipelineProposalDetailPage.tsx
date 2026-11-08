@@ -1,7 +1,7 @@
 import { stageExplanation } from '../../lib/aihrMeta';
 import type { ReactNode } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { ArrowLeft, ShieldCheck } from 'lucide-react';
+import { ArrowLeft, Receipt, ShieldCheck } from 'lucide-react';
 import { useRpduProposal } from '../../hooks/useRpduPipeline';
 import { MAX_EVALUATORS_PER_PROPOSAL, RECOMMENDATION_META, anonymityGateReason, isTerminalStatus, nextStepFor } from '../../lib/proposalPipeline';
 import { formatDate } from '../../lib/format';
@@ -67,6 +67,19 @@ function DetailBody({ id, role }: { id: string | undefined; role: 'rpdu' | 'admi
 
       {!!proposal.manuscriptVersions?.length && <details className="bg-white p-4"><summary className="min-h-11 cursor-pointer text-sm font-semibold">Manuscript history</summary>{proposal.manuscriptVersions.map((version) => <div key={version.id} className="py-2"><DocumentLink href={version.fileUrl} label={`Version ${version.version} · ${version.stage}${version.current ? ' · Current' : ''}`} muted /></div>)}</details>}
       {(proposal.status === 'APPROVED' || proposal.status === 'FORWARDED_TO_REO') && <TechnicalReviewGateway proposal={proposal} role={role} onForward={forward} />}
+      {(proposal.budgetAllocationId || proposal.clearance) && (
+        <Card title="Line-Item Budget">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm text-slate-600">{proposal.budgetAllocationId ? 'RPDU has entered the Line-Item Budget for this proposal.' : 'The Certificate of Technical Review is issued. Enter the Line-Item Budget next.'}</p>
+            <Link
+              to={proposal.budgetAllocationId ? `/rpdu/budgets/${proposal.budgetAllocationId}` : `/rpdu/budgets/new/${proposal.id}`}
+              className="inline-flex min-h-11 shrink-0 items-center justify-center gap-1.5 rounded-sm bg-[#C8102E] px-4 text-xs font-bold text-white shadow-xs hover:bg-[#A00D26]"
+            >
+              <Receipt className="h-4 w-4" />{proposal.budgetAllocationId ? 'Open budget' : 'Prepare budget'}
+            </Link>
+          </div>
+        </Card>
+      )}
       {(proposal.canSetProjectPeriod || proposal.projectPeriod) && (
         <Card title="Project period">
           <ProjectPeriodCard key={proposal.projectPeriod ? `${proposal.projectPeriod.startDate}:${proposal.projectPeriod.durationMonths}` : 'unset'} proposal={proposal} onSave={setProjectPeriod} />

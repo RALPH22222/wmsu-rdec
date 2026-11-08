@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import {
   FileText,
@@ -10,43 +10,45 @@ import {
   User,
   Calendar,
   Receipt,
+  RotateCcw,
+  PlusCircle,
+  AlertTriangle,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { API_ENDPOINTS } from '../../config/apiConfig';
-import type { RpduBudgetAllocationItem } from '../../types';
+import { getEligibleBudgets, getRpduBudgets } from '../../lib/budgetApi';
+import { formatDate, formatPesoCents } from '../../lib/format';
+import { TONE_CLASSES } from '../../components/ui/toneClasses';
+import { EmptyState } from '../../components/ui/EmptyState';
+import type { EligibleBudgetProposal, RpduBudgetAllocationItem } from '../../types';
+
+interface BudgetLists {
+  allocations: RpduBudgetAllocationItem[];
+  eligible: EligibleBudgetProposal[];
+  error: string | null;
+}
 
 export const RpduBudgetAllocationPage: React.FC = () => {
   const { session } = useAuth();
-  const [allocations, setAllocations] = useState<RpduBudgetAllocationItem[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const token = session?.access_token;
+  const [lists, setLists] = useState<BudgetLists | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'PENDING' | 'APPROVED'>('ALL');
 
-  const fetchAllocations = useCallback(async () => {
-    if (!session?.access_token) return;
-    setIsLoading(true);
-    try {
-      const res = await fetch(API_ENDPOINTS.RPDU.BUDGET_ALLOCATIONS, {
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
-      });
-      const json = await res.json();
-      if (json.success && Array.isArray(json.data)) {
-        setAllocations(json.data);
-      } else {
-        setAllocations([]);
-      }
-    } catch (err) {
-      console.error('Failed to fetch RPDU budget allocations:', err);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [session?.access_token]);
-
   useEffect(() => {
-    fetchAllocations();
-  }, [fetchAllocations]);
+    if (!token) return;
+    const controller = new AbortController();
+    Promise.all([getRpduBudgets(token, controller.signal), getEligibleBudgets(token, controller.signal)])
+      .then(([allocations, eligible]) => setLists({ allocations, eligible, error: null }))
+      .catch((err: unknown) => {
+        if (controller.signal.aborted) return;
+        setLists({ allocations: [], eligible: [], error: err instanceof Error ? err.message : 'Unable to load budget allocations' });
+      });
+    return () => controller.abort();
+  }, [token]);
+
+  const isLoading = lists === null;
+  const allocations = useMemo(() => lists?.allocations ?? [], [lists]);
+  const eligible = lists?.eligible ?? [];
 
   // Helper to resolve the 2-stage status of an allocation
   const getAllocationStage = (item: RpduBudgetAllocationItem): 'PENDING' | 'APPROVED' => {
@@ -93,10 +95,51 @@ export const RpduBudgetAllocationPage: React.FC = () => {
             Line-Item Budget Allocations Review
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
-            Review multi-year Line-Item Budget (LIB) submissions across Personnel Services, MOOE, and Equipment Outlay. Approving an allocation authorizes the proponent to route the document for physical endorsement signatures.
+            Prepare and accept the Line-Item Budget (LIB) for each technically cleared proposal across Personnel Services, MOOE, and Equipment Outlay. Accepting a budget lets the proponent route it for endorsement signatures.
           </p>
         </div>
       </div>
+
+      {lists?.error && (
+        <p role="alert" className="flex items-start gap-1.5 rounded-sm border border-red-200 bg-red-50 p-3 text-xs text-red-800">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" /> {lists.error}
+        </p>
+      )}
+
+      {/* Eligible proposals without a LIB */}
+      {!isLoading && (
+        <section className="bg-white rounded-sm border border-slate-200 shadow-xs">
+          <h2 className="px-4 py-3 border-b border-slate-100 text-xs font-bold uppercase tracking-wider text-slate-500">
+            Eligible — no budget yet ({eligible.length})
+          </h2>
+          {eligible.length === 0 ? (
+            <EmptyState size="md" icon={Receipt} title="Nothing to prepare" description="Every technically cleared proposal already has a Line-Item Budget." />
+          ) : (
+            <ul className="divide-y divide-slate-100">
+              {eligible.map((entry) => (
+                <li key={entry.detailedProposalId} className="p-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="min-w-0">
+                    <div className="font-mono text-xs font-bold text-[#C8102E]">{entry.code}</div>
+                    <div className="font-bold text-slate-900 text-sm break-words mt-0.5">{entry.title}</div>
+                    <div className="text-xs text-slate-500 mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
+                      <span className="inline-flex items-center gap-1"><User className="w-3.5 h-3.5 text-slate-400" />{entry.proponentName}</span>
+                      <span className="inline-flex items-center gap-1"><Building className="w-3.5 h-3.5 text-slate-400" />{entry.department || 'WMSU Department'}</span>
+                      <span>{entry.projectDuration ?? 'Project period not set'}</span>
+                      <span>Ceiling {formatPesoCents(entry.ceiling)}</span>
+                    </div>
+                  </div>
+                  <Link
+                    to={`/rpdu/budgets/new/${entry.detailedProposalId}`}
+                    className="inline-flex min-h-11 shrink-0 items-center justify-center gap-1.5 rounded-sm bg-[#C8102E] px-4 text-xs font-bold text-white shadow-xs hover:bg-[#A00D26]"
+                  >
+                    <PlusCircle className="h-4 w-4" /> Prepare budget
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      )}
 
       {/* Allocations Table */}
       <div className="bg-white rounded-md border border-slate-200 shadow-xs overflow-hidden">
@@ -136,7 +179,7 @@ export const RpduBudgetAllocationPage: React.FC = () => {
                   : 'bg-white text-slate-600 hover:text-slate-900 border border-slate-200'
               }`}
             >
-              Pending Review ({stats.pending})
+              Pending ({stats.pending})
             </button>
             <button
               type="button"
@@ -155,7 +198,7 @@ export const RpduBudgetAllocationPage: React.FC = () => {
         {isLoading ? (
           <div className="p-12 text-center text-xs text-slate-500 space-y-2">
             <div className="w-6 h-6 border-2 border-[#C8102E] border-t-transparent rounded-full animate-spin mx-auto" />
-            <p className="font-semibold">Loading submitted budget allocations from database...</p>
+            <p className="font-semibold">Loading budget allocations...</p>
           </div>
         ) : filteredAllocations.length === 0 ? (
           <div className="p-12 text-center text-xs text-slate-500 space-y-2">
@@ -164,7 +207,7 @@ export const RpduBudgetAllocationPage: React.FC = () => {
             <p className="text-slate-400 max-w-sm mx-auto">
               {searchQuery
                 ? `No submissions matched "${searchQuery}". Try a different search term.`
-                : 'There are currently no Line-Item Budget submissions matching this status filter.'}
+                : 'No Line-Item Budgets match this status filter.'}
             </p>
           </div>
         ) : (
@@ -181,7 +224,7 @@ export const RpduBudgetAllocationPage: React.FC = () => {
               </thead>
               <tbody className="divide-y divide-slate-100 font-medium">
                 {filteredAllocations.map((item) => {
-                  const ceiling = item.enBancApprovedAmount ?? item.callBudgetCap ?? 500000;
+                  const ceiling = item.enBancApprovedAmount ?? item.callBudgetCap;
                   const isOver = item.totalApprovedAmount > ceiling + 0.01;
 
                   return (
@@ -196,7 +239,7 @@ export const RpduBudgetAllocationPage: React.FC = () => {
                         </div>
                         <div className="text-xs text-slate-400 mt-1 flex items-center gap-1.5">
                           <Calendar className="w-3.5 h-3.5" />
-                          <span>Submitted {new Date(item.createdAt).toLocaleDateString()}</span>
+                          <span>Saved {formatDate(item.createdAt)}</span>
                           <span>&bull;</span>
                           <span>{item.metadata.projectDuration || '1 Year'}</span>
                         </div>
@@ -217,11 +260,11 @@ export const RpduBudgetAllocationPage: React.FC = () => {
                       {/* Total Allocation & Step 8.2 En Banc Ceiling */}
                       <td className="py-4 px-4 text-right">
                         <div className={`font-black text-sm sm:text-base font-mono ${isOver ? 'text-rose-600' : 'text-slate-900'}`}>
-                          ₱{item.totalApprovedAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                          {formatPesoCents(item.totalApprovedAmount)}
                         </div>
                         <div className="mt-1 flex items-center justify-end gap-1.5 text-[11px]">
                           <span className="text-slate-400">
-                            En Banc: ₱{(item.enBancApprovedAmount ?? item.totalApprovedAmount).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                            Ceiling: {formatPesoCents(ceiling)}
                           </span>
                         </div>
                       </td>
@@ -229,12 +272,16 @@ export const RpduBudgetAllocationPage: React.FC = () => {
                       {/* 2-Stage Review Status Badge */}
                       <td className="py-4 px-4 text-center">
                         {getAllocationStage(item) === 'APPROVED' ? (
-                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 whitespace-nowrap">
-                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> Accepted
+                          <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border whitespace-nowrap ${TONE_CLASSES.emerald.badge}`}>
+                            <CheckCircle2 className="w-3.5 h-3.5" /> Accepted
+                          </span>
+                        ) : item.reviewStatus === 'REOPENED' ? (
+                          <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border whitespace-nowrap ${TONE_CLASSES.amber.badge}`}>
+                            <RotateCcw className="w-3.5 h-3.5" /> Reopened
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200 whitespace-nowrap">
-                            <Clock className="w-3.5 h-3.5 text-amber-600" /> Pending Review
+                          <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border whitespace-nowrap ${TONE_CLASSES.amber.badge}`}>
+                            <Clock className="w-3.5 h-3.5" /> Pending
                           </span>
                         )}
                       </td>
@@ -245,7 +292,7 @@ export const RpduBudgetAllocationPage: React.FC = () => {
                           to={`/rpdu/budgets/${item.id}`}
                           className="px-3.5 py-1.5 text-xs font-semibold text-slate-700 bg-white hover:bg-slate-50 hover:text-slate-900 border border-slate-200 rounded-sm shadow-2xs transition-colors inline-flex items-center gap-1.5 cursor-pointer"
                         >
-                          <Eye className="w-3.5 h-3.5 text-slate-400" /> Review
+                          <Eye className="w-3.5 h-3.5 text-slate-400" /> Open
                         </Link>
                       </td>
                     </tr>

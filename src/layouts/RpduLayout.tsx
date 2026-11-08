@@ -25,6 +25,7 @@ export const RpduLayout: React.FC = () => {
     if (/^\/rpdu\/evaluations\/.+/.test(location.pathname)) return 'Proposal Review Panel';
     if (location.pathname.startsWith('/rpdu/evaluations')) return 'Technical Evaluations';
     if (location.pathname.startsWith('/rpdu/external-funding')) return 'External Funding Requests';
+    if (location.pathname.startsWith('/rpdu/budgets/new/')) return 'Prepare Line-Item Budget';
     if (/^\/rpdu\/budgets\/.+/.test(location.pathname)) return 'Line-Item Budget Review Workspace';
     if (location.pathname.startsWith('/rpdu/budgets')) return 'Budget Allocations Review Desk';
     if (location.pathname.startsWith('/rpdu/grants')) return 'Approved Institutional Grants';
