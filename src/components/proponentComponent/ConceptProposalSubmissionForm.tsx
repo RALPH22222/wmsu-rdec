@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useId, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { proposalResearchAgendas } from '../../lib/researchAgendas';
 import {
   FileText,
   Upload,
@@ -120,7 +121,9 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
   }, [loadingCalls, canSubmit]);
 
   // 1. Research Agenda State
-  const [selectedAgenda, setSelectedAgenda] = useState<string>(RESEARCH_AGENDAS[0].name);
+  const [selectedAgendas, setSelectedAgendas] = useState<string[]>([]);
+  const agendaErrorId = useId();
+  const agendaHintId = useId();
 
   // Determine logged-in user profile
   const loggedInName =
@@ -282,8 +285,8 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
       errs.title = 'Proposal title cannot exceed 255 characters.';
     }
 
-    if (!selectedAgenda) {
-      errs.agenda = 'Please select a research agenda.';
+    if (!selectedAgendas.length) {
+      errs.agenda = 'Please select at least one research agenda.';
     }
 
     if (!conceptProposalFile) {
@@ -349,7 +352,7 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
       const newProposal = await submitConceptProposal({
         title: proposalTitle.trim(),
         callId: confirmedCallId,
-        researchAgenda: selectedAgenda,
+        researchAgendas: selectedAgendas,
         conceptPaperFile: conceptProposalFile?.file,
         endorsementFile: endorsementPdf?.file,
       });
@@ -360,6 +363,7 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
       setProposalTitle('');
       setConceptProposalFile(null);
       setEndorsementPdf(null);
+      setSelectedAgendas([]);
     } catch (error) {
       setConfirmModalOpen(false);
       if (error instanceof ConceptProposalTitleExistsError) {
@@ -379,7 +383,7 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
       item.thematicArea.toLowerCase().includes(submissionSearchQuery.toLowerCase()) ||
       (item.callTitle && item.callTitle.toLowerCase().includes(submissionSearchQuery.toLowerCase()));
     const matchesAgenda =
-      submissionAgendaFilter === 'all' || item.thematicArea === submissionAgendaFilter;
+      submissionAgendaFilter === 'all' || proposalResearchAgendas(item).includes(submissionAgendaFilter);
 
     return matchesStatus && matchesSearch && matchesAgenda;
   });
@@ -486,48 +490,41 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
                 </span>
                 <div>
                   <h3 className="text-lg font-bold text-slate-900">
-                    Select Research Agenda
+                    Select Research Agendas
                   </h3>
-                  <p className="text-sm leading-relaxed text-slate-500">
-                    Choose the institutional research priority aligned with your proposal.
+                  <p id={agendaHintId} className="text-sm leading-relaxed text-slate-500">
+                    Choose one or more institutional research priorities aligned with your proposal.
                   </p>
                 </div>
               </div>
               <span className="text-sm font-semibold text-slate-400 uppercase tracking-wider">
-                Required
+                {selectedAgendas.length ? `${selectedAgendas.length} selected` : 'Required'}
               </span>
             </div>
 
             {errors.agenda && (
-              <p className="text-sm text-red-600 font-bold flex items-center gap-1">
+              <p id={agendaErrorId} role="alert" className="text-sm text-red-600 font-bold flex items-center gap-1">
                 <AlertTriangle className="w-3.5 h-3.5" />
                 {errors.agenda}
               </p>
             )}
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <fieldset aria-describedby={`${agendaHintId}${errors.agenda ? ` ${agendaErrorId}` : ''}`} aria-invalid={Boolean(errors.agenda)} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <legend className="sr-only">Research agendas — select at least one</legend>
               {RESEARCH_AGENDAS.map((agenda) => {
-                const isSelected = selectedAgenda === agenda.name;
+                const isSelected = selectedAgendas.includes(agenda.name);
 
                 return (
-                  <div
+                  <label
                     key={agenda.id}
-                    onClick={() => {
-                      setSelectedAgenda(agenda.name);
-                      setErrors((prev) => {
-                        const next = { ...prev };
-                        delete next.agenda;
-                        return next;
-                      });
-                    }}
-                    className={`p-4 rounded-sm border cursor-pointer transition-all flex flex-col justify-between ${
+                    className={`p-4 rounded-sm border cursor-pointer transition-all flex flex-col justify-between focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[#C8102E] ${
                       isSelected
                         ? 'border-[#C8102E] bg-red-50/20 ring-1 ring-[#C8102E] shadow-2xs'
                         : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/60'
                     }`}
                   >
-                    <div>
-                      <div className="flex items-center justify-between mb-2">
+                    <span>
+                      <span className="flex items-center justify-between mb-2">
                         <span
                           className={`text-sm font-bold px-2 py-0.5 rounded uppercase tracking-wider ${
                             isSelected
@@ -537,38 +534,33 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
                         >
                           {agenda.badge}
                         </span>
-                      </div>
+                      </span>
 
-                      <h4 className="text-sm font-bold text-slate-900 leading-snug">
+                      <span className="block text-sm font-bold text-slate-900 leading-snug">
                         {agenda.name}
-                      </h4>
-                      <p className="text-sm text-slate-500 mt-1 line-clamp-3 leading-relaxed">
+                      </span>
+                      <span className="text-sm text-slate-500 mt-1 line-clamp-3 leading-relaxed">
                         {agenda.desc}
-                      </p>
-                    </div>
+                      </span>
+                    </span>
 
-                    <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-sm">
+                    <span className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between gap-3 text-sm">
                       <span
                         className={`font-semibold ${
                           isSelected ? 'text-[#C8102E]' : 'text-slate-400'
                         }`}
                       >
-                        {isSelected ? '✓ Selected Agenda' : 'Click to select'}
+                        {isSelected ? 'Selected' : 'Select agenda'}
                       </span>
-                      <div
-                        className={`w-4 h-4 rounded-full border flex items-center justify-center ${
-                          isSelected
-                            ? 'border-[#C8102E] bg-[#C8102E] text-white'
-                            : 'border-slate-300'
-                        }`}
-                      >
-                        {isSelected && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
-                      </div>
-                    </div>
-                  </div>
+                      <input type="checkbox" aria-label={agenda.name} checked={isSelected} onChange={(event) => {
+                        setSelectedAgendas((previous) => event.target.checked ? [...previous, agenda.name] : previous.filter((name) => name !== agenda.name));
+                        setErrors((previous) => { const next = { ...previous }; delete next.agenda; return next; });
+                      }} className="h-4 w-4 shrink-0 accent-[#C8102E]" />
+                    </span>
+                  </label>
                 );
               })}
-            </div>
+            </fieldset>
           </div>
 
           {/* STEP 2: SUBMIT CONCEPT PROPOSAL (TITLE & FILE) */}
@@ -1027,10 +1019,10 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
                           {item.title}
                         </h3>
                         <div className="flex flex-wrap items-center gap-2 mt-1.5">
-                          <span className="inline-flex items-center gap-1.5 text-sm font-bold px-2 py-1 rounded-sm bg-slate-100 text-slate-700 border border-slate-200">
+                          {proposalResearchAgendas(item).map((agenda) => <span key={agenda} className="inline-flex min-w-0 items-center gap-1.5 text-sm font-bold px-2 py-1 rounded-sm bg-slate-100 text-slate-700 border border-slate-200 [overflow-wrap:anywhere]">
                             <Layers className="w-4 h-4 shrink-0 text-[#C8102E]" />
-                            {item.thematicArea}
-                          </span>
+                            {agenda}
+                          </span>)}
                         </div>
                       </div>
 
@@ -1142,10 +1134,10 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
 
                 <div className="px-4 py-2.5 flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-3">
                   <span className="w-36 shrink-0 text-[11px] font-medium text-slate-500">
-                    Research Agenda
+                    Research Agendas
                   </span>
                   <span className="font-semibold text-slate-900 flex-1 leading-snug">
-                    {selectedAgenda}
+                    {selectedAgendas.join('; ')}
                   </span>
                 </div>
 
@@ -1312,7 +1304,7 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
                   </span>
                 </div>
                 <div className="flex items-center justify-between border-b border-slate-200/70 pb-2">
-                  <span className="text-slate-500 font-medium">Research Agenda:</span>
+                  <span className="text-slate-500 font-medium">Research Agendas:</span>
                   <span className="font-semibold text-slate-800 truncate max-w-[220px]">
                     {submittedProposal.thematicArea}
                   </span>

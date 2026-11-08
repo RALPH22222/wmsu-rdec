@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useRef } from 'react';
+import { proposalResearchAgendas } from '../../lib/researchAgendas';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   ClipboardCheck,
@@ -63,7 +64,7 @@ export const PreliminaryScreeningManager: React.FC<PreliminaryScreeningManagerPr
 
   // Extract unique filter options
   const uniqueThematicAreas = useMemo(() => {
-    return Array.from(new Set(conceptProposals.map((p) => p.thematicArea)));
+    return Array.from(new Set(conceptProposals.flatMap(proposalResearchAgendas)));
   }, [conceptProposals]);
 
   const uniqueColleges = useMemo(() => {
@@ -76,7 +77,7 @@ export const PreliminaryScreeningManager: React.FC<PreliminaryScreeningManagerPr
       const matchesStatus = view === 'consolidation'
         ? true
         : statusFilter === 'all' || p.screeningStatus === statusFilter;
-      const matchesThematic = thematicFilter === 'all' || p.thematicArea === thematicFilter;
+      const matchesThematic = thematicFilter === 'all' || proposalResearchAgendas(p).includes(thematicFilter);
       const matchesCollege = collegeFilter === 'all' || p.college === collegeFilter;
       const q = searchQuery.toLowerCase().trim();
       const matchesSearch =

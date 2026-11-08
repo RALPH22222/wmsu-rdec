@@ -131,6 +131,7 @@ export interface ConceptProposal {
   submittedTime?: string;
   submittedTimestamp?: string | null;
   screeningStatus: ScreeningStatus;
+  researchAgendas?: string[];
   budgetRequested: number;
   thematicArea: string;
   durationMonths: number;

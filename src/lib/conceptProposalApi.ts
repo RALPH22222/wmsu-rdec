@@ -34,6 +34,7 @@ interface ProposalRecord {
   proponent_id: string;
   title: string;
   research_agenda: string;
+  research_agendas?: string[] | null;
   custom_research_agenda?: string | null;
   proposed_budget: number;
   submitted_at: string;
@@ -46,6 +47,7 @@ interface ProposalRecord {
 }
 
 function formatProposal(row: ProposalRecord): ConceptProposal {
+  const researchAgendas = row.research_agendas?.length ? row.research_agendas : [row.custom_research_agenda || row.research_agenda];
   const screening = Array.isArray(row.preliminary_screenings) ? row.preliminary_screenings[0] : row.preliminary_screenings;
   const department = row.proponent?.departments?.name || 'Unassigned';
   const fileUrl = (url: string) => url ? new URL(url, `${API_BASE_URL.replace(/\/api\/?$/, '')}/`).href : undefined;
@@ -75,7 +77,8 @@ function formatProposal(row: ProposalRecord): ConceptProposal {
     screenedAt: screening?.reviewed_at ? new Date(screening.reviewed_at).toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' }) : undefined,
     screenedTimestamp: screening?.reviewed_at,
     budgetRequested: Number(row.proposed_budget || 0),
-    thematicArea: row.custom_research_agenda || row.research_agenda,
+    researchAgendas,
+    thematicArea: researchAgendas.join('; '),
     durationMonths: 0,
     executiveSummary: '',
     objectives: [],
@@ -93,7 +96,8 @@ function formatProposal(row: ProposalRecord): ConceptProposal {
 export interface ConceptProposalPayload {
   callId: string;
   title: string;
-  researchAgenda: string;
+  researchAgenda?: string;
+  researchAgendas?: string[];
   customResearchAgenda?: string;
   proposedBudget?: number;
   conceptPaperFile?: File | null;
@@ -111,7 +115,8 @@ export async function submitConceptProposalApi(
   const formData = new FormData();
   formData.append('call_id', payload.callId);
   formData.append('title', payload.title);
-  formData.append('research_agenda', payload.researchAgenda);
+  if (payload.researchAgendas) formData.append('research_agendas', JSON.stringify(payload.researchAgendas));
+  if (payload.researchAgenda) formData.append('research_agenda', payload.researchAgenda);
 
   if (payload.customResearchAgenda) {
     formData.append('custom_research_agenda', payload.customResearchAgenda);

@@ -114,7 +114,7 @@ export function ConceptProposalDetailsPage() {
                     ['Proponent', proposal.leadInvestigator],
                     ['College', proposal.college],
                     ['Department', proposal.department],
-                    ['Research agenda', proposal.thematicArea],
+                    ['Research agendas', proposal.thematicArea],
                   ].map(([label, value]) => <div key={label} className="min-w-0"><dt className="text-sm font-semibold text-slate-500">{label}</dt><dd className="mt-1 text-sm leading-relaxed text-slate-800 [overflow-wrap:anywhere]">{value || 'Not provided'}</dd></div>)}
                 </dl>
               </div>

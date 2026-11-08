@@ -20,6 +20,18 @@ test('CSV preserves quoted titles and prevents spreadsheet formula execution', (
   assert.ok(csv.includes('Not received'));
 });
 
+test('multi-agenda proposals match each agenda without duplicating overall proposal or budget totals', () => {
+  const rows = [proposal('multi', 'Health; Education', 100, { researchAgendas: ['Health', 'Education', 'Health'] }), proposal('single', 'Health', 50)];
+  const result = consolidateProposals(rows);
+  assert.equal(result.rows.length, 2);
+  assert.equal(result.totalBudget, 150);
+  assert.equal(result.agendas.find((group) => group.agenda === 'Health')?.count, 2);
+  assert.equal(result.agendas.find((group) => group.agenda === 'Health')?.budget, 150);
+  assert.equal(result.agendas.find((group) => group.agenda === 'Education')?.count, 1);
+  assert.equal(result.agendas.find((group) => group.agenda === 'Education')?.budget, 100);
+  assert.equal(consolidationCsv(rows).split('\r\n').length, 3);
+});
+
 test('all received includes ten submissions while screening passed includes only three, with matching totals and exports', () => {
   const rows = Array.from({ length: 10 }, (_, i) => proposal(String(i), 'Health', 100, {
     screeningStatus: i < 3 ? 'passed' : i < 8 ? 'pending' : 'failed',
