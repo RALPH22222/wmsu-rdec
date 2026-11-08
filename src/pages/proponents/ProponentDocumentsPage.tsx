@@ -325,7 +325,9 @@ export default function ProponentDocumentsPage() {
       const itemBudget = Number(item.finalApprovedBudget || item.proposedBudget || 0);
       const contractStatus = item.contract
         ? ({ label: 'Issued', tone: 'emerald' } as const)
-        : ({ label: 'Ready to print', tone: 'emerald' } as const);
+        : item.projectPeriodSource === 'rpdu'
+          ? ({ label: 'Ready to print', tone: 'emerald' } as const)
+          : ({ label: 'Awaiting project period', tone: 'amber' } as const);
       return (
         <DocumentRow
           key={entry.key}
