@@ -303,9 +303,7 @@ export const BudgetAllocationForm: React.FC = () => {
 
   // Budget cap calculation: prefer the proposal's En Banc / Concept Approved Budget if set, otherwise fallback to Call limit
   const hasProposalApprovedBudget = Boolean(matchedConcept?.budgetRequested && Number(matchedConcept.budgetRequested) > 0);
-  const maxBudgetLimit = hasProposalApprovedBudget
-    ? Number(matchedConcept!.budgetRequested)
-    : matchedCall?.maxBudgetPerProject || 500000;
+  const maxBudgetLimit = hasProposalApprovedBudget ? Number(matchedConcept!.budgetRequested) : 0;
 
   const profileFullName = profile ? `${profile.first_name || ''} ${profile.last_name || ''}`.trim() : '';
   const profileDepartment = profile?.departments?.name || '';
@@ -1093,9 +1091,11 @@ export const BudgetAllocationForm: React.FC = () => {
   };
 
   const hasTechnicalReview = Boolean(matchedConcept);
+  // RPDU records the approved budget on the evaluation page; the LIB stays locked until it exists.
+  const isLibLocked = !hasTechnicalReview || !hasProposalApprovedBudget;
 
   // Full-Page Print Preview (replaces modal)
-  if (isPrintPreviewOpen && hasTechnicalReview) {
+  if (isPrintPreviewOpen && !isLibLocked) {
     return (
       <div className="mx-auto max-w-7xl pb-12 space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 sm:p-5 border border-slate-200 rounded-md shadow-xs">
@@ -1186,10 +1186,10 @@ export const BudgetAllocationForm: React.FC = () => {
       {/* Top Banner: Official Header & Proposal Selector (expands to full-page white surface when no COTR) */}
       <div
         className={`bg-white rounded-md border border-slate-200 shadow-xs print:hidden ${
-          !hasTechnicalReview ? 'min-h-[calc(100vh-9rem)] flex flex-col' : 'p-6 space-y-5'
+          isLibLocked ? 'min-h-[calc(100vh-9rem)] flex flex-col' : 'p-6 space-y-5'
         }`}
       >
-        <div className={!hasTechnicalReview ? 'p-6 space-y-5' : 'space-y-5'}>
+        <div className={isLibLocked ? 'p-6 space-y-5' : 'space-y-5'}>
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-5 border-b border-slate-100">
             <div>
               <h2 className="text-xl font-black text-slate-900 tracking-tight">
@@ -1198,7 +1198,7 @@ export const BudgetAllocationForm: React.FC = () => {
               <p className="text-xs text-slate-500 mt-1 max-w-xl leading-relaxed">
                 Formulate the official multi-year Line-Item Budget (LIB) structured strictly by Personnel Services (PS), MOOE, and Equipment Outlay (EO) matching the WMSU-RPDU institutional format.
               </p>
-              {hasTechnicalReview && (
+              {!isLibLocked && (
                 <div className="flex flex-wrap items-center gap-2 mt-3">
                   <button
                     type="button"
@@ -1248,6 +1248,7 @@ export const BudgetAllocationForm: React.FC = () => {
 
             {/* Badges: Total Allocated, Cap, Status */}
             <div className="flex flex-wrap sm:flex-nowrap items-center gap-3 shrink-0">
+              {hasProposalApprovedBudget && (<>
               <div className="text-right p-3 bg-slate-50 rounded-md border border-slate-200 min-w-[140px]">
                 <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
                   Total Allocated
@@ -1279,6 +1280,7 @@ export const BudgetAllocationForm: React.FC = () => {
                   {hasProposalApprovedBudget ? 'Target LIB Amount' : matchedCall?.code || 'Call Cap'}
                 </div>
               </div>
+              </>)}
 
               <div
                 className={`px-3 py-2 rounded-md border text-center min-w-[130px] flex flex-col justify-center shrink-0 self-stretch ${
@@ -1429,7 +1431,7 @@ export const BudgetAllocationForm: React.FC = () => {
             ))}
 
           {/* Over-Budget Alert */}
-          {hasTechnicalReview && isOverBudget && (
+          {!isLibLocked && isOverBudget && (
             <div className="p-3 bg-rose-50 border border-rose-200 rounded-md text-xs text-rose-800 flex items-start gap-2.5">
               <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
               <div>
@@ -1440,6 +1442,28 @@ export const BudgetAllocationForm: React.FC = () => {
             </div>
           )}
         </div>
+
+        {hasTechnicalReview && !hasProposalApprovedBudget && (
+          <div className="flex-1 flex flex-col items-center justify-center border-t border-slate-100 bg-white px-6 py-16 text-center space-y-4">
+            <div className="w-12 h-12 rounded-full bg-slate-50 border border-slate-200 text-slate-600 flex items-center justify-center mx-auto">
+              <Lock className="w-5 h-5" />
+            </div>
+            <div className="space-y-1.5 max-w-xl">
+              <h3 className="text-base font-black text-slate-900">Approved budget not yet set</h3>
+              <p className="text-xs text-slate-600 leading-relaxed">
+                RPDU has not recorded the approved budget for this proposal. The Line-Item Budget opens once it is set.
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+              <Link
+                to="/proponent/documents"
+                className="inline-flex min-h-10 items-center gap-1.5 px-4 py-2 rounded-md text-xs font-bold bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 shadow-xs transition-colors"
+              >
+                View Documents &amp; Clearances
+              </Link>
+            </div>
+          </div>
+        )}
 
         {!hasTechnicalReview && (
           <div className="flex-1 flex flex-col items-center justify-center border-t border-slate-100 bg-white px-6 py-16 text-center space-y-4">
@@ -1472,7 +1496,7 @@ export const BudgetAllocationForm: React.FC = () => {
         )}
       </div>
 
-      {hasTechnicalReview && (
+      {!isLibLocked && (
       /* Main Grid: Left Column LIB Table, Right Column Sidebar */
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left Column (2 Cols): Project Metadata Header, 3-Class Table */}

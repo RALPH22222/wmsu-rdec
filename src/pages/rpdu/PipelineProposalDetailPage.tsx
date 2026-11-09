@@ -23,6 +23,7 @@ import { ClarificationThread } from '../../components/ui/ClarificationThread';
 import { FundingClassificationField } from '../../components/rpduComponent/FundingClassificationField';
 import { ManuscriptAnonymityCard } from '../../components/rpduComponent/ManuscriptAnonymityCard';
 import { ProjectPeriodCard } from '../../components/rpduComponent/ProjectPeriodCard';
+import { ApprovedBudgetCard } from '../../components/rpduComponent/ApprovedBudgetCard';
 
 interface PipelineProposalDetailPageProps { role?: 'rpdu' | 'admin' }
 
@@ -32,7 +33,7 @@ const Card = ({ title, badge, children }: { title: string; badge?: ReactNode; ch
 
 /** Rendered keyed by the route id, so a stale response for a previous id can never write into this proposal. */
 function DetailBody({ id, role }: { id: string | undefined; role: 'rpdu' | 'admin' }) {
-  const { proposal, loading, error, refresh, unassign, checkRevision, checkAnonymity, forward, buildActionSheet, saveSummary, publishSummary, clarify, checkNda, saveFundingClassification, setProjectPeriod } = useRpduProposal(id);
+  const { proposal, loading, error, refresh, unassign, checkRevision, checkAnonymity, forward, buildActionSheet, saveSummary, publishSummary, clarify, checkNda, saveFundingClassification, setProjectPeriod, setApprovedBudget } = useRpduProposal(id);
   const backHref = `/${role}/evaluations`;
 
   if (loading) return <section className="mx-auto max-w-5xl space-y-3" aria-label="Loading proposal"><div className="h-20 animate-pulse rounded-sm bg-slate-100" /><div className="h-40 animate-pulse rounded-sm bg-slate-100" /></section>;
@@ -67,6 +68,11 @@ function DetailBody({ id, role }: { id: string | undefined; role: 'rpdu' | 'admi
 
       {!!proposal.manuscriptVersions?.length && <details className="bg-white p-4"><summary className="min-h-11 cursor-pointer text-sm font-semibold">Manuscript history</summary>{proposal.manuscriptVersions.map((version) => <div key={version.id} className="py-2"><DocumentLink href={version.fileUrl} label={`Version ${version.version} · ${version.stage}${version.current ? ' · Current' : ''}`} muted /></div>)}</details>}
       {(proposal.status === 'APPROVED' || proposal.status === 'FORWARDED_TO_REO') && <TechnicalReviewGateway proposal={proposal} role={role} onForward={forward} />}
+      {(proposal.canSetApprovedBudget || proposal.approvedBudget !== null) && (
+        <Card title="Approved budget">
+          <ApprovedBudgetCard key={proposal.approvedBudget ?? 'unset'} proposal={proposal} onSave={setApprovedBudget} />
+        </Card>
+      )}
       {(proposal.canSetProjectPeriod || proposal.projectPeriod) && (
         <Card title="Project period">
           <ProjectPeriodCard key={proposal.projectPeriod ? `${proposal.projectPeriod.startDate}:${proposal.projectPeriod.durationMonths}` : 'unset'} proposal={proposal} onSave={setProjectPeriod} />

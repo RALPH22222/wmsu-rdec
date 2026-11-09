@@ -66,6 +66,7 @@ export const API_ENDPOINTS = {
     PROPOSALS: `${API_BASE_URL}/pipeline/proposals`,
     PROPOSAL_BY_ID: (id: string) => `${API_BASE_URL}/pipeline/proposals/${encodeURIComponent(id)}`,
     PROJECT_PERIOD: (id: string) => `${API_BASE_URL}/pipeline/proposals/${encodeURIComponent(id)}/project-period`,
+    APPROVED_BUDGET: (id: string) => `${API_BASE_URL}/pipeline/proposals/${encodeURIComponent(id)}/approved-budget`,
     FUNDING_CLASSIFICATION: (id: string) => `${API_BASE_URL}/pipeline/proposals/${encodeURIComponent(id)}/funding-classification`,
     ASSESSMENT_TEMPLATE: (id: string) => `${API_BASE_URL}/pipeline/my-reviews/${encodeURIComponent(id)}/assessment-template`,
     REVISION_HISTORY_DRAFT: (id: string) => `${API_BASE_URL}/pipeline/my-proposals/${encodeURIComponent(id)}/revision-history/draft`,

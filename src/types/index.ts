@@ -399,6 +399,10 @@ export interface RpduProposal {
   projectPeriod: ProjectPeriod | null;
   canSetProjectPeriod: boolean;
   contractNotarized: boolean;
+  /** The amount RPDU approved after the technical review; the proponent's LIB ceiling. */
+  approvedBudget: number | null;
+  budgetAccepted: boolean;
+  canSetApprovedBudget: boolean;
   externalFundingRequestId?: string | null;
   manuscriptVersions?: ManuscriptVersion[];
   /** Only RPDU Head and ADMIN may record the Step 7.6 check. */
