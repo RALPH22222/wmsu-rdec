@@ -138,7 +138,7 @@ export function AihrConceptRow({ concept, role, onLogVerdict, onDeliberate }: Ai
       {concept.canInviteProponent && <Link to={`/${role}/aihr-invitations`} className={`${SECONDARY_BUTTON} mt-4`}><Mail aria-hidden="true" className="h-4 w-4" />Manage AIHR invitations</Link>}
 
       {/* Recorded Pipeline Sections */}
-      {(aihr || enBanc || detailedProposal || concept.aihr?.verdict === 'PASS') && (
+      {(aihr || enBanc || detailedProposal || concept.invitation?.presentation_file_url || concept.aihr?.verdict === 'PASS') && (
         <div className="mt-5 space-y-3 border-t border-slate-100 pt-4">
           {aihr && (
             <div className="flex flex-col gap-3 rounded-sm border border-slate-200/80 bg-slate-50/60 p-4 sm:flex-row sm:items-center sm:justify-between">
@@ -209,6 +209,24 @@ export function AihrConceptRow({ concept, role, onLogVerdict, onDeliberate }: Ai
                 <Link to={`/${role}/evaluations/${detailedProposal.id}`} className={SECONDARY_BUTTON}>
                   Open proposal <ArrowUpRight className="h-4 w-4 shrink-0" />
                 </Link>
+              </div>
+            </div>
+          )}
+
+          {concept.invitation?.presentation_file_url && (
+            <div className="flex flex-col gap-3 rounded-sm border border-slate-200/80 bg-slate-50/60 p-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="min-w-0 space-y-1">
+                <p className={SECTION_LABEL}>
+                  <FileText aria-hidden="true" className="h-3.5 w-3.5 text-slate-400" />
+                  <span>AIHR presentation</span>
+                </p>
+                <p className="break-words text-sm text-slate-600">
+                  {concept.invitation.presentation_file_name || 'Presentation file'}
+                  {concept.invitation.presentation_submitted_at ? ` · Submitted ${formatDate(concept.invitation.presentation_submitted_at)}` : ''}
+                </p>
+              </div>
+              <div className="sm:shrink-0">
+                <DocumentLink href={concept.invitation.presentation_file_url} label="Presentation" muted />
               </div>
             </div>
           )}

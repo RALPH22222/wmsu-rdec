@@ -4,6 +4,7 @@ import { API_ENDPOINTS } from '../../config/apiConfig';
 import { useAuth } from '../../context/AuthContext';
 import { request } from '../../lib/apiRequest';
 import type { AihrConcept } from '../../types';
+import { DocumentLink } from '../ui/DocumentLink';
 
 interface AihrAttendanceProps {
   concept?: AihrConcept;
@@ -128,6 +129,24 @@ export function AihrAttendance({ concept, conceptId, onAttendanceChanged }: Aihr
                       <p className="text-xs text-slate-600">Project Leader / Proponent</p>
                     )}
                   </div>
+                </div>
+
+                <div className="flex flex-col gap-2 rounded-sm border border-slate-200 bg-slate-50/80 p-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="min-w-0">
+                    <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Submitted Presentation</p>
+                    {invitation.presentation_file_url ? (
+                      <p className="mt-1 break-words text-sm font-semibold text-slate-900">
+                        {invitation.presentation_file_name || 'Presentation file'}
+                      </p>
+                    ) : (
+                      <p className="mt-1 text-xs text-slate-500">No presentation file uploaded by the proponent yet.</p>
+                    )}
+                  </div>
+                  {invitation.presentation_file_url && (
+                    <div className="sm:shrink-0">
+                      <DocumentLink href={invitation.presentation_file_url} label="Open presentation" muted />
+                    </div>
+                  )}
                 </div>
 
                 <div className="border-t border-slate-100 pt-3">

@@ -571,6 +571,10 @@ export interface AihrInvitationRecord {
   round_number?: number;
   confirmed_at?: string | null;
   declined_at?: string | null;
+  presentation_file_url?: string | null;
+  presentation_file_name?: string | null;
+  presentation_file_size?: number | null;
+  presentation_submitted_at?: string | null;
   history?: { round_number: number; event_date: string; event_time: string; venue: string; confirmed_at: string | null }[];
   proponent_id: string | null;
   proxy_requests?: AihrProxyRequest[];
@@ -605,6 +609,11 @@ export interface ProponentAihrInvitation {
   version: string;
   response: AihrInvitationResponse;
   history: { round: number; eventDate: string; eventTime: string; venue: string; confirmedAt: string | null }[];
+  presentationFileUrl?: string | null;
+  presentationFileName?: string | null;
+  presentationFileSize?: number | null;
+  presentationSubmittedAt?: string | null;
+  canSubmitPresentation?: boolean;
   canConfirmAttendance: boolean;
   conceptId: string;
   title: string;

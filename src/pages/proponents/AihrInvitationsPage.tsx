@@ -7,10 +7,22 @@ import { request } from '../../lib/apiRequest';
 import type { ProponentAihrInvitation } from '../../types';
 import { DocumentLink } from '../../components/ui/DocumentLink';
 import { AIHR_REPLY_LABELS } from '../../lib/aihrMeta';
-import { formatSubmissionDateTime } from '../../lib/format';
+import { formatFileSize, formatSubmissionDateTime } from '../../lib/format';
 
 const buttonClass = 'inline-flex min-h-12 items-center justify-center gap-2 rounded-sm border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:cursor-not-allowed disabled:opacity-50';
 const inputClass = 'mt-1 min-h-12 w-full rounded border border-slate-300 px-3 py-2 text-base focus-visible:outline-2 focus-visible:outline-brand';
+const ALLOWED_PRESENTATION_TYPES = new Set([
+  'application/pdf',
+  'application/vnd.ms-powerpoint',
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+]);
+
+function validPresentationSelection(file: File) {
+  if (file.size === 0 || file.size > 15 * 1024 * 1024) return false;
+  const ext = file.name.split('.').pop()?.toLowerCase() || '';
+  if (!['ppt', 'pptx', 'pdf'].includes(ext)) return false;
+  return !file.type || ALLOWED_PRESENTATION_TYPES.has(file.type);
+}
 
 function Invitation({ invitation, onSaved }: { invitation: ProponentAihrInvitation; onSaved: (message: string) => void }) {
   const { session } = useAuth();
@@ -18,7 +30,9 @@ function Invitation({ invitation, onSaved }: { invitation: ProponentAihrInvitati
   const [proxyPosition, setProxyPosition] = useState('');
   const [reason, setReason] = useState('');
   const [reasonFile, setReasonFile] = useState<File | null>(null);
+  const [presentationFile, setPresentationFile] = useState<File | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
+  const presentationInput = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const running = useRef(false);
   const [error, setError] = useState('');
@@ -29,6 +43,21 @@ function Invitation({ invitation, onSaved }: { invitation: ProponentAihrInvitati
       await request(API_ENDPOINTS.AIHR.REPLY_INVITATION(invitation.conceptId), session?.access_token, { method: 'POST', body: JSON.stringify({ response: 'CONFIRMED', expectedVersion: invitation.version }) });
       onSaved('Invitation accepted. Your attendance is confirmed.');
     } catch (failure) { setError(failure instanceof Error ? failure.message : 'Unable to record your reply. Refresh and try again.'); }
+    finally { setBusy(false); running.current = false; }
+  };
+  const submitPresentation = async (event: FormEvent) => {
+    event.preventDefault();
+    if (running.current) return;
+    if (!presentationFile) { setError('Choose a PowerPoint (.ppt, .pptx) or PDF presentation no larger than 15 MB.'); return; }
+    running.current = true; setBusy(true); setError('');
+    try {
+      const body = new FormData();
+      body.append('presentation_file', presentationFile);
+      await request(API_ENDPOINTS.AIHR.PRESENTATION(invitation.conceptId), session?.access_token, { method: 'POST', body });
+      setPresentationFile(null);
+      if (presentationInput.current) presentationInput.current.value = '';
+      onSaved('AIHR presentation submitted. RPDU can now access your file.');
+    } catch (failure) { setError(failure instanceof Error ? failure.message : 'Unable to upload your presentation. Try again.'); }
     finally { setBusy(false); running.current = false; }
   };
   const submit = async (event: FormEvent) => {
@@ -57,11 +86,89 @@ function Invitation({ invitation, onSaved }: { invitation: ProponentAihrInvitati
     {error && <p role="alert" className="text-base text-red-700">{error}</p>}
     <p className="text-base text-slate-600">As the project leader/proponent, accept the invitation to confirm your attendance at the Agency In-House Review. If you cannot attend, request a proxy for RPDU approval. The review takes place outside the system.</p>
     <dl className="grid gap-4 text-base sm:grid-cols-3"><div><dt className="text-sm text-slate-600">Date</dt><dd className="mt-1 font-semibold">{invitation.eventDate}</dd></div><div><dt className="text-sm text-slate-600">Time (Manila)</dt><dd className="mt-1 font-semibold">{invitation.eventTime.slice(0, 5)}</dd></div><div className="min-w-0"><dt className="text-sm text-slate-600">Venue</dt><dd className="mt-1 break-words font-semibold">{invitation.venue}</dd></div></dl>
-    <section className="space-y-2 border-t border-slate-200 pt-4">
-      <h3 className="text-lg font-semibold">Presentation PPT template</h3>
-      <p className="text-base text-slate-600">Please follow the RPDU PowerPoint (PPT) template when preparing your AIHR presentation.</p>
-      <p id={`${invitation.conceptId}-ppt-template-help`} className="break-words text-sm text-slate-600"><span className="font-semibold text-slate-700">Template:</span> AIHR Presentation Template (placeholder). The official template link will be provided by RPDU.</p>
-      <div className="pt-2"><button type="button" disabled aria-describedby={`${invitation.conceptId}-ppt-template-help`} className={`${buttonClass} border-brand bg-brand text-white disabled:hover:bg-brand`}><Download aria-hidden="true" className="h-4 w-4" />Download PPT template</button></div>
+    <section className="space-y-4 border-t border-slate-200 pt-4">
+      <div className="space-y-2">
+        <h3 className="text-lg font-semibold">Presentation PPT template</h3>
+        <p className="text-base text-slate-600">Please follow the RPDU PowerPoint (PPT) template when preparing your AIHR presentation, then upload your completed slide deck below for RPDU.</p>
+        <p id={`${invitation.conceptId}-ppt-template-help`} className="break-words text-sm text-slate-600"><span className="font-semibold text-slate-700">Template:</span> AIHR Presentation Template (placeholder). The official template link will be provided by RPDU.</p>
+        <div className="pt-2"><button type="button" disabled aria-describedby={`${invitation.conceptId}-ppt-template-help`} className={`${buttonClass} border-brand bg-brand text-white disabled:hover:bg-brand`}><Download aria-hidden="true" className="h-4 w-4" />Download PPT template</button></div>
+      </div>
+      {invitation.presentationFileUrl && (
+        <div className="space-y-2 rounded-sm border border-emerald-200 bg-emerald-50/60 p-4">
+          <p className="text-sm font-semibold text-emerald-900">Submitted presentation</p>
+          <p className="break-words text-sm text-slate-700">
+            <span className="font-semibold text-slate-900">{invitation.presentationFileName || 'Presentation file'}</span>
+            {invitation.presentationFileSize ? ` · ${formatFileSize(invitation.presentationFileSize)}` : ''}
+            {invitation.presentationSubmittedAt ? ` · Uploaded ${formatSubmissionDateTime(invitation.presentationSubmittedAt)}` : ''}
+          </p>
+          <div className="pt-1">
+            <DocumentLink href={invitation.presentationFileUrl} label="Open submitted presentation" muted />
+          </div>
+        </div>
+      )}
+      {invitation.canSubmitPresentation !== false ? (
+        <form onSubmit={submitPresentation} className="space-y-3 rounded-sm border border-slate-200 bg-slate-50 p-4">
+          <fieldset disabled={busy} className="space-y-3">
+            <legend className="text-sm font-semibold text-slate-900">
+              {invitation.presentationFileUrl ? 'Replace AIHR presentation file' : 'Submit AIHR presentation file'}
+            </legend>
+            <p id={`${invitation.conceptId}-presentation-help`} className="text-sm text-slate-600">
+              Accepted formats: PowerPoint (.ppt, .pptx) or PDF (.pdf), up to 15 MB. RPDU will see your latest uploaded presentation.
+            </p>
+            <label className="block text-sm font-semibold">
+              Presentation file (.ppt, .pptx, or .pdf)
+              <input
+                ref={presentationInput}
+                type="file"
+                accept=".ppt,.pptx,.pdf,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/pdf"
+                aria-describedby={`${invitation.conceptId}-presentation-help`}
+                onChange={(event) => {
+                  const file = event.target.files?.[0] || null;
+                  if (file && !validPresentationSelection(file)) {
+                    setError('Choose a PowerPoint (.ppt, .pptx) or PDF presentation no larger than 15 MB.');
+                    setPresentationFile(null);
+                    event.target.value = '';
+                    return;
+                  }
+                  setPresentationFile(file);
+                  setError('');
+                }}
+                className={`${inputClass} bg-white file:mr-3 file:rounded-sm file:border-0 file:bg-slate-100 file:px-3 file:py-2`}
+              />
+            </label>
+            {presentationFile && (
+              <div className="flex flex-wrap items-center gap-3 text-sm">
+                <p className="min-w-0 break-words">
+                  {presentationFile.name} · {presentationFile.name.split('.').pop()?.toUpperCase() || 'FILE'} · {formatFileSize(presentationFile.size)}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPresentationFile(null);
+                    if (presentationInput.current) presentationInput.current.value = '';
+                  }}
+                  className={buttonClass}
+                >
+                  Remove file
+                </button>
+              </div>
+            )}
+            <button
+              type="submit"
+              disabled={busy || !presentationFile}
+              className={`${buttonClass} border-brand bg-brand text-white enabled:hover:bg-brand-dark disabled:hover:bg-brand`}
+            >
+              {busy ? 'Uploading…' : invitation.presentationFileUrl ? 'Replace presentation' : 'Upload presentation'}
+            </button>
+          </fieldset>
+        </form>
+      ) : (
+        <p className="rounded-sm border border-slate-200 bg-slate-50 p-3.5 text-sm text-slate-600">
+          {invitation.response.status === 'CONFIRMED' || invitation.response.status === 'PROXY_APPROVED'
+            ? 'Presentation upload is closed because the AIHR review has concluded.'
+            : 'Presentation upload is unavailable because the 2-day invitation reply window closed without confirmed attendance or an approved proxy. Wait for RPDU to send a new invitation or approve a pending proxy request.'}
+        </p>
+      )}
     </section>
     <p className="text-sm text-slate-600">Accept the invitation or request a proxy within the reply window. Coordinate with RPDU for presentation arrangements and evaluation materials.</p>
     {invitation.history.length > 0 && <details className="border-t border-slate-200 pt-4"><summary className="min-h-12 cursor-pointer py-3 font-semibold">Earlier invitations ({invitation.history.length})</summary><ul className="space-y-3">{invitation.history.map((old) => <li key={old.round} className="break-words text-sm text-slate-600">Invitation {old.round}: {old.eventDate} at {old.eventTime.slice(0,5)} · {old.venue}</li>)}</ul></details>}
@@ -107,3 +214,4 @@ export function ProponentAihrInvitationsPage() {
     {!resource.loading && !resource.error && (!resource.data?.length ? <div className="rounded-sm border border-slate-200 bg-white p-6"><h2 className="text-xl font-semibold">No AIHR invitations yet</h2><p className="mt-2 text-base text-slate-600">Your invitation will appear here after RPDU sends it.</p></div> : <ul className="space-y-6">{resource.data.map((invitation) => <Invitation key={invitation.conceptId} invitation={invitation} onSaved={(notice) => { setMessage(notice); resource.refresh(); }} />)}</ul>)}
   </section>;
 }
+

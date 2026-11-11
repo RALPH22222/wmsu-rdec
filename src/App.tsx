@@ -18,7 +18,7 @@ import { CallFormPage } from './pages/CallFormPage';
 import { EvaluatorAssignmentPage } from './pages/rpdu/EvaluatorAssignmentPage';
 import { AihrDeliberationPage } from './pages/rpdu/AihrDeliberationPage';
 import { AihrInvitationsPage } from './pages/rpdu/AihrInvitationsPage';
-import { ProponentAihrInvitationsPage } from './pages/proponent/AihrInvitationsPage';
+import { ProponentAihrInvitationsPage } from './pages/proponents/AihrInvitationsPage';
 import { MemoPage } from './pages/rpdu/MemoPage';
 import ProponentDashboard from './pages/proponents/ProponentDashboard';
 import { ConceptProposalDetailsPage } from './pages/proponents/ConceptProposalDetailsPage';

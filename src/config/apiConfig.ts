@@ -102,6 +102,7 @@ export const API_ENDPOINTS = {
     REPLY_INVITATION: (id: string) => `${API_BASE_URL}/aihr/concepts/${encodeURIComponent(id)}/invitation/reply`,
     MY_INVITATIONS: `${API_BASE_URL}/aihr/invitations/mine`,
     PROXY: (id: string) => `${API_BASE_URL}/aihr/concepts/${encodeURIComponent(id)}/proxy`,
+    PRESENTATION: (id: string) => `${API_BASE_URL}/aihr/concepts/${encodeURIComponent(id)}/presentation`,
     PROXY_DECISION: (id: string) => `${API_BASE_URL}/aihr/proxy-requests/${encodeURIComponent(id)}`,
     INVITATION: (id: string) => `${API_BASE_URL}/aihr/concepts/${encodeURIComponent(id)}/invitation`,
     CONCEPTS: `${API_BASE_URL}/aihr/concepts`,

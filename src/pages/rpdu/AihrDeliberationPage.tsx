@@ -22,6 +22,7 @@ import { useAihrConcepts } from '../../hooks/useAihrConcepts';
 import { StatCard } from '../../components/ui/StatCard';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { Pagination } from '../../components/ui/Pagination';
+import { DocumentLink } from '../../components/ui/DocumentLink';
 import { paginate } from '../../lib/pagination';
 import { AihrConceptRow } from '../../components/rpduComponent/AihrConceptRow';
 import { AihrVerdictModal } from '../../components/rpduComponent/modals/AihrVerdictModal';
@@ -447,6 +448,16 @@ export function AihrDeliberationPage({ role = 'rpdu' }: AihrDeliberationPageProp
                                         <td className="p-3 align-top">
                                           <p className="font-semibold text-slate-900 break-words">{concept.title}</p>
                                           <p className="mt-0.5 text-xs text-slate-500">{concept.researchAgenda}</p>
+                                          {concept.invitation?.presentation_file_url ? (
+                                            <div className="mt-2 flex flex-wrap items-center gap-2">
+                                              <DocumentLink href={concept.invitation.presentation_file_url} label="Open presentation" muted />
+                                              <span className="break-words text-xs text-slate-600">
+                                                {concept.invitation.presentation_file_name || 'Presentation file'}
+                                              </span>
+                                            </div>
+                                          ) : (
+                                            <p className="mt-1.5 text-xs text-slate-500">No presentation file uploaded yet</p>
+                                          )}
                                         </td>
                                         <td className="p-3 align-top">
                                           {approvedProxy ? (
