@@ -308,7 +308,15 @@ export interface ReviewSubmission {
   assessmentFileUrl: string;
   actionSheetUrl: string;
   submittedAt: string;
+  /** 'EMAIL' when RPDU recorded an evaluation the evaluator sent by e-mail (its checklist is then empty). */
+  source?: SubmissionSource;
+  /** RPDU view, e-mailed evaluations only: the evaluator's pasted original message, when it was received and who recorded it. */
+  emailMessage?: string | null;
+  emailReceivedAt?: string | null;
+  recordedBy?: string | null;
 }
+
+export type SubmissionSource = 'PORTAL' | 'EMAIL';
 
 export interface StatusHistoryEntry {
   status: PipelineStatus;
@@ -334,6 +342,8 @@ export interface RpduReview {
   /** When the evaluator accepted the invitation (flow 7.1); null while awaiting their response. */
   acceptedAt: string | null;
   canRemove: boolean;
+  /** An e-mailed evaluation can be recorded for this seat now (round open, nothing submitted yet). */
+  canRecordEmail?: boolean;
   submissions: ReviewSubmission[];
   nda: SeatNda;
 }
@@ -359,9 +369,27 @@ export interface ActionSheet { round: number; points: ActionSheetPoints; otherCo
 /** One seat's recommendation in a round summary, by blind label; null for a seat without a submission (RPDU drafts only). */
 export interface SummaryRecommendation { blindLabel: string; recommendation: ReviewRecommendation | null }
 /** The RPDU Head's compiled evaluation summary for one round (RPDU view): a draft until published. */
-export interface RoundSummary { round: number; outcome: PipelineStatus | null; recommendations: SummaryRecommendation[]; points: ActionSheetPoints; remarks: string; coverNote: string; fileUrl: string | null; publishedBy: string | null; publishedAt: string | null; updatedAt: string; isPublished: boolean }
+export interface RoundSummary {
+  round: number; outcome: PipelineStatus | null; recommendations: SummaryRecommendation[]; points: ActionSheetPoints; remarks: string; coverNote: string; fileUrl: string | null; publishedBy: string | null; publishedAt: string | null; updatedAt: string; isPublished: boolean;
+  /** The Head's choices for e-mailed evaluations: quote each original message / attach each review attachment (the proponent sees them in the portal and the e-mail). */
+  includeEvaluatorMessages?: boolean;
+  includeReviewAttachments?: boolean;
+  /** The round has at least one evaluation recorded from e-mail. */
+  hasEmailEvaluations?: boolean;
+  /** Delivery of the outcome e-mail after publishing; null before it is attempted. */
+  emailStatus?: OutcomeEmailStatus | null;
+  emailedAt?: string | null;
+  emailError?: string | null;
+}
+export type OutcomeEmailStatus = 'SENT' | 'FAILED' | 'NOT_CONFIGURED';
 /** A published evaluation summary as the proponent receives it. */
-export interface ProponentRoundSummary { round: number; outcome: PipelineStatus; recommendations: SummaryRecommendation[]; points: ActionSheetPoints; remarks: string; coverNote: string; fileUrl: string | null; publishedAt: string }
+export interface ProponentRoundSummary {
+  round: number; outcome: PipelineStatus; recommendations: SummaryRecommendation[]; points: ActionSheetPoints; remarks: string; coverNote: string; fileUrl: string | null; publishedAt: string;
+  /** Original messages of e-mailed evaluations, present only when the Head included them. */
+  evaluatorMessages?: { blindLabel: string; message: string; receivedAt: string | null }[];
+  /** Review attachments of e-mailed evaluations, present only when the Head included them. */
+  reviewAttachments?: { blindLabel: string; fileUrl: string }[];
+}
 /** The proponent's view of a generated action sheet: the document is the deliverable. */
 export interface ProponentActionSheet { round: number; fileUrl: string; preparedAt: string }
 export type ClarificationAuthor = 'PROPONENT' | 'RPDU';
@@ -443,8 +471,10 @@ export interface RpduProposal {
   /** Pre-filled consolidation of the current round for the summary form; null when no summary can be saved. */
   summarySeed: { round: number; points: ActionSheetPoints; remarks: string } | null;
   canSaveSummary: boolean;
-  /** The caller may publish a summary (RPDU Head or ADMIN). */
+  /** The round's state allows publishing (every evaluation in, summary not yet published); says nothing about the caller's role. */
   canPublishSummary?: boolean;
+  /** The caller's role may approve and send the outcome (RPDU Head or ADMIN). Staff can still save a draft. */
+  canApproveOutcome?: boolean;
   /** The outcome the current round's recommendations resolve to; null until the panel is complete. */
   computedOutcome: PipelineStatus | null;
 }

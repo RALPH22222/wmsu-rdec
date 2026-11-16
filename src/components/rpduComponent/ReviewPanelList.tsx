@@ -2,13 +2,15 @@ import { useAuth } from '../../context/AuthContext';
 import { API_ENDPOINTS } from '../../config/apiConfig';
 import { request } from '../../lib/apiRequest';
 import { useState } from 'react';
-import { CheckCircle2, Circle, Clock, ShieldCheck, ShieldX, UserMinus, XCircle } from 'lucide-react';
+import { CheckCircle2, Circle, Clock, Mail, ShieldCheck, ShieldX, UserMinus, XCircle } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import type { RpduReview } from '../../types';
+import type { EmailSubmissionInput } from '../../lib/pipelineApi';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { DocumentLink } from '../ui/DocumentLink';
 import { formatDate } from '../../lib/format';
 import { RejectNdaDialog } from './modals/RejectNdaDialog';
+import { RecordEmailReviewModal } from './modals/RecordEmailReviewModal';
 
 const SEAT_STATUS: Record<RpduReview['status'], { label: string; className: string }> = {
   PENDING: { label: 'No evaluation yet', className: 'bg-slate-100 text-slate-700' },
@@ -43,12 +45,13 @@ function ndaStep(nda: RpduReview['nda']): Step {
 }
 
 function seatSteps(seat: RpduReview, currentRound: number): Step[] {
-  const evaluated = seat.submissions.some((s) => s.round === currentRound);
+  const current = seat.submissions.find((s) => s.round === currentRound);
+  const evaluated = Boolean(current);
   return [
     { label: 'Invited', value: formatDate(seat.assignedAt), tone: 'done' },
     seat.acceptedAt ? { label: 'Accepted', value: formatDate(seat.acceptedAt), tone: 'done' } : { label: 'Accepted', value: 'Awaiting response', tone: 'pending' },
     ndaStep(seat.nda),
-    evaluated ? { label: 'Evaluated', value: 'Submitted', tone: 'done' } : { label: 'Evaluated', value: 'Not yet', tone: 'upcoming' },
+    evaluated ? { label: 'Evaluated', value: current?.source === 'EMAIL' ? 'Received by e-mail' : 'Submitted', tone: 'done' } : { label: 'Evaluated', value: 'Not yet', tone: 'upcoming' },
   ];
 }
 
@@ -73,9 +76,11 @@ interface ReviewPanelListProps {
   externalProposalId?: string;
   onRemove: (reviewId: string) => Promise<void>;
   onCheckNda: (reviewId: string, outcome: 'VERIFIED' | 'REJECTED', note: string) => Promise<void>;
+  /** RPDU records an evaluation the evaluator sent by e-mail; omit to hide the action. */
+  onRecordEmail?: (reviewId: string, input: EmailSubmissionInput) => Promise<void>;
 }
 
-export function ReviewPanelList({ panel, canManageReviewers, currentRound, externalProposalId, onRemove, onCheckNda }: ReviewPanelListProps) {
+export function ReviewPanelList({ panel, canManageReviewers, currentRound, externalProposalId, onRemove, onCheckNda, onRecordEmail }: ReviewPanelListProps) {
   const { session } = useAuth();
   const [invitationStatus, setInvitationStatus] = useState('');
   const [issuing, setIssuing] = useState(false);
@@ -98,6 +103,9 @@ export function ReviewPanelList({ panel, canManageReviewers, currentRound, exter
   const [verifying, setVerifying] = useState<RpduReview | null>(null);
   const [verifyBusy, setVerifyBusy] = useState(false);
   const [rejecting, setRejecting] = useState<RpduReview | null>(null);
+  const [recording, setRecording] = useState<RpduReview | null>(null);
+  // Bumped on every open so the modal remounts blank.
+  const [recordCount, setRecordCount] = useState(0);
 
   const confirmVerify = async () => {
     if (!verifying) return;
@@ -147,6 +155,9 @@ export function ReviewPanelList({ panel, canManageReviewers, currentRound, exter
                       <button type="button" onClick={() => setRejecting(seat)} className="inline-flex min-h-11 items-center gap-1 rounded-sm border border-red-200 bg-white px-3 text-xs font-semibold text-red-700 hover:bg-red-50"><ShieldX className="h-4 w-4" />Reject</button>
                     </>
                   )}
+                  {onRecordEmail && seat.canRecordEmail && (
+                    <button type="button" onClick={() => { setRecordCount((count) => count + 1); setRecording(seat); }} className="inline-flex min-h-11 items-center gap-1 rounded-sm border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-800 hover:bg-slate-50"><Mail className="h-4 w-4" aria-hidden="true" />Record e-mailed evaluation</button>
+                  )}
                   {externalProposalId && !seat.acceptedAt && <button type="button" disabled={issuing} onClick={() => void invite(seat.id)} className="min-h-11 px-3 text-sm text-red-800">Issue technical invitation</button>}
                   {canManageReviewers && seat.canRemove && (
                     <button type="button" onClick={() => setRemoving(seat)} className="inline-flex min-h-11 items-center gap-1 rounded-sm border border-slate-200 px-3 text-xs font-semibold text-slate-600 hover:bg-slate-50" title="Remove from panel"><UserMinus className="h-4 w-4" />Remove</button>
@@ -160,6 +171,7 @@ export function ReviewPanelList({ panel, canManageReviewers, currentRound, exter
       <ConfirmDialog isOpen={Boolean(removing)} onClose={() => setRemoving(null)} onConfirm={confirm} loading={busy} tone="danger" title="Remove evaluator?" confirmLabel="Remove" description={removing ? `${removing.evaluatorName} will be removed as ${removing.blindLabel}. If the proposal is under review it returns to Awaiting Evaluators.` : ''} />
       <ConfirmDialog isOpen={Boolean(verifying)} onClose={() => setVerifying(null)} onConfirm={confirmVerify} loading={verifyBusy} tone="brand" icon={ShieldCheck} title="Verify this NDA?" confirmLabel="Verify" description={verifying ? `Confirms ${verifying.evaluatorName}'s signed non-disclosure undertaking. The manuscript and evaluation form unlock for ${verifying.blindLabel}.` : ''} />
       <RejectNdaDialog key={rejecting?.id ?? 'none'} isOpen={Boolean(rejecting)} seatLabel={rejecting ? `${rejecting.evaluatorName} · ${rejecting.blindLabel}` : ''} onClose={() => setRejecting(null)} onSubmit={(note) => (rejecting ? onCheckNda(rejecting.id, 'REJECTED', note) : Promise.resolve())} />
+      {onRecordEmail && <RecordEmailReviewModal key={`${recording?.id ?? 'none'}-${recordCount}`} isOpen={Boolean(recording)} seat={recording} onClose={() => setRecording(null)} onSubmit={onRecordEmail} />}
     </>
   );
 }

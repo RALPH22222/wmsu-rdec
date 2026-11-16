@@ -87,6 +87,22 @@ export const API_ENDPOINTS = {
     OUTSOURCED_PROJECTS: `${API_BASE_URL}/pipeline/outsourced-projects`,
     OUTSOURCED_PROJECT: (id: string) => `${API_BASE_URL}/pipeline/outsourced-projects/${encodeURIComponent(id)}`,
     REVISION_CHECK: (proposalId: string, revisionId: string) => `${API_BASE_URL}/pipeline/proposals/${encodeURIComponent(proposalId)}/revisions/${encodeURIComponent(revisionId)}/check`,
+    // Outcome release and e-mail-originated evaluations
+    EMAIL_SUBMISSION: (proposalId: string, reviewId: string) => `${API_BASE_URL}/pipeline/proposals/${encodeURIComponent(proposalId)}/reviews/${encodeURIComponent(reviewId)}/email-submission`,
+    SUMMARY_EMAIL: (proposalId: string, round: number) => `${API_BASE_URL}/pipeline/proposals/${encodeURIComponent(proposalId)}/summaries/${encodeURIComponent(String(round))}/email`,
+    // Post-approval documents (Action Sheet + Work Plan), proponent side
+    MY_POST_APPROVAL_DOCUMENTS: (proposalId: string) => `${API_BASE_URL}/pipeline/my-proposals/${encodeURIComponent(proposalId)}/post-approval-documents`,
+    MY_POST_APPROVAL_TEMPLATE: (proposalId: string, kind: 'action-sheet' | 'work-plan') => `${API_BASE_URL}/pipeline/my-proposals/${encodeURIComponent(proposalId)}/post-approval-templates/${kind}`,
+    // RPDU document checks (revisions and post-approval documents) and the proponent's corrections
+    DOCUMENT_CHECKS: (proposalId: string) => `${API_BASE_URL}/pipeline/proposals/${encodeURIComponent(proposalId)}/document-checks`,
+    REVISION_RETURN: (proposalId: string, revisionId: string) => `${API_BASE_URL}/pipeline/proposals/${encodeURIComponent(proposalId)}/revisions/${encodeURIComponent(revisionId)}/return`,
+    POST_APPROVAL_CHECK: (proposalId: string, documentId: string) => `${API_BASE_URL}/pipeline/proposals/${encodeURIComponent(proposalId)}/post-approval-documents/${encodeURIComponent(documentId)}/check`,
+    MY_RETURNED_REVISIONS: (proposalId: string) => `${API_BASE_URL}/pipeline/my-proposals/${encodeURIComponent(proposalId)}/returned-revisions`,
+    MY_REVISION_CORRECTION: (proposalId: string, revisionId: string) => `${API_BASE_URL}/pipeline/my-proposals/${encodeURIComponent(proposalId)}/revisions/${encodeURIComponent(revisionId)}/corrections`,
+    // RPDU-internal revision history
+    REVISION_LOG: (proposalId: string) => `${API_BASE_URL}/pipeline/proposals/${encodeURIComponent(proposalId)}/revision-log`,
+    REVISION_LOG_ENTRY: (proposalId: string, entryId: string) => `${API_BASE_URL}/pipeline/proposals/${encodeURIComponent(proposalId)}/revision-log/${encodeURIComponent(entryId)}`,
+    REVISION_LOG_EXPORT: (proposalId: string) => `${API_BASE_URL}/pipeline/proposals/${encodeURIComponent(proposalId)}/revision-log/export`,
     FORWARD: (id: string) => `${API_BASE_URL}/pipeline/proposals/${encodeURIComponent(id)}/forward`,
     ANONYMITY: (id: string) => `${API_BASE_URL}/pipeline/proposals/${encodeURIComponent(id)}/anonymity`,
     MY_REVIEW_RESPONSE: (id: string) => `${API_BASE_URL}/pipeline/my-reviews/${encodeURIComponent(id)}/response`,

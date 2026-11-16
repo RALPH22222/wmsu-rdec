@@ -71,6 +71,30 @@ export function RoundSummaryAccordion({ summary, defaultOpen = false }: RoundSum
         )}
       </section>
 
+      {(summary.evaluatorMessages?.length ?? 0) > 0 && (
+        <section className="rounded-sm border border-slate-100 p-4">
+          <SectionHeading>Original evaluator messages</SectionHeading>
+          <p className="mt-2 text-sm text-slate-500">Some evaluators replied to RPDU by e-mail. RPDU shared their messages as sent.</p>
+          <ul className="mt-3 space-y-3">
+            {summary.evaluatorMessages?.map((item) => (
+              <li key={item.blindLabel}>
+                <p className="text-sm font-semibold text-slate-900">{item.blindLabel}{item.receivedAt && <span className="font-normal text-slate-500"> · received {formatDate(item.receivedAt)}</span>}</p>
+                <blockquote className="mt-1 whitespace-pre-wrap break-words border-l-4 border-slate-300 bg-slate-50 p-3 text-sm leading-relaxed text-slate-700 [overflow-wrap:anywhere]">{item.message}</blockquote>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {(summary.reviewAttachments?.length ?? 0) > 0 && (
+        <section className="rounded-sm border border-slate-100 p-4">
+          <SectionHeading>Evaluator attachments</SectionHeading>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {summary.reviewAttachments?.map((item) => <DocumentLink key={item.blindLabel} href={item.fileUrl} label={`${item.blindLabel} review attachment`} size="sm" muted />)}
+          </div>
+        </section>
+      )}
+
       {summary.fileUrl && <div><DocumentLink href={summary.fileUrl} label="Download summary report" size="sm" muted /></div>}
     </RoundAccordion>
   );

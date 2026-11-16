@@ -1,8 +1,8 @@
 import { useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useCallForProposals } from '../context/CallForProposalsContext';
-import { assignEvaluatorApi, buildActionSheetApi, checkAnonymityApi, checkNdaApi, checkRevisionApi, forwardToReoApi, getPipelineEvaluators, getPipelineProposal, getPipelineProposals, postClarificationApi, publishSummaryApi, saveFundingClassificationApi, saveSummaryApi, setProjectPeriodApi, unassignEvaluatorApi } from '../lib/pipelineApi';
-import type { ActionSheetInput, SummaryInput } from '../lib/pipelineApi';
+import { assignEvaluatorApi, buildActionSheetApi, checkAnonymityApi, checkNdaApi, checkRevisionApi, forwardToReoApi, getPipelineEvaluators, getPipelineProposal, getPipelineProposals, postClarificationApi, publishSummaryApi, recordEmailSubmissionApi, resendSummaryEmailApi, saveFundingClassificationApi, saveSummaryApi, setProjectPeriodApi, unassignEvaluatorApi } from '../lib/pipelineApi';
+import type { ActionSheetInput, EmailSubmissionInput, SummaryInput } from '../lib/pipelineApi';
 import { STATUS_META } from '../lib/proposalPipeline';
 import { formatDateRange } from '../lib/format';
 import type { FundingClassification, PipelineEvaluator, RpduProposal } from '../types';
@@ -150,10 +150,39 @@ export function useRpduProposal(id: string | undefined) {
     try {
       const { proposal, warning } = await publishSummaryApi(id, round, input, token);
       setData(proposal);
-      showToast(`Round ${round} evaluation summary published — ${STATUS_META[proposal.status].label}`);
+      showToast(`Round ${round} outcome approved and sent — ${STATUS_META[proposal.status].label}`);
       if (warning) showToast(warning);
     } catch (failure) {
       showToast(failure instanceof Error ? failure.message : 'Unable to publish the evaluation summary');
+      reread();
+      throw failure;
+    }
+  }, [id, token, setData, showToast, reread]);
+
+  /** Re-sends the published outcome e-mail (RPDU Head / ADMIN). */
+  const resendSummaryEmail = useCallback(async (round: number) => {
+    if (!id) return;
+    try {
+      const { proposal, warning } = await resendSummaryEmailApi(id, round, token);
+      setData(proposal);
+      showToast(warning ?? `Round ${round} outcome e-mailed to the proponent`);
+    } catch (failure) {
+      showToast(failure instanceof Error ? failure.message : 'Unable to send the outcome e-mail');
+      reread();
+      throw failure;
+    }
+  }, [id, token, setData, showToast, reread]);
+
+  /** Records an evaluation the evaluator sent by e-mail for one seat. */
+  const recordEmailReview = useCallback(async (reviewId: string, input: EmailSubmissionInput) => {
+    if (!id) return;
+    try {
+      const proposal = await recordEmailSubmissionApi(id, reviewId, input, token);
+      setData(proposal);
+      const label = proposal.panel.find((seat) => seat.id === reviewId)?.blindLabel ?? 'The evaluator';
+      showToast(`${label}'s e-mailed evaluation recorded`);
+    } catch (failure) {
+      showToast(failure instanceof Error ? failure.message : 'Unable to record the e-mailed evaluation');
       reread();
       throw failure;
     }
@@ -212,5 +241,5 @@ export function useRpduProposal(id: string | undefined) {
     }
   }, [id, token, setData, showToast, reread]);
 
-  return { proposal: resource.data, loading: resource.loading, error: resource.error, refresh: resource.refresh, replace: resource.setData, unassign, checkRevision, checkAnonymity, forward, buildActionSheet, saveSummary, publishSummary, clarify, checkNda, saveFundingClassification, setProjectPeriod };
+  return { proposal: resource.data, loading: resource.loading, error: resource.error, refresh: resource.refresh, replace: resource.setData, unassign, checkRevision, checkAnonymity, forward, buildActionSheet, saveSummary, publishSummary, resendSummaryEmail, recordEmailReview, clarify, checkNda, saveFundingClassification, setProjectPeriod };
 }

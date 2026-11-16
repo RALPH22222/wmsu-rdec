@@ -92,7 +92,11 @@ export interface ActionSheetInput { points: ActionSheetPoints; otherComments: st
 export const buildActionSheetApi = async (proposalId: string, round: number, input: ActionSheetInput, token?: string): Promise<RpduProposal> =>
   (await request<RpduProposal>(API_ENDPOINTS.PIPELINE.ACTION_SHEET(proposalId, round), token, { method: 'PUT', body: JSON.stringify(input) })).data;
 
-export interface SummaryInput { points: ActionSheetPoints; remarks: string; coverNote: string }
+export interface SummaryInput {
+  points: ActionSheetPoints; remarks: string; coverNote: string;
+  /** Only meaningful when the round has an e-mailed evaluation; the server forces both to false otherwise. */
+  includeEvaluatorMessages?: boolean; includeReviewAttachments?: boolean;
+}
 
 /** Saves (or updates) the round's evaluation summary draft. */
 export const saveSummaryApi = async (proposalId: string, round: number, input: SummaryInput, token?: string): Promise<RpduProposal> =>
@@ -102,6 +106,35 @@ export const saveSummaryApi = async (proposalId: string, round: number, input: S
 export const publishSummaryApi = async (proposalId: string, round: number, input: SummaryInput, token?: string): Promise<{ proposal: RpduProposal; warning: string | null }> => {
   const result = await request<RpduProposal>(API_ENDPOINTS.PIPELINE.SUMMARY_PUBLISH(proposalId, round), token, { method: 'POST', body: JSON.stringify(input) });
   return { proposal: result.data, warning: result.warning ?? null };
+};
+
+/** RPDU Head / ADMIN: re-sends the outcome e-mail of a published summary. */
+export const resendSummaryEmailApi = async (proposalId: string, round: number, token?: string): Promise<{ proposal: RpduProposal; warning: string | null }> => {
+  const result = await request<RpduProposal>(API_ENDPOINTS.PIPELINE.SUMMARY_EMAIL(proposalId, round), token, { method: 'POST' });
+  return { proposal: result.data, warning: result.warning ?? null };
+};
+
+export interface EmailSubmissionInput {
+  recommendation: ReviewRecommendation;
+  justification: string;
+  /** The evaluator's original e-mail text, pasted by RPDU (optional). */
+  emailMessage: string;
+  /** When RPDU received the e-mail: a date (YYYY-MM-DD) or a local date-time (YYYY-MM-DDTHH:mm). */
+  receivedAt: string;
+  assessmentFile: File;
+  actionSheetFile?: File | null;
+}
+
+/** RPDU / ADMIN: records an evaluation the evaluator sent by e-mail instead of using the portal. */
+export const recordEmailSubmissionApi = async (proposalId: string, reviewId: string, input: EmailSubmissionInput, token?: string): Promise<RpduProposal> => {
+  const body = new FormData();
+  body.append('recommendation', input.recommendation);
+  body.append('remarks', input.justification);
+  body.append('email_message', input.emailMessage);
+  body.append('email_received_at', input.receivedAt);
+  body.append('assessment_file', input.assessmentFile);
+  if (input.actionSheetFile) body.append('action_sheet_file', input.actionSheetFile);
+  return (await request<RpduProposal>(API_ENDPOINTS.PIPELINE.EMAIL_SUBMISSION(proposalId, reviewId), token, { method: 'POST', body })).data;
 };
 
 export const postClarificationApi = async (proposalId: string, round: number, body: string, token?: string): Promise<RpduProposal> =>

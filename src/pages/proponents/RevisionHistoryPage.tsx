@@ -1,6 +1,6 @@
 import { stageExplanation } from '../../lib/aihrMeta';
 import { useId, useState, type KeyboardEvent, type ReactNode } from 'react';
-import { FileSearch, History, MessageSquare, ShieldCheck, Upload } from 'lucide-react';
+import { ClipboardCheck, FileSearch, History, MessageSquare, ShieldCheck, Upload } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useMyPipelineProposals } from '../../hooks/useMyPipelineProposals';
 import { nextStepFor } from '../../lib/proposalPipeline';
@@ -15,6 +15,8 @@ import { RevisionUploadForm } from '../../components/proponentComponent/Revision
 import { RevisionTimeline } from '../../components/proponentComponent/RevisionTimeline';
 import { ActionSheetStrip } from '../../components/proponentComponent/ActionSheetStrip';
 import { ClarificationThread } from '../../components/ui/ClarificationThread';
+import { PostApprovalDocuments } from '../../components/proponentComponent/PostApprovalDocuments';
+import { ReturnedRevisionCard } from '../../components/proponentComponent/ReturnedRevisionCard';
 
 const Card = ({ title, children }: { title: string; children: ReactNode }) => (
   <section><h3 className="mb-5 border-b border-slate-100 pb-3 text-lg font-bold text-slate-800">{title}</h3><div className="space-y-5">{children}</div></section>
@@ -24,28 +26,33 @@ const TABS = [
   { key: 'feedback', label: 'Feedback', icon: MessageSquare },
   { key: 'revision', label: 'Submit Revision', icon: Upload },
   { key: 'history', label: 'History', icon: History },
+  { key: 'post-approval', label: 'Post-approval', icon: ClipboardCheck },
 ] as const;
 type RevisionTab = typeof TABS[number]['key'];
 
 export function RevisionHistoryPage() {
   const { proposals, eligibleConcepts, loading, error, refresh, uploadRevision, clarify } = useMyPipelineProposals();
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<RevisionTab>('feedback');
+  // null = no explicit choice yet: an approved proposal opens on the post-approval tab, anything else on feedback.
+  const [chosenTab, setChosenTab] = useState<RevisionTab | null>(null);
   const ids = useId();
   const selected = proposals.find((item) => item.id === selectedId) ?? proposals[0] ?? null;
+  const postApprovalOpen = selected?.status === 'APPROVED' || selected?.status === 'FORWARDED_TO_REO';
+  const visibleTabs = TABS.filter((tab) => tab.key !== 'post-approval' || postApprovalOpen);
+  const activeTab: RevisionTab = chosenTab && visibleTabs.some((tab) => tab.key === chosenTab) ? chosenTab : postApprovalOpen ? 'post-approval' : 'feedback';
 
   const selectTab = (tab: RevisionTab) => {
-    setActiveTab(tab);
+    setChosenTab(tab);
     document.getElementById(`${ids}-tab-${tab}`)?.focus();
   };
   const navigateTabs = (event: KeyboardEvent<HTMLDivElement>) => {
-    const index = TABS.findIndex((tab) => tab.key === activeTab);
-    const next = event.key === 'ArrowRight' ? (index + 1) % TABS.length
-      : event.key === 'ArrowLeft' ? (index + TABS.length - 1) % TABS.length
-        : event.key === 'Home' ? 0 : event.key === 'End' ? TABS.length - 1 : null;
+    const index = visibleTabs.findIndex((tab) => tab.key === activeTab);
+    const next = event.key === 'ArrowRight' ? (index + 1) % visibleTabs.length
+      : event.key === 'ArrowLeft' ? (index + visibleTabs.length - 1) % visibleTabs.length
+        : event.key === 'Home' ? 0 : event.key === 'End' ? visibleTabs.length - 1 : null;
     if (next === null) return;
     event.preventDefault();
-    selectTab(TABS[next].key);
+    selectTab(visibleTabs[next].key);
   };
 
   return (
@@ -88,18 +95,20 @@ export function RevisionHistoryPage() {
         <div className="space-y-6">
           {proposals.length > 1 && <div className="rounded-sm border border-slate-200 bg-white p-5 sm:p-6">
             <label htmlFor={`${ids}-proposal`} className="mb-2 block text-sm font-semibold text-slate-700">Select a proposal</label>
-            <select id={`${ids}-proposal`} value={selected?.id ?? ''} onChange={(event) => { setSelectedId(event.target.value); setActiveTab('feedback'); }} className="min-h-11 w-full min-w-0 rounded-sm border border-slate-300 bg-white px-3 py-2 text-base sm:text-sm text-slate-800 focus:border-[#C8102E] focus:outline-none focus:ring-2 focus:ring-[#C8102E]/20">
+            <select id={`${ids}-proposal`} value={selected?.id ?? ''} onChange={(event) => { setSelectedId(event.target.value); setChosenTab(null); }} className="min-h-11 w-full min-w-0 rounded-sm border border-slate-300 bg-white px-3 py-2 text-base sm:text-sm text-slate-800 focus:border-[#C8102E] focus:outline-none focus:ring-2 focus:ring-[#C8102E]/20">
               {proposals.map((item) => <option key={item.id} value={item.id}>{item.code} · {item.title}</option>)}
             </select>
           </div>}
 
           {selected && (
             <div key={selected.id} className="min-w-0 space-y-6">
+              <ReturnedRevisionCard proposalId={selected.id} onCorrected={refresh} />
               <header className="rounded-sm border border-slate-200 bg-white p-5 shadow-xs sm:p-6">
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-2"><span className="font-mono text-sm font-bold text-slate-500">{selected.code}</span><ProposalStatusBadge proposal={selected} size="sm" /><span className="text-sm text-slate-500">Round {selected.currentRound} · Submitted {formatDate(selected.submittedAt)}</span></div>
                 <h2 className="mt-4 border-l-4 border-[#C8102E] pl-3 break-words font-brand text-lg font-bold leading-snug text-slate-900 sm:text-xl">{selected.title}</h2>
                 <div className="mt-5 flex flex-col gap-4 rounded-sm bg-slate-50 p-4 sm:flex-row sm:items-center sm:justify-between">
                   <div><p className="text-sm font-semibold text-slate-800">Next action</p><p className="mt-1 text-sm leading-relaxed text-slate-700">{selected.preReviewStage ? stageExplanation(selected.preReviewStage) : nextStepFor(selected.status, 'proponent')}</p></div>
+                  {selected.status === 'APPROVED' && <button type="button" onClick={() => selectTab('post-approval')} className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-sm bg-[#C8102E] px-4 py-3 text-sm font-semibold text-white hover:bg-[#A00D26] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#C8102E]"><ClipboardCheck aria-hidden="true" className="h-5 w-5" />Complete post-approval documents</button>}
                   {selected.canUploadRevision && <button type="button" onClick={() => selectTab('revision')} className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-sm bg-[#C8102E] px-4 py-3 text-sm font-semibold text-white hover:bg-[#A00D26] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#C8102E]"><Upload aria-hidden="true" className="h-5 w-5" />Submit revision</button>}
                 </div>
                 <p className={`mt-4 flex items-start gap-2 text-sm leading-relaxed ${selected.anonymity.attestedAt ? 'text-emerald-700' : 'text-amber-700'}`}>
@@ -112,8 +121,8 @@ export function RevisionHistoryPage() {
               </header>
 
               <section aria-label="Proposal review details" className="min-w-0 overflow-hidden rounded-sm border border-slate-200 bg-white shadow-xs">
-                <div role="tablist" aria-label="Evaluation and revision sections" onKeyDown={navigateTabs} className="flex gap-2 overflow-x-auto border-b border-slate-200 bg-slate-50 p-3 sm:p-4">
-                  {TABS.map(({ key, label, icon: Icon }) => <button key={key} type="button" role="tab" id={`${ids}-tab-${key}`} aria-selected={activeTab === key} aria-controls={`${ids}-panel-${key}`} tabIndex={activeTab === key ? 0 : -1} onClick={() => setActiveTab(key)} className={`inline-flex min-h-11 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-sm px-4 py-3 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#C8102E] ${activeTab === key ? 'bg-[#C8102E] text-white' : 'text-slate-600 hover:bg-slate-200'}`}><Icon aria-hidden="true" className="h-5 w-5" />{label}</button>)}
+                <div role="tablist" aria-label="Evaluation and revision sections" onKeyDown={navigateTabs} className="grid grid-cols-2 gap-2 border-b border-slate-200 bg-slate-50 p-3 sm:flex sm:overflow-x-auto sm:p-4">
+                  {visibleTabs.map(({ key, label, icon: Icon }) => <button key={key} type="button" role="tab" id={`${ids}-tab-${key}`} aria-selected={activeTab === key} aria-controls={`${ids}-panel-${key}`} tabIndex={activeTab === key ? 0 : -1} onClick={() => setChosenTab(key)} className={`inline-flex min-h-11 items-center justify-center gap-2 whitespace-nowrap rounded-sm px-2 py-3 text-sm sm:shrink-0 sm:px-4 font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#C8102E] ${activeTab === key ? 'bg-[#C8102E] text-white' : 'text-slate-600 hover:bg-slate-200'}`}><Icon aria-hidden="true" className="h-5 w-5" />{label}</button>)}
                 </div>
 
                 {/* Keep panels mounted so changing tabs preserves selected files and unsent clarification drafts. */}
@@ -152,6 +161,13 @@ export function RevisionHistoryPage() {
                 <div id={`${ids}-panel-history`} role="tabpanel" aria-labelledby={`${ids}-tab-history`} hidden={activeTab !== 'history'} tabIndex={0} className="p-5 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[#C8102E] sm:p-6">
                   <div className="space-y-8"><Card title="Manuscript history"><RevisionTimeline proposal={selected} /></Card><Card title="Status history"><HistoryList size="sm" entries={selected.history} /></Card></div>
                 </div>
+
+                {postApprovalOpen && <div id={`${ids}-panel-post-approval`} role="tabpanel" aria-labelledby={`${ids}-tab-post-approval`} hidden={activeTab !== 'post-approval'} tabIndex={0} className="p-5 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[#C8102E] sm:p-6">
+                  <Card title="Post-approval documents">
+                    <p className="text-sm leading-relaxed text-slate-600">Your detailed proposal is approved. Download the two templates, complete them, and upload both for RPDU review. RPDU will check each document or return it with a note.</p>
+                    <PostApprovalDocuments proposalId={selected.id} />
+                  </Card>
+                </div>}
               </section>
             </div>
           )}

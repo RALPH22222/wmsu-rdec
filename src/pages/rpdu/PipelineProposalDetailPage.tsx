@@ -1,10 +1,10 @@
 import { stageExplanation } from '../../lib/aihrMeta';
 import type { ReactNode } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { ArrowLeft, ShieldCheck } from 'lucide-react';
+import { ArrowLeft, Mail, ShieldCheck } from 'lucide-react';
 import { useRpduProposal } from '../../hooks/useRpduPipeline';
 import { MAX_EVALUATORS_PER_PROPOSAL, RECOMMENDATION_META, anonymityGateReason, isTerminalStatus, nextStepFor } from '../../lib/proposalPipeline';
-import { formatDate } from '../../lib/format';
+import { formatDate, formatDateTime } from '../../lib/format';
 import { ProposalStatusBadge } from '../../components/ui/ProposalStatusBadge';
 import { PipelineStepper } from '../../components/ui/PipelineStepper';
 import { DocumentLink } from '../../components/ui/DocumentLink';
@@ -15,6 +15,8 @@ import { HistoryList } from '../../components/ui/HistoryList';
 import { ReviewPanelList } from '../../components/rpduComponent/ReviewPanelList';
 import { PanelDots } from '../../components/rpduComponent/PanelDots';
 import { RevisionComparator } from '../../components/rpduComponent/RevisionComparator';
+import { DocumentChecksCard } from '../../components/rpduComponent/DocumentChecksCard';
+import { InternalRevisionHistory } from '../../components/rpduComponent/InternalRevisionHistory';
 import { TechnicalReviewGateway } from '../../components/rpduComponent/TechnicalReviewGateway';
 import { DeclinedInvitations } from '../../components/rpduComponent/DeclinedInvitations';
 import { ActionSheetCard } from '../../components/rpduComponent/ActionSheetCard';
@@ -32,7 +34,7 @@ const Card = ({ title, badge, children }: { title: string; badge?: ReactNode; ch
 
 /** Rendered keyed by the route id, so a stale response for a previous id can never write into this proposal. */
 function DetailBody({ id, role }: { id: string | undefined; role: 'rpdu' | 'admin' }) {
-  const { proposal, loading, error, refresh, unassign, checkRevision, checkAnonymity, forward, buildActionSheet, saveSummary, publishSummary, clarify, checkNda, saveFundingClassification, setProjectPeriod } = useRpduProposal(id);
+  const { proposal, loading, error, refresh, unassign, checkRevision, checkAnonymity, forward, buildActionSheet, saveSummary, publishSummary, resendSummaryEmail, recordEmailReview, clarify, checkNda, saveFundingClassification, setProjectPeriod } = useRpduProposal(id);
   const backHref = `/${role}/evaluations`;
 
   if (loading) return <section className="mx-auto max-w-5xl space-y-3" aria-label="Loading proposal"><div className="h-20 animate-pulse rounded-sm bg-slate-100" /><div className="h-40 animate-pulse rounded-sm bg-slate-100" /></section>;
@@ -80,7 +82,7 @@ function DetailBody({ id, role }: { id: string | undefined; role: 'rpdu' | 'admi
       <Card title="Review panel">
         <div className="mb-5"><FundingClassificationField key={proposal.fundingClassification ?? 'unclassified'} value={proposal.fundingClassification ?? null} canEdit={Boolean(proposal.canSetFundingClassification)} onSave={(value) => saveFundingClassification(proposal.id, value)} /></div>
         <PanelDots count={proposal.panel.length} className="mb-2" />
-        <ReviewPanelList externalProposalId={proposal.externalFundingRequestId ? proposal.id : undefined} panel={proposal.panel} canManageReviewers={Boolean(proposal.canManageReviewers)} currentRound={proposal.currentRound} onRemove={unassign} onCheckNda={checkNda} />
+        <ReviewPanelList externalProposalId={proposal.externalFundingRequestId ? proposal.id : undefined} panel={proposal.panel} canManageReviewers={Boolean(proposal.canManageReviewers)} currentRound={proposal.currentRound} onRemove={unassign} onCheckNda={checkNda} onRecordEmail={recordEmailReview} />
         {canAssignMore && (thirdSeatBlocked
           ? <p className="mt-3 flex items-start gap-1.5 rounded-sm border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800"><ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" /><span><span className="font-semibold">Third seat on hold.</span> {thirdSeatBlocked}. Record it in the Manuscript anonymity card above, then assign the last evaluator from the list.</span></p>
           : <Link to={backHref} className="mt-3 inline-flex min-h-11 items-center text-xs font-semibold text-[#C8102E]">Assign evaluators from the list →</Link>)}
@@ -89,7 +91,7 @@ function DetailBody({ id, role }: { id: string | undefined; role: 'rpdu' | 'admi
 
       {(proposal.status === 'AWAITING_SUMMARY' || proposal.summaries.length > 0) && (
         <Card title="Evaluation summary">
-          <RoundSummaryCard proposal={proposal} onSave={saveSummary} onPublish={publishSummary} />
+          <RoundSummaryCard proposal={proposal} onSave={saveSummary} onPublish={publishSummary} onResend={resendSummaryEmail} />
         </Card>
       )}
 
@@ -102,6 +104,13 @@ function DetailBody({ id, role }: { id: string | undefined; role: 'rpdu' | 'admi
       {(proposal.clarifications.length > 0 || proposal.canClarify) && (
         <Card title="Clarifications" badge={proposal.awaitingReply > 0 ? <span className="rounded-sm bg-amber-50 px-2 py-0.5 text-[11px] font-bold normal-case tracking-normal text-amber-700">{proposal.awaitingReply} awaiting reply</span> : undefined}>
           <ClarificationThread messages={proposal.clarifications} currentRound={proposal.currentRound} canPost={proposal.canClarify} viewer="RPDU" onPost={clarify} />
+        </Card>
+      )}
+
+      {(proposal.revisions.length > 0 || proposal.status === 'APPROVED' || proposal.status === 'FORWARDED_TO_REO') && (
+        <Card title="Document checks">
+          {/* No page refresh on change: it would swap the page for its loading skeleton and lose the scroll position. */}
+          <DocumentChecksCard proposalId={proposal.id} />
         </Card>
       )}
 
@@ -122,13 +131,24 @@ function DetailBody({ id, role }: { id: string | undefined; role: 'rpdu' | 'admi
                   {entries.map(({ seat, submission }) => (
                     <article key={seat.id} className="rounded-sm border border-slate-100 p-3">
                       <div className="flex flex-wrap items-center justify-between gap-2">
-                        <p className="text-sm font-semibold text-slate-900">{seat.evaluatorName} <span className="text-xs font-normal text-slate-500">· {seat.blindLabel}</span></p>
-                        <RecommendationBadge recommendation={submission.recommendation} />
+                        <p className="min-w-0 break-words text-sm font-semibold text-slate-900">{seat.evaluatorName} <span className="text-xs font-normal text-slate-500">· {seat.blindLabel}</span></p>
+                        <div className="flex flex-wrap items-center gap-2">
+                          {submission.source === 'EMAIL' && <span className="inline-flex items-center gap-1 rounded-sm border border-blue-200 bg-blue-50 px-2 py-0.5 text-[11px] font-bold text-blue-700"><Mail className="h-3 w-3" aria-hidden="true" />Received by e-mail</span>}
+                          <RecommendationBadge recommendation={submission.recommendation} />
+                        </div>
                       </div>
+                      {submission.source === 'EMAIL' && (
+                        <div className="mt-3 space-y-2">
+                          <p className="text-xs text-slate-500">{submission.emailReceivedAt ? `Received ${formatDateTime(submission.emailReceivedAt)}` : 'Receipt time not recorded'}{submission.recordedBy ? ` · recorded by ${submission.recordedBy}` : ''}</p>
+                          {submission.emailMessage ? (
+                            <blockquote className="max-h-60 overflow-y-auto whitespace-pre-wrap break-words border-l-4 border-slate-300 bg-slate-50 p-3 text-xs text-slate-700 [overflow-wrap:anywhere]">{submission.emailMessage}</blockquote>
+                          ) : <p className="text-xs italic text-slate-400">No e-mail message was pasted.</p>}
+                        </div>
+                      )}
                       <div className="mt-3"><ChecklistSummary checklist={submission.checklist} /></div>
                       <h4 className="mt-3 text-[11px] font-bold uppercase tracking-wider text-slate-500">Justification</h4>
                       <p className="mt-1 whitespace-pre-wrap break-words text-xs text-slate-700">{submission.remarks}</p>
-                      <div className="mt-3 flex flex-wrap gap-2"><DocumentLink href={submission.assessmentFileUrl} label="Assessment form" muted /><DocumentLink href={submission.actionSheetUrl} label="Action sheet" muted /></div>
+                      <div className="mt-3 flex flex-wrap gap-2"><DocumentLink href={submission.assessmentFileUrl} label={submission.source === 'EMAIL' ? 'Review attachment' : 'Assessment form'} muted />{(submission.source !== 'EMAIL' || submission.actionSheetUrl !== submission.assessmentFileUrl) && <DocumentLink href={submission.actionSheetUrl} label="Action sheet" muted />}</div>
                     </article>
                   ))}
                 </RoundAccordion>
@@ -151,6 +171,10 @@ function DetailBody({ id, role }: { id: string | undefined; role: 'rpdu' | 'admi
             ))}
           </ul>
         )}
+      </Card>
+
+      <Card title="Revision history">
+        <InternalRevisionHistory proposalId={proposal.id} />
       </Card>
 
       <Card title="Status history"><HistoryList entries={proposal.history} /></Card>

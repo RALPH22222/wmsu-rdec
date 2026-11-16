@@ -16,7 +16,8 @@ export function RecommendationBadge({ recommendation }: { recommendation: Review
 
 /** Read-only rendering of a submitted assessment checklist, grouped like the Proposal Assessment Form. */
 export function ChecklistSummary({ checklist }: { checklist: Checklist }) {
-  if (Object.keys(checklist).length === 0) return <p className="text-xs text-slate-500">No checklist recorded for this evaluation.</p>;
+  // An evaluation recorded from e-mail stores no checklist: the evaluator's attachment is the assessment.
+  if (Object.keys(checklist).length === 0) return <p className="text-xs text-slate-500">Checklist not encoded — see the attached assessment.</p>;
   return (
     // Two balanced columns on desktop keep the 19 points from running as one long list.
     <div className="space-y-3 lg:columns-2 lg:gap-x-8 lg:space-y-0">
