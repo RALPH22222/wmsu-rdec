@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useCallForProposals } from '../context/CallForProposalsContext';
-import { assignEvaluatorApi, buildActionSheetApi, checkAnonymityApi, checkNdaApi, checkRevisionApi, forwardToReoApi, getPipelineEvaluators, getPipelineProposal, getPipelineProposals, postClarificationApi, publishSummaryApi, saveFundingClassificationApi, saveSummaryApi, setApprovedBudgetApi, setProjectPeriodApi, unassignEvaluatorApi } from '../lib/pipelineApi';
+import { assignEvaluatorApi, buildActionSheetApi, checkAnonymityApi, checkNdaApi, checkRevisionApi, forwardToReoApi, getPipelineEvaluators, getPipelineProposal, getPipelineProposals, postClarificationApi, publishSummaryApi, saveFundingClassificationApi, saveSummaryApi, setProjectPeriodApi, unassignEvaluatorApi } from '../lib/pipelineApi';
 import type { ActionSheetInput, SummaryInput } from '../lib/pipelineApi';
 import { STATUS_META } from '../lib/proposalPipeline';
 import { formatDateRange } from '../lib/format';
@@ -212,17 +212,5 @@ export function useRpduProposal(id: string | undefined) {
     }
   }, [id, token, setData, showToast, reread]);
 
-  const setApprovedBudget = useCallback(async (amount: number) => {
-    if (!id) return;
-    try {
-      setData(await setApprovedBudgetApi(id, amount, token));
-      showToast('Approved budget saved');
-    } catch (failure) {
-      showToast(failure instanceof Error ? failure.message : 'Unable to save the approved budget');
-      reread();
-      throw failure;
-    }
-  }, [id, token, setData, showToast, reread]);
-
-  return { proposal: resource.data, loading: resource.loading, error: resource.error, refresh: resource.refresh, replace: resource.setData, unassign, checkRevision, checkAnonymity, forward, buildActionSheet, saveSummary, publishSummary, clarify, checkNda, saveFundingClassification, setProjectPeriod, setApprovedBudget };
+  return { proposal: resource.data, loading: resource.loading, error: resource.error, refresh: resource.refresh, replace: resource.setData, unassign, checkRevision, checkAnonymity, forward, buildActionSheet, saveSummary, publishSummary, clarify, checkNda, saveFundingClassification, setProjectPeriod };
 }

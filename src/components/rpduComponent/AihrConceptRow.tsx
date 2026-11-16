@@ -83,9 +83,11 @@ export function AihrConceptRow({ concept, role, onLogVerdict, onDeliberate }: Ai
         <div className="min-w-0 flex-1 space-y-2.5">
           <div className="flex flex-wrap items-center gap-2">
             <Chip tone={stage.tone} label={stage.label} title={stage.description} />
-            <span className="inline-flex items-center rounded-sm border border-slate-200 bg-slate-50 px-2.5 py-1 font-mono text-xs font-bold text-slate-800">
-              {formatCurrency(concept.proposedBudget)}
-            </span>
+            {concept.proposedBudget > 0 ? (
+              <span className="inline-flex items-center rounded-sm border border-slate-200 bg-slate-50 px-2.5 py-1 font-mono text-xs font-bold text-slate-800">
+                {formatCurrency(concept.proposedBudget)}
+              </span>
+            ) : <Chip tone="amber" label="Budget not set" />}
           </div>
 
           <h3 className="break-words text-base font-bold leading-snug text-slate-900 sm:text-lg">

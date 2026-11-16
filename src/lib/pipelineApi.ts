@@ -76,10 +76,6 @@ export const checkRevisionApi = async (proposalId: string, revisionId: string, c
 export const setProjectPeriodApi = async (proposalId: string, input: { startDate: string; durationMonths: number }, token?: string): Promise<RpduProposal> =>
   (await request<RpduProposal>(API_ENDPOINTS.PIPELINE.PROJECT_PERIOD(proposalId), token, { method: 'PUT', body: JSON.stringify({ startDate: input.startDate, durationMonths: input.durationMonths }) })).data;
 
-/** RPDU sets (or changes) the approved budget amount, the ceiling of the proponent's Line-Item Budget. */
-export const setApprovedBudgetApi = async (proposalId: string, amount: number, token?: string): Promise<RpduProposal> =>
-  (await request<RpduProposal>(API_ENDPOINTS.PIPELINE.APPROVED_BUDGET(proposalId), token, { method: 'PUT', body: JSON.stringify({ amount }) })).data;
-
 export const checkAnonymityApi = async (proposalId: string, checked: boolean, expectedUpdatedAt: string | null, token?: string): Promise<RpduProposal> =>
   (await request<RpduProposal>(API_ENDPOINTS.PIPELINE.ANONYMITY(proposalId), token, { method: 'PUT', body: JSON.stringify({ checked, expectedUpdatedAt }) })).data;
 

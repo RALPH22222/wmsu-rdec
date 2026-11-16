@@ -5,6 +5,7 @@ import type { VerdictPayload } from '../../../lib/aihrApi';
 import { QUALIFYING_SCORE, VERDICT_META } from '../../../lib/aihrMeta';
 import { ACCEPTED_DOCUMENT_TYPES, MAX_UPLOAD_BYTES } from '../../../lib/proposalPipeline';
 import { formatFileSize } from '../../../lib/format';
+import { APPROVED_BUDGET_MAX, parseApprovedBudgetInput } from '../../../lib/approvedBudget';
 import { ModalShell } from '../../ui/ModalShell';
 import { DocumentLink } from '../../ui/DocumentLink';
 import { TONE_CLASSES } from '../../ui/toneClasses';
@@ -19,10 +20,10 @@ interface AihrVerdictModalProps {
 const MAX_REMARKS_LENGTH = 5000;
 const VERDICTS: AihrVerdictInput[] = ['CONDITIONALLY_APPROVED', 'FAIL'];
 
-type Field = 'verdict' | 'fundingClassification' | 'score' | 'date' | 'remarks' | 'file';
+type Field = 'verdict' | 'fundingClassification' | 'score' | 'approvedBudget' | 'date' | 'remarks' | 'file';
 
 /** Mirrors the server's validation messages; the server re-checks every one. */
-const validate = (concept: AihrConcept, verdict: AihrVerdictInput | null, fundingClassification: FundingClassification | null, score: string, presentedOn: string, remarks: string, file: File | null): Partial<Record<Field, string>> => {
+const validate = (concept: AihrConcept, verdict: AihrVerdictInput | null, fundingClassification: FundingClassification | null, score: string, approvedBudget: string, presentedOn: string, remarks: string, file: File | null): Partial<Record<Field, string>> => {
   const errors: Partial<Record<Field, string>> = {};
   if (!verdict) errors.verdict = 'Choose an AIHR verdict';
   if (verdict === 'CONDITIONALLY_APPROVED' && !fundingClassification) errors.fundingClassification = 'Choose Institutional or Outsource';
@@ -30,6 +31,10 @@ const validate = (concept: AihrConcept, verdict: AihrVerdictInput | null, fundin
   if (trimmed) {
     const value = Number(trimmed);
     if (!Number.isFinite(value) || value < 0 || value > 100) errors.score = 'Score must be a number from 0 to 100';
+  }
+  if (verdict && verdict !== 'FAIL') {
+    if (!approvedBudget.trim()) errors.approvedBudget = 'Enter the approved budget';
+    else if (parseApprovedBudgetInput(approvedBudget) === null) errors.approvedBudget = Number(approvedBudget.replace(/[₱\s,]/g, '')) > APPROVED_BUDGET_MAX ? 'Amount must not exceed ₱100,000,000.00' : 'Amount must be a positive number with at most two decimals';
   }
   if (!concept.canLogVerdict || !concept.invitation || presentedOn !== concept.invitation.event_date) {
     errors.date = concept.verdictBlockedReason || 'The presentation date must match the sent AIHR invitation.';
@@ -47,6 +52,7 @@ function VerdictForm({ concept, isOpen, onClose, onSubmit }: AihrVerdictModalPro
   const [verdict, setVerdict] = useState<AihrVerdictInput | null>(concept.aihr?.verdict === 'CONDITIONALLY_APPROVED' || concept.aihr?.verdict === 'FAIL' ? concept.aihr.verdict : null);
   const [fundingClassification, setFundingClassification] = useState<FundingClassification | null>(concept.fundingClassification ?? null);
   const [score, setScore] = useState(concept.aihr?.score?.toString() ?? '');
+  const [approvedBudget, setApprovedBudget] = useState(concept.proposedBudget > 0 ? String(concept.proposedBudget) : '');
   const presentedOn = concept.invitation?.event_date ?? '';
   const [remarks, setRemarks] = useState(concept.aihr?.remarks ?? '');
   const [file, setFile] = useState<File | null>(null);
@@ -54,7 +60,7 @@ function VerdictForm({ concept, isOpen, onClose, onSubmit }: AihrVerdictModalPro
   const [busy, setBusy] = useState(false);
   const [warning, setWarning] = useState<string | null>(null);
 
-  const errors = validate(concept, verdict, fundingClassification, score, presentedOn, remarks, file);
+  const errors = validate(concept, verdict, fundingClassification, score, approvedBudget, presentedOn, remarks, file);
   const visibleErrors = showErrors ? errors : {};
   const numericScore = score.trim() ? Number(score) : null;
   const belowMark = numericScore !== null && Number.isFinite(numericScore) && numericScore < QUALIFYING_SCORE && verdict !== null && verdict !== 'FAIL';
@@ -64,7 +70,7 @@ function VerdictForm({ concept, isOpen, onClose, onSubmit }: AihrVerdictModalPro
     if (Object.keys(errors).length > 0 || !verdict) return;
     setBusy(true);
     try {
-      const result = await onSubmit(concept.id, { verdict, fundingClassification: verdict === 'CONDITIONALLY_APPROVED' ? fundingClassification : null, score, presentedOn, remarks, scoresheetFile: file });
+      const result = await onSubmit(concept.id, { verdict, fundingClassification: verdict === 'CONDITIONALLY_APPROVED' ? fundingClassification : null, score, approvedBudget: verdict === 'FAIL' ? null : parseApprovedBudgetInput(approvedBudget), presentedOn, remarks, scoresheetFile: file });
       if (result.warning) setWarning(result.warning);
       else onClose();
     } catch {
@@ -138,6 +144,14 @@ function VerdictForm({ concept, isOpen, onClose, onSubmit }: AihrVerdictModalPro
           {belowMark && <p className="text-xs text-amber-700">Below the qualifying mark; the verdict can still be saved.</p>}
           {errorText('score')}
         </div>
+        {verdict !== 'FAIL' && (
+          <div className="space-y-1.5">
+            <label htmlFor={`${ids}-approved-budget`} className="text-sm font-semibold text-slate-800">Approved budget (₱)</label>
+            <input id={`${ids}-approved-budget`} type="text" inputMode="decimal" value={approvedBudget} onChange={(e) => setApprovedBudget(e.target.value)} aria-invalid={Boolean(visibleErrors.approvedBudget)} aria-describedby={describedBy('approvedBudget', `${ids}-approved-budget-hint`)} className={inputClass(Boolean(visibleErrors.approvedBudget))} />
+            <p id={`${ids}-approved-budget-hint`} className="text-xs text-slate-500">Becomes the proponent's Line-Item Budget ceiling</p>
+            {errorText('approvedBudget')}
+          </div>
+        )}
         <div className="space-y-1.5">
           <label htmlFor={`${ids}-date`} className="text-sm font-semibold text-slate-800">Scheduled AIHR date</label>
           <input id={`${ids}-date`} type="date" readOnly value={presentedOn} aria-invalid={Boolean(visibleErrors.date)} aria-describedby={describedBy('date', `${ids}-date-hint`)} className={inputClass(Boolean(visibleErrors.date))} />
