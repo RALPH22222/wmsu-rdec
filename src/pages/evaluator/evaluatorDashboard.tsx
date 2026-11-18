@@ -1,7 +1,8 @@
 
-import { ArrowRight, CheckCircle2, ClipboardList, FileText, Mail, ShieldCheck } from 'lucide-react';
+import { ArrowRight, CheckCircle2, ClipboardList, Clock, FileText, Mail, ShieldCheck } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { formatSubmissionDateTime } from '../../lib/format';
 import { formatUserFullName } from '../../utils/userUtils';
 import { useMyReviews } from '../../hooks/useMyReviews';
 
@@ -26,6 +27,16 @@ export default function EvaluatorDashboard() {
       <h2 className="text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">Welcome back, {loadingProfile && !profile ? 'Evaluator' : name}</h2>
       <p className="text-xs font-medium text-slate-500 sm:text-sm">Technical Evaluator Workspace — WMSU</p>
     </section>
+    {profile?.is_temporary_evaluator && (
+      <div role="status" className="flex items-start gap-3 rounded-sm border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
+        <Clock className="mt-0.5 h-4 w-4 shrink-0 text-amber-700" aria-hidden="true" />
+        <p>
+          {profile.evaluator_closes_at
+            ? `Temporary evaluator account: all assigned evaluations are submitted. Your account will close at ${formatSubmissionDateTime(profile.evaluator_closes_at)} (24 hours after completion) unless reopened by RPDU.`
+            : 'Temporary evaluator account: your access remains open until 24 hours after you finish evaluating all assigned proposals.'}
+        </p>
+      </div>
+    )}
     <section aria-label="Your review workload" aria-busy={loading}>
       {loading && <p role="status" className="sr-only">Loading your review statistics</p>}
       {error ? <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-sm border border-red-200 bg-red-50 p-4 text-sm text-red-800"><p>Unable to load your review statistics. {error}</p><button type="button" onClick={refresh} className="min-h-11 rounded-sm border border-red-200 px-3 font-semibold hover:bg-red-100">Try again</button></div>

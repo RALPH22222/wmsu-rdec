@@ -19,11 +19,15 @@ export interface UserProfileData {
   sex?: SexType | null;
   role: string;
   is_rpdu_head?: boolean | null;
+  is_temporary_evaluator?: boolean | null;
+  evaluator_closes_at?: string | null;
+  evaluator_reopened_at?: string | null;
   created_at?: string;
   is_eligible_to_submit?: boolean;
   portal_access?: {
     allowed: boolean;
     role: string | null;
+    reason?: string | null;
     accessibleCallIds: string[];
     submissionCallId: string | null;
   };

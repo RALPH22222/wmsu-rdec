@@ -52,6 +52,7 @@ import { RpduBudgetAllocationPage } from './pages/rpdu/RpduBudgetAllocationPage'
 import { RpduBudgetAllocationReviewPage } from './pages/rpdu/RpduBudgetAllocationReviewPage';
 import Login from './pages/auth/Login';
 import Register from './pages/auth/Register';
+import EvaluatorInvitePage from './pages/auth/EvaluatorInvitePage';
 import { DocumentPreviewPage } from './pages/DocumentPreviewPage';
 import { Toast } from './components/Toast';
 import { ProtectedRoute } from './components/ProtectedRoute';
@@ -112,6 +113,7 @@ export function App() {
             {/* Auth Routes */}
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
+            <Route path="/evaluator-invite" element={<EvaluatorInvitePage />} />
 
             {/* Protected Portal Routes (Requires Active Authentication) */}
             <Route element={<ProtectedRoute />}>

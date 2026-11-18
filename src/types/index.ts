@@ -479,6 +479,8 @@ export interface RpduProposal {
   computedOutcome: PipelineStatus | null;
 }
 
+export type TemporaryEvaluatorAccountStatus = 'PERMANENT' | 'ACTIVE' | 'CLOSING_SOON' | 'CLOSED' | 'REOPEN_PENDING';
+
 export interface EvaluatorProfile {
   disciplines: string[];
   highestDegree: string;
@@ -490,7 +492,63 @@ export interface PipelineEvaluator extends EvaluatorProfile {
   name: string;
   email: string;
   department: string;
+  createdAt?: string | null;
   activeLoad: number;
+  totalProposals?: number;
+  isTemporary?: boolean;
+  accountStatus?: TemporaryEvaluatorAccountStatus;
+  closesAt?: string | null;
+  reopenedAt?: string | null;
+  temporaryPassword?: string | null;
+}
+
+export interface CreateTemporaryEvaluatorInput {
+  firstName: string;
+  middleInitial?: string;
+  lastName: string;
+  email: string;
+  specialization: string;
+}
+
+export interface CreatedTemporaryEvaluatorResult {
+  evaluator: PipelineEvaluator;
+  credentials: { email: string; temporaryPassword: string };
+}
+
+export interface PendingTemporaryEvaluatorInvitation {
+  id: string;
+  email: string;
+  createdAt: string;
+  expiresAt: string;
+}
+
+export interface SendTemporaryEvaluatorInviteResult {
+  invitation: PendingTemporaryEvaluatorInvitation & { emailStatus: 'SENT' };
+  inviteUrl: string;
+}
+
+export interface EvaluatorInvitationDetails {
+  email: string;
+  createdAt: string;
+  expiresAt: string;
+}
+
+export interface CompleteEvaluatorInvitationInput {
+  firstName: string;
+  middleInitial?: string;
+  lastName: string;
+  specialization: string;
+  password: string;
+}
+
+export interface CompleteEvaluatorInvitationResult {
+  evaluator: PipelineEvaluator;
+  email: string;
+}
+
+export interface ReopenTemporaryEvaluatorResult {
+  activatedImmediately: boolean;
+  evaluator: PipelineEvaluator;
 }
 
 /** What an evaluator may see. Never carries proponent, department, or concept identifiers. */

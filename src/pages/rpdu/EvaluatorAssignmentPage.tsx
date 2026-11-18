@@ -12,7 +12,7 @@ interface EvaluatorAssignmentPageProps { role?: 'rpdu' | 'admin' }
 const STATUS_ORDER: PipelineStatus[] = ['PENDING_ASSIGNMENT', 'UNDER_REVIEW', 'AWAITING_SUMMARY', 'REVISION_REQUESTED', 'APPROVED', 'REJECTED', 'FORWARDED_TO_REO'];
 
 export function EvaluatorAssignmentPage({ role = 'rpdu' }: EvaluatorAssignmentPageProps) {
-  const { proposals, evaluators, loading, error, refresh, assign } = useRpduPipeline();
+  const { proposals, evaluators, loading, error, refresh, assign, createTemporaryEvaluator, sendTemporaryEvaluatorInvitation, reopenEvaluator } = useRpduPipeline();
   const [query, setQuery] = useState('');
   const [status, setStatus] = useState<PipelineStatus | 'ALL'>('ALL');
   const [assigning, setAssigning] = useState<RpduProposal | null>(null);
@@ -64,7 +64,7 @@ export function EvaluatorAssignmentPage({ role = 'rpdu' }: EvaluatorAssignmentPa
         </ul>
       )}
 
-      <AssignEvaluatorModal key={current?.id ?? 'none'} proposal={current} evaluators={evaluators} isOpen={Boolean(current)} onClose={() => setAssigning(null)} onAssign={assign} />
+      <AssignEvaluatorModal key={current?.id ?? 'none'} proposal={current} evaluators={evaluators} isOpen={Boolean(current)} onClose={() => setAssigning(null)} onAssign={assign} onCreateTemporary={createTemporaryEvaluator} onInviteTemporary={sendTemporaryEvaluatorInvitation} onReopen={reopenEvaluator} />
     </section>
   );
 }

@@ -48,7 +48,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
     try {
       const data = await getProfile(token);
-      if (!data?.portal_access?.allowed) throw new Error('Unable to verify access to your Call for Proposals window.');
+      if (!data?.portal_access?.allowed) throw new Error(data?.portal_access?.reason || 'Unable to verify access to your Call for Proposals window.');
       if (request !== profileRequest.current) return;
       setProfile(data);
       setAuthError(null);

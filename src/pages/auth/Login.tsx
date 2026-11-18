@@ -7,11 +7,12 @@ import { ArrowRight, ArrowLeft, Lock, Mail, Eye, EyeOff } from 'lucide-react';
 export default function Login() {
   const navigate = useNavigate();
   const location = useLocation();
-  const [email, setEmail] = useState('');
+  const state = (location.state as { error?: string; email?: string } | null) ?? null;
+  const [email, setEmail] = useState(state?.email || '');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(location.state?.error || null);
+  const [error, setError] = useState<string | null>(state?.error || null);
   const warningDialog = useRef<HTMLDialogElement>(null);
 
   useEffect(() => {
@@ -50,7 +51,7 @@ export default function Login() {
     let userData;
     try {
       userData = await getProfile(authData.session.access_token);
-      if (!userData?.portal_access?.allowed) throw new Error('Unable to verify portal access.');
+      if (!userData?.portal_access?.allowed) throw new Error(userData?.portal_access?.reason || 'Unable to verify portal access.');
     } catch (error) {
       await supabase.auth.signOut();
       setError(error instanceof Error ? error.message : 'Unable to verify portal access.');

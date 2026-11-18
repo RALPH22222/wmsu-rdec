@@ -1,11 +1,11 @@
 import { useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useCallForProposals } from '../context/CallForProposalsContext';
-import { assignEvaluatorApi, buildActionSheetApi, checkAnonymityApi, checkNdaApi, checkRevisionApi, forwardToReoApi, getPipelineEvaluators, getPipelineProposal, getPipelineProposals, postClarificationApi, publishSummaryApi, recordEmailSubmissionApi, resendSummaryEmailApi, saveFundingClassificationApi, saveSummaryApi, setProjectPeriodApi, unassignEvaluatorApi } from '../lib/pipelineApi';
+import { assignEvaluatorApi, buildActionSheetApi, checkAnonymityApi, checkNdaApi, checkRevisionApi, createTemporaryEvaluatorApi, forwardToReoApi, getPipelineEvaluators, getPipelineProposal, getPipelineProposals, postClarificationApi, publishSummaryApi, recordEmailSubmissionApi, reopenTemporaryEvaluatorApi, resendSummaryEmailApi, saveFundingClassificationApi, saveSummaryApi, sendTemporaryEvaluatorInvitationApi, setProjectPeriodApi, unassignEvaluatorApi } from '../lib/pipelineApi';
 import type { ActionSheetInput, EmailSubmissionInput, SummaryInput } from '../lib/pipelineApi';
 import { STATUS_META } from '../lib/proposalPipeline';
 import { formatDateRange } from '../lib/format';
-import type { FundingClassification, PipelineEvaluator, RpduProposal } from '../types';
+import type { CreateTemporaryEvaluatorInput, FundingClassification, PipelineEvaluator, RpduProposal } from '../types';
 import { useAsyncResource } from './useAsyncResource';
 
 interface PipelineData { proposals: RpduProposal[]; evaluators: PipelineEvaluator[] }
@@ -25,12 +25,65 @@ export function useRpduPipeline() {
   const assign = useCallback(async (proposalId: string, evaluatorId: string) => {
     try {
       const { proposal, warning } = await assignEvaluatorApi(proposalId, evaluatorId, token);
-      setData((prev) => (prev ? { ...prev, proposals: replaceIn(prev.proposals, proposal) } : prev));
+      setData((prev) => (prev ? {
+        ...prev,
+        proposals: replaceIn(prev.proposals, proposal),
+        evaluators: prev.evaluators.map((person) => (person.id === evaluatorId
+          ? {
+              ...person,
+              activeLoad: person.activeLoad + 1,
+              totalProposals: (person.totalProposals ?? person.activeLoad) + 1,
+              ...(person.isTemporary ? { accountStatus: 'ACTIVE', closesAt: null, reopenedAt: null } : {}),
+            }
+          : person)),
+      } : prev));
       const seat = proposal.panel[proposal.panel.length - 1];
       showToast(proposal.status === 'UNDER_REVIEW' ? `Panel complete — ${proposal.code} is now under review` : `Assigned ${seat?.evaluatorName ?? 'evaluator'} as ${seat?.blindLabel ?? 'panel member'}`);
       return { warning };
     } catch (failure) {
       showToast(failure instanceof Error ? failure.message : 'Unable to assign this evaluator');
+      throw failure;
+    }
+  }, [token, setData, showToast]);
+
+  const createTemporaryEvaluator = useCallback(async (input: CreateTemporaryEvaluatorInput) => {
+    try {
+      const created = await createTemporaryEvaluatorApi(input, token);
+      setData((prev) => (prev ? { ...prev, evaluators: [created.evaluator, ...prev.evaluators] } : prev));
+      showToast(`Temporary evaluator account created for ${created.evaluator.name}`);
+      return created;
+    } catch (failure) {
+      showToast(failure instanceof Error ? failure.message : 'Unable to create temporary evaluator');
+      throw failure;
+    }
+  }, [token, setData, showToast]);
+
+  const sendTemporaryEvaluatorInvitation = useCallback(async (email: string) => {
+    try {
+      const sent = await sendTemporaryEvaluatorInvitationApi(email, token);
+      showToast(`Invitation email sent to ${sent.invitation.email}`);
+      return sent;
+    } catch (failure) {
+      showToast(failure instanceof Error ? failure.message : 'Unable to send invitation email');
+      throw failure;
+    }
+  }, [token, showToast]);
+
+  const reopenEvaluator = useCallback(async (evaluatorId: string) => {
+    try {
+      const result = await reopenTemporaryEvaluatorApi(evaluatorId, token);
+      setData((prev) => (prev ? {
+        ...prev,
+        evaluators: prev.evaluators.map((person) => (person.id === evaluatorId ? result.evaluator : person)),
+      } : prev));
+      showToast(
+        result.activatedImmediately
+          ? `Reopened ${result.evaluator.name}'s temporary account.`
+          : `${result.evaluator.name} marked for reopening. Assign a proposal to activate login.`,
+      );
+      return result;
+    } catch (failure) {
+      showToast(failure instanceof Error ? failure.message : 'Unable to reopen temporary evaluator account');
       throw failure;
     }
   }, [token, setData, showToast]);
@@ -46,7 +99,7 @@ export function useRpduPipeline() {
     }
   }, [token, setData, showToast]);
 
-  return { proposals: resource.data?.proposals ?? [], evaluators: resource.data?.evaluators ?? [], loading: resource.loading, error: resource.error, refresh: resource.refresh, assign, unassign };
+  return { proposals: resource.data?.proposals ?? [], evaluators: resource.data?.evaluators ?? [], loading: resource.loading, error: resource.error, refresh: resource.refresh, assign, unassign, createTemporaryEvaluator, sendTemporaryEvaluatorInvitation, reopenEvaluator };
 }
 
 export function useRpduProposal(id: string | undefined) {

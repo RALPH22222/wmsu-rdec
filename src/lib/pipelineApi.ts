@@ -1,8 +1,8 @@
 import { API_ENDPOINTS } from '../config/apiConfig';
 import type {
-  ActionSheetPoints, BlindReview, Checklist, DeclineReason, EligibleConcept, EvaluatorProfile, FundingClassification, OutsourcedProject, PendingConcept, PipelineEvaluator, ProponentProposal, ReviewRecommendation, RevisionHistoryDraft, RpduProposal,
+  ActionSheetPoints, BlindReview, Checklist, CompleteEvaluatorInvitationInput, CompleteEvaluatorInvitationResult, CreatedTemporaryEvaluatorResult, CreateTemporaryEvaluatorInput, DeclineReason, EligibleConcept, EvaluatorInvitationDetails, EvaluatorProfile, FundingClassification, OutsourcedProject, PendingConcept, PendingTemporaryEvaluatorInvitation, PipelineEvaluator, ProponentProposal, ReopenTemporaryEvaluatorResult, ReviewRecommendation, RevisionHistoryDraft, RpduProposal, SendTemporaryEvaluatorInviteResult,
 } from '../types';
-import { request } from './apiRequest';
+import { publicRequest, request } from './apiRequest';
 
 // ---- RPDU / Admin ---------------------------------------------------------
 
@@ -59,6 +59,81 @@ export const getPipelineEvaluators = async (token?: string, signal?: AbortSignal
 
 export const saveEvaluatorProfileApi = async (id: string, profile: EvaluatorProfile, token?: string): Promise<EvaluatorProfile> =>
   (await request<EvaluatorProfile>(API_ENDPOINTS.PIPELINE.EVALUATOR_PROFILE(id), token, { method: 'PUT', body: JSON.stringify(profile) }, AbortSignal.timeout(15_000))).data;
+
+export const createTemporaryEvaluatorApi = async (
+  input: CreateTemporaryEvaluatorInput,
+  token?: string,
+): Promise<CreatedTemporaryEvaluatorResult> =>
+  (await request<CreatedTemporaryEvaluatorResult>(
+    API_ENDPOINTS.PIPELINE.TEMPORARY_EVALUATOR,
+    token,
+    { method: 'POST', body: JSON.stringify(input) },
+    AbortSignal.timeout(15_000),
+  )).data;
+
+export const reopenTemporaryEvaluatorApi = async (
+  id: string,
+  token?: string,
+): Promise<ReopenTemporaryEvaluatorResult> =>
+  (await request<ReopenTemporaryEvaluatorResult>(
+    API_ENDPOINTS.PIPELINE.REOPEN_EVALUATOR(id),
+    token,
+    { method: 'POST' },
+    AbortSignal.timeout(15_000),
+  )).data;
+
+export const listTemporaryEvaluatorInvitationsApi = async (
+  token?: string,
+  signal?: AbortSignal,
+): Promise<PendingTemporaryEvaluatorInvitation[]> =>
+  (await request<PendingTemporaryEvaluatorInvitation[]>(
+    API_ENDPOINTS.PIPELINE.TEMPORARY_EVALUATOR_INVITATIONS,
+    token,
+    {},
+    signal,
+  )).data;
+
+export const sendTemporaryEvaluatorInvitationApi = async (
+  email: string,
+  token?: string,
+): Promise<SendTemporaryEvaluatorInviteResult> =>
+  (await request<SendTemporaryEvaluatorInviteResult>(
+    API_ENDPOINTS.PIPELINE.TEMPORARY_EVALUATOR_INVITATIONS,
+    token,
+    { method: 'POST', body: JSON.stringify({ email }) },
+    AbortSignal.timeout(30_000),
+  )).data;
+
+export const revokeTemporaryEvaluatorInvitationApi = async (
+  id: string,
+  token?: string,
+): Promise<{ id: string }> =>
+  (await request<{ id: string }>(
+    API_ENDPOINTS.PIPELINE.TEMPORARY_EVALUATOR_INVITATION(id),
+    token,
+    { method: 'DELETE' },
+    AbortSignal.timeout(15_000),
+  )).data;
+
+export const getEvaluatorInvitationApi = async (
+  inviteToken: string,
+  signal?: AbortSignal,
+): Promise<EvaluatorInvitationDetails> =>
+  (await publicRequest<EvaluatorInvitationDetails>(
+    API_ENDPOINTS.PIPELINE.PUBLIC_EVALUATOR_INVITATION(inviteToken),
+    {},
+    signal,
+  )).data;
+
+export const completeEvaluatorInvitationApi = async (
+  inviteToken: string,
+  input: CompleteEvaluatorInvitationInput,
+): Promise<CompleteEvaluatorInvitationResult> =>
+  (await publicRequest<CompleteEvaluatorInvitationResult>(
+    API_ENDPOINTS.PIPELINE.PUBLIC_EVALUATOR_INVITATION_COMPLETE(inviteToken),
+    { method: 'POST', body: JSON.stringify(input) },
+    AbortSignal.timeout(20_000),
+  )).data;
 
 export const assignEvaluatorApi = async (proposalId: string, evaluatorId: string, token?: string): Promise<{ proposal: RpduProposal; warning: string | null }> => {
   const result = await request<RpduProposal>(API_ENDPOINTS.PIPELINE.PROPOSAL_REVIEWS(proposalId), token, { method: 'POST', body: JSON.stringify({ evaluatorId }) });
