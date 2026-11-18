@@ -160,7 +160,8 @@ export function DocumentChecksCard({ proposalId, onChanged }: DocumentChecksCard
         {doc.canCheck && (
           <>
             <button type="button" onClick={() => void act(`d-${doc.id}`, () => checkDocument(doc.id, 'CHECKED'))} disabled={pending !== null} className={primaryButton}>
-              <CheckCircle2 aria-hidden="true" className="h-4 w-4 shrink-0" />{busy ? 'Saving…' : 'Mark as checked'}
+              <CheckCircle2 aria-hidden="true" className="h-4 w-4 shrink-0" />
+              {busy ? 'Saving…' : group.kind === 'TECHNICAL_CERTIFICATE' ? 'Approve certificate' : 'Mark as checked'}
             </button>
             <button type="button" onClick={() => setTarget({ type: 'document', id: doc.id, label: `${label} · v${doc.version}` })} disabled={pending !== null} className={neutralButton}>
               <Undo2 aria-hidden="true" className="h-4 w-4 shrink-0" />Return for correction
@@ -194,7 +195,7 @@ export function DocumentChecksCard({ proposalId, onChanged }: DocumentChecksCard
 
       <section aria-label="Post-approval documents">
         <h3 className={groupTitle}><FileCheck2 aria-hidden="true" className="h-3.5 w-3.5" />Post-approval documents</h3>
-        {hasPostApproval ? <ul className="divide-y divide-slate-100">{data.postApproval.map(renderGroup)}</ul> : <p className="py-3 text-sm text-slate-500">The proponent has not uploaded the Action Sheet or Work Plan yet.</p>}
+        {hasPostApproval ? <ul className="divide-y divide-slate-100">{data.postApproval.map(renderGroup)}</ul> : <p className="py-3 text-sm text-slate-500">The proponent has not uploaded any post-approval documents yet.</p>}
       </section>
 
       {target && (

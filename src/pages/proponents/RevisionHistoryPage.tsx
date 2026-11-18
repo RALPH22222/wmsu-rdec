@@ -69,7 +69,7 @@ export function RevisionHistoryPage() {
           <span className="sr-only">Loading your evaluations and revisions</span>
           <div aria-hidden="true" className="space-y-6 motion-safe:animate-pulse">
             <div className="space-y-5 rounded-sm border border-slate-200 bg-white p-5 shadow-xs sm:p-6">
-              <div className="flex flex-wrap gap-3"><div className="h-5 w-20 rounded-sm bg-slate-100" /><div className="h-6 w-32 rounded-sm bg-slate-200" /><div className="h-5 w-40 max-w-full rounded-sm bg-slate-100" /></div>
+              <div className="flex flex-wrap gap-3"><div className="h-6 w-32 rounded-sm bg-slate-200" /><div className="h-5 w-40 max-w-full rounded-sm bg-slate-100" /></div>
               <div className="h-7 w-3/4 rounded-sm bg-slate-200" />
               <div className="space-y-3 rounded-sm bg-slate-50 p-4"><div className="h-4 w-28 rounded-sm bg-slate-200" /><div className="h-4 w-full rounded-sm bg-slate-100" /><div className="h-4 w-2/3 rounded-sm bg-slate-100" /></div>
               <div className="h-5 w-5/6 rounded-sm bg-slate-100" />
@@ -96,7 +96,7 @@ export function RevisionHistoryPage() {
           {proposals.length > 1 && <div className="rounded-sm border border-slate-200 bg-white p-5 sm:p-6">
             <label htmlFor={`${ids}-proposal`} className="mb-2 block text-sm font-semibold text-slate-700">Select a proposal</label>
             <select id={`${ids}-proposal`} value={selected?.id ?? ''} onChange={(event) => { setSelectedId(event.target.value); setChosenTab(null); }} className="min-h-11 w-full min-w-0 rounded-sm border border-slate-300 bg-white px-3 py-2 text-base sm:text-sm text-slate-800 focus:border-[#C8102E] focus:outline-none focus:ring-2 focus:ring-[#C8102E]/20">
-              {proposals.map((item) => <option key={item.id} value={item.id}>{item.code} · {item.title}</option>)}
+              {proposals.map((item) => <option key={item.id} value={item.id}>{item.title}</option>)}
             </select>
           </div>}
 
@@ -104,7 +104,7 @@ export function RevisionHistoryPage() {
             <div key={selected.id} className="min-w-0 space-y-6">
               <ReturnedRevisionCard proposalId={selected.id} onCorrected={refresh} />
               <header className="rounded-sm border border-slate-200 bg-white p-5 shadow-xs sm:p-6">
-                <div className="flex flex-wrap items-center gap-x-3 gap-y-2"><span className="font-mono text-sm font-bold text-slate-500">{selected.code}</span><ProposalStatusBadge proposal={selected} size="sm" /><span className="text-sm text-slate-500">Round {selected.currentRound} · Submitted {formatDate(selected.submittedAt)}</span></div>
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-2"><ProposalStatusBadge proposal={selected} size="sm" /><span className="text-sm text-slate-500">Round {selected.currentRound} · Submitted {formatDate(selected.submittedAt)}</span></div>
                 <h2 className="mt-4 border-l-4 border-[#C8102E] pl-3 break-words font-brand text-lg font-bold leading-snug text-slate-900 sm:text-xl">{selected.title}</h2>
                 <div className="mt-5 flex flex-col gap-4 rounded-sm bg-slate-50 p-4 sm:flex-row sm:items-center sm:justify-between">
                   <div><p className="text-sm font-semibold text-slate-800">Next action</p><p className="mt-1 text-sm leading-relaxed text-slate-700">{selected.preReviewStage ? stageExplanation(selected.preReviewStage) : nextStepFor(selected.status, 'proponent')}</p></div>
@@ -164,7 +164,7 @@ export function RevisionHistoryPage() {
 
                 {postApprovalOpen && <div id={`${ids}-panel-post-approval`} role="tabpanel" aria-labelledby={`${ids}-tab-post-approval`} hidden={activeTab !== 'post-approval'} tabIndex={0} className="p-5 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[#C8102E] sm:p-6">
                   <Card title="Post-approval documents">
-                    <p className="text-sm leading-relaxed text-slate-600">Your detailed proposal is approved. Download the two templates, complete them, and upload both for RPDU review. RPDU will check each document or return it with a note.</p>
+                    <p className="text-sm leading-relaxed text-slate-600">Your detailed proposal is approved. Download and complete the Action Sheet and Work Plan templates, then upload your externally issued Certificate of Technical Review for RPDU checking and approval.</p>
                     <PostApprovalDocuments proposalId={selected.id} />
                   </Card>
                 </div>}

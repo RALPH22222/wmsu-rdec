@@ -4,16 +4,16 @@ import type { PostApprovalKind } from '../../types/postApproval';
 import { PostApprovalCard } from './postApproval/PostApprovalCard';
 
 const STEPS = [
-  { icon: Download, label: 'Download templates' },
-  { icon: Upload, label: 'Complete and upload' },
-  { icon: ClipboardCheck, label: 'RPDU checks' },
+  { icon: Download, label: 'Prepare forms & certificate' },
+  { icon: Upload, label: 'Upload completed files' },
+  { icon: ClipboardCheck, label: 'RPDU checks & approves' },
 ] as const;
 
 export function PostApprovalDocuments({ proposalId }: { proposalId: string }) {
   const { data, loading, error, refresh, upload, downloadTemplate } = usePostApprovalDocuments(proposalId);
 
   if (loading) {
-    return <div role="status" aria-busy="true"><span className="sr-only">Loading post-approval documents</span><div aria-hidden="true" className="grid gap-5 motion-safe:animate-pulse lg:grid-cols-2">{[0, 1].map((item) => <div key={item} className="h-72 rounded-sm bg-slate-100" />)}</div></div>;
+    return <div role="status" aria-busy="true"><span className="sr-only">Loading post-approval documents</span><div aria-hidden="true" className="grid gap-5 motion-safe:animate-pulse lg:grid-cols-2">{[0, 1, 2].map((item) => <div key={item} className={`h-72 rounded-sm bg-slate-100 ${item === 2 ? 'lg:col-span-2' : ''}`} />)}</div></div>;
   }
   if (error || !data) {
     return <p role="alert" className="flex flex-col gap-2 rounded-sm border border-red-200 bg-red-50 p-4 text-sm text-red-800 sm:flex-row sm:items-center sm:justify-between">{error || 'Unable to load the post-approval documents.'}<button type="button" onClick={refresh} className="min-h-11 rounded-sm border border-red-300 px-4 text-sm font-semibold">Retry</button></p>;
@@ -38,7 +38,11 @@ export function PostApprovalDocuments({ proposalId }: { proposalId: string }) {
         </ol>
       </div>
       <div className="grid gap-5 lg:grid-cols-2">
-        {data.documents.map((item) => <PostApprovalCard key={item.kind} document={item} closedReason={closedReason} onDownload={downloadTemplate} onUpload={handleUpload} />)}
+        {data.documents.map((item) => (
+          <div key={item.kind} className={item.kind === 'TECHNICAL_CERTIFICATE' ? 'lg:col-span-2' : undefined}>
+            <PostApprovalCard document={item} closedReason={closedReason} onDownload={downloadTemplate} onUpload={handleUpload} />
+          </div>
+        ))}
       </div>
     </div>
   );

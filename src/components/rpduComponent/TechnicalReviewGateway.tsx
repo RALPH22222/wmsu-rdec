@@ -1,5 +1,4 @@
 import { useId, useState } from 'react';
-import { Link } from 'react-router-dom';
 import { ArrowRight, CheckCircle2, Circle, Send } from 'lucide-react';
 import type { RpduProposal } from '../../types';
 import { formatDate } from '../../lib/format';
@@ -7,12 +6,11 @@ import { ConfirmDialog } from '../ui/ConfirmDialog';
 
 interface TechnicalReviewGatewayProps {
   proposal: RpduProposal;
-  role: 'rpdu' | 'admin';
   onForward: () => Promise<unknown>;
 }
 
 /** The five readiness items the backend checks before an approved proposal may be forwarded to the REO. */
-export function TechnicalReviewGateway({ proposal, role, onForward }: TechnicalReviewGatewayProps) {
+export function TechnicalReviewGateway({ proposal, onForward }: TechnicalReviewGatewayProps) {
   const hintId = useId();
   const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -46,7 +44,7 @@ export function TechnicalReviewGateway({ proposal, role, onForward }: TechnicalR
               <p className="text-sm font-semibold text-slate-900">{item.label}</p>
               {item.detail && <p className="mt-0.5 break-words text-xs text-slate-500">{item.detail}</p>}
               {item.key === 'certificate' && !item.ok && (
-                <Link to={`/${role}/letters?template=WMSU-RPDU-CERT-001.00&proposal=${proposal.conceptProposalId}`} className="inline-flex min-h-11 items-center gap-1 text-xs font-semibold text-[#C8102E] hover:underline">Open the Letter Desk<ArrowRight className="h-3.5 w-3.5" /></Link>
+                <a href="#document-checks" className="inline-flex min-h-11 items-center gap-1 text-xs font-semibold text-[#C8102E] hover:underline">Check in Document checks<ArrowRight className="h-3.5 w-3.5" /></a>
               )}
               {item.key === 'revisions' && !item.ok && (
                 <a href="#revision-comparator" className="inline-flex min-h-11 items-center gap-1 text-xs font-semibold text-[#C8102E] hover:underline">Review the revisions<ArrowRight className="h-3.5 w-3.5" /></a>

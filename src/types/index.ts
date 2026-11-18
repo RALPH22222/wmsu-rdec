@@ -454,8 +454,8 @@ export interface RpduProposal {
   declines: ReviewDecline[];
   revisions: PipelineRevision[];
   history: StatusHistoryEntry[];
-  /** Certificate of Technical Review issued from the Letter Desk (a `technical_clearances` row). */
-  clearance: { issuedAt: string } | null;
+  /** Approved Certificate of Technical Review (a `technical_clearances` row). */
+  clearance: { issuedAt: string; fileUrl?: string | null } | null;
   gateway: GatewayReadiness;
   /** Generated Proposal Action Sheets, one per round, oldest first. */
   actionSheets: ActionSheet[];

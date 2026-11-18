@@ -75,17 +75,33 @@ const EXPECTED_MIME_BY_EXT: Record<string, string> = {
   '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
 };
 
+const EXPECTED_PREVIEW_MIME_BY_EXT: Record<string, string> = {
+  ...EXPECTED_MIME_BY_EXT,
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.png': 'image/png',
+  '.webp': 'image/webp',
+  '.gif': 'image/gif',
+};
+
 export const DOCUMENT_UPLOAD_ACCEPT =
   '.pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document';
 
-/** Validates that a file has a .pdf, .doc, or .docx extension and a matching (or generic/empty) browser MIME type. */
-export const isValidProposalDocumentFile = (file: { name: string; type?: string }): boolean => {
+const matchesExpectedMime = (file: { name: string; type?: string }, mimesByExt: Record<string, string>): boolean => {
   const lower = (file.name || '').trim().toLowerCase();
-  const ext = Object.keys(EXPECTED_MIME_BY_EXT).find((item) => lower.endsWith(item));
+  const ext = Object.keys(mimesByExt).find((item) => lower.endsWith(item));
   if (!ext) return false;
   const mime = (file.type || '').trim().toLowerCase();
-  return !mime || mime === 'application/octet-stream' || mime === EXPECTED_MIME_BY_EXT[ext];
+  return !mime || mime === 'application/octet-stream' || mime === mimesByExt[ext];
 };
+
+/** Validates that a file has a .pdf, .doc, or .docx extension and a matching (or generic/empty) browser MIME type. */
+export const isValidProposalDocumentFile = (file: { name: string; type?: string }): boolean =>
+  matchesExpectedMime(file, EXPECTED_MIME_BY_EXT);
+
+/** Validates that a file is a supported document or scan image (.pdf, .doc, .docx, .jpg, .png, .webp, .gif). */
+export const isValidPreviewDocumentFile = (file: { name: string; type?: string }): boolean =>
+  matchesExpectedMime(file, EXPECTED_PREVIEW_MIME_BY_EXT);
 
 /** Labels an evaluator's page reference: a stored value that already starts with "p." (e.g. "p. 2", "p.12", "P 3") is shown as-is, anything else gets "p. ". */
 export const formatPageRef = (pageRef: string): string => {

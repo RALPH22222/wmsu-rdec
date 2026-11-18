@@ -19,7 +19,6 @@ import { SignatureField } from '../../components/rpduComponent/SignatureField';
 type Template =
   | 'WMSU-RPDU-LET-001.01'
   | 'WMSU-RPDU-LET-003.00'
-  | 'WMSU-RPDU-CERT-001.00'
   | 'WMSU-RPDU-PSC-001.00'
   | 'WMSU-RPDU-CA-001.01';
 
@@ -107,7 +106,6 @@ type Preview = {
 
 const SCREENING: Template = 'WMSU-RPDU-LET-001.01';
 const INVITATION: Template = 'WMSU-RPDU-LET-003.00';
-const CERTIFICATE: Template = 'WMSU-RPDU-CERT-001.00';
 const CONTRACT: Template = 'WMSU-RPDU-CA-001.01';
 
 const isContractTemplate = (t: string) => t === 'WMSU-RPDU-CA-001.01' || t === 'WMSU-RPDU-PSC-001.00';
@@ -123,23 +121,22 @@ export function LetterDeskPage() {
   const { pathname } = useLocation();
   const evaluationsBase = pathname.startsWith('/admin') ? '/admin/evaluations' : '/rpdu/evaluations';
   const [sources, setSources] = useState<Source[]>([]);
+  const externalCertificateRequested = ['WMSU-RPDU-CERT-001.00', 'cotr'].includes(searchParams.get('template') || '');
 
   // Default template based on search params
   const initialTemplate: Template = useMemo(() => {
     const t = searchParams.get('template');
     if (t === CONTRACT || t === 'WMSU-RPDU-PSC-001.00' || t === 'psc') return CONTRACT;
-    if (t === CERTIFICATE || t === 'cotr') return CERTIFICATE;
     if (t === INVITATION) return INVITATION;
     return SCREENING;
   }, [searchParams]);
 
   const [template, setTemplate] = useState<Template>(initialTemplate);
-  const [stage, setStage] = useState(() => (searchParams.get('proposal') || searchParams.get('template') === 'psc' ? 2 : 1));
+  const [stage, setStage] = useState(() => (!externalCertificateRequested && (searchParams.get('proposal') || searchParams.get('template') === 'psc') ? 2 : 1));
 
   // Form State
-  const [conceptId, setConceptId] = useState(() => searchParams.get('proposal') || '');
+  const [conceptId, setConceptId] = useState(() => (externalCertificateRequested ? '' : searchParams.get('proposal') || ''));
   const [reviewId, setReviewId] = useState('');
-  const [headApprovalConfirmed, setHeadApprovalConfirmed] = useState(false);
 
   const [contractContext, setContractContext] = useState<ContractContext | null>(null);
   const [contextLoading, setContextLoading] = useState(() => Boolean(searchParams.get('proposal')));
@@ -213,9 +210,6 @@ export function LetterDeskPage() {
   }, [sources, template]);
 
   const signatoriesReady = useMemo(() => {
-    if (template === CERTIFICATE) {
-      return Boolean(signatories.coordinator.trim());
-    }
     if (isContractTemplate(template)) {
       return Boolean(
         signatories.firstParty?.trim() &&
@@ -325,7 +319,6 @@ export function LetterDeskPage() {
 
   const selectTemplate = (value: Template) => {
     setTemplate(value);
-    setHeadApprovalConfirmed(false);
     setConceptId('');
     setContractContext(null);
     setReviewId('');
@@ -368,7 +361,6 @@ export function LetterDeskPage() {
             'Study Leader',
         },
         signatures: isContractTemplate(template) ? emptyPscSignatures : signatures,
-        headApprovalConfirmed,
         contractData: contractContext?.contractData,
       });
       setPreview(data);
@@ -405,7 +397,6 @@ export function LetterDeskPage() {
             'Study Leader',
         },
         signatures: isContractTemplate(template) ? emptyPscSignatures : signatures,
-        headApprovalConfirmed,
         digest: preview.digest,
         contractData: contractContext?.contractData,
       });
@@ -588,9 +579,14 @@ export function LetterDeskPage() {
             <div>
               <h2 className="text-xl font-bold text-slate-900">Select Official Document Type</h2>
               <p className="mt-1 text-sm text-slate-600">
-                Choose the letter, certificate, or contract you want to prepare and issue.
+                Choose the letter or contract you want to prepare and issue.
               </p>
             </div>
+            {externalCertificateRequested && (
+              <p role="note" className="rounded-sm border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+                Certificate of Technical Review (<span className="font-mono font-semibold">WMSU-RPDU-CERT-001.00</span>) preparation and issuance happen outside the system. The proponent uploads the issued certificate under <span className="font-semibold">Evaluation &amp; Revisions</span>, and RPDU Staff/Head checks it under <Link to={evaluationsBase} className="font-semibold text-[#C8102E] underline">Technical Evaluations</Link>.
+              </p>
+            )}
 
             <fieldset className="space-y-3">
               <legend className="sr-only">Document templates</legend>
@@ -645,30 +641,13 @@ export function LetterDeskPage() {
                 </div>
               </label>
 
-              {/* 3. Certificate of Technical Review (COTR) */}
-              <label
-                className={`block cursor-pointer rounded-lg border p-5 transition-all ${
-                  template === CERTIFICATE
-                    ? 'border-[#C8102E] bg-red-50/50 shadow-xs'
-                    : 'border-slate-200 bg-white hover:bg-slate-50'
-                }`}
-              >
-                <div className="flex items-start gap-3">
-                  <input
-                    className="mt-1 h-4 w-4 accent-[#C8102E] cursor-pointer"
-                    type="radio"
-                    name="template"
-                    checked={template === CERTIFICATE}
-                    onChange={() => selectTemplate(CERTIFICATE)}
-                  />
-                  <div>
-                    <span className="font-bold text-slate-900">Certificate of Technical Review (COTR)</span>
-                    <p className="mt-1 text-xs text-slate-500">
-                      WMSU-RPDU-CERT-001.00 · Official technical review clearance for endorsement to the Research Ethics Office (REO).
-                    </p>
-                  </div>
-                </div>
-              </label>
+              {/* 3. Certificate of Technical Review (COTR — external) */}
+              <div className="rounded-lg border border-slate-200 bg-slate-50 p-5">
+                <p className="font-bold text-slate-900">Certificate of Technical Review (COTR)</p>
+                <p className="mt-1 text-xs text-slate-600">
+                  WMSU-RPDU-CERT-001.00 · Prepared and issued outside the system. Proponents upload the issued certificate under <span className="font-semibold">Evaluation &amp; Revisions → Post-approval</span>, and RPDU Staff/Head checks and approves it under <Link to={evaluationsBase} className="font-semibold text-[#C8102E] underline">Technical Evaluations</Link> → Document checks.
+                </p>
+              </div>
 
               {/* 4. Professional Service Contract (PSC) */}
               <label
@@ -723,8 +702,6 @@ export function LetterDeskPage() {
               <p className="mt-1 text-sm text-slate-600">
                 {isContractTemplate(template)
                   ? 'Select a research proposal with an accepted Line-Item Budget to automatically pull its Final Approved Budget, Proponent Name, and Proposal Title from the database into 11 PSC.pdf and 11 PSC.docx.'
-                  : template === CERTIFICATE
-                  ? 'Select the technically reviewed proposal to issue the clearance certificate.'
                   : 'Select the proposal record to address this official correspondence.'}
               </p>
             </div>
@@ -742,7 +719,6 @@ export function LetterDeskPage() {
                   setConceptId(event.target.value);
                   setContractContext(null);
                   setContextLoading(isContractTemplate(template) && Boolean(event.target.value));
-                  setHeadApprovalConfirmed(false);
                   setReviewId('');
                   clearDraft();
                 }}
@@ -979,29 +955,9 @@ export function LetterDeskPage() {
               <p className="mt-1 text-sm text-slate-600">
                 {isContractTemplate(template)
                   ? 'Confirm the Conforme contracting parties and official witnesses in accordance with the official WMSU PSC template.'
-                  : `Confirm the designated officials and signers for this ${
-                      template === CERTIFICATE ? 'certificate' : 'letter'
-                    }.`}
+                  : 'Confirm the designated officials and signers for this letter.'}
               </p>
             </div>
-
-            {/* COTR Specific Head Approval Checkbox */}
-            {template === CERTIFICATE && (
-              <label className="flex items-start gap-3 rounded-md border border-amber-200 bg-amber-50 p-4 text-sm leading-relaxed text-amber-900 cursor-pointer">
-                <input
-                  type="checkbox"
-                  className="mt-1 h-4 w-4 accent-[#C8102E] cursor-pointer"
-                  checked={headApprovalConfirmed}
-                  onChange={(event) => {
-                    setHeadApprovalConfirmed(event.target.checked);
-                    clearDraft();
-                  }}
-                />
-                <span className="font-medium">
-                  I hereby confirm that the RPDU Head has thoroughly evaluated the final detailed research proposal, validated all revision action sheets, and approved the study for clearance to the Research Ethics Office (REO).
-                </span>
-              </label>
-            )}
 
             <div className="space-y-6">
               {/* FOR CONTRACT (PSC): IN-PERSON SIGNING & CONFORME SIGNATORY VERIFICATION */}
@@ -1172,28 +1128,26 @@ export function LetterDeskPage() {
                     </div>
                   </div>
 
-                  {template !== CERTIFICATE && (
-                    <div>
-                      <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1" htmlFor="director-name">
-                        RDEC Director *
-                      </label>
-                      <input
-                        id="director-name"
-                        maxLength={120}
-                        value={signatories.director}
-                        onChange={(event) => updateSignatory('director', event.target.value)}
-                        placeholder="Full name of RDEC Director"
-                        className="w-full rounded-md border border-slate-300 bg-white p-3 text-sm text-slate-900 font-semibold focus:border-[#C8102E] focus:outline-hidden"
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1" htmlFor="director-name">
+                      RDEC Director *
+                    </label>
+                    <input
+                      id="director-name"
+                      maxLength={120}
+                      value={signatories.director}
+                      onChange={(event) => updateSignatory('director', event.target.value)}
+                      placeholder="Full name of RDEC Director"
+                      className="w-full rounded-md border border-slate-300 bg-white p-3 text-sm text-slate-900 font-semibold focus:border-[#C8102E] focus:outline-hidden"
+                    />
+                    <div className="mt-3">
+                      <SignatureField
+                        label="Director Signature"
+                        value={signatures.director}
+                        onChange={(value) => updateSignature('director', value)}
                       />
-                      <div className="mt-3">
-                        <SignatureField
-                          label="Director Signature"
-                          value={signatures.director}
-                          onChange={(value) => updateSignature('director', value)}
-                        />
-                      </div>
                     </div>
-                  )}
+                  </div>
 
                   {template === SCREENING && (
                     <div className="md:col-span-2 flex justify-center">
@@ -1256,8 +1210,6 @@ export function LetterDeskPage() {
                 <h2 className="text-xl font-bold text-slate-900">
                   {isContractTemplate(template)
                     ? 'Review Professional Service Contract (WMSU-RPDU-CA-001.01)'
-                    : template === CERTIFICATE
-                    ? 'Review Certificate of Technical Review'
                     : 'Review and Issue Document'}
                 </h2>
                 <p className="mt-1 text-sm text-slate-600">
@@ -1349,8 +1301,6 @@ export function LetterDeskPage() {
                     ? 'Issuing Document…'
                     : isContractTemplate(template)
                     ? 'Send PSC to Proponent'
-                    : template === CERTIFICATE
-                    ? 'Issue & Archive Certificate (COTR)'
                     : 'Issue Official Letter'}
                 </button>
                 {projectPeriodNotice}
@@ -1366,8 +1316,6 @@ export function LetterDeskPage() {
                     <div className="font-bold">
                       {isContractTemplate(template)
                         ? 'PSC sent to the proponent for completion and download.'
-                        : template === CERTIFICATE
-                        ? 'Certificate of Technical Review successfully cleared!'
                         : 'Official letter successfully issued!'}
                     </div>
                     <div className="text-xs text-emerald-800 mt-0.5">

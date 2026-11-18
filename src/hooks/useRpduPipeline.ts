@@ -294,5 +294,5 @@ export function useRpduProposal(id: string | undefined) {
     }
   }, [id, token, setData, showToast, reread]);
 
-  return { proposal: resource.data, loading: resource.loading, error: resource.error, refresh: resource.refresh, replace: resource.setData, unassign, checkRevision, checkAnonymity, forward, buildActionSheet, saveSummary, publishSummary, resendSummaryEmail, recordEmailReview, clarify, checkNda, saveFundingClassification, setProjectPeriod };
+  return { proposal: resource.data, loading: resource.loading, error: resource.error, refresh: resource.refresh, reread, replace: resource.setData, unassign, checkRevision, checkAnonymity, forward, buildActionSheet, saveSummary, publishSummary, resendSummaryEmail, recordEmailReview, clarify, checkNda, saveFundingClassification, setProjectPeriod };
 }

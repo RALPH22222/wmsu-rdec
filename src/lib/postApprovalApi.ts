@@ -5,7 +5,7 @@ import { request } from './apiRequest';
 export const getPostApprovalDocuments = async (proposalId: string, token?: string, signal?: AbortSignal): Promise<PostApprovalDocuments> =>
   (await request<PostApprovalDocuments>(API_ENDPOINTS.PIPELINE.MY_POST_APPROVAL_DOCUMENTS(proposalId), token, {}, signal)).data;
 
-/** Either or both files; the server stores each as a new version. */
+/** Any combination of the three post-approval files; the server stores each as a new version. */
 export const uploadPostApprovalDocumentsApi = async (
   proposalId: string,
   files: Partial<Record<PostApprovalKind, File>>,
@@ -14,15 +14,21 @@ export const uploadPostApprovalDocumentsApi = async (
   const body = new FormData();
   if (files.ACTION_SHEET) body.append('action_sheet_file', files.ACTION_SHEET);
   if (files.WORK_PLAN) body.append('work_plan_file', files.WORK_PLAN);
+  if (files.TECHNICAL_CERTIFICATE) body.append('technical_certificate_file', files.TECHNICAL_CERTIFICATE);
   return (await request<PostApprovalDocuments>(API_ENDPOINTS.PIPELINE.MY_POST_APPROVAL_DOCUMENTS(proposalId), token, { method: 'POST', body })).data;
 };
 
-const TEMPLATE_FILES: Record<PostApprovalKind, { slug: 'action-sheet' | 'work-plan'; fileName: string }> = {
+type TemplateKind = 'ACTION_SHEET' | 'WORK_PLAN';
+
+const TEMPLATE_FILES: Record<TemplateKind, { slug: 'action-sheet' | 'work-plan'; fileName: string }> = {
   ACTION_SHEET: { slug: 'action-sheet', fileName: 'Proposal Action Sheet (FR-007.00).docx' },
   WORK_PLAN: { slug: 'work-plan', fileName: 'Research Work Plan (FR-010.00).docx' },
 };
 
+const isTemplateKind = (kind: PostApprovalKind): kind is TemplateKind => kind === 'ACTION_SHEET' || kind === 'WORK_PLAN';
+
 export const downloadPostApprovalTemplate = async (proposalId: string, kind: PostApprovalKind, token?: string): Promise<void> => {
+  if (!isTemplateKind(kind)) throw new Error('This document is prepared and issued outside the system.');
   if (!token) throw new Error('Please sign in to continue.');
   const { slug, fileName } = TEMPLATE_FILES[kind];
   const response = await fetch(API_ENDPOINTS.PIPELINE.MY_POST_APPROVAL_TEMPLATE(proposalId, slug), { headers: { Authorization: `Bearer ${token}` } });

@@ -10,6 +10,7 @@ import {
   formatPageRef,
   initialsOf,
   isOverdue,
+  isValidPreviewDocumentFile,
   isValidProposalDocumentFile,
 } from './format.ts';
 
@@ -76,6 +77,13 @@ test('isValidProposalDocumentFile accepts PDF, DOC, and DOCX files and rejects u
   assert.equal(isValidProposalDocumentFile({ name: 'endorsement.docx', type: '' }), true);
   assert.equal(isValidProposalDocumentFile({ name: 'notes.txt', type: 'text/plain' }), false);
   assert.equal(isValidProposalDocumentFile({ name: 'fake.pdf', type: 'image/png' }), false);
+});
+
+test('isValidPreviewDocumentFile also allows signed certificate image scans', () => {
+  assert.equal(isValidPreviewDocumentFile({ name: 'certificate.pdf', type: 'application/pdf' }), true);
+  assert.equal(isValidPreviewDocumentFile({ name: 'certificate.jpg', type: 'image/jpeg' }), true);
+  assert.equal(isValidPreviewDocumentFile({ name: 'certificate.png', type: 'image/png' }), true);
+  assert.equal(isValidPreviewDocumentFile({ name: 'certificate.exe', type: 'application/octet-stream' }), false);
 });
 
 test('formatPageRef prefixes a bare page reference and leaves an already-prefixed one alone', () => {

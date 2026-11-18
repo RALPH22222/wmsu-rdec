@@ -34,7 +34,7 @@ const Card = ({ title, badge, children }: { title: string; badge?: ReactNode; ch
 
 /** Rendered keyed by the route id, so a stale response for a previous id can never write into this proposal. */
 function DetailBody({ id, role }: { id: string | undefined; role: 'rpdu' | 'admin' }) {
-  const { proposal, loading, error, refresh, unassign, checkRevision, checkAnonymity, forward, buildActionSheet, saveSummary, publishSummary, resendSummaryEmail, recordEmailReview, clarify, checkNda, saveFundingClassification, setProjectPeriod } = useRpduProposal(id);
+  const { proposal, loading, error, refresh, reread, unassign, checkRevision, checkAnonymity, forward, buildActionSheet, saveSummary, publishSummary, resendSummaryEmail, recordEmailReview, clarify, checkNda, saveFundingClassification, setProjectPeriod } = useRpduProposal(id);
   const backHref = `/${role}/evaluations`;
 
   if (loading) return (
@@ -99,7 +99,7 @@ function DetailBody({ id, role }: { id: string | undefined; role: 'rpdu' | 'admi
       </Card>
 
       {!!proposal.manuscriptVersions?.length && <details className="bg-white p-4"><summary className="min-h-11 cursor-pointer text-sm font-semibold">Manuscript history</summary>{proposal.manuscriptVersions.map((version) => <div key={version.id} className="py-2"><DocumentLink href={version.fileUrl} label={`Version ${version.version} · ${version.stage}${version.current ? ' · Current' : ''}`} muted /></div>)}</details>}
-      {(proposal.status === 'APPROVED' || proposal.status === 'FORWARDED_TO_REO') && <TechnicalReviewGateway proposal={proposal} role={role} onForward={forward} />}
+      {(proposal.status === 'APPROVED' || proposal.status === 'FORWARDED_TO_REO') && <TechnicalReviewGateway proposal={proposal} onForward={forward} />}
       {(proposal.canSetProjectPeriod || proposal.projectPeriod) && (
         <Card title="Project period">
           <ProjectPeriodCard key={proposal.projectPeriod ? `${proposal.projectPeriod.startDate}:${proposal.projectPeriod.durationMonths}` : 'unset'} proposal={proposal} onSave={setProjectPeriod} />
@@ -140,8 +140,10 @@ function DetailBody({ id, role }: { id: string | undefined; role: 'rpdu' | 'admi
 
       {(proposal.revisions.length > 0 || proposal.status === 'APPROVED' || proposal.status === 'FORWARDED_TO_REO') && (
         <Card title="Document checks">
-          {/* No page refresh on change: it would swap the page for its loading skeleton and lose the scroll position. */}
-          <DocumentChecksCard proposalId={proposal.id} />
+          {/* Silently re-read proposal after checks so TechnicalReviewGateway reflects certificate approval without resetting scroll. */}
+          <div id="document-checks" className="scroll-mt-20">
+            <DocumentChecksCard proposalId={proposal.id} onChanged={reread} />
+          </div>
         </Card>
       )}
 

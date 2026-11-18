@@ -1,7 +1,7 @@
 // RPDU document checks: returned revisions and post-approval document checks (backend services/documentChecks.js).
 
 export type RevisionItem = 'MANUSCRIPT' | 'ACTION_SHEET' | 'REVISION_HISTORY';
-export type PostApprovalKind = 'ACTION_SHEET' | 'WORK_PLAN';
+export type PostApprovalKind = 'ACTION_SHEET' | 'WORK_PLAN' | 'TECHNICAL_CERTIFICATE';
 export type CheckState = 'SUBMITTED' | 'RETURNED' | 'CHECKED';
 
 export interface RevisionFiles {
@@ -70,6 +70,7 @@ export const REVISION_ITEM_LABEL: Record<RevisionItem, string> = {
 export const POST_APPROVAL_LABEL: Record<PostApprovalKind, string> = {
   ACTION_SHEET: 'Action Sheet',
   WORK_PLAN: 'Work Plan',
+  TECHNICAL_CERTIFICATE: 'Certificate of Technical Review',
 };
 
 export type CorrectionFiles = Partial<Record<RevisionItem, File>>;

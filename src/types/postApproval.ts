@@ -1,5 +1,5 @@
-/** Post-approval documents: the Proposal Action Sheet (WMSU-RPDU-FR-007.00) and the Research Work Plan (WMSU-RPDU-FR-010.00). */
-export type PostApprovalKind = 'ACTION_SHEET' | 'WORK_PLAN';
+/** Post-approval documents: Proposal Action Sheet (WMSU-RPDU-FR-007.00), Research Work Plan (WMSU-RPDU-FR-010.00), and externally issued Certificate of Technical Review (WMSU-RPDU-CERT-001.00). */
+export type PostApprovalKind = 'ACTION_SHEET' | 'WORK_PLAN' | 'TECHNICAL_CERTIFICATE';
 export type PostApprovalStatus = 'SUBMITTED' | 'CHECKED' | 'RETURNED';
 
 export interface PostApprovalVersion {
@@ -26,6 +26,6 @@ export interface PostApprovalDocument {
 export interface PostApprovalDocuments {
   canUpload: boolean;
   reason?: string;
-  /** Always two entries: the Action Sheet, then the Work Plan. */
+  /** Always three entries: Action Sheet, Work Plan, and Certificate of Technical Review. */
   documents: PostApprovalDocument[];
 }
