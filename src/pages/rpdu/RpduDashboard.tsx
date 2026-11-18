@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Calendar, FileText, Layers, Users, ClipboardCheck } from 'lucide-react';
 import { useCallForProposals } from '../../context/CallForProposalsContext';
 import { useAuth } from '../../context/AuthContext';
@@ -9,9 +9,13 @@ import { EvaluatorsRoster } from '../../components/rpduComponent/EvaluatorsRoste
 
 export const RpduDashboard: React.FC = () => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { activeCall, calls, conceptProposals } = useCallForProposals({ calls: true, concepts: true });
   const { user, profile, loadingProfile } = useAuth();
-  const [activeTab, setActiveTab] = useState<'calls' | 'evaluators'>('calls');
+  const activeTab = searchParams.get('tab') === 'evaluators' ? 'evaluators' : 'calls';
+  const selectTab = (tab: 'calls' | 'evaluators') => {
+    setSearchParams(tab === 'evaluators' ? { tab: 'evaluators' } : {}, { replace: true });
+  };
 
   const fullName = formatUserFullName(profile, user, 'RPDU Staff');
 
@@ -108,7 +112,7 @@ export const RpduDashboard: React.FC = () => {
         <nav className="flex space-x-6 sm:space-x-8 overflow-x-auto scrollbar-none">
           <button
             type="button"
-            onClick={() => setActiveTab('calls')}
+            onClick={() => selectTab('calls')}
             className={`py-3.5 px-1 border-b-2 font-bold text-xs sm:text-sm transition-colors cursor-pointer flex items-center gap-2 whitespace-nowrap ${activeTab === 'calls'
                 ? 'border-[#C8102E] text-[#C8102E]'
                 : 'border-transparent text-slate-500 hover:text-slate-800'
@@ -123,7 +127,7 @@ export const RpduDashboard: React.FC = () => {
 
           <button
             type="button"
-            onClick={() => setActiveTab('evaluators')}
+            onClick={() => selectTab('evaluators')}
             className={`py-3.5 px-1 border-b-2 font-bold text-xs sm:text-sm transition-colors cursor-pointer flex items-center gap-2 whitespace-nowrap ${activeTab === 'evaluators'
                 ? 'border-[#C8102E] text-[#C8102E]'
                 : 'border-transparent text-slate-500 hover:text-slate-800'
