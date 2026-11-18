@@ -40,7 +40,34 @@ function PortalBody({ reviewId }: { reviewId: string | undefined }) {
     return result;
   };
 
-  if (loading) return <section className="mx-auto max-w-5xl space-y-3" aria-label="Loading review"><div className="h-20 animate-pulse rounded-sm bg-slate-100" /><div className="h-40 animate-pulse rounded-sm bg-slate-100" /></section>;
+  if (loading) return (
+    <section role="status" aria-busy="true" className="mx-auto max-w-5xl space-y-4">
+      <span className="sr-only">Loading review</span>
+      <div aria-hidden="true" className="space-y-4 motion-safe:animate-pulse">
+        <div className="h-9 w-36 rounded-sm bg-slate-200" />
+        <div className="space-y-3 rounded-sm border border-slate-200 bg-white p-4 shadow-xs sm:p-5">
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="h-6 w-28 rounded-none bg-slate-200" />
+            <div className="h-4 w-40 rounded-sm bg-slate-100" />
+          </div>
+          <div className="h-6 w-3/4 rounded-sm bg-slate-200" />
+          <div className="h-4 w-5/6 rounded-sm bg-slate-100" />
+          <div className="h-10 w-full rounded-sm bg-slate-100" />
+          <div className="h-10 w-full rounded-sm bg-slate-100" />
+          <div className="h-9 w-64 max-w-full rounded-sm bg-slate-200" />
+        </div>
+        <div className="space-y-3 rounded-sm border border-slate-200 bg-white p-4 shadow-xs sm:p-5">
+          <div className="h-4 w-44 rounded-sm bg-slate-200" />
+          <div className="h-4 w-full max-w-xl rounded-sm bg-slate-100" />
+          <div className="h-11 w-44 rounded-sm bg-slate-200" />
+        </div>
+        <div className="space-y-3 rounded-sm border border-slate-200 bg-white p-4 shadow-xs sm:p-5">
+          <div className="h-4 w-36 rounded-sm bg-slate-200" />
+          <div className="h-24 w-full rounded-sm bg-slate-100" />
+        </div>
+      </div>
+    </section>
+  );
   if (error || !review) return <section className="mx-auto max-w-5xl space-y-3"><Link to="/evaluator/reviews" className="inline-flex min-h-11 items-center gap-1 text-xs font-semibold text-slate-600"><ArrowLeft className="h-4 w-4" />Back</Link><p role="alert" className="rounded-sm border border-red-200 bg-red-50 p-4 text-sm text-red-800">{error || 'Review not found.'}</p></section>;
 
   const current = review.submissions.find((s) => s.round === review.currentRound);
@@ -69,7 +96,7 @@ function PortalBody({ reviewId }: { reviewId: string | undefined }) {
       <Link to="/evaluator/reviews" className="inline-flex min-h-11 items-center gap-1 text-xs font-semibold text-slate-600 hover:text-slate-900"><ArrowLeft className="h-4 w-4" />Assigned reviews</Link>
 
       <header className="rounded-sm border border-slate-200 bg-white p-4 shadow-xs sm:p-5">
-        <div className="flex flex-wrap items-center gap-2"><span className="font-mono text-[11px] font-bold text-slate-500">{review.code}</span><StatusBadge status={review.proposalStatus} size="md" /><span className="text-xs text-slate-500">Round {review.currentRound} · You are {review.blindLabel}</span></div>
+        <div className="flex flex-wrap items-center gap-2"><StatusBadge status={review.proposalStatus} size="md" /><span className="text-xs text-slate-500">Round {review.currentRound} · You are {review.blindLabel}</span></div>
         <h2 className="mt-2 break-words font-brand text-lg font-bold text-slate-900">{review.title}</h2>
         <p className="mt-1 flex items-start gap-2 text-xs text-slate-500"><EyeOff className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />Identities are withheld both ways: you see the research team only by code, and they see you only as Evaluator A, B or C.</p>
         <p className="mt-3 rounded-sm bg-slate-50 p-3 text-xs text-slate-700">{nextStep}</p>

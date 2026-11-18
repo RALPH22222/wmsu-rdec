@@ -74,7 +74,7 @@ export function EvaluatorSidebar({ mobileOpen = false, onCloseMobile }: Evaluato
                   <span className="block text-base font-extrabold uppercase tracking-tight text-slate-900 sm:text-lg">
                     WMSU <span className="text-brand">RDEC</span>
                   </span>
-                  <span className="inline-block rounded-xs border border-slate-300 bg-slate-200/80 px-1.5 py-0.2 text-[9px] font-black uppercase tracking-wider text-slate-800">
+                  <span className="inline-block rounded-xs border border-emerald-300 bg-emerald-100 px-1.5 py-0.2 text-[9px] font-black uppercase tracking-wider text-emerald-900">
                     Evaluator Desk
                   </span>
                 </div>
@@ -134,8 +134,8 @@ export function EvaluatorSidebar({ mobileOpen = false, onCloseMobile }: Evaluato
               <div
                 className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-sm border font-bold text-xs transition-colors ${
                   location.pathname === '/evaluator/profile'
-                    ? 'border-[#C8102E] bg-[#C8102E] text-white'
-                    : 'border-slate-200 bg-slate-100 text-slate-700 group-hover:border-red-200'
+                    ? 'border-emerald-700 bg-emerald-700 text-white'
+                    : 'border-emerald-300 bg-emerald-100 text-emerald-800 group-hover:border-emerald-400'
                 }`}
               >
                 <User className="h-5 w-5" strokeWidth={1.75} />

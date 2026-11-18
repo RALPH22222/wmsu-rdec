@@ -27,23 +27,28 @@ export function EvaluatorAssignmentPage({ role = 'rpdu' }: EvaluatorAssignmentPa
   const current = assigning ? proposals.find((item) => item.id === assigning.id) ?? null : null;
 
   return (
-    <section className="mx-auto max-w-5xl space-y-4" aria-labelledby="evaluations-title">
-      <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+    <section className="space-y-6 text-slate-900" aria-labelledby="evaluations-title">
+      <header className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h2 id="evaluations-title" className="font-brand text-lg font-bold text-slate-900">Technical Evaluations</h2>
-          <p className="text-xs text-slate-500">{proposals.length} proposal{proposals.length === 1 ? '' : 's'} · {awaiting} awaiting evaluators</p>
-        </div>
-        <div className="flex flex-col gap-2 sm:flex-row">
-          <label className="relative block sm:w-64">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-            <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search title, code, proponent" aria-label="Search proposals" className="min-h-11 w-full rounded-sm border border-slate-200 bg-white pl-9 pr-3 text-sm focus:border-[#C8102E] focus:outline-none" />
-          </label>
-          <select value={status} onChange={(e) => setStatus(e.target.value as PipelineStatus | 'ALL')} aria-label="Filter by status" className="min-h-11 rounded-sm border border-slate-200 bg-white px-3 text-sm focus:border-[#C8102E] focus:outline-none">
-            <option value="ALL">All statuses</option>
-            {STATUS_ORDER.map((value) => <option key={value} value={value}>{STATUS_META[value].label}</option>)}
-          </select>
+          <h1 id="evaluations-title" className="text-2xl font-bold">Technical Evaluations</h1>
+          <p className="mt-2 max-w-3xl text-base text-slate-600">
+            Assign evaluators to cleared detailed proposals and track review progress.
+          </p>
+          <p className="mt-1.5 text-sm font-bold text-slate-700">
+            {proposals.length} proposal{proposals.length === 1 ? '' : 's'} · {awaiting} awaiting evaluators
+          </p>
         </div>
       </header>
+      <div className="flex flex-col gap-2 sm:flex-row">
+        <label className="relative block sm:w-72">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+          <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search title or proponent" aria-label="Search proposals" className="min-h-11 w-full rounded-sm border border-slate-200 bg-white pl-9 pr-3 text-sm focus:border-[#C8102E] focus:outline-none" />
+        </label>
+        <select value={status} onChange={(e) => setStatus(e.target.value as PipelineStatus | 'ALL')} aria-label="Filter by status" className="min-h-11 rounded-sm border border-slate-200 bg-white px-3 text-sm focus:border-[#C8102E] focus:outline-none">
+          <option value="ALL">All statuses</option>
+          {STATUS_ORDER.map((value) => <option key={value} value={value}>{STATUS_META[value].label}</option>)}
+        </select>
+      </div>
 
       {error && (
         <p role="alert" className="flex flex-col gap-2 rounded-sm border border-red-200 bg-red-50 p-4 text-sm text-red-800 sm:flex-row sm:items-center sm:justify-between">
@@ -53,7 +58,28 @@ export function EvaluatorAssignmentPage({ role = 'rpdu' }: EvaluatorAssignmentPa
       )}
 
       {loading ? (
-        <div className="space-y-3" aria-label="Loading proposals"><div className="h-24 animate-pulse rounded-sm bg-slate-100" /><div className="h-24 animate-pulse rounded-sm bg-slate-100" /></div>
+        <div role="status" aria-busy="true" className="divide-y divide-slate-100 rounded-sm border border-slate-200 bg-white shadow-xs">
+          <span className="sr-only">Loading proposals</span>
+          {[0, 1, 2, 3].map((index) => (
+            <div key={index} aria-hidden="true" className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5 motion-safe:animate-pulse">
+              <div className="min-w-0 flex-1 space-y-2.5">
+                <div className="h-5 w-28 rounded-sm bg-slate-200" />
+                <div className="h-4 w-72 max-w-full rounded-sm bg-slate-200" />
+                <div className="h-3 w-56 max-w-full rounded-sm bg-slate-100" />
+                <div className="flex items-center gap-1.5 pt-0.5">
+                  <span className="h-2.5 w-2.5 rounded-full bg-slate-200" />
+                  <span className="h-2.5 w-2.5 rounded-full bg-slate-200" />
+                  <span className="h-2.5 w-2.5 rounded-full bg-slate-200" />
+                  <span className="ml-1 h-3 w-16 rounded-sm bg-slate-100" />
+                </div>
+              </div>
+              <div className="flex gap-2 sm:shrink-0">
+                <div className="h-11 w-24 rounded-sm bg-slate-200" />
+                <div className="h-11 w-20 rounded-sm bg-slate-100" />
+              </div>
+            </div>
+          ))}
+        </div>
       ) : visible.length === 0 ? (
         error ? null : <EmptyState icon={ClipboardList} title={proposals.length === 0 ? 'No detailed proposals yet' : 'No proposals match'} description={proposals.length === 0 ? 'Detailed proposals appear here once proponents submit them after preliminary screening.' : 'Try a different search or status.'} />
       ) : (

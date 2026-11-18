@@ -29,7 +29,7 @@ export function EvaluatorReviewsPage() {
               return (
               <li key={review.id} className="flex flex-col gap-4 p-4 transition-colors hover:bg-slate-50/50 sm:flex-row sm:items-center sm:justify-between sm:p-5">
                 <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-2"><span className="font-mono text-[11px] font-bold text-slate-500">{review.code}</span><StatusBadge status={review.proposalStatus} /><NdaChip state={review.nda.state} />{review.invitation.canRespond && <span className="rounded-sm bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-800">Awaiting your response</span>}<span className="text-[11px] font-semibold text-slate-500">Round {review.currentRound} · You are {review.blindLabel}</span></div>
+                  <div className="flex flex-wrap items-center gap-2"><StatusBadge status={review.proposalStatus} /><NdaChip state={review.nda.state} />{review.invitation.canRespond && <span className="rounded-sm bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-800">Awaiting your response</span>}<span className="text-[11px] font-semibold text-slate-500">Round {review.currentRound} · You are {review.blindLabel}</span></div>
                   <h4 className="mt-2 break-words text-base font-bold leading-snug text-slate-900 [overflow-wrap:anywhere]">{review.title}</h4>
                 </div>
                 <Link to={`/evaluator/reviews/${review.id}`} className={`inline-flex min-h-11 items-center justify-center rounded-sm px-4 text-sm font-semibold sm:shrink-0 ${primary ? 'bg-[#C8102E] text-white hover:bg-[#A00D26]' : 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50'}`}>

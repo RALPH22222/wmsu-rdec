@@ -117,6 +117,7 @@ export function AdminSidebar({ mobileOpen = false, onCloseMobile }: AdminSidebar
                 (item.path === '/admin/letters' && pathname.startsWith('/admin/letters/')) ||
                 (item.path === '/admin/outsourced-projects' && pathname.startsWith('/admin/outsourced-projects/')) ||
                 (item.path === '/admin/screening' && pathname.startsWith('/admin/screening/')) ||
+                (item.path === '/admin/evaluations' && pathname.startsWith('/admin/evaluations/')) ||
                 (item.path === '/admin' && pathname.startsWith('/admin/calls/'));
               const Icon = item.icon;
               return (

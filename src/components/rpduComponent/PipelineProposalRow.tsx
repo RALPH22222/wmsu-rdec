@@ -28,7 +28,6 @@ export function PipelineProposalRow({ proposal, detailHref, onAssign }: Pipeline
     <li className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
       <div className="min-w-0">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="font-mono text-[11px] font-bold text-slate-500">{proposal.code}</span>
           <ProposalStatusBadge proposal={proposal} />
           {proposal.awaitingReply > 0 && <span className="rounded-sm bg-amber-50 px-2 py-0.5 text-[11px] font-bold text-amber-700">{proposal.awaitingReply} question{proposal.awaitingReply === 1 ? '' : 's'} awaiting reply</span>}
           {proposal.currentRound > 1 && <span className="text-[11px] font-semibold text-slate-500">Round {proposal.currentRound}</span>}

@@ -180,6 +180,7 @@ export function RpduSidebar({ mobileOpen = false, onCloseMobile }: RpduSidebarPr
                 (item.path === '/rpdu/letters' && pathname.startsWith('/rpdu/letters/')) ||
                 (item.path === '/rpdu/outsourced-projects' && pathname.startsWith('/rpdu/outsourced-projects/')) ||
                 (item.path === '/rpdu/screening' && pathname.startsWith('/rpdu/screening/')) ||
+                (item.path === '/rpdu/evaluations' && pathname.startsWith('/rpdu/evaluations/')) ||
                 (item.path === '/rpdu' && pathname.startsWith('/rpdu/calls/'));
               const Icon = item.icon;
               return (

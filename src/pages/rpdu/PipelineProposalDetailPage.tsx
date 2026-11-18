@@ -37,7 +37,38 @@ function DetailBody({ id, role }: { id: string | undefined; role: 'rpdu' | 'admi
   const { proposal, loading, error, refresh, unassign, checkRevision, checkAnonymity, forward, buildActionSheet, saveSummary, publishSummary, resendSummaryEmail, recordEmailReview, clarify, checkNda, saveFundingClassification, setProjectPeriod } = useRpduProposal(id);
   const backHref = `/${role}/evaluations`;
 
-  if (loading) return <section className="mx-auto max-w-5xl space-y-3" aria-label="Loading proposal"><div className="h-20 animate-pulse rounded-sm bg-slate-100" /><div className="h-40 animate-pulse rounded-sm bg-slate-100" /></section>;
+  if (loading) return (
+    <section role="status" aria-busy="true" className="mx-auto max-w-5xl space-y-4">
+      <span className="sr-only">Loading proposal</span>
+      <div aria-hidden="true" className="space-y-4 motion-safe:animate-pulse">
+        <div className="flex items-center justify-between gap-3">
+          <div className="h-9 w-28 rounded-sm bg-slate-200" />
+          <div className="h-10 w-36 rounded-sm bg-slate-100" />
+        </div>
+        <div className="space-y-3 rounded-sm border border-slate-200 bg-white p-4 shadow-xs sm:p-5">
+          <div className="flex items-center gap-2">
+            <div className="h-6 w-28 rounded-sm bg-slate-200" />
+            <div className="h-4 w-16 rounded-sm bg-slate-100" />
+          </div>
+          <div className="h-6 w-3/4 rounded-sm bg-slate-200" />
+          <div className="h-3.5 w-1/2 rounded-sm bg-slate-100" />
+          <div className="h-10 w-full rounded-sm bg-slate-100" />
+          <div className="flex gap-2 pt-1">
+            <div className="h-10 w-36 rounded-sm bg-slate-200" />
+            <div className="h-10 w-28 rounded-sm bg-slate-100" />
+          </div>
+        </div>
+        <div className="space-y-3 rounded-sm border border-slate-200 bg-white p-4 shadow-xs sm:p-5">
+          <div className="h-4 w-48 rounded-sm bg-slate-200" />
+          <div className="h-48 w-full rounded-sm bg-slate-100" />
+        </div>
+        <div className="space-y-3 rounded-sm border border-slate-200 bg-white p-4 shadow-xs sm:p-5">
+          <div className="h-4 w-32 rounded-sm bg-slate-200" />
+          <div className="h-24 w-full rounded-sm bg-slate-100" />
+        </div>
+      </div>
+    </section>
+  );
   if (error || !proposal) return <section className="mx-auto max-w-5xl space-y-3"><Link to={backHref} className="inline-flex min-h-11 items-center gap-1 text-xs font-semibold text-slate-600"><ArrowLeft className="h-4 w-4" />Back</Link><p role="alert" className="rounded-sm border border-red-200 bg-red-50 p-4 text-sm text-red-800">{error || 'Proposal not found.'}</p></section>;
 
   const submittedRounds = proposal.panel.flatMap((seat) => seat.submissions.map((s) => s.round));
@@ -55,7 +86,7 @@ function DetailBody({ id, role }: { id: string | undefined; role: 'rpdu' | 'admi
       </div>
 
       <header className="rounded-sm border border-slate-200 bg-white p-4 shadow-xs sm:p-5">
-        <div className="flex flex-wrap items-center gap-2"><span className="font-mono text-[11px] font-bold text-slate-500">{proposal.code}</span><ProposalStatusBadge proposal={proposal} size="md" /><span className="text-xs text-slate-500">Round {proposal.currentRound}</span></div>
+        <div className="flex flex-wrap items-center gap-2"><ProposalStatusBadge proposal={proposal} size="md" /><span className="text-xs text-slate-500">Round {proposal.currentRound}</span></div>
         <h2 className="mt-2 break-words font-brand text-lg font-bold text-slate-900">{proposal.title}</h2>
         <p className="mt-1 text-xs text-slate-500">{proposal.proponent.name} · {proposal.proponent.department || 'No department'} · Submitted {formatDate(proposal.submittedAt)}</p>
         <p className="mt-3 rounded-sm bg-slate-50 p-3 text-xs text-slate-700">{proposal.preReviewStage ? stageExplanation(proposal.preReviewStage) : nextStepFor(proposal.status, 'rpdu', proposal.currentRound)}</p>
