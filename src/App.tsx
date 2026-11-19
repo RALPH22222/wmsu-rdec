@@ -121,6 +121,7 @@ export function App() {
               {/* Proponent Dashboard Layout */}
               <Route element={<Layout />}>
                 <Route path="/proponent" element={<ProponentDashboard />} />
+                <Route path="/proponent/tracker" element={<Navigate to="/proponent?tab=tracker" replace />} />
                 <Route path="/proponent/submit" element={<ProponentDashboard />} />
                 <Route path="/proponent/proposals/:proposalId" element={<ConceptProposalDetailsPage />} />
                 <Route path="/proponent/detailed-proposals" element={<DetailedProposalSubmissionPage />} />

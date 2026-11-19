@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useId, useRef } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { proposalResearchAgendas } from '../../lib/researchAgendas';
 import {
   FileText,
@@ -18,11 +18,13 @@ import {
   Plus,
   AlertCircle,
   Layers,
+  ListChecks,
   Loader2,
   Check,
   ChevronLeft,
   ChevronRight
 } from 'lucide-react';
+import { ProponentPipelineTracker } from './ProponentPipelineTracker';
 import { useCallForProposals } from '../../context/CallForProposalsContext';
 import { useAuth } from '../../context/AuthContext';
 import { checkConceptProposalTitleApi, ConceptProposalTitleExistsError } from '../../lib/conceptProposalApi';
@@ -104,6 +106,7 @@ const formatWindowDate = (date: string) => new Date(`${date}T00:00:00+08:00`).to
 
 export const ConceptProposalSubmissionForm: React.FC = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const restoredList = useLocation().state?.proposalList;
   const { activeCall, loadingCalls, conceptProposals, loadingConceptProposals, screeningError, refreshConceptProposals, submitConceptProposal, showToast } = useCallForProposals({ calls: true, concepts: true });
   const { user, profile, session } = useAuth();
@@ -115,11 +118,13 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
   const conceptDocInputId = useId();
   const titleErrorId = useId();
 
-  // Tab View: 'submit' | 'my-submissions'
-  const [activeTab, setActiveTab] = useState<'submit' | 'my-submissions'>('my-submissions');
+  // Tab View: 'submit' | 'my-submissions' | 'tracker'
+  const initialTab = searchParams.get('tab') === 'tracker' ? 'tracker' : 'my-submissions';
+  const [activeTab, setActiveTab] = useState<'submit' | 'my-submissions' | 'tracker'>(initialTab);
+  const [trackerProposalId, setTrackerProposalId] = useState<string | null>(() => searchParams.get('proposal'));
   useEffect(() => {
-    if (!loadingCalls && !canSubmit) setActiveTab('my-submissions');
-  }, [loadingCalls, canSubmit]);
+    if (!loadingCalls && !canSubmit && activeTab === 'submit') setActiveTab('my-submissions');
+  }, [loadingCalls, canSubmit, activeTab]);
 
   // 1. Research Agenda State
   const [selectedAgendas, setSelectedAgendas] = useState<string[]>([]);
@@ -465,37 +470,50 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
       </section>
 
 
-      {/* VIEW TABS: Submit New vs Track My Submissions */}
-      <div className="flex items-center justify-between border-b border-slate-200">
-        <div className="grid w-full grid-cols-2 gap-1 sm:flex sm:w-auto sm:items-center sm:gap-2">
+      {/* VIEW TABS: Submit New vs My Submitted Proposals vs Proposal Tracker */}
+      <div className="flex items-center justify-between border-b border-slate-200 overflow-x-auto">
+        <div className="flex w-full items-center gap-1 sm:w-auto sm:gap-2">
           <button
             type="button"
             onClick={() => setActiveTab('submit')}
             disabled={!canSubmit}
-            className={`flex min-w-0 items-center gap-2 px-2 py-3 text-sm sm:px-4 font-bold border-b-2 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
+            className={`flex shrink-0 items-center gap-2 whitespace-nowrap px-3 py-3 text-sm sm:px-4 font-bold border-b-2 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
               activeTab === 'submit'
                 ? 'border-[#C8102E] text-[#C8102E]'
                 : 'border-transparent text-slate-500 hover:text-slate-800'
             }`}
           >
-            <Send className="w-4 h-4" />
+            <Send className="w-4 h-4 shrink-0" />
             <span>Submit Concept Proposal</span>
           </button>
 
           <button
             type="button"
             onClick={() => setActiveTab('my-submissions')}
-            className={`flex min-w-0 items-center gap-2 px-2 py-3 text-sm sm:px-4 font-bold border-b-2 transition-all cursor-pointer ${
+            className={`flex shrink-0 items-center gap-2 whitespace-nowrap px-3 py-3 text-sm sm:px-4 font-bold border-b-2 transition-all cursor-pointer ${
               activeTab === 'my-submissions'
                 ? 'border-[#C8102E] text-[#C8102E]'
                 : 'border-transparent text-slate-500 hover:text-slate-800'
             }`}
           >
-            <Clock className="w-4 h-4" />
+            <Clock className="w-4 h-4 shrink-0" />
             <span>My Submitted Proposals</span>
             <span className="ml-1 px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-200 text-slate-700">
               {mySubmissions.length}
             </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('tracker')}
+            className={`flex shrink-0 items-center gap-2 whitespace-nowrap px-3 py-3 text-sm sm:px-4 font-bold border-b-2 transition-all cursor-pointer ${
+              activeTab === 'tracker'
+                ? 'border-[#C8102E] text-[#C8102E]'
+                : 'border-transparent text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            <ListChecks className="w-4 h-4 shrink-0" />
+            <span>Proposal Tracker</span>
           </button>
         </div>
       </div>
@@ -1068,7 +1086,20 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
                     </div>
 
                     {/* Action Buttons Panel on right (Matching CallForProposalsManager) */}
-                    <div className="flex items-center gap-2 shrink-0 border-t lg:border-t-0 pt-3 lg:pt-0 border-slate-100">
+                    <div className="flex flex-wrap items-center gap-2 shrink-0 border-t lg:border-t-0 pt-3 lg:pt-0 border-slate-100">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setTrackerProposalId(item.id);
+                          setActiveTab('tracker');
+                        }}
+                        className="min-h-11 px-3.5 py-3 rounded-sm text-sm font-bold text-[#C8102E] border border-[#C8102E]/40 bg-white hover:bg-red-50 transition-all flex items-center gap-2 cursor-pointer"
+                        title="Track this proposal across all 11 RPDU stages"
+                      >
+                        <ListChecks className="w-4 h-4 shrink-0" />
+                        <span>Track</span>
+                      </button>
+
                       <button
                         type="button"
                         onClick={() => navigate(`/proponent/proposals/${encodeURIComponent(item.id)}`, { state: { proposalList: { status: submissionStatusFilter, search: submissionSearchQuery, agenda: submissionAgendaFilter, page: pagination.page } } })}
@@ -1096,6 +1127,11 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
             </div>
           )}
         </div>
+      )}
+
+      {/* TAB 3: 11-STEP PROPOSAL TRACKER */}
+      {activeTab === 'tracker' && (
+        <ProponentPipelineTracker key={trackerProposalId ?? 'default'} initialProposalId={trackerProposalId} standalone />
       )}
 
       {/* CONFIRMATION MODAL BEFORE SUBMISSION */}

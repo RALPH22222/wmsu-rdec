@@ -33,6 +33,7 @@ export const API_ENDPOINTS = {
     PROFILE: `${API_BASE_URL}/profile`,
     CONCEPT_PROPOSALS: `${API_BASE_URL}/proponent/concept-proposals`,
     BUDGET_ALLOCATIONS: `${API_BASE_URL}/proponent/budget-allocations`,
+    PROPOSAL_TRACKING: `${API_BASE_URL}/proposal-tracking/mine`,
   },
 
   // RPDU Role Endpoints (Ready for expansion)

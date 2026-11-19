@@ -647,6 +647,34 @@ export interface ProponentProposal {
   summaries: ProponentRoundSummary[];
 }
 
+export type ProponentTrackerStepState = 'complete' | 'active' | 'upcoming' | 'failed' | 'outsourced';
+
+export interface ProponentTrackerStep {
+  step: number;
+  key: string;
+  shortLabel: string;
+  label: string;
+  state: ProponentTrackerStepState;
+  detail: string;
+}
+
+export interface ProponentPipelineTrackerItem {
+  id: string;
+  detailedProposalId: string | null;
+  title: string;
+  callTitle: string;
+  submittedAt: string | null;
+  currentStep: number;
+  currentStepLabel: string;
+  statusSummary: string;
+  completedSteps: number;
+  totalSteps: number;
+  outcome: 'in_progress' | 'completed' | 'halted' | 'outsourced';
+  nextActionLabel: string;
+  nextActionHref: string;
+  steps: ProponentTrackerStep[];
+}
+
 export interface EligibleConcept {
   id: string;
   title: string;
