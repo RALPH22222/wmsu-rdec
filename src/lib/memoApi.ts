@@ -21,15 +21,15 @@ export interface RecipientOptions {
 const authHeader = (token?: string | null): Record<string, string> =>
   token ? { Authorization: `Bearer ${token}` } : {};
 
-export async function getMemos(token?: string | null): Promise<Memo[]> {
-  const res = await fetch(`${API_BASE_URL}/memos`, { headers: authHeader(token) });
+export async function getMemos(token?: string | null, signal?: AbortSignal): Promise<Memo[]> {
+  const res = await fetch(`${API_BASE_URL}/memos`, { headers: authHeader(token), signal });
   const json = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(json.message || 'Failed to retrieve memoranda.');
   return json.data || [];
 }
 
-export async function getMemoById(id: string, token?: string | null): Promise<Memo | null> {
-  const res = await fetch(`${API_BASE_URL}/memos/${id}`, { headers: authHeader(token) });
+export async function getMemoById(id: string, token?: string | null, signal?: AbortSignal): Promise<Memo | null> {
+  const res = await fetch(`${API_BASE_URL}/memos/${id}`, { headers: authHeader(token), signal });
   const json = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(json.message || 'Failed to retrieve memorandum.');
   return json.data || null;

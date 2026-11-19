@@ -419,13 +419,30 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
       </div>
 
       <section aria-label="Current Call for Proposals" className="rounded-sm border border-slate-200 bg-white p-5 sm:p-6">
-        {loadingCalls ? <div role="status">
-          <span className="sr-only">Loading current Call for Proposals</span>
-          <div aria-hidden="true" className="space-y-3 motion-safe:animate-pulse"><div className="h-3 w-36 rounded bg-slate-100" /><div className="h-5 w-2/3 rounded bg-slate-100" /><div className="h-4 w-1/2 rounded bg-slate-100" /></div>
-        </div> : activeCall ? <>
+        {loadingCalls ? (
+          <div role="status" aria-busy="true">
+            <span className="sr-only">Loading current Call for Proposals</span>
+            <div className="mb-2 flex items-center justify-between gap-3">
+              <p className="text-sm font-semibold text-slate-500">Current Call for Proposals</p>
+              <span aria-hidden="true" className="h-7 w-16 rounded-none bg-slate-200 motion-safe:animate-pulse" />
+            </div>
+            <div className="flex flex-col gap-2 lg:flex-row lg:items-baseline lg:justify-between lg:gap-5">
+              <div aria-hidden="true" className="h-7 w-72 max-w-full rounded-sm bg-slate-200 motion-safe:animate-pulse" />
+              <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm leading-relaxed lg:shrink-0 lg:justify-end">
+                <p className="inline-flex items-center gap-1.5 whitespace-nowrap text-slate-700">
+                  Opens <span aria-hidden="true" className="inline-block h-4 w-24 rounded-sm bg-slate-200 motion-safe:animate-pulse" />
+                </p>
+                <p className="inline-flex items-center gap-1.5 whitespace-nowrap text-slate-700">
+                  Deadline <span aria-hidden="true" className="inline-block h-4 w-24 rounded-sm bg-slate-200 motion-safe:animate-pulse" />
+                </p>
+              </div>
+            </div>
+            <div aria-hidden="true" className="mt-2 h-4 w-80 max-w-full rounded-sm bg-slate-100 motion-safe:animate-pulse" />
+          </div>
+        ) : activeCall ? <>
           <div className="mb-2 flex items-center justify-between gap-3">
             <p className="text-sm font-semibold text-slate-500">Current Call for Proposals</p>
-            <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-sm font-bold text-emerald-700">OPEN</span>
+            <span className="rounded-none border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-sm font-bold text-emerald-700">OPEN</span>
           </div>
           <div className="flex flex-col gap-2 lg:flex-row lg:items-baseline lg:justify-between lg:gap-5">
             <h3 className="min-w-0 break-words text-lg sm:text-xl font-bold leading-snug text-slate-900">{activeCall.title}</h3>
@@ -438,6 +455,10 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
             ? 'New proposals will be submitted to this open window automatically.'
             : 'Your account cannot submit new proposals. Your existing submissions remain available.'}</p>
         </> : <>
+          <div className="mb-2 flex items-center justify-between gap-3">
+            <p className="text-sm font-semibold text-slate-500">Current Call for Proposals</p>
+            <span className="rounded-none border border-red-200 bg-red-50 px-2.5 py-1 text-sm font-bold text-[#A00D26]">CLOSED</span>
+          </div>
           <h3 className="text-lg font-semibold text-slate-900">No open Call for Proposals</h3>
           <p className="mt-2 text-sm leading-relaxed text-slate-600">New submissions are currently closed. Your existing submissions remain available in My Submissions.</p>
         </>}
