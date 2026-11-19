@@ -20,17 +20,41 @@ import { LogoutModal } from './LogoutModal';
 
 export type AdminSidebarProps = { mobileOpen?: boolean; onCloseMobile?: () => void };
 
-const navItems = [
-  { name: 'Call for Proposals', path: '/admin', icon: Calendar },
-  { name: 'Preliminary Screening', path: '/admin/screening', icon: ClipboardCheck },
-  { name: 'AIHR & En Banc', path: '/admin/aihr', icon: Gavel },
-  { name: 'AIHR Invitations', path: '/admin/aihr-invitations', icon: Mail },
-  { name: 'Outsourced Projects', path: '/admin/outsourced-projects', icon: FolderArchive },
-  { name: 'Official Memorandums', path: '/admin/memos', icon: ScrollText },
-  { name: 'Official Letters & Contracts', path: '/admin/letters', icon: Mail },
-  { name: 'Issued Documents Archive', path: '/admin/archive', icon: Archive },
-  { name: 'Inception Scheduling', path: '/admin/scheduling', icon: CalendarCheck },
-  { name: 'Technical Evaluations', path: '/admin/evaluations', icon: Users },
+const navGroups = [
+  {
+    id: 'proposal-pipeline',
+    label: 'Proposal Pipeline',
+    items: [
+      { name: 'Call for Proposals', path: '/admin', icon: Calendar },
+      { name: 'Preliminary Screening', path: '/admin/screening', icon: ClipboardCheck },
+      { name: 'Technical Evaluations', path: '/admin/evaluations', icon: Users },
+    ],
+  },
+  {
+    id: 'aihr-scheduling',
+    label: 'AIHR & Scheduling',
+    items: [
+      { name: 'AIHR Invitations', path: '/admin/aihr-invitations', icon: Mail },
+      { name: 'AIHR & En Banc', path: '/admin/aihr', icon: Gavel },
+      { name: 'Inception Scheduling', path: '/admin/scheduling', icon: CalendarCheck },
+    ],
+  },
+  {
+    id: 'external-projects',
+    label: 'External Projects',
+    items: [
+      { name: 'Outsourced Projects', path: '/admin/outsourced-projects', icon: FolderArchive },
+    ],
+  },
+  {
+    id: 'documents-archive',
+    label: 'Documents & Archive',
+    items: [
+      { name: 'Official Memorandums', path: '/admin/memos', icon: ScrollText },
+      { name: 'Official Letters & Contracts', path: '/admin/letters', icon: Mail },
+      { name: 'Issued Documents Archive', path: '/admin/archive', icon: Archive },
+    ],
+  },
 ];
 
 export function AdminSidebar({ mobileOpen = false, onCloseMobile }: AdminSidebarProps) {
@@ -65,13 +89,13 @@ export function AdminSidebar({ mobileOpen = false, onCloseMobile }: AdminSidebar
         />
       )}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-72 max-w-[85vw] flex-col justify-between border-r border-slate-300 bg-slate-100 text-slate-800 transition-transform duration-300 ease-in-out lg:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-50 flex h-dvh w-72 max-w-[85vw] flex-col overflow-hidden border-r border-slate-300 bg-slate-100 text-slate-800 transition-transform duration-300 ease-in-out lg:translate-x-0 ${
           mobileOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full'
         }`}
       >
-        <div>
+        <div className="flex min-h-0 flex-1 flex-col">
           {/* Top Header / Branding */}
-          <div className="border-b border-slate-200/90 bg-white/70 p-5">
+          <div className="shrink-0 border-b border-slate-200/90 bg-white/70 p-5">
             <div className="flex items-center justify-between">
               <Link to="/" className="flex items-center gap-2.5">
                 <div className="flex shrink-0 items-center -space-x-2">
@@ -103,48 +127,64 @@ export function AdminSidebar({ mobileOpen = false, onCloseMobile }: AdminSidebar
           </div>
 
           {/* Navigation Section */}
-          <nav className="flex-1 space-y-1 overflow-y-auto px-3.5 py-4" aria-label="Admin navigation">
-            <div className="px-3 pb-2 text-[10px] font-bold uppercase tracking-wider text-slate-500">
-              Admin Management
-            </div>
-            {navItems.map((item) => {
-              const active =
-                pathname === item.path ||
-                (item.path === '/admin/memos' &&
-                  (pathname.startsWith('/admin/memos') || pathname.startsWith('/admin/aihr-memos'))) ||
-                (item.path === '/admin/archive' &&
-                  (pathname.startsWith('/admin/archive') || pathname.startsWith('/admin/issued-documents'))) ||
-                (item.path === '/admin/letters' && pathname.startsWith('/admin/letters/')) ||
-                (item.path === '/admin/outsourced-projects' && pathname.startsWith('/admin/outsourced-projects/')) ||
-                (item.path === '/admin/screening' && pathname.startsWith('/admin/screening/')) ||
-                (item.path === '/admin/evaluations' && pathname.startsWith('/admin/evaluations/')) ||
-                (item.path === '/admin' && pathname.startsWith('/admin/calls/'));
-              const Icon = item.icon;
-              return (
-                <Link
-                  key={item.path}
-                  to={item.path}
-                  onClick={onCloseMobile}
-                  className={`group flex items-center gap-3 rounded-sm px-3.5 py-2.5 text-xs font-semibold transition-all border ${
-                    active
-                      ? 'border-slate-900 bg-slate-900 text-white shadow-2xs'
-                      : 'border-transparent text-slate-700 hover:border-slate-300 hover:bg-white/80 hover:text-slate-900'
-                  }`}
+          <nav className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain px-3.5 py-4" aria-label="Admin navigation">
+            {navGroups.map((group, groupIndex) => (
+              <div
+                key={group.id}
+                role="group"
+                aria-labelledby={`admin-nav-group-${group.id}`}
+                className={groupIndex > 0 ? 'border-t border-slate-200 pt-3.5' : undefined}
+              >
+                <p
+                  id={`admin-nav-group-${group.id}`}
+                  className="px-3 pb-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-500"
                 >
-                  <Icon
-                    className={`h-4 w-4 shrink-0 transition-colors ${
-                      active ? 'text-red-400' : 'text-slate-500 group-hover:text-slate-800'
-                    }`}
-                  />
-                  <span className="truncate">{item.name}</span>
-                </Link>
-              );
-            })}
+                  {group.label}
+                </p>
+                <div className="space-y-1">
+                  {group.items.map((item) => {
+                    const active =
+                      pathname === item.path ||
+                      (item.path === '/admin/memos' &&
+                        (pathname.startsWith('/admin/memos') || pathname.startsWith('/admin/aihr-memos'))) ||
+                      (item.path === '/admin/archive' &&
+                        (pathname.startsWith('/admin/archive') || pathname.startsWith('/admin/issued-documents'))) ||
+                      (item.path === '/admin/letters' && pathname.startsWith('/admin/letters/')) ||
+                      (item.path === '/admin/outsourced-projects' && pathname.startsWith('/admin/outsourced-projects/')) ||
+                      (item.path === '/admin/screening' && pathname.startsWith('/admin/screening/')) ||
+                      (item.path === '/admin/evaluations' && pathname.startsWith('/admin/evaluations/')) ||
+                      (item.path === '/admin' && pathname.startsWith('/admin/calls/'));
+                    const Icon = item.icon;
+                    return (
+                      <Link
+                        key={item.path}
+                        to={item.path}
+                        onClick={onCloseMobile}
+                        aria-current={active ? 'page' : undefined}
+                        className={`group flex items-center gap-3 rounded-sm px-3.5 py-2.5 text-xs font-semibold transition-all border ${
+                          active
+                            ? 'border-slate-900 bg-slate-900 text-white shadow-2xs'
+                            : 'border-transparent text-slate-700 hover:border-slate-300 hover:bg-white/80 hover:text-slate-900'
+                        }`}
+                      >
+                        <Icon
+                          aria-hidden="true"
+                          className={`h-4 w-4 shrink-0 transition-colors ${
+                            active ? 'text-red-400' : 'text-slate-500 group-hover:text-slate-800'
+                          }`}
+                        />
+                        <span className="truncate">{item.name}</span>
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
           </nav>
         </div>
 
         {/* Bottom User Profile Section */}
-        <div className="border-t border-slate-200 bg-slate-200/60 p-3.5">
+        <div className="shrink-0 border-t border-slate-200 bg-slate-200/60 p-3.5">
           <div className="flex items-center justify-between gap-3 rounded-sm border border-slate-300 bg-white p-3 shadow-2xs">
             <div className="flex min-w-0 items-center gap-3">
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-sm border border-slate-800 bg-slate-900 text-white">

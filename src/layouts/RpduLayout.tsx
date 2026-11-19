@@ -9,6 +9,7 @@ export const RpduLayout: React.FC = () => {
   const location = useLocation();
 
   const getPageTitle = () => {
+    if (location.pathname === '/rpdu/profile') return 'Institutional Profile & Affiliation';
     if (location.pathname.startsWith('/rpdu/archive/preview') || location.pathname.includes('/archive/') && location.pathname.includes('/preview')) {
       return 'Official Document Preview';
     }

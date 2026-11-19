@@ -22,19 +22,43 @@ import { LogoutModal } from './LogoutModal';
 
 export type RpduSidebarProps = { mobileOpen?: boolean; onCloseMobile?: () => void };
 
-const navItems = [
-  { name: 'Call for Proposals', path: '/rpdu', icon: Calendar },
-  { name: 'Preliminary Screening', path: '/rpdu/screening', icon: ClipboardCheck },
-  { name: 'External Funding Requests', path: '/rpdu/external-funding', icon: Handshake },
-  { name: 'AIHR & En Banc', path: '/rpdu/aihr', icon: Gavel },
-  { name: 'AIHR Invitations', path: '/rpdu/aihr-invitations', icon: Mail },
-  { name: 'Outsourced Projects', path: '/rpdu/outsourced-projects', icon: FolderArchive },
-  { name: 'Official Memorandums', path: '/rpdu/memos', icon: ScrollText },
-  { name: 'Official Letters & Contracts', path: '/rpdu/letters', icon: Mail },
-  { name: 'Issued Documents Archive', path: '/rpdu/archive', icon: Archive },
-  { name: 'Budget Allocations', path: '/rpdu/budgets', icon: Receipt },
-  { name: 'Inception Scheduling', path: '/rpdu/scheduling', icon: CalendarCheck },
-  { name: 'Technical Evaluations', path: '/rpdu/evaluations', icon: Users },
+const navGroups = [
+  {
+    id: 'proposal-pipeline',
+    label: 'Proposal Pipeline',
+    items: [
+      { name: 'Call for Proposals', path: '/rpdu', icon: Calendar },
+      { name: 'Preliminary Screening', path: '/rpdu/screening', icon: ClipboardCheck },
+      { name: 'Technical Evaluations', path: '/rpdu/evaluations', icon: Users },
+    ],
+  },
+  {
+    id: 'aihr-scheduling',
+    label: 'AIHR & Scheduling',
+    items: [
+      { name: 'AIHR Invitations', path: '/rpdu/aihr-invitations', icon: Mail },
+      { name: 'AIHR & En Banc', path: '/rpdu/aihr', icon: Gavel },
+      { name: 'Inception Scheduling', path: '/rpdu/scheduling', icon: CalendarCheck },
+    ],
+  },
+  {
+    id: 'funding-external',
+    label: 'Funding & External Projects',
+    items: [
+      { name: 'Budget Allocations', path: '/rpdu/budgets', icon: Receipt },
+      { name: 'External Funding Requests', path: '/rpdu/external-funding', icon: Handshake },
+      { name: 'Outsourced Projects', path: '/rpdu/outsourced-projects', icon: FolderArchive },
+    ],
+  },
+  {
+    id: 'documents-archive',
+    label: 'Documents & Archive',
+    items: [
+      { name: 'Official Memorandums', path: '/rpdu/memos', icon: ScrollText },
+      { name: 'Official Letters & Contracts', path: '/rpdu/letters', icon: Mail },
+      { name: 'Issued Documents Archive', path: '/rpdu/archive', icon: Archive },
+    ],
+  },
 ];
 
 export function RpduSidebar({ mobileOpen = false, onCloseMobile }: RpduSidebarProps) {
@@ -51,6 +75,7 @@ export function RpduSidebar({ mobileOpen = false, onCloseMobile }: RpduSidebarPr
 
   const defaultRoleTitle = isHead ? 'RPDU Unit Head' : 'RPDU Staff';
   const fullName = formatUserFullName(profile, user, defaultRoleTitle);
+  const isProfileActive = pathname === '/rpdu/profile';
 
   const logout = async () => {
     setLoggingOut(true);
@@ -77,7 +102,6 @@ export function RpduSidebar({ mobileOpen = false, onCloseMobile }: RpduSidebarPr
         rolePillText: 'text-amber-900',
         rolePillLabel: 'RPDU Head',
         sectionLabelColor: 'text-slate-500',
-        sectionLabel: 'RPDU Executive Desk',
         navActive: 'border-brand-dark bg-brand-dark text-white shadow-2xs',
         navActiveIcon: 'text-white',
         navHover: 'hover:border-slate-200 hover:bg-white/80 hover:text-slate-900',
@@ -100,7 +124,6 @@ export function RpduSidebar({ mobileOpen = false, onCloseMobile }: RpduSidebarPr
         rolePillText: 'text-slate-800',
         rolePillLabel: 'RPDU Staff',
         sectionLabelColor: 'text-slate-400',
-        sectionLabel: 'RPDU Operations Desk',
         navActive: 'border-brand bg-brand text-white shadow-2xs',
         navActiveIcon: 'text-white',
         navHover: 'hover:border-slate-200 hover:bg-white/80 hover:text-slate-900',
@@ -165,44 +188,60 @@ export function RpduSidebar({ mobileOpen = false, onCloseMobile }: RpduSidebarPr
           </div>
 
           {/* Navigation Section */}
-          <nav className="min-h-0 flex-1 space-y-1 overflow-y-auto overscroll-contain px-3.5 py-4" aria-label="RPDU navigation">
-            <div className={`px-3 pb-2 text-[10px] font-bold uppercase tracking-wider ${roleStyles.sectionLabelColor}`}>
-              {roleStyles.sectionLabel}
-            </div>
-            {navItems.map((item) => {
-              const active =
-                pathname === item.path ||
-                (item.path === '/rpdu/budgets' && pathname.startsWith('/rpdu/budgets')) ||
-                (item.path === '/rpdu/memos' &&
-                  (pathname.startsWith('/rpdu/memos') || pathname.startsWith('/rpdu/aihr-memos'))) ||
-                (item.path === '/rpdu/archive' &&
-                  (pathname.startsWith('/rpdu/archive') || pathname.startsWith('/rpdu/issued-documents'))) ||
-                (item.path === '/rpdu/letters' && pathname.startsWith('/rpdu/letters/')) ||
-                (item.path === '/rpdu/outsourced-projects' && pathname.startsWith('/rpdu/outsourced-projects/')) ||
-                (item.path === '/rpdu/screening' && pathname.startsWith('/rpdu/screening/')) ||
-                (item.path === '/rpdu/evaluations' && pathname.startsWith('/rpdu/evaluations/')) ||
-                (item.path === '/rpdu' && pathname.startsWith('/rpdu/calls/'));
-              const Icon = item.icon;
-              return (
-                <Link
-                  key={item.path}
-                  to={item.path}
-                  onClick={onCloseMobile}
-                  className={`group flex items-center gap-3 rounded-sm px-3.5 py-2.5 text-xs font-semibold transition-all border ${
-                    active
-                      ? roleStyles.navActive
-                      : `border-transparent text-slate-700 ${roleStyles.navHover}`
-                  }`}
+          <nav className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain px-3.5 py-4" aria-label="RPDU navigation">
+            {navGroups.map((group, groupIndex) => (
+              <div
+                key={group.id}
+                role="group"
+                aria-labelledby={`rpdu-nav-group-${group.id}`}
+                className={groupIndex > 0 ? 'border-t border-slate-200/70 pt-3.5' : undefined}
+              >
+                <p
+                  id={`rpdu-nav-group-${group.id}`}
+                  className={`px-3 pb-1.5 text-[10px] font-bold uppercase tracking-wider ${roleStyles.sectionLabelColor}`}
                 >
-                  <Icon
-                    className={`h-4 w-4 shrink-0 transition-colors ${
-                      active ? roleStyles.navActiveIcon : 'text-slate-400 group-hover:text-slate-700'
-                    }`}
-                  />
-                  <span className="truncate">{item.name}</span>
-                </Link>
-              );
-            })}
+                  {group.label}
+                </p>
+                <div className="space-y-1">
+                  {group.items.map((item) => {
+                    const active =
+                      pathname === item.path ||
+                      (item.path === '/rpdu/budgets' && pathname.startsWith('/rpdu/budgets')) ||
+                      (item.path === '/rpdu/memos' &&
+                        (pathname.startsWith('/rpdu/memos') || pathname.startsWith('/rpdu/aihr-memos'))) ||
+                      (item.path === '/rpdu/archive' &&
+                        (pathname.startsWith('/rpdu/archive') || pathname.startsWith('/rpdu/issued-documents'))) ||
+                      (item.path === '/rpdu/letters' && pathname.startsWith('/rpdu/letters/')) ||
+                      (item.path === '/rpdu/outsourced-projects' && pathname.startsWith('/rpdu/outsourced-projects/')) ||
+                      (item.path === '/rpdu/screening' && pathname.startsWith('/rpdu/screening/')) ||
+                      (item.path === '/rpdu/evaluations' && pathname.startsWith('/rpdu/evaluations/')) ||
+                      (item.path === '/rpdu' && pathname.startsWith('/rpdu/calls/'));
+                    const Icon = item.icon;
+                    return (
+                      <Link
+                        key={item.path}
+                        to={item.path}
+                        onClick={onCloseMobile}
+                        aria-current={active ? 'page' : undefined}
+                        className={`group flex items-center gap-3 rounded-sm px-3.5 py-2.5 text-xs font-semibold transition-all border ${
+                          active
+                            ? roleStyles.navActive
+                            : `border-transparent text-slate-700 ${roleStyles.navHover}`
+                        }`}
+                      >
+                        <Icon
+                          aria-hidden="true"
+                          className={`h-4 w-4 shrink-0 transition-colors ${
+                            active ? roleStyles.navActiveIcon : 'text-slate-400 group-hover:text-slate-700'
+                          }`}
+                        />
+                        <span className="truncate">{item.name}</span>
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
           </nav>
         </div>
 
@@ -211,11 +250,25 @@ export function RpduSidebar({ mobileOpen = false, onCloseMobile }: RpduSidebarPr
           <div
             className={`flex items-center justify-between gap-3 rounded-sm border ${roleStyles.cardBorder} ${roleStyles.cardBg} p-3 shadow-2xs`}
           >
-            <div className="flex min-w-0 items-center gap-3">
+            <Link
+              to="/rpdu/profile"
+              onClick={onCloseMobile}
+              aria-current={isProfileActive ? 'page' : undefined}
+              className="group flex min-w-0 flex-1 items-center gap-3 rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+              title="Click to view and edit profile"
+            >
               <div
-                className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-sm border ${roleStyles.avatarBorder} ${roleStyles.avatarBg} ${roleStyles.avatarText}`}
+                className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-sm border transition-colors ${
+                  isProfileActive
+                    ? isHead
+                      ? 'border-amber-700 bg-amber-700 text-white'
+                      : 'border-slate-700 bg-slate-700 text-white'
+                    : isHead
+                      ? `${roleStyles.avatarBorder} ${roleStyles.avatarBg} ${roleStyles.avatarText} group-hover:border-amber-400`
+                      : `${roleStyles.avatarBorder} ${roleStyles.avatarBg} ${roleStyles.avatarText} group-hover:border-slate-300`
+                }`}
               >
-                <User className="h-5 w-5" strokeWidth={1.75} />
+                <User aria-hidden="true" className="h-5 w-5" strokeWidth={1.75} />
               </div>
               <div className="min-w-0">
                 {loadingProfile && !profile ? (
@@ -234,7 +287,7 @@ export function RpduSidebar({ mobileOpen = false, onCloseMobile }: RpduSidebarPr
                   </>
                 )}
               </div>
-            </div>
+            </Link>
             <button
               type="button"
               onClick={() => setLogoutOpen(true)}

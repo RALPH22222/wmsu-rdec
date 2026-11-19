@@ -209,6 +209,7 @@ export function App() {
                 <Route path="/rpdu/evaluations/:id" element={<PipelineProposalDetailPage role="rpdu" />} />
                 <Route path="/rpdu/budgets" element={<RpduBudgetAllocationPage />} />
                 <Route path="/rpdu/budgets/:allocationId" element={<RpduBudgetAllocationReviewPage />} />
+                <Route path="/rpdu/profile" element={<ProfilePage />} />
                 <Route path="/rpdu/notarization" element={<Navigate to="/rpdu/archive?filter=CONTRACT" replace />} />
               </Route>
             </Route>

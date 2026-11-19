@@ -71,15 +71,33 @@ export const ProponentSidebar: React.FC<ProponentSidebarProps> = ({
     }
   };
 
-  const navItems = [
-    { name: 'Concept Proposal', path: '/proponent', icon: FileText, active: isProposalActive },
-    { name: 'Detailed Proposal', path: '/proponent/detailed-proposals', icon: FileUp, active: isDetailedProposalActive },
-    { name: 'AIHR Invitations', path: '/proponent/aihr-invitations', icon: Mail, active: isAihrActive },
-    { name: 'External Funding', path: '/proponent/external-funding', icon: Handshake, active: isExternalFundingActive },
-    { name: 'Budget Allocation', path: '/proponent/budget', icon: DollarSign, active: isBudgetActive },
-    { name: 'Memorandums', path: '/proponent/memos', icon: ScrollText, active: isMemosActive },
-    { name: 'Documents & Contracts', path: '/proponent/documents', icon: FileSignature, active: isDocumentsActive },
-    { name: 'Evaluation & Revisions', path: '/proponent/revisions', icon: History, active: isRevisionsActive },
+  const navGroups = [
+    {
+      id: 'proposals-review',
+      label: 'Proposals & Review',
+      items: [
+        { name: 'Concept Proposal', path: '/proponent', icon: FileText, active: isProposalActive },
+        { name: 'Detailed Proposal', path: '/proponent/detailed-proposals', icon: FileUp, active: isDetailedProposalActive },
+        { name: 'Evaluation & Revisions', path: '/proponent/revisions', icon: History, active: isRevisionsActive },
+        { name: 'AIHR Invitations', path: '/proponent/aihr-invitations', icon: Mail, active: isAihrActive },
+      ],
+    },
+    {
+      id: 'funding-budget',
+      label: 'Funding & Budget',
+      items: [
+        { name: 'Budget Allocation', path: '/proponent/budget', icon: DollarSign, active: isBudgetActive },
+        { name: 'External Funding', path: '/proponent/external-funding', icon: Handshake, active: isExternalFundingActive },
+      ],
+    },
+    {
+      id: 'official-documents',
+      label: 'Official Documents',
+      items: [
+        { name: 'Documents & Contracts', path: '/proponent/documents', icon: FileSignature, active: isDocumentsActive },
+        { name: 'Memorandums', path: '/proponent/memos', icon: ScrollText, active: isMemosActive },
+      ],
+    },
   ];
 
   return (
@@ -96,13 +114,13 @@ export const ProponentSidebar: React.FC<ProponentSidebarProps> = ({
 
       {/* Sidebar Container */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-72 max-w-[85vw] flex-col justify-between border-r border-slate-200 bg-white text-slate-800 transition-transform duration-300 ease-in-out lg:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-50 flex h-dvh w-72 max-w-[85vw] flex-col overflow-hidden border-r border-slate-200 bg-white text-slate-800 transition-transform duration-300 ease-in-out lg:translate-x-0 ${
           mobileOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full'
         }`}
       >
-        <div>
+        <div className="flex min-h-0 flex-1 flex-col">
           {/* Top Header / Branding */}
-          <div className="border-b border-slate-100 p-5">
+          <div className="shrink-0 border-b border-slate-100 p-5">
             <div className="flex items-center justify-between">
               <Link to="/" className="flex items-center gap-2.5">
                 <div className="flex shrink-0 items-center -space-x-2">
@@ -136,37 +154,53 @@ export const ProponentSidebar: React.FC<ProponentSidebarProps> = ({
           </div>
 
           {/* Navigation Section */}
-          <nav className="flex-1 space-y-1 overflow-y-auto px-3.5 py-4" aria-label="Proponent navigation">
-            <div className="px-3 pb-2 text-[10px] font-bold uppercase tracking-wider text-slate-400">
-              Researcher Portal
-            </div>
-            {navItems.map((item) => {
-              const Icon = item.icon;
-              return (
-                <Link
-                  key={item.path}
-                  to={item.path}
-                  onClick={onCloseMobile}
-                  className={`group flex items-center gap-3 rounded-sm px-3.5 py-2.5 text-xs font-semibold transition-all border ${
-                    item.active
-                      ? 'border-brand bg-brand text-white shadow-2xs'
-                      : 'border-transparent text-slate-600 hover:border-slate-200 hover:bg-slate-50 hover:text-slate-900'
-                  }`}
+          <nav className="flex-1 space-y-4 overflow-y-auto px-3.5 py-4" aria-label="Proponent navigation">
+            {navGroups.map((group, groupIndex) => (
+              <div
+                key={group.id}
+                role="group"
+                aria-labelledby={`proponent-nav-group-${group.id}`}
+                className={groupIndex > 0 ? 'border-t border-slate-100 pt-3.5' : undefined}
+              >
+                <p
+                  id={`proponent-nav-group-${group.id}`}
+                  className="px-3 pb-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400"
                 >
-                  <Icon
-                    className={`h-4 w-4 shrink-0 transition-colors ${
-                      item.active ? 'text-white' : 'text-slate-400 group-hover:text-brand'
-                    }`}
-                  />
-                  <span className="truncate">{item.name}</span>
-                </Link>
-              );
-            })}
+                  {group.label}
+                </p>
+                <div className="space-y-1">
+                  {group.items.map((item) => {
+                    const Icon = item.icon;
+                    return (
+                      <Link
+                        key={item.path}
+                        to={item.path}
+                        onClick={onCloseMobile}
+                        aria-current={item.active ? 'page' : undefined}
+                        className={`group flex items-center gap-3 rounded-sm px-3.5 py-2.5 text-xs font-semibold transition-all border ${
+                          item.active
+                            ? 'border-brand bg-brand text-white shadow-2xs'
+                            : 'border-transparent text-slate-600 hover:border-slate-200 hover:bg-slate-50 hover:text-slate-900'
+                        }`}
+                      >
+                        <Icon
+                          aria-hidden="true"
+                          className={`h-4 w-4 shrink-0 transition-colors ${
+                            item.active ? 'text-white' : 'text-slate-400 group-hover:text-brand'
+                          }`}
+                        />
+                        <span className="truncate">{item.name}</span>
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
           </nav>
         </div>
 
         {/* Bottom User Profile Section */}
-        <div className="border-t border-slate-100 bg-slate-50/60 p-3.5">
+        <div className="shrink-0 border-t border-slate-100 bg-slate-50/60 p-3.5">
           <div className="flex items-center justify-between gap-3 rounded-sm border border-slate-200/90 bg-white p-3 shadow-2xs">
             <Link
               to="/proponent/profile"
