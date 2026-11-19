@@ -15,7 +15,6 @@ import {
   AlertTriangle,
   Send,
   CheckCircle2,
-  Eye,
   Layers,
   ChevronLeft,
   ChevronRight,
@@ -816,14 +815,52 @@ export const InceptionSchedulingManager: React.FC = () => {
                 </div>
 
                 <div className="border border-slate-200 rounded-md overflow-hidden bg-white shadow-2xs">
-                  <div className="max-h-80 overflow-y-auto">
+                  {/* Mobile (< 768px): compact cards, zero horizontal scroll */}
+                  <div className="md:hidden divide-y divide-slate-100">
+                    {paginatedSelectedProjects.map((project, idx) => {
+                      const actualIndex = projectStartIndex + idx;
+                      return (
+                        <div key={project.contractId || project.proposalCode || actualIndex} className="p-4 space-y-2">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0">
+                              <span className="font-mono text-xs font-bold text-slate-800">
+                                #{actualIndex + 1} · {project.contractNumber || 'N/A'}
+                              </span>
+                              <span className="font-mono text-xs text-slate-400 block">
+                                {project.proposalCode || 'N/A'}
+                              </span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveProject(actualIndex)}
+                              className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-sm cursor-pointer transition-colors shrink-0"
+                              title="Remove project from joint meeting"
+                              aria-label="Remove project from joint meeting"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                          <p className="font-bold text-slate-900 text-sm leading-snug break-words">
+                            {project.projectTitle}
+                          </p>
+                          <p className="text-xs text-slate-600 break-words">
+                            <span className="font-semibold text-slate-800">{project.leadInvestigator || 'N/A'}</span>
+                            {project.studyLeaderCollege ? ` · ${project.studyLeaderCollege}` : ''}
+                          </p>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Desktop (>= 768px): fitted table without horizontal scroll */}
+                  <div className="hidden md:block">
                     <table className="w-full text-left text-sm">
-                      <thead className="bg-slate-50 text-xs uppercase font-bold text-slate-500 border-b border-slate-200 sticky top-0 z-10 shadow-2xs">
+                      <thead className="bg-slate-50 text-xs uppercase font-bold text-slate-500 border-b border-slate-200">
                         <tr>
                           <th className="py-3 px-4 w-10 text-center">#</th>
-                          <th className="py-3 px-4 w-40 whitespace-nowrap">Contract &amp; Code</th>
+                          <th className="py-3 px-4 w-36 whitespace-nowrap">Contract &amp; Code</th>
                           <th className="py-3 px-4">Research Project Title</th>
-                          <th className="py-3 px-4 w-56 whitespace-nowrap">Study Leader</th>
+                          <th className="py-3 px-4 w-52">Study Leader</th>
                           <th className="py-3 px-4 text-right w-20">Action</th>
                         </tr>
                       </thead>
@@ -843,17 +880,17 @@ export const InceptionSchedulingManager: React.FC = () => {
                                   {project.proposalCode || 'N/A'}
                                 </span>
                               </td>
-                              <td className="py-3.5 px-4 align-middle">
-                                <span className="font-bold text-slate-900 block text-sm leading-snug line-clamp-2" title={project.projectTitle}>
+                              <td className="py-3.5 px-4 align-middle min-w-0">
+                                <span className="font-bold text-slate-900 block text-sm leading-snug break-words line-clamp-2" title={project.projectTitle}>
                                   {project.projectTitle}
                                 </span>
                               </td>
-                              <td className="py-3.5 px-4 align-middle whitespace-nowrap">
-                                <span className="font-semibold text-slate-800 block text-sm">
+                              <td className="py-3.5 px-4 align-middle min-w-0">
+                                <span className="font-semibold text-slate-800 block text-sm break-words">
                                   {project.leadInvestigator || 'N/A'}
                                 </span>
                                 {project.studyLeaderCollege && (
-                                  <span className="text-xs text-slate-500 block truncate max-w-52 mt-0.5" title={project.studyLeaderCollege}>
+                                  <span className="text-xs text-slate-500 block break-words line-clamp-1 mt-0.5" title={project.studyLeaderCollege}>
                                     {project.studyLeaderCollege}
                                   </span>
                                 )}
@@ -864,6 +901,7 @@ export const InceptionSchedulingManager: React.FC = () => {
                                   onClick={() => handleRemoveProject(actualIndex)}
                                   className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-sm cursor-pointer transition-colors inline-flex items-center justify-center"
                                   title="Remove project from joint meeting"
+                                  aria-label="Remove project from joint meeting"
                                 >
                                   <Trash2 className="w-4 h-4" />
                                 </button>
@@ -1381,9 +1419,9 @@ export const InceptionSchedulingManager: React.FC = () => {
 
       {/* Table Section */}
       <div className="bg-white rounded-md border border-slate-200 shadow-xs overflow-hidden">
-        <div className="p-5 sm:p-6 border-b border-slate-100 flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-slate-50/50">
+        <div className="p-5 sm:p-6 border-b border-slate-100 flex flex-col xl:flex-row xl:items-center justify-between gap-4 bg-slate-50/50">
           {/* Search Input */}
-          <div className="relative flex-1 max-w-lg">
+          <div className="relative w-full xl:flex-1 xl:max-w-md">
             <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" aria-hidden="true" />
             <input
               type="text"
@@ -1395,7 +1433,7 @@ export const InceptionSchedulingManager: React.FC = () => {
           </div>
 
           {/* Status Filter Tabs */}
-          <div className="flex flex-wrap items-center gap-1.5 self-start lg:self-auto">
+          <div className="flex flex-wrap items-center gap-1.5 self-start xl:self-auto">
             <button
               type="button"
               onClick={() => setStatusFilter('all')}
@@ -1455,175 +1493,222 @@ export const InceptionSchedulingManager: React.FC = () => {
           </div>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm text-slate-600">
-            <thead className="bg-slate-50 text-xs uppercase tracking-wider font-bold text-slate-500 border-b border-slate-200">
-              <tr>
-                <th className="py-4 px-5">Date &amp; Time</th>
-                <th className="py-4 px-5">Venue</th>
-                <th className="py-4 px-5">SO Status</th>
-                <th className="py-4 px-5 text-center">Meeting Status</th>
-                <th className="py-4 px-5 text-center">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {isLoading ? (
-                <tr>
-                  <td colSpan={5} className="py-16 text-center text-slate-400">
-                    <RotateCcw className="w-7 h-7 mx-auto mb-2.5 text-[#C8102E] animate-spin" aria-hidden="true" />
-                    <p className="font-semibold text-slate-700 text-sm">Loading inception meetings...</p>
-                  </td>
-                </tr>
-              ) : filteredMeetings.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="py-16 text-center text-slate-400">
-                    <Calendar className="w-10 h-10 mx-auto mb-2.5 text-slate-300 stroke-1" aria-hidden="true" />
-                    <p className="font-semibold text-slate-700 text-sm">No Inception Meetings matching criteria.</p>
-                    <p className="text-xs sm:text-sm text-slate-400 mt-1">
-                      Click &ldquo;Schedule Inception Meeting&rdquo; to select approved projects and schedule kickoff.
-                    </p>
-                  </td>
-                </tr>
-              ) : (
-                filteredMeetings.map((meeting) => {
-                  const normalizedSo = normalizeSpecialOrderStatus(meeting.specialOrderStatus);
-                  return (
-                    <tr key={meeting.id} className="hover:bg-slate-50/70 transition-colors">
-                      {/* Date & Time */}
-                      <td className="py-4 px-5 align-middle whitespace-nowrap">
+        {(() => {
+          const renderMeetingActions = (meeting: InceptionMeeting, align: 'start' | 'end' = 'end') => {
+            const normalizedSo = normalizeSpecialOrderStatus(meeting.specialOrderStatus);
+            return (
+              <div
+                className={`flex flex-wrap items-center gap-1.5 ${
+                  align === 'end' ? 'justify-end' : 'justify-start'
+                }`}
+              >
+                {/* Primary Workspace Action: Roster, Minutes & Details */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedMeeting(meeting);
+                    setViewMode('details');
+                  }}
+                  className="px-2.5 py-1.5 text-xs font-bold text-[#C8102E] bg-red-50/70 hover:bg-[#C8102E] hover:text-white border border-red-200 rounded-sm shadow-2xs transition-colors cursor-pointer inline-flex items-center gap-1.5 whitespace-nowrap shrink-0"
+                  title="Open Meeting Details, Roster &amp; Minutes Workspace"
+                >
+                  <ClipboardCheck className="w-3.5 h-3.5" aria-hidden="true" />
+                  Roster &amp; Minutes
+                </button>
+
+                {/* 1a. Forward SO Request (Step 10.2) */}
+                {normalizedSo === 'pending_request' && (
+                  <button
+                    type="button"
+                    onClick={() => handleUpdateSoStatus(meeting.id, 'forwarded_to_op')}
+                    className="px-2.5 py-1.5 text-xs font-semibold text-blue-700 bg-white hover:bg-blue-50 border border-blue-200 rounded-sm shadow-2xs transition-colors cursor-pointer inline-flex items-center gap-1.5 whitespace-nowrap shrink-0"
+                    title="Forward SO Request to Office of the President (Meeting remains Not Scheduled)"
+                  >
+                    <Send className="w-3.5 h-3.5 text-blue-600" aria-hidden="true" /> Forward SO
+                  </button>
+                )}
+
+                {/* 1b. Approve SO (transitions Meeting Status from Not Scheduled -> Scheduled) */}
+                {normalizedSo === 'forwarded_to_op' && (
+                  <button
+                    type="button"
+                    onClick={() => handleUpdateSoStatus(meeting.id, 'approved')}
+                    className="px-2.5 py-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50/70 hover:bg-emerald-100 border border-emerald-200 rounded-sm shadow-2xs transition-colors cursor-pointer inline-flex items-center gap-1.5 whitespace-nowrap shrink-0"
+                    title="Mark Special Order as Approved (updates Meeting Status to Scheduled)"
+                  >
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" aria-hidden="true" /> Approve SO
+                  </button>
+                )}
+
+                {/* 2. Mark Meeting Completed (only once SO is Approved and Meeting is Scheduled) */}
+                {meeting.status === 'scheduled' && (
+                  <button
+                    type="button"
+                    onClick={() => handleMarkMeetingCompleted(meeting.id)}
+                    className="px-2.5 py-1.5 text-xs font-semibold text-emerald-700 bg-white hover:bg-emerald-50 border border-emerald-200 rounded-sm shadow-2xs transition-colors cursor-pointer inline-flex items-center gap-1.5 whitespace-nowrap shrink-0"
+                    title="Mark as Completed"
+                  >
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" aria-hidden="true" /> Complete
+                  </button>
+                )}
+
+                <div className="flex items-center gap-1 pl-0.5">
+                  {/* 3. View Special Order Memo */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedMeeting(meeting);
+                      setViewMode('memo');
+                    }}
+                    className="p-1.5 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-sm transition-colors cursor-pointer shrink-0"
+                    title="View Special Order Request Memo"
+                    aria-label="View Special Order Request Memo"
+                  >
+                    <FileText className="w-4 h-4" aria-hidden="true" />
+                  </button>
+
+                  {/* 4. Edit */}
+                  <button
+                    type="button"
+                    onClick={() => openEditForm(meeting)}
+                    className="p-1.5 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-sm transition-colors cursor-pointer shrink-0"
+                    title="Edit Meeting"
+                    aria-label="Edit Meeting"
+                  >
+                    <Edit2 className="w-4 h-4" aria-hidden="true" />
+                  </button>
+
+                  {/* 5. Delete */}
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteMeeting(meeting.id)}
+                    className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-sm transition-colors cursor-pointer shrink-0"
+                    title="Delete Meeting"
+                    aria-label="Delete Meeting"
+                  >
+                    <Trash2 className="w-4 h-4" aria-hidden="true" />
+                  </button>
+                </div>
+              </div>
+            );
+          };
+
+          if (isLoading) {
+            return (
+              <div className="py-16 text-center text-slate-400">
+                <RotateCcw className="w-7 h-7 mx-auto mb-2.5 text-[#C8102E] animate-spin" aria-hidden="true" />
+                <p className="font-semibold text-slate-700 text-sm">Loading inception meetings...</p>
+              </div>
+            );
+          }
+
+          if (filteredMeetings.length === 0) {
+            return (
+              <div className="py-16 px-4 text-center text-slate-400">
+                <Calendar className="w-10 h-10 mx-auto mb-2.5 text-slate-300 stroke-1" aria-hidden="true" />
+                <p className="font-semibold text-slate-700 text-sm">No Inception Meetings matching criteria.</p>
+                <p className="text-xs sm:text-sm text-slate-400 mt-1">
+                  Click &ldquo;Schedule Inception Meeting&rdquo; to select approved projects and schedule kickoff.
+                </p>
+              </div>
+            );
+          }
+
+          return (
+            <>
+              {/* Mobile & Compact Laptop (< 1280px): responsive card list, zero horizontal scrollbar */}
+              <div className="xl:hidden divide-y divide-slate-100">
+                {filteredMeetings.map((meeting) => (
+                  <div key={meeting.id} className="p-4 sm:p-5 space-y-3 hover:bg-slate-50/70 transition-colors">
+                    <div className="flex flex-wrap items-start justify-between gap-2.5">
+                      <div>
                         <div className="font-bold text-slate-900 text-sm">
                           {meeting.meetingDate ? formatDate(meeting.meetingDate) : '—'}
                         </div>
                         <div className="text-xs text-slate-500 flex items-center gap-1 mt-0.5">
-                          <Clock className="w-3.5 h-3.5 text-slate-400" aria-hidden="true" /> {formatMeetingTime(meeting.meetingTime)}
+                          <Clock className="w-3.5 h-3.5 text-slate-400" aria-hidden="true" />{' '}
+                          {formatMeetingTime(meeting.meetingTime)}
                         </div>
-                      </td>
-
-                      {/* Venue */}
-                      <td className="py-4 px-5 align-middle max-w-sm">
-                        <div className="flex items-center gap-2 text-sm text-slate-800 font-medium">
-                          <MapPin className="w-4 h-4 text-[#C8102E] shrink-0" aria-hidden="true" />
-                          <span className="truncate" title={meeting.venue}>{meeting.venue}</span>
-                        </div>
-                      </td>
-
-                      {/* Special Order Status */}
-                      <td className="py-4 px-5 align-middle whitespace-nowrap">
+                      </div>
+                      <div className="flex flex-wrap items-center gap-1.5">
                         {renderSoStatusBadge(meeting.specialOrderStatus, 'sm')}
-                      </td>
-
-                      {/* Meeting Lifecycle Status */}
-                      <td className="py-4 px-5 align-middle text-center whitespace-nowrap">
                         <InceptionStatusChip status={meeting.status} size="sm" />
-                      </td>
+                      </div>
+                    </div>
 
-                      {/* Actions */}
-                      <td className="py-4 px-5 align-middle text-center whitespace-nowrap">
-                        <div className="flex items-center justify-center gap-2 whitespace-nowrap">
-                          {/* Primary Workspace Action: Roster & Minutes */}
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setSelectedMeeting(meeting);
-                              setViewMode('details');
-                            }}
-                            className="px-3 py-1.5 text-xs font-bold text-[#C8102E] bg-red-50/70 hover:bg-[#C8102E] hover:text-white border border-red-200 rounded-sm shadow-2xs transition-colors cursor-pointer inline-flex items-center gap-1.5 shrink-0"
-                            title="Open Roster &amp; Minutes Workspace"
-                          >
-                            <ClipboardCheck className="w-3.5 h-3.5" aria-hidden="true" />
-                            Roster &amp; Minutes
-                          </button>
+                    <div className="flex items-start gap-2 text-sm text-slate-800 font-medium min-w-0">
+                      <MapPin className="w-4 h-4 text-[#C8102E] shrink-0 mt-0.5" aria-hidden="true" />
+                      <span className="break-words [overflow-wrap:anywhere] min-w-0" title={meeting.venue}>
+                        {meeting.venue}
+                      </span>
+                    </div>
 
-                          {/* 1a. Forward SO Request (Step 10.2) */}
-                          {normalizedSo === 'pending_request' && (
-                            <button
-                              type="button"
-                              onClick={() => handleUpdateSoStatus(meeting.id, 'forwarded_to_op')}
-                              className="px-3 py-1.5 text-xs font-semibold text-blue-700 bg-white hover:bg-blue-50 border border-blue-200 rounded-sm shadow-2xs transition-colors cursor-pointer inline-flex items-center gap-1.5 shrink-0"
-                              title="Forward SO Request to Office of the President (Meeting remains Not Scheduled)"
-                            >
-                              <Send className="w-3.5 h-3.5 text-blue-600" aria-hidden="true" /> Forward SO
-                            </button>
-                          )}
+                    <div className="pt-1">{renderMeetingActions(meeting, 'start')}</div>
+                  </div>
+                ))}
+              </div>
 
-                          {/* 1b. Approve SO (transitions Meeting Status from Not Scheduled -> Scheduled) */}
-                          {normalizedSo === 'forwarded_to_op' && (
-                            <button
-                              type="button"
-                              onClick={() => handleUpdateSoStatus(meeting.id, 'approved')}
-                              className="px-3 py-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50/70 hover:bg-emerald-100 border border-emerald-200 rounded-sm shadow-2xs transition-colors cursor-pointer inline-flex items-center gap-1.5 shrink-0"
-                              title="Mark Special Order as Approved (updates Meeting Status to Scheduled)"
-                            >
-                              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" aria-hidden="true" /> Approve SO
-                            </button>
-                          )}
-
-                          {/* 2. Mark Meeting Completed (only once SO is Approved and Meeting is Scheduled) */}
-                          {meeting.status === 'scheduled' && (
-                            <button
-                              type="button"
-                              onClick={() => handleMarkMeetingCompleted(meeting.id)}
-                              className="px-3 py-1.5 text-xs font-semibold text-emerald-700 bg-white hover:bg-emerald-50 border border-emerald-200 rounded-sm shadow-2xs transition-colors cursor-pointer inline-flex items-center gap-1.5 shrink-0"
-                              title="Mark as Completed"
-                            >
-                              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" aria-hidden="true" /> Complete
-                            </button>
-                          )}
-
-                          {/* 3. View Special Order Memo */}
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setSelectedMeeting(meeting);
-                              setViewMode('memo');
-                            }}
-                            className="p-2 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-sm transition-colors cursor-pointer shrink-0"
-                            title="View Special Order Request Memo"
-                          >
-                            <FileText className="w-4 h-4" aria-hidden="true" />
-                          </button>
-
-                          {/* 4. Edit */}
-                          <button
-                            type="button"
-                            onClick={() => openEditForm(meeting)}
-                            className="p-2 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-sm transition-colors cursor-pointer shrink-0"
-                            title="Edit Meeting"
-                          >
-                            <Edit2 className="w-4 h-4" aria-hidden="true" />
-                          </button>
-
-                          {/* 5. Delete */}
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteMeeting(meeting.id)}
-                            className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-sm transition-colors cursor-pointer shrink-0"
-                            title="Delete Meeting"
-                          >
-                            <Trash2 className="w-4 h-4" aria-hidden="true" />
-                          </button>
-
-                          {/* 6. View Meeting Details */}
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setSelectedMeeting(meeting);
-                              setViewMode('details');
-                            }}
-                            className="p-2 text-slate-400 hover:text-[#C8102E] hover:bg-red-50/60 rounded-sm transition-colors cursor-pointer shrink-0"
-                            title="View Meeting Details"
-                          >
-                            <Eye className="w-4 h-4" aria-hidden="true" />
-                          </button>
-                        </div>
-                      </td>
+              {/* Desktop (>= 1280px): table fitted to container with zero horizontal scrollbar */}
+              <div className="hidden xl:block">
+                <table className="w-full text-left text-sm text-slate-600">
+                  <thead className="bg-slate-50 text-xs uppercase tracking-wider font-bold text-slate-500 border-b border-slate-200">
+                    <tr>
+                      <th className="py-3.5 px-4 whitespace-nowrap">Date &amp; Time</th>
+                      <th className="py-3.5 px-4">Venue</th>
+                      <th className="py-3.5 px-4 whitespace-nowrap">SO Status</th>
+                      <th className="py-3.5 px-4 text-center whitespace-nowrap">Meeting Status</th>
+                      <th className="py-3.5 px-4 text-right whitespace-nowrap">Actions</th>
                     </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {filteredMeetings.map((meeting) => (
+                      <tr key={meeting.id} className="hover:bg-slate-50/70 transition-colors">
+                        {/* Date & Time */}
+                        <td className="py-4 px-4 align-middle whitespace-nowrap">
+                          <div className="font-bold text-slate-900 text-sm">
+                            {meeting.meetingDate ? formatDate(meeting.meetingDate) : '—'}
+                          </div>
+                          <div className="text-xs text-slate-500 flex items-center gap-1 mt-0.5">
+                            <Clock className="w-3.5 h-3.5 text-slate-400" aria-hidden="true" />{' '}
+                            {formatMeetingTime(meeting.meetingTime)}
+                          </div>
+                        </td>
+
+                        {/* Venue */}
+                        <td className="py-4 px-4 align-middle min-w-[180px]">
+                          <div className="flex items-start gap-2 text-sm text-slate-800 font-medium min-w-0">
+                            <MapPin className="w-4 h-4 text-[#C8102E] shrink-0 mt-0.5" aria-hidden="true" />
+                            <span
+                              className="break-words [overflow-wrap:anywhere] line-clamp-2 leading-snug min-w-0"
+                              title={meeting.venue}
+                            >
+                              {meeting.venue}
+                            </span>
+                          </div>
+                        </td>
+
+                        {/* Special Order Status */}
+                        <td className="py-4 px-4 align-middle whitespace-nowrap">
+                          {renderSoStatusBadge(meeting.specialOrderStatus, 'sm')}
+                        </td>
+
+                        {/* Meeting Lifecycle Status */}
+                        <td className="py-4 px-4 align-middle text-center whitespace-nowrap">
+                          <InceptionStatusChip status={meeting.status} size="sm" />
+                        </td>
+
+                        {/* Actions */}
+                        <td className="py-4 px-4 align-middle text-right">
+                          {renderMeetingActions(meeting, 'end')}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          );
+        })()}
       </div>
     </div>
   );

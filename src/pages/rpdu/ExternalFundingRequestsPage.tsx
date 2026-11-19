@@ -49,7 +49,7 @@ export function ExternalFundingRequestsPage() {
   };
 
   return (
-    <section className="mx-auto max-w-5xl space-y-5">
+    <section className="mx-auto max-w-7xl space-y-5">
       <header>
         <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">External Funding Requests</h1>
         <p className="mt-2 text-sm text-slate-600">Review the full manuscript and supporting documents. RPDU Head or ADMIN clearance sends a complete packet to technical review.</p>
