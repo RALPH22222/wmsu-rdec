@@ -2,6 +2,7 @@ import type { InceptionAttendanceStatus, InceptionMeetingStatus } from '../../..
 import type { StatusTone } from '../../../lib/proposalPipeline';
 
 export const MEETING_STATUS_META: Record<InceptionMeetingStatus, { label: string; tone: StatusTone }> = {
+  not_scheduled: { label: 'Not Scheduled', tone: 'slate' },
   scheduled: { label: 'Scheduled', tone: 'blue' },
   completed: { label: 'Completed', tone: 'emerald' },
   rescheduled: { label: 'Rescheduled', tone: 'amber' },

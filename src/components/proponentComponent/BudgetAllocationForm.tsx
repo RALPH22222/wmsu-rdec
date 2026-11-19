@@ -34,6 +34,7 @@ import { useAuth } from '../../context/AuthContext';
 import { API_ENDPOINTS } from '../../config/apiConfig';
 import {
   DEFAULT_LIB_SIGNATORIES,
+  normalizeVpReselSignatory,
   validateEoItems,
   buildLibPrintableHtml,
   printLibHtml,
@@ -252,18 +253,22 @@ type MetadataState = Omit<LibMetadata, 'title' | 'coResearchers' | 'projectStaff
   signatories: LibSignatories;
 };
 
-const resolveSignatories = (raw: Partial<LibSignatories> | undefined, fallbackLeader: string): LibSignatories => ({
-  studyLeaderName: raw?.studyLeaderName?.trim() || fallbackLeader || DEFAULT_LIB_SIGNATORIES.studyLeaderName,
-  studyLeaderTitle: raw?.studyLeaderTitle?.trim() || DEFAULT_LIB_SIGNATORIES.studyLeaderTitle,
-  notedByName: raw?.notedByName?.trim() || DEFAULT_LIB_SIGNATORIES.notedByName,
-  notedByTitle: raw?.notedByTitle?.trim() || DEFAULT_LIB_SIGNATORIES.notedByTitle,
-  recommendingApprovalName:
-    raw?.recommendingApprovalName?.trim() || DEFAULT_LIB_SIGNATORIES.recommendingApprovalName,
-  recommendingApprovalTitle:
-    raw?.recommendingApprovalTitle?.trim() || DEFAULT_LIB_SIGNATORIES.recommendingApprovalTitle,
-  approvedByName: raw?.approvedByName?.trim() || DEFAULT_LIB_SIGNATORIES.approvedByName,
-  approvedByTitle: raw?.approvedByTitle?.trim() || DEFAULT_LIB_SIGNATORIES.approvedByTitle,
-});
+const resolveSignatories = (raw: Partial<LibSignatories> | undefined, fallbackLeader: string): LibSignatories => {
+  const normalizedVp = normalizeVpReselSignatory(
+    raw?.recommendingApprovalName,
+    raw?.recommendingApprovalTitle
+  );
+  return {
+    studyLeaderName: raw?.studyLeaderName?.trim() || fallbackLeader || DEFAULT_LIB_SIGNATORIES.studyLeaderName,
+    studyLeaderTitle: raw?.studyLeaderTitle?.trim() || DEFAULT_LIB_SIGNATORIES.studyLeaderTitle,
+    notedByName: raw?.notedByName?.trim() || DEFAULT_LIB_SIGNATORIES.notedByName,
+    notedByTitle: raw?.notedByTitle?.trim() || DEFAULT_LIB_SIGNATORIES.notedByTitle,
+    recommendingApprovalName: normalizedVp.recommendingApprovalName,
+    recommendingApprovalTitle: normalizedVp.recommendingApprovalTitle,
+    approvedByName: raw?.approvedByName?.trim() || DEFAULT_LIB_SIGNATORIES.approvedByName,
+    approvedByTitle: raw?.approvedByTitle?.trim() || DEFAULT_LIB_SIGNATORIES.approvedByTitle,
+  };
+};
 
 export const BudgetAllocationForm: React.FC = () => {
   const { conceptProposals, calls } = useCallForProposals({ calls: true, concepts: true });

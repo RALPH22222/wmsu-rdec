@@ -3,6 +3,7 @@ import type {
   InceptionMeeting,
   ProfessionalServiceContract,
   InceptionMeetingStatus,
+  SpecialOrderStatus,
   InceptionRollCallEntry,
   InceptionAttendanceSummary,
   InceptionMinutesDocument,
@@ -199,9 +200,37 @@ export const buildDefaultRollCall = (meeting: Partial<InceptionMeeting>): Incept
   return roster;
 };
 
+export const normalizeSpecialOrderStatus = (
+  raw?: string | null
+): 'pending_request' | 'forwarded_to_op' | 'approved' => {
+  if (raw === 'approved' || raw === 'so_issued') return 'approved';
+  if (raw === 'forwarded_to_op') return 'forwarded_to_op';
+  return 'pending_request';
+};
+
+export const resolveMeetingStatusFromSo = (
+  specialOrderStatus: SpecialOrderStatus | string | undefined,
+  rawStatus?: InceptionMeetingStatus | string | null,
+  hasMinutesDoc = false,
+  presentCount = 0
+): InceptionMeetingStatus => {
+  if (rawStatus === 'cancelled') return 'cancelled';
+  const normalizedSo = normalizeSpecialOrderStatus(specialOrderStatus);
+  if (normalizedSo !== 'approved') {
+    return 'not_scheduled';
+  }
+  if (rawStatus === 'completed' && hasMinutesDoc && presentCount > 0) {
+    return 'completed';
+  }
+  if (rawStatus === 'rescheduled') {
+    return 'rescheduled';
+  }
+  return 'scheduled';
+};
+
 /**
  * Normalizes an InceptionMeeting object (cleaning cached localStorage entries,
- * deduplicating roll-call, and ensuring status/timestamps match actual workflow state).
+ * deduplicating roll-call, and ensuring status/timestamps match actual Special Order & workflow state).
  */
 export const normalizeInceptionMeeting = (m: InceptionMeeting): InceptionMeeting => {
   const fixedMeetingTime = m.meetingTime === '01:30' ? '09:30' : (m.meetingTime || '09:30');
@@ -215,15 +244,18 @@ export const normalizeInceptionMeeting = (m: InceptionMeeting): InceptionMeeting
   const minutesUploadedAt = hasMinutesDoc
     ? (m.minutesUploadedAt || m.minutesPdf?.uploadedAt || null)
     : null;
-  const effectiveStatus: InceptionMeetingStatus =
-    m.status === 'completed' && (!hasMinutesDoc || attendanceSummary.present === 0)
-      ? 'scheduled'
-      : (m.status || 'scheduled');
+  const normalizedSoStatus = normalizeSpecialOrderStatus(m.specialOrderStatus);
+  const effectiveStatus = resolveMeetingStatusFromSo(
+    normalizedSoStatus,
+    m.status,
+    hasMinutesDoc,
+    attendanceSummary.present
+  );
 
   return {
     ...withTime,
     meetingType: 'in_person',
-    specialOrderStatus: m.specialOrderStatus === 'so_issued' ? 'forwarded_to_op' : m.specialOrderStatus,
+    specialOrderStatus: normalizedSoStatus,
     status: effectiveStatus,
     completedDate: effectiveStatus === 'completed' ? m.completedDate : '',
     rollCall,

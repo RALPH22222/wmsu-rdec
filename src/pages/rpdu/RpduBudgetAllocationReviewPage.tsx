@@ -24,6 +24,7 @@ import { API_ENDPOINTS } from '../../config/apiConfig';
 import type { RpduBudgetAllocationItem } from '../../types';
 import {
   DEFAULT_LIB_SIGNATORIES,
+  normalizeVpReselSignatory,
   buildLibPrintableHtml,
   printLibHtml,
   downloadLibPdfFile,
@@ -184,6 +185,11 @@ export const RpduBudgetAllocationReviewPage: React.FC = () => {
 
   const isTwoYears = true;
 
+  const normalizedVp = normalizeVpReselSignatory(
+    allocation.metadata.signatories?.recommendingApprovalName,
+    allocation.metadata.signatories?.recommendingApprovalTitle
+  );
+
   const signatories = {
     studyLeaderName:
       allocation.metadata.signatories?.studyLeaderName ||
@@ -196,12 +202,8 @@ export const RpduBudgetAllocationReviewPage: React.FC = () => {
       allocation.metadata.signatories?.notedByName || DEFAULT_LIB_SIGNATORIES.notedByName,
     notedByTitle:
       allocation.metadata.signatories?.notedByTitle || DEFAULT_LIB_SIGNATORIES.notedByTitle,
-    recommendingApprovalName:
-      allocation.metadata.signatories?.recommendingApprovalName ||
-      DEFAULT_LIB_SIGNATORIES.recommendingApprovalName,
-    recommendingApprovalTitle:
-      allocation.metadata.signatories?.recommendingApprovalTitle ||
-      DEFAULT_LIB_SIGNATORIES.recommendingApprovalTitle,
+    recommendingApprovalName: normalizedVp.recommendingApprovalName,
+    recommendingApprovalTitle: normalizedVp.recommendingApprovalTitle,
     approvedByName:
       allocation.metadata.signatories?.approvedByName || DEFAULT_LIB_SIGNATORIES.approvedByName,
     approvedByTitle:

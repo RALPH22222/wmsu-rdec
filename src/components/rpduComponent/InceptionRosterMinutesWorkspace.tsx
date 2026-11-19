@@ -30,6 +30,7 @@ import {
   updateInceptionRoster,
   uploadInceptionMinutes,
   removeInceptionMinutes,
+  normalizeSpecialOrderStatus,
 } from '../../lib/inceptionApi';
 import { API_BASE_URL } from '../../config/apiConfig';
 import { formatDateTime, formatFileSize } from '../../lib/format';
@@ -398,6 +399,14 @@ export const InceptionRosterMinutesWorkspace: React.FC<InceptionRosterMinutesWor
       setFeedback({
         type: 'error',
         message: 'Please select and upload the official minutes/resolutions document (.pdf, .doc, .docx) first.',
+      });
+      return;
+    }
+
+    if (markCompleted && normalizeSpecialOrderStatus(meeting.specialOrderStatus) !== 'approved') {
+      setFeedback({
+        type: 'error',
+        message: 'Special Order (SO) must be Approved before the meeting can be marked as Completed.',
       });
       return;
     }

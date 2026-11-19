@@ -7,10 +7,34 @@ export const DEFAULT_LIB_SIGNATORIES: Required<LibSignatories> = {
   studyLeaderTitle: 'Study Leader',
   notedByName: 'REYNANTE E. AUTIDA, PhD',
   notedByTitle: 'Director for Research',
-  recommendingApprovalName: 'TERESITA A. NARVAEZ, EdD',
-  recommendingApprovalTitle: 'Vice President for Research and Extension',
+  recommendingApprovalName: 'JOEL G. FERNANDO, PhD',
+  recommendingApprovalTitle: 'Vice President - RESEL',
   approvedByName: 'MA. CARLA A. OCHOTORENA, RN, PhD',
   approvedByTitle: 'University President',
+};
+
+const LEGACY_VP_NAMES = new Set(['TERESITA A. NARVAEZ, EDD', 'TERESITA A. NARVAEZ, EdD']);
+const LEGACY_VP_TITLES = new Set([
+  'VICE PRESIDENT FOR RESEARCH AND EXTENSION',
+  'Vice President for Research and Extension',
+]);
+
+export const normalizeVpReselSignatory = (
+  name?: string,
+  title?: string
+): { recommendingApprovalName: string; recommendingApprovalTitle: string } => {
+  const trimmedName = (name || '').trim();
+  const trimmedTitle = (title || '').trim();
+  return {
+    recommendingApprovalName:
+      !trimmedName || LEGACY_VP_NAMES.has(trimmedName) || LEGACY_VP_NAMES.has(trimmedName.toUpperCase())
+        ? DEFAULT_LIB_SIGNATORIES.recommendingApprovalName
+        : trimmedName,
+    recommendingApprovalTitle:
+      !trimmedTitle || LEGACY_VP_TITLES.has(trimmedTitle) || LEGACY_VP_TITLES.has(trimmedTitle.toUpperCase())
+        ? DEFAULT_LIB_SIGNATORIES.recommendingApprovalTitle
+        : trimmedTitle,
+  };
 };
 
 export interface EoItemValidationIssue {
@@ -77,9 +101,19 @@ const escapeHtml = (value: unknown): string =>
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
 
-const formatPeso = (amount: number): string => {
+const formatAmount = (amount: number): string => {
   const num = Number(amount) || 0;
-  return `₱${num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  return num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+};
+
+const formatCellAmount = (amount: number): string => {
+  const num = Number(amount) || 0;
+  return num > 0 ? formatAmount(num) : '';
+};
+
+const formatTotalCellAmount = (amount: number): string => {
+  const num = Number(amount) || 0;
+  return num > 0 ? formatAmount(num) : '-';
 };
 
 export interface BuildLibPrintableHtmlParams {
@@ -96,7 +130,7 @@ export interface BuildLibPrintableHtmlParams {
 
 /**
  * Generates the official WMSU-RPDU Project Line-Item Budget printable A4 HTML document
- * following the official RPDU print layout and Excel template.
+ * following the official Lib_Abdulla.pdf reference format.
  */
 export const buildLibPrintableHtml = (params: BuildLibPrintableHtmlParams): string => {
   const {
@@ -117,11 +151,50 @@ export const buildLibPrintableHtml = (params: BuildLibPrintableHtmlParams): stri
   const cleanCoResearchers = coResearchers.map((c) => String(c || '').trim()).filter(Boolean);
   const cleanProjectStaff = projectStaff.map((s) => String(s || '').trim()).filter(Boolean);
 
-  const psItems = items.filter((i) => i.classType === 'PS');
+  const rawPsItems = items.filter((i) => i.classType === 'PS');
   const mooeItems = items.filter((i) => i.classType === 'MOOE');
   const rawEoItems = items.filter((i) => i.classType === 'EO');
 
-  // Ensure standard EO lines (ICT Equipment, Furnitures and Fixtures) appear as in the official template
+  // Ensure the 3 standard PS lines always appear as in Lib_Abdulla.pdf
+  const psItems: LibLineItem[] = [...rawPsItems];
+  if (!psItems.some((i) => i.id === 'ps-pl' || i.description.toLowerCase().includes('project leader'))) {
+    psItems.unshift({
+      id: 'ps-pl',
+      classType: 'PS',
+      subclass: 'Honoraria',
+      description: 'Project Leader @4,500/mo',
+      year1: 0,
+      year2: 0,
+      total: 0,
+      isStandard: true,
+    });
+  }
+  if (!psItems.some((i) => i.id === 'ps-co' || i.description.toLowerCase().includes('co-researcher'))) {
+    psItems.push({
+      id: 'ps-co',
+      classType: 'PS',
+      subclass: 'Honoraria',
+      description: 'Co-Researchers @2,000/mo',
+      year1: 0,
+      year2: 0,
+      total: 0,
+      isStandard: true,
+    });
+  }
+  if (!psItems.some((i) => i.id === 'ps-staff' || i.description.toLowerCase().includes('project staff'))) {
+    psItems.push({
+      id: 'ps-staff',
+      classType: 'PS',
+      subclass: 'Honoraria',
+      description: 'Project Staff @1,500/mo',
+      year1: 0,
+      year2: 0,
+      total: 0,
+      isStandard: true,
+    });
+  }
+
+  // Ensure standard EO lines (ICT Equipment, Furnitures and Fixtures) appear as in Lib_Abdulla.pdf
   const eoItems: LibLineItem[] = [...rawEoItems];
   if (!eoItems.some((i) => i.description.toLowerCase().includes('ict equipment'))) {
     eoItems.unshift({
@@ -182,21 +255,16 @@ export const buildLibPrintableHtml = (params: BuildLibPrintableHtmlParams): stri
   };
 
   const formatPsDescription = (item: LibLineItem): string => {
-    if (item.id === 'ps-co' && cleanCoResearchers.length > 0) {
-      return `Co-Researchers @2,000/mo x ${cleanCoResearchers.length} personnel`;
-    }
-    if (item.id === 'ps-staff' && cleanProjectStaff.length > 0) {
-      return `Project Staff @1,500/mo x ${cleanProjectStaff.length} personnel`;
-    }
+    if (item.id === 'ps-pl') return 'Project Leader @4,500/mo';
+    if (item.id === 'ps-co') return 'Co-Researchers @2,000/mo';
+    if (item.id === 'ps-staff') return 'Project Staff @1,500/mo';
     return item.description;
   };
 
-  const visiblePsItems = psItems.filter((item) => {
-    if (item.id === 'ps-pl') return true;
-    if (item.id === 'ps-co') return cleanCoResearchers.length > 0 || (Number(item.total) || 0) > 0;
-    if (item.id === 'ps-staff') return cleanProjectStaff.length > 0 || (Number(item.total) || 0) > 0;
-    return true;
-  });
+  const normalizedVp = normalizeVpReselSignatory(
+    signatories?.recommendingApprovalName,
+    signatories?.recommendingApprovalTitle
+  );
 
   const resolvedSignatories: Required<LibSignatories> = {
     studyLeaderName:
@@ -204,15 +272,13 @@ export const buildLibPrintableHtml = (params: BuildLibPrintableHtmlParams): stri
     studyLeaderTitle: (signatories?.studyLeaderTitle || DEFAULT_LIB_SIGNATORIES.studyLeaderTitle).trim(),
     notedByName: (signatories?.notedByName || DEFAULT_LIB_SIGNATORIES.notedByName).trim(),
     notedByTitle: (signatories?.notedByTitle || DEFAULT_LIB_SIGNATORIES.notedByTitle).trim(),
-    recommendingApprovalName:
-      (signatories?.recommendingApprovalName || DEFAULT_LIB_SIGNATORIES.recommendingApprovalName).trim(),
-    recommendingApprovalTitle:
-      (signatories?.recommendingApprovalTitle || DEFAULT_LIB_SIGNATORIES.recommendingApprovalTitle).trim(),
+    recommendingApprovalName: normalizedVp.recommendingApprovalName,
+    recommendingApprovalTitle: normalizedVp.recommendingApprovalTitle,
     approvedByName: (signatories?.approvedByName || DEFAULT_LIB_SIGNATORIES.approvedByName).trim(),
     approvedByTitle: (signatories?.approvedByTitle || DEFAULT_LIB_SIGNATORIES.approvedByTitle).trim(),
   };
 
-  const durationDisplay = String(projectDuration || '1 Year').toUpperCase();
+  const durationDisplay = String(projectDuration || '1 Year').trim();
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -236,7 +302,7 @@ export const buildLibPrintableHtml = (params: BuildLibPrintableHtmlParams): stri
       font-family: Arial, Helvetica, sans-serif;
       font-size: 11px;
       color: #000000;
-      line-height: 1.35;
+      line-height: 1.38;
     }
     .lib-container {
       padding: 16px 0;
@@ -245,7 +311,7 @@ export const buildLibPrintableHtml = (params: BuildLibPrintableHtmlParams): stri
       width: 210mm;
       min-height: 297mm;
       margin: 0 auto;
-      padding: 12mm 15mm 14mm 15mm;
+      padding: 14mm 16mm 15mm 16mm;
       background: #ffffff;
       box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
       display: flex;
@@ -263,94 +329,70 @@ export const buildLibPrintableHtml = (params: BuildLibPrintableHtmlParams): stri
         box-shadow: none !important;
         width: 210mm !important;
         min-height: auto !important;
-        padding: 12mm 15mm 14mm 15mm !important;
+        padding: 14mm 16mm 15mm 16mm !important;
       }
     }
-    .header-bar {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding-bottom: 8px;
-      border-bottom: 1.5px solid #000000;
-      margin-bottom: 8px;
-    }
-    .header-logos {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      width: 115px;
-      flex-shrink: 0;
-    }
-    .header-logos img {
-      width: 48px;
-      height: 48px;
-      object-fit: contain;
-    }
-    .header-center {
-      flex: 1;
+    .header-block {
       text-align: center;
-      padding: 0 8px;
-    }
-    .header-univ {
-      font-size: 10.5px;
-      font-weight: 700;
-      letter-spacing: 0.02em;
-      text-transform: uppercase;
+      margin-bottom: 18px;
     }
     .header-rdec {
-      font-size: 11px;
+      font-size: 11.5px;
       font-weight: 700;
       text-transform: uppercase;
-      margin-top: 1px;
+      letter-spacing: 0.01em;
     }
     .header-rpdu {
-      font-size: 10.5px;
+      font-size: 11.5px;
       font-weight: 700;
       text-transform: uppercase;
-      margin-top: 1px;
+      margin-top: 2px;
+      letter-spacing: 0.01em;
     }
     .header-doc-title {
       font-size: 11.5px;
       font-weight: 700;
       margin-top: 2px;
     }
-    .header-spacer {
-      width: 115px;
+    .meta-title-block {
+      display: flex;
+      align-items: flex-start;
+      gap: 24px;
+      font-size: 11px;
+      font-weight: 700;
+      margin-bottom: 12px;
+    }
+    .meta-title-label {
       flex-shrink: 0;
+    }
+    .meta-title-text {
+      flex: 1;
+      font-weight: 700;
     }
     .meta-table {
       width: 100%;
       border-collapse: collapse;
-      margin-bottom: 10px;
-      font-size: 10.5px;
+      margin-bottom: 12px;
+      font-size: 11px;
     }
     .meta-table td {
-      padding: 2.5px 4px;
+      padding: 2.5px 0;
       vertical-align: top;
-    }
-    .meta-label {
-      width: 155px;
-      font-weight: 400;
-      color: #111111;
-    }
-    .meta-value {
-      font-weight: 400;
+      font-weight: 700;
       color: #000000;
     }
-    .meta-title-row td {
-      border-bottom: 1px solid #000000;
-      padding-bottom: 4px;
-      margin-bottom: 2px;
+    .meta-label {
+      width: 170px;
+      padding-right: 12px;
     }
-    .meta-title-value {
+    .meta-value {
       font-weight: 700;
-      text-align: center;
     }
     .schedule-header-table {
       width: 100%;
       border-collapse: collapse;
       margin-bottom: 6px;
-      font-size: 10.5px;
+      font-size: 11px;
     }
     .schedule-header-table th {
       border: 1px solid #000000;
@@ -362,44 +404,48 @@ export const buildLibPrintableHtml = (params: BuildLibPrintableHtmlParams): stri
     .budget-table {
       width: 100%;
       border-collapse: collapse;
-      font-size: 10.5px;
+      font-size: 11px;
     }
     .budget-table td {
-      padding: 2px 6px;
+      padding: 2.2px 6px;
       vertical-align: bottom;
+      font-weight: 700;
     }
     .col-item {
-      width: 52%;
+      width: 49%;
     }
     .col-y1 {
-      width: 16%;
+      width: 17%;
       text-align: right;
       white-space: nowrap;
     }
     .col-y2 {
-      width: 16%;
+      width: 17%;
       text-align: right;
       white-space: nowrap;
     }
     .col-total {
-      width: 16%;
+      width: 17%;
       text-align: right;
       white-space: nowrap;
     }
     .section-heading td {
       font-weight: 700;
-      padding-top: 6px;
-      padding-bottom: 3px;
-      text-transform: uppercase;
+      padding-top: 8px;
+      padding-bottom: 4px;
+      padding-left: 8px;
     }
     .subsection-heading td {
       font-weight: 700;
-      padding-left: 14px;
-      padding-top: 2px;
+      padding-left: 22px;
+      padding-top: 4px;
       padding-bottom: 2px;
     }
     .line-item-row td.col-item {
-      padding-left: 26px;
+      padding-left: 22px;
+    }
+    .line-item-subrow td.col-item {
+      padding-left: 40px;
     }
     .subtotal-row td {
       border-top: 1px solid #000000;
@@ -413,22 +459,22 @@ export const buildLibPrintableHtml = (params: BuildLibPrintableHtmlParams): stri
     }
     .grand-total-row td {
       border-top: 1px solid #000000;
-      border-bottom: 3px double #000000;
+      border-bottom: 1.5px solid #000000;
       font-weight: 700;
-      padding-top: 4px;
-      padding-bottom: 4px;
+      padding-top: 3.5px;
+      padding-bottom: 3.5px;
     }
     .grand-total-label {
-      text-align: center;
+      padding-left: 48px !important;
       text-transform: uppercase;
     }
     .signatories-grid {
       margin-top: 28px;
       display: grid;
       grid-template-columns: 1fr 1fr;
-      column-gap: 48px;
+      column-gap: 56px;
       row-gap: 28px;
-      font-size: 10.5px;
+      font-size: 11px;
       page-break-inside: avoid;
       break-inside: avoid;
     }
@@ -437,7 +483,8 @@ export const buildLibPrintableHtml = (params: BuildLibPrintableHtmlParams): stri
       flex-direction: column;
     }
     .sig-caption {
-      margin-bottom: 30px;
+      margin-bottom: 32px;
+      font-weight: 400;
       color: #000000;
     }
     .sig-name {
@@ -446,7 +493,8 @@ export const buildLibPrintableHtml = (params: BuildLibPrintableHtmlParams): stri
       letter-spacing: 0.01em;
     }
     .sig-role {
-      color: #111111;
+      font-weight: 400;
+      color: #000000;
       margin-top: 1px;
     }
   </style>
@@ -454,47 +502,40 @@ export const buildLibPrintableHtml = (params: BuildLibPrintableHtmlParams): stri
 <body>
   <div class="lib-container">
     <div class="lib-page">
-      <!-- Official Institutional Header -->
-      <div class="header-bar">
-        <div class="header-logos">
-          <img src="/WMSU.png" alt="WMSU Seal" />
-          <img src="/RDEC-WMSU.png" alt="RDEC Seal" />
-        </div>
-        <div class="header-center">
-          <div class="header-univ">WESTERN MINDANAO STATE UNIVERSITY</div>
-          <div class="header-rdec">RESEARCH DEVELOPMENT AND EVALUATION CENTER</div>
-          <div class="header-rpdu">RESEARCH PROJECT DEVELOPMENT UNIT</div>
-          <div class="header-doc-title">Project Line-Item Budget</div>
-        </div>
-        <div class="header-spacer"></div>
+      <!-- Official Institutional Header (Lib_Abdulla.pdf format) -->
+      <div class="header-block">
+        <div class="header-rdec">RESEARCH DEVELOPMENT AND EVALUATION CENTER</div>
+        <div class="header-rpdu">RESEARCH PROJECT DEVELOPMENT UNIT</div>
+        <div class="header-doc-title">Project Line-Item Budget</div>
       </div>
 
-      <!-- Project Metadata Rows -->
+      <!-- Project Title & Metadata Rows -->
+      <div class="meta-title-block">
+        <span class="meta-title-label">Title</span>
+        <span class="meta-title-text">${escapeHtml(title || 'Untitled Research Project')}</span>
+      </div>
+
       <table class="meta-table">
         <tbody>
-          <tr class="meta-title-row">
-            <td class="meta-label">Title</td>
-            <td class="meta-value meta-title-value">${escapeHtml(title || 'Untitled Research Project')}</td>
-          </tr>
           <tr>
             <td class="meta-label">Project Duration</td>
             <td class="meta-value">${escapeHtml(durationDisplay)}</td>
           </tr>
           <tr>
             <td class="meta-label">Study Leader</td>
-            <td class="meta-value">${escapeHtml(studyLeader || 'N/A')}</td>
+            <td class="meta-value">${escapeHtml(studyLeader || 'None')}</td>
           </tr>
           <tr>
             <td class="meta-label">Co-Researchers</td>
-            <td class="meta-value">${escapeHtml(cleanCoResearchers.length > 0 ? cleanCoResearchers.join('; ') : 'N/A')}</td>
+            <td class="meta-value">${escapeHtml(cleanCoResearchers.length > 0 ? cleanCoResearchers.join(', ') : 'None')}</td>
           </tr>
           <tr>
             <td class="meta-label">Project Staff</td>
-            <td class="meta-value">${escapeHtml(cleanProjectStaff.length > 0 ? cleanProjectStaff.join('; ') : 'N/A')}</td>
+            <td class="meta-value">${escapeHtml(cleanProjectStaff.length > 0 ? cleanProjectStaff.join(', ') : 'None')}</td>
           </tr>
           <tr>
             <td class="meta-label">Implementing Department</td>
-            <td class="meta-value">${escapeHtml(implementingDepartment || 'N/A')}</td>
+            <td class="meta-value">${escapeHtml(implementingDepartment || 'None')}</td>
           </tr>
         </tbody>
       </table>
@@ -503,12 +544,13 @@ export const buildLibPrintableHtml = (params: BuildLibPrintableHtmlParams): stri
       <table class="schedule-header-table">
         <thead>
           <tr>
-            <th rowspan="2" style="width: 52%;">ITEMS</th>
-            <th style="width: 16%;">YEAR 1</th>
-            <th style="width: 16%;">YEAR 2</th>
-            <th rowspan="2" style="width: 16%;">TOTAL</th>
+            <th style="width: 49%;">ITEMS</th>
+            <th style="width: 17%;">YEAR 1</th>
+            <th style="width: 17%;">YEAR 2</th>
+            <th rowspan="2" style="width: 17%; vertical-align: middle;">TOTAL</th>
           </tr>
           <tr>
+            <th>&nbsp;</th>
             <th>WMSU- GIA</th>
             <th>WMSU- GIA</th>
           </tr>
@@ -529,29 +571,29 @@ export const buildLibPrintableHtml = (params: BuildLibPrintableHtmlParams): stri
             isTeachingDeloading
               ? `<tr class="line-item-row">
                   <td class="col-item">Teaching De-loading Arrangement</td>
-                  <td class="col-y1">${formatPeso(0)}</td>
-                  <td class="col-y2">${formatPeso(0)}</td>
-                  <td class="col-total">${formatPeso(0)}</td>
+                  <td class="col-y1"></td>
+                  <td class="col-y2"></td>
+                  <td class="col-total">-</td>
                 </tr>`
-              : visiblePsItems
+              : psItems
                   .map((item) => {
                     const y1 = Number(item.year1) || 0;
                     const y2 = isTwoYears ? Number(item.year2) || 0 : 0;
                     const tot = y1 + y2;
                     return `<tr class="line-item-row">
                       <td class="col-item">${escapeHtml(formatPsDescription(item))}</td>
-                      <td class="col-y1">${formatPeso(y1)}</td>
-                      <td class="col-y2">${isTwoYears && y2 > 0 ? formatPeso(y2) : isTwoYears ? formatPeso(0) : ''}</td>
-                      <td class="col-total">${formatPeso(tot)}</td>
+                      <td class="col-y1">${formatCellAmount(y1)}</td>
+                      <td class="col-y2">${formatCellAmount(y2)}</td>
+                      <td class="col-total">${formatTotalCellAmount(tot)}</td>
                     </tr>`;
                   })
                   .join('\n')
           }
           <tr class="subtotal-row">
             <td class="col-item subtotal-label">Total for PS</td>
-            <td class="col-y1">${formatPeso(psSubtotal.year1)}</td>
-            <td class="col-y2">${formatPeso(psSubtotal.year2)}</td>
-            <td class="col-total">${formatPeso(psSubtotal.total)}</td>
+            <td class="col-y1">${formatTotalCellAmount(psSubtotal.year1)}</td>
+            <td class="col-y2">${formatTotalCellAmount(psSubtotal.year2)}</td>
+            <td class="col-total">${formatTotalCellAmount(psSubtotal.total)}</td>
           </tr>
 
           <!-- II. MOOE -->
@@ -565,22 +607,22 @@ export const buildLibPrintableHtml = (params: BuildLibPrintableHtmlParams): stri
               const tot = y1 + y2;
               return `<tr class="line-item-row">
                 <td class="col-item">${escapeHtml(item.description || 'Operating Expense')}</td>
-                <td class="col-y1">${formatPeso(y1)}</td>
-                <td class="col-y2">${formatPeso(y2)}</td>
-                <td class="col-total">${formatPeso(tot)}</td>
+                <td class="col-y1">${formatCellAmount(y1)}</td>
+                <td class="col-y2">${formatCellAmount(y2)}</td>
+                <td class="col-total">${formatTotalCellAmount(tot)}</td>
               </tr>`;
             })
             .join('\n')}
           <tr class="subtotal-row">
             <td class="col-item subtotal-label">Total for MOOE</td>
-            <td class="col-y1">${formatPeso(mooeSubtotal.year1)}</td>
-            <td class="col-y2">${formatPeso(mooeSubtotal.year2)}</td>
-            <td class="col-total">${formatPeso(mooeSubtotal.total)}</td>
+            <td class="col-y1">${formatTotalCellAmount(mooeSubtotal.year1)}</td>
+            <td class="col-y2">${formatTotalCellAmount(mooeSubtotal.year2)}</td>
+            <td class="col-total">${formatTotalCellAmount(mooeSubtotal.total)}</td>
           </tr>
 
           <!-- III. EQUIPMENT OUTLAY -->
           <tr class="section-heading">
-            <td colspan="4" style="text-transform: none; font-weight: 700;">III. Equipment Outlay</td>
+            <td colspan="4" style="padding-left: 0;">III. Equipment Outlay</td>
           </tr>
           ${eoItems
             .map((item) => {
@@ -590,25 +632,29 @@ export const buildLibPrintableHtml = (params: BuildLibPrintableHtmlParams): stri
               const hasPositiveAmount = y1 > 0 || y2 > 0 || tot > 0;
               return `<tr class="line-item-row">
                 <td class="col-item">${escapeHtml(item.description || 'Equipment Item')}</td>
-                <td class="col-y1">${hasPositiveAmount ? formatPeso(y1) : ''}</td>
-                <td class="col-y2">${hasPositiveAmount ? formatPeso(y2) : ''}</td>
-                <td class="col-total">${hasPositiveAmount ? formatPeso(tot) : ''}</td>
+                <td class="col-y1">${hasPositiveAmount ? formatCellAmount(y1) : ''}</td>
+                <td class="col-y2">${hasPositiveAmount ? formatCellAmount(y2) : ''}</td>
+                <td class="col-total">${hasPositiveAmount ? formatTotalCellAmount(tot) : ''}</td>
               </tr>`;
             })
             .join('\n')}
-          <tr class="subtotal-row">
-            <td class="col-item subtotal-label">Total for EO</td>
-            <td class="col-y1">${formatPeso(eoSubtotal.year1)}</td>
-            <td class="col-y2">${formatPeso(eoSubtotal.year2)}</td>
-            <td class="col-total">${formatPeso(eoSubtotal.total)}</td>
-          </tr>
+          ${
+            eoSubtotal.total > 0
+              ? `<tr class="subtotal-row">
+                  <td class="col-item subtotal-label">Total for EO</td>
+                  <td class="col-y1">${formatTotalCellAmount(eoSubtotal.year1)}</td>
+                  <td class="col-y2">${formatTotalCellAmount(eoSubtotal.year2)}</td>
+                  <td class="col-total">${formatTotalCellAmount(eoSubtotal.total)}</td>
+                </tr>`
+              : ''
+          }
 
           <!-- GRAND TOTAL -->
           <tr class="grand-total-row">
             <td class="col-item grand-total-label">GRAND TOTAL</td>
-            <td class="col-y1">${formatPeso(grandTotal.year1)}</td>
-            <td class="col-y2">${formatPeso(grandTotal.year2)}</td>
-            <td class="col-total">${formatPeso(grandTotal.total)}</td>
+            <td class="col-y1">${formatAmount(grandTotal.year1)}</td>
+            <td class="col-y2">${formatAmount(grandTotal.year2)}</td>
+            <td class="col-total">${formatAmount(grandTotal.total)}</td>
           </tr>
         </tbody>
       </table>

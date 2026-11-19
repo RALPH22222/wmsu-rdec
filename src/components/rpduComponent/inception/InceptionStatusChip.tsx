@@ -8,14 +8,14 @@ interface InceptionStatusChipProps {
   size?: 'sm' | 'md';
 }
 
-/** Meeting lifecycle chip: blue scheduled, emerald completed, amber rescheduled, red cancelled. */
+/** Meeting lifecycle chip: slate not_scheduled, blue scheduled, emerald completed, amber rescheduled, red cancelled. */
 export const InceptionStatusChip: React.FC<InceptionStatusChipProps> = ({ status, size = 'sm' }) => {
-  const meta = MEETING_STATUS_META[status] ?? MEETING_STATUS_META.scheduled;
+  const meta = MEETING_STATUS_META[status] ?? MEETING_STATUS_META.not_scheduled;
   const tone = TONE_CLASSES[meta.tone];
   return (
     <span
       className={`inline-flex items-center gap-1.5 rounded-sm border font-bold whitespace-nowrap ${tone.badge} ${
-        size === 'sm' ? 'px-2 py-0.5 text-[11px]' : 'px-2.5 py-1 text-xs'
+        size === 'sm' ? 'px-2.5 py-1 text-xs' : 'px-3 py-1 text-xs'
       }`}
     >
       <span className={`w-1.5 h-1.5 rounded-full ${tone.dot}`} aria-hidden="true" />

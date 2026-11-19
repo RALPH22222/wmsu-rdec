@@ -970,7 +970,9 @@ export interface InceptionProjectItem {
   studyLeaderDepartment?: string;
 }
 
-export type InceptionMeetingStatus = 'scheduled' | 'completed' | 'rescheduled' | 'cancelled';
+export type InceptionMeetingStatus = 'not_scheduled' | 'scheduled' | 'completed' | 'rescheduled' | 'cancelled';
+
+export type SpecialOrderStatus = 'pending_request' | 'forwarded_to_op' | 'approved' | 'so_issued';
 
 export type InceptionAttendanceStatus = 'present' | 'absent' | 'excused' | 'pending';
 
@@ -1025,7 +1027,7 @@ export interface InceptionMeeting {
   agenda?: string;
   resolutionsSummary?: string;
   specialOrderNumber?: string;
-  specialOrderStatus: 'pending_request' | 'forwarded_to_op' | 'so_issued';
+  specialOrderStatus: SpecialOrderStatus;
   specialOrderDate?: string;
   status: InceptionMeetingStatus;
   completedDate?: string;
