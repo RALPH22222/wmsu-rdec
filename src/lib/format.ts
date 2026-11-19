@@ -69,6 +69,10 @@ export const initialsOf = (name: string): string =>
 export const capitalizeFirstLetter = (value: string): string =>
   value.replace(/^(\s*)([a-z])/, (_, leading: string, first: string) => `${leading}${first.toUpperCase()}`);
 
+/** Capitalizes the first alphabetic character of each whitespace-separated word while preserving trailing spaces as the user types. */
+export const capitalizeWords = (value: string): string =>
+  value.replace(/(^|\s)([a-z])/g, (_, prefix: string, first: string) => `${prefix}${first.toUpperCase()}`);
+
 const EXPECTED_MIME_BY_EXT: Record<string, string> = {
   '.pdf': 'application/pdf',
   '.doc': 'application/msword',

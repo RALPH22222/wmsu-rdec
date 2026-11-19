@@ -27,7 +27,7 @@ export function EvaluationPortalPage() {
 }
 
 function PortalBody({ reviewId }: { reviewId: string | undefined }) {
-  const { review, loading, error, submit, respond, uploadNda } = useMyReview(reviewId);
+  const { review, loading, error, submit, respond, uploadNda, reportNdaEmailed } = useMyReview(reviewId);
   const { session } = useAuth();
   const [downloading, setDownloading] = useState(false);
   const [downloadError, setDownloadError] = useState('');
@@ -108,7 +108,7 @@ function PortalBody({ reviewId }: { reviewId: string | undefined }) {
       </header>
 
       {canRespond && <InvitationCard review={review} onRespond={handleRespond} />}
-      <NdaCard review={review} onUpload={uploadNda} />
+      <NdaCard review={review} onUpload={uploadNda} onReportEmailed={reportNdaEmailed} />
 
       <Card title={`Round ${review.currentRound} evaluation`}>
         {acceptedAt && ndaVerified && (

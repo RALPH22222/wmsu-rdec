@@ -1,6 +1,6 @@
 import { API_ENDPOINTS } from '../config/apiConfig';
 import type {
-  ActionSheetPoints, BlindReview, Checklist, CompleteEvaluatorInvitationInput, CompleteEvaluatorInvitationResult, CreatedTemporaryEvaluatorResult, CreateTemporaryEvaluatorInput, DeclineReason, EligibleConcept, EvaluatorInvitationDetails, EvaluatorProfile, FundingClassification, OutsourcedProject, PendingConcept, PendingTemporaryEvaluatorInvitation, PipelineEvaluator, ProponentProposal, ReopenTemporaryEvaluatorResult, ReviewRecommendation, RevisionHistoryDraft, RpduProposal, SendTemporaryEvaluatorInviteResult,
+  ActionSheetPoints, AssignEmailOnlyEvaluatorInput, BlindReview, Checklist, CompleteEvaluatorInvitationInput, CompleteEvaluatorInvitationResult, CreatedTemporaryEvaluatorResult, CreateTemporaryEvaluatorInput, DeclineReason, EligibleConcept, EvaluatorInvitationDetails, EvaluatorProfile, FundingClassification, OutsourcedProject, PendingConcept, PendingTemporaryEvaluatorInvitation, PipelineEvaluator, ProponentProposal, ReopenTemporaryEvaluatorResult, ReviewRecommendation, RevisionHistoryDraft, RpduProposal, SendTemporaryEvaluatorInviteResult,
 } from '../types';
 import { publicRequest, request } from './apiRequest';
 
@@ -48,6 +48,10 @@ export const downloadAssessmentTemplate = (reviewId: string, token?: string): Pr
 /** The evaluator's NDA template; `code` is the proposal's blind code, used for the file name. */
 export const downloadNdaTemplate = (reviewId: string, code: string, token?: string): Promise<void> =>
   downloadDocument(API_ENDPOINTS.PIPELINE.MY_REVIEW_NDA_TEMPLATE(reviewId), `NDA-${code}.docx`, token);
+
+/** RPDU downloads a seat's pre-filled NDA template (useful when emailing an email-only reviewer manually). */
+export const downloadSeatNdaTemplate = (proposalId: string, reviewId: string, code: string, token?: string): Promise<void> =>
+  downloadDocument(API_ENDPOINTS.PIPELINE.REVIEW_NDA_TEMPLATE(proposalId, reviewId), `NDA-${code}.docx`, token);
 
 export const downloadRevisionHistoryDraft = (proposalId: string, draft: RevisionHistoryDraft, token?: string): Promise<void> =>
   downloadDocument(API_ENDPOINTS.PIPELINE.REVISION_HISTORY_DRAFT(proposalId), 'Revision History Draft.docx', token, draft);
@@ -140,6 +144,18 @@ export const assignEvaluatorApi = async (proposalId: string, evaluatorId: string
   return { proposal: result.data, warning: result.warning ?? null };
 };
 
+export const assignEmailOnlyEvaluatorApi = async (
+  proposalId: string,
+  input: AssignEmailOnlyEvaluatorInput,
+  token?: string,
+): Promise<{ proposal: RpduProposal; warning: string | null }> => {
+  const result = await request<RpduProposal>(API_ENDPOINTS.PIPELINE.PROPOSAL_REVIEWS(proposalId), token, {
+    method: 'POST',
+    body: JSON.stringify({ mode: 'EMAIL_ONLY', ...input }),
+  });
+  return { proposal: result.data, warning: result.warning ?? null };
+};
+
 export const unassignEvaluatorApi = async (reviewId: string, token?: string): Promise<RpduProposal> =>
   (await request<RpduProposal>(API_ENDPOINTS.PIPELINE.REVIEW_BY_ID(reviewId), token, { method: 'DELETE' })).data;
 
@@ -160,6 +176,13 @@ export const forwardToReoApi = async (proposalId: string, token?: string): Promi
 /** RPDU verifies or rejects a seat's signed NDA; a rejection lets the evaluator re-upload. */
 export const checkNdaApi = async (reviewId: string, outcome: 'VERIFIED' | 'REJECTED', note: string, token?: string): Promise<RpduProposal> =>
   (await request<RpduProposal>(API_ENDPOINTS.PIPELINE.REVIEW_NDA_CHECK(reviewId), token, { method: 'PUT', body: JSON.stringify({ outcome, note: note.trim() }) })).data;
+
+/** RPDU Staff/Head uploads a signed NDA received by email for a portal or email-only seat. */
+export const recordEmailedNdaApi = async (proposalId: string, reviewId: string, file: File, token?: string): Promise<RpduProposal> => {
+  const body = new FormData();
+  body.append('nda', file);
+  return (await request<RpduProposal>(API_ENDPOINTS.PIPELINE.REVIEW_EMAILED_NDA(proposalId, reviewId), token, { method: 'POST', body })).data;
+};
 
 export interface ActionSheetInput { points: ActionSheetPoints; otherComments: string }
 
@@ -237,6 +260,10 @@ export const uploadNdaApi = async (reviewId: string, file: File, token?: string)
   body.append('nda', file);
   return (await request<BlindReview>(API_ENDPOINTS.PIPELINE.MY_REVIEW_NDA(reviewId), token, { method: 'POST', body })).data;
 };
+
+/** Portal evaluator reports they sent their signed NDA to RPDU by email; manuscript stays locked until verified. */
+export const reportNdaEmailedApi = async (reviewId: string, token?: string): Promise<BlindReview> =>
+  (await request<BlindReview>(API_ENDPOINTS.PIPELINE.MY_REVIEW_NDA_REPORT_EMAILED(reviewId), token, { method: 'POST' })).data;
 
 export interface SubmitReviewPayload {
   recommendation: ReviewRecommendation;

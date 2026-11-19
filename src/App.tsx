@@ -16,6 +16,7 @@ import { AdminLetterDeskPage } from './pages/admin/AdminLetterDeskPage';
 import { RpduDashboard } from './pages/rpdu/RpduDashboard';
 import { CallFormPage } from './pages/CallFormPage';
 import { EvaluatorAssignmentPage } from './pages/rpdu/EvaluatorAssignmentPage';
+import { AssignEvaluatorSubPage } from './pages/rpdu/AssignEvaluatorSubPage';
 import { AihrDeliberationPage } from './pages/rpdu/AihrDeliberationPage';
 import { AihrInvitationsPage } from './pages/rpdu/AihrInvitationsPage';
 import { ProponentAihrInvitationsPage } from './pages/proponents/AihrInvitationsPage';
@@ -175,6 +176,7 @@ export function App() {
                 <Route path="/admin/contracts" element={<Navigate to="/admin/archive?filter=CONTRACT" replace />} />
                 <Route path="/admin/scheduling" element={<AdminInceptionSchedulingPage />} />
                 <Route path="/admin/evaluations" element={<EvaluatorAssignmentPage role="admin" />} />
+                <Route path="/admin/evaluations/:id/assign" element={<AssignEvaluatorSubPage role="admin" />} />
                 <Route path="/admin/evaluations/:id" element={<PipelineProposalDetailPage role="admin" />} />
                 <Route path="/admin/notarization" element={<Navigate to="/admin/archive?filter=CONTRACT" replace />} />
               </Route>
@@ -205,6 +207,7 @@ export function App() {
                 <Route path="/rpdu/contracts" element={<Navigate to="/rpdu/archive?filter=CONTRACT" replace />} />
                 <Route path="/rpdu/scheduling" element={<InceptionSchedulingPage />} />
                 <Route path="/rpdu/evaluations" element={<EvaluatorAssignmentPage role="rpdu" />} />
+                <Route path="/rpdu/evaluations/:id/assign" element={<AssignEvaluatorSubPage role="rpdu" />} />
                 <Route path="/rpdu/external-funding" element={<ExternalFundingRequestsPage />} />
                 <Route path="/rpdu/evaluations/:id" element={<PipelineProposalDetailPage role="rpdu" />} />
                 <Route path="/rpdu/budgets" element={<RpduBudgetAllocationPage />} />

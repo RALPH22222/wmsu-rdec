@@ -6,6 +6,7 @@ import { SubmitDetailedProposalCard } from '../../components/proponentComponent/
 import { EmptyState } from '../../components/ui/EmptyState';
 import { useMyPipelineProposals } from '../../hooks/useMyPipelineProposals';
 import { STAGE_META, stageExplanation } from '../../lib/aihrMeta';
+import { TONE_CLASSES } from '../../components/ui/toneClasses';
 import { formatDate } from '../../lib/format';
 import { ProposalTemplateList } from '../../components/proponentComponent/ProposalTemplateList';
 import type { PendingConcept } from '../../types';
@@ -25,15 +26,19 @@ const TABS: { key: Tab; label: string; icon: LucideIcon }[] = [
 function ConceptStageList({ concepts }: { concepts: PendingConcept[] }) {
   return (
     <ul className="divide-y divide-slate-100">
-      {concepts.map((concept) => (
-        <li key={concept.id} className="flex flex-col gap-3 py-5 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
-          <div className="min-w-0">
-            <p className="border-l-4 border-[#C8102E] pl-3 break-words text-base font-semibold leading-snug text-slate-900">{concept.title}</p>
-            <p className="mt-2 text-sm leading-relaxed text-slate-600">{stageExplanation(concept.stage)}</p>
-          </div>
-          <span className={`inline-flex shrink-0 items-center self-start rounded-sm border px-3 py-1.5 text-sm font-semibold ${concept.stage === 'AIHR_FAILED' || concept.stage === 'NOT_APPROVED' ? 'border-red-200 bg-red-50 text-red-700' : 'border-slate-200 bg-slate-50 text-slate-700'}`}>{STAGE_META[concept.stage].label}</span>
-        </li>
-      ))}
+      {concepts.map((concept) => {
+        const stage = STAGE_META[concept.stage];
+        const tone = TONE_CLASSES[stage.tone];
+        return (
+          <li key={concept.id} className="flex flex-col gap-3 py-5 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
+            <div className="min-w-0">
+              <p className="border-l-4 border-[#C8102E] pl-3 break-words text-base font-semibold leading-snug text-slate-900">{concept.title}</p>
+              <p className="mt-2 text-sm leading-relaxed text-slate-600">{stageExplanation(concept.stage)}</p>
+            </div>
+            <span className={`inline-flex shrink-0 items-center self-start rounded-none border px-3 py-1.5 text-xs font-semibold ${tone.badge}`}>{stage.label}</span>
+          </li>
+        );
+      })}
     </ul>
   );
 }

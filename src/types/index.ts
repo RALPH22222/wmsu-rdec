@@ -329,10 +329,21 @@ export interface StatusHistoryEntry {
   actorRole?: string;
 }
 
+export type EvaluatorDeliveryMode = 'PORTAL' | 'EMAIL_ONLY';
+export type NdaSource = 'PORTAL' | 'EMAIL';
+
+export interface AssignEmailOnlyEvaluatorInput {
+  name: string;
+  email: string;
+  affiliation?: string;
+}
+
 export interface RpduReview {
   id: string;
-  evaluatorId: string;
+  deliveryMode?: EvaluatorDeliveryMode;
+  evaluatorId: string | null;
   evaluatorName: string;
+  evaluatorEmail?: string | null;
   department: string;
   blindLabel: string;
   status: ReviewRowStatus;
@@ -358,9 +369,25 @@ export interface InvitationState { acceptedAt: string | null; canRespond: boolea
 /** Evaluator NDA gate: the manuscript and revision files stay hidden until RPDU verifies the signed NDA. */
 export type NdaState = 'NOT_REQUIRED' | 'REQUIRED' | 'PENDING_CHECK' | 'REJECTED' | 'VERIFIED';
 /** The evaluator's own NDA state for a seat. */
-export interface EvaluatorNda { state: NdaState; fileUrl: string | null; uploadedAt: string | null; checkedAt: string | null; note: string; canUpload: boolean }
+export interface EvaluatorNda {
+  state: NdaState;
+  fileUrl: string | null;
+  uploadedAt: string | null;
+  checkedAt: string | null;
+  reportedEmailedAt?: string | null;
+  source?: NdaSource;
+  note: string;
+  canUpload: boolean;
+  canReportEmailed?: boolean;
+}
 /** RPDU view of a seat's NDA, with the checker's name and outcome. */
-export interface SeatNda extends Omit<EvaluatorNda, 'canUpload'> { checkedBy: string | null; outcome: 'VERIFIED' | 'REJECTED' | null; canCheck: boolean }
+export interface SeatNda extends Omit<EvaluatorNda, 'canUpload' | 'canReportEmailed'> {
+  checkedBy: string | null;
+  recordedBy?: string | null;
+  outcome: 'VERIFIED' | 'REJECTED' | null;
+  canCheck: boolean;
+  canRecordEmailed?: boolean;
+}
 /** Consolidated comment per assessment point id (see ASSESSMENT_POINTS); '' when nothing was noted. */
 export type ActionSheetPoints = Record<string, string>;
 export interface ActionSheetSeed { round: number; points: ActionSheetPoints; otherComments: string }
@@ -440,6 +467,7 @@ export interface RpduProposal {
   preReviewStage?: AihrStage | null;
   id: string;
   conceptProposalId: string;
+  researchAgendas?: string[];
   code: string;
   title: string;
   status: PipelineStatus;

@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useCallForProposals } from '../context/CallForProposalsContext';
-import { getMyReview, getMyReviews, respondToInvitationApi, submitReviewApi, uploadNdaApi, type InvitationResponse, type SubmitReviewPayload } from '../lib/pipelineApi';
+import { getMyReview, getMyReviews, reportNdaEmailedApi, respondToInvitationApi, submitReviewApi, uploadNdaApi, type InvitationResponse, type SubmitReviewPayload } from '../lib/pipelineApi';
 import { STATUS_META } from '../lib/proposalPipeline';
 import type { BlindReview, PipelineStatus } from '../types';
 import { useAsyncResource } from './useAsyncResource';
@@ -73,5 +73,17 @@ export function useMyReview(reviewId: string | undefined) {
     }
   }, [reviewId, token, setData, showToast]);
 
-  return { review: resource.data, loading: resource.loading, error: resource.error, refresh: resource.refresh, submit, respond, uploadNda };
+  /** Reports that the evaluator sent their signed NDA to RPDU by email; manuscript stays locked until verified. */
+  const reportNdaEmailed = useCallback(async (): Promise<void> => {
+    if (!reviewId) throw new Error('No review selected.');
+    try {
+      setData(await reportNdaEmailedApi(reviewId, token));
+      showToast('Reported NDA sent by email — RPDU will record and verify it');
+    } catch (failure) {
+      showToast(failure instanceof Error ? failure.message : 'Unable to report your emailed NDA');
+      throw failure;
+    }
+  }, [reviewId, token, setData, showToast]);
+
+  return { review: resource.data, loading: resource.loading, error: resource.error, refresh: resource.refresh, submit, respond, uploadNda, reportNdaEmailed };
 }

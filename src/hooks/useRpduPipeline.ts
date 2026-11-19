@@ -1,11 +1,11 @@
 import { useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useCallForProposals } from '../context/CallForProposalsContext';
-import { assignEvaluatorApi, buildActionSheetApi, checkAnonymityApi, checkNdaApi, checkRevisionApi, createTemporaryEvaluatorApi, forwardToReoApi, getPipelineEvaluators, getPipelineProposal, getPipelineProposals, postClarificationApi, publishSummaryApi, recordEmailSubmissionApi, reopenTemporaryEvaluatorApi, resendSummaryEmailApi, saveFundingClassificationApi, saveSummaryApi, sendTemporaryEvaluatorInvitationApi, setProjectPeriodApi, unassignEvaluatorApi } from '../lib/pipelineApi';
+import { assignEmailOnlyEvaluatorApi, assignEvaluatorApi, buildActionSheetApi, checkAnonymityApi, checkNdaApi, checkRevisionApi, createTemporaryEvaluatorApi, forwardToReoApi, getPipelineEvaluators, getPipelineProposal, getPipelineProposals, postClarificationApi, publishSummaryApi, recordEmailedNdaApi, recordEmailSubmissionApi, reopenTemporaryEvaluatorApi, resendSummaryEmailApi, saveFundingClassificationApi, saveSummaryApi, sendTemporaryEvaluatorInvitationApi, setProjectPeriodApi, unassignEvaluatorApi } from '../lib/pipelineApi';
 import type { ActionSheetInput, EmailSubmissionInput, SummaryInput } from '../lib/pipelineApi';
 import { STATUS_META } from '../lib/proposalPipeline';
 import { formatDateRange } from '../lib/format';
-import type { CreateTemporaryEvaluatorInput, FundingClassification, PipelineEvaluator, RpduProposal } from '../types';
+import type { AssignEmailOnlyEvaluatorInput, CreateTemporaryEvaluatorInput, FundingClassification, PipelineEvaluator, RpduProposal } from '../types';
 import { useAsyncResource } from './useAsyncResource';
 
 interface PipelineData { proposals: RpduProposal[]; evaluators: PipelineEvaluator[] }
@@ -42,6 +42,23 @@ export function useRpduPipeline() {
       return { warning };
     } catch (failure) {
       showToast(failure instanceof Error ? failure.message : 'Unable to assign this evaluator');
+      throw failure;
+    }
+  }, [token, setData, showToast]);
+
+  const assignEmailOnly = useCallback(async (proposalId: string, input: AssignEmailOnlyEvaluatorInput) => {
+    try {
+      const { proposal, warning } = await assignEmailOnlyEvaluatorApi(proposalId, input, token);
+      setData((prev) => (prev ? { ...prev, proposals: replaceIn(prev.proposals, proposal) } : prev));
+      const seat = proposal.panel[proposal.panel.length - 1];
+      showToast(
+        proposal.status === 'UNDER_REVIEW'
+          ? `Panel complete — ${proposal.code} is now under review`
+          : `Assigned ${seat?.evaluatorName ?? 'email-only evaluator'} as ${seat?.blindLabel ?? 'panel member'}`,
+      );
+      return { warning };
+    } catch (failure) {
+      showToast(failure instanceof Error ? failure.message : 'Unable to assign this email-only evaluator');
       throw failure;
     }
   }, [token, setData, showToast]);
@@ -99,7 +116,7 @@ export function useRpduPipeline() {
     }
   }, [token, setData, showToast]);
 
-  return { proposals: resource.data?.proposals ?? [], evaluators: resource.data?.evaluators ?? [], loading: resource.loading, error: resource.error, refresh: resource.refresh, assign, unassign, createTemporaryEvaluator, sendTemporaryEvaluatorInvitation, reopenEvaluator };
+  return { proposals: resource.data?.proposals ?? [], evaluators: resource.data?.evaluators ?? [], loading: resource.loading, error: resource.error, refresh: resource.refresh, assign, assignEmailOnly, unassign, createTemporaryEvaluator, sendTemporaryEvaluatorInvitation, reopenEvaluator };
 }
 
 export function useRpduProposal(id: string | undefined) {
@@ -254,6 +271,20 @@ export function useRpduProposal(id: string | undefined) {
     }
   }, [id, token, setData, showToast, reread]);
 
+  const recordEmailedNda = useCallback(async (reviewId: string, file: File): Promise<void> => {
+    if (!id) return;
+    try {
+      const proposal = await recordEmailedNdaApi(id, reviewId, file, token);
+      setData(proposal);
+      const seatLabel = proposal.panel.find((seat) => seat.id === reviewId)?.blindLabel ?? 'this evaluator';
+      showToast(`Emailed NDA recorded for ${seatLabel} — verify it to unlock blinded materials`);
+    } catch (failure) {
+      showToast(failure instanceof Error ? failure.message : 'Unable to record the emailed NDA');
+      reread();
+      throw failure;
+    }
+  }, [id, token, setData, showToast, reread]);
+
   const checkNda = useCallback(async (reviewId: string, outcome: 'VERIFIED' | 'REJECTED', note: string): Promise<void> => {
     if (!id) return;
     try {
@@ -294,5 +325,5 @@ export function useRpduProposal(id: string | undefined) {
     }
   }, [id, token, setData, showToast, reread]);
 
-  return { proposal: resource.data, loading: resource.loading, error: resource.error, refresh: resource.refresh, reread, replace: resource.setData, unassign, checkRevision, checkAnonymity, forward, buildActionSheet, saveSummary, publishSummary, resendSummaryEmail, recordEmailReview, clarify, checkNda, saveFundingClassification, setProjectPeriod };
+  return { proposal: resource.data, loading: resource.loading, error: resource.error, refresh: resource.refresh, reread, replace: resource.setData, unassign, checkRevision, checkAnonymity, forward, buildActionSheet, saveSummary, publishSummary, resendSummaryEmail, recordEmailReview, clarify, recordEmailedNda, checkNda, saveFundingClassification, setProjectPeriod };
 }

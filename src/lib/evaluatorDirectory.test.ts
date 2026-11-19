@@ -1,7 +1,12 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import type { PipelineEvaluator } from '../types/index.ts';
-import { evaluatorFilterOptions, matchesEvaluator } from './evaluatorDirectory.ts';
+import {
+  MATCHING_AGENDAS_FILTER,
+  evaluatorFilterOptions,
+  matchesEvaluator,
+  matchingProposalSpecializations,
+} from './evaluatorDirectory.ts';
 
 const reviewer = (overrides: Partial<PipelineEvaluator> = {}): PipelineEvaluator => ({
   id: 'reviewer', name: 'Ana Cruz', email: 'ana@example.org', department: 'Engineering', activeLoad: 2,
@@ -37,4 +42,29 @@ test('filter choices are sorted, deduplicated across reviewers, and omit empty d
   assert.deepEqual(result.disciplines, ['Agriculture', 'Environmental Science', 'Water Resources']);
   assert.deepEqual(result.degrees, ['PhD in Engineering']);
   assert.deepEqual(evaluatorFilterOptions([]), { disciplines: [], degrees: [] });
+});
+
+test('matchingProposalSpecializations matches exact tags, phrases, and whole-word acronyms without false substrings', () => {
+  const aiReviewer = reviewer({ disciplines: ['Artificial Intelligence', 'AI', 'Agriculture'] });
+  assert.deepEqual(
+    matchingProposalSpecializations(aiReviewer, ['Artificial Intelligence & Digital Transformation']),
+    ['Artificial Intelligence'],
+  );
+  assert.deepEqual(
+    matchingProposalSpecializations(reviewer({ disciplines: ['AI', 'IT'] }), ['AI in Healthcare']),
+    ['AI'],
+  );
+  assert.deepEqual(
+    matchingProposalSpecializations(reviewer({ disciplines: ['AI'] }), ['Training Programs']),
+    [],
+    'Short acronym AI must not match inside the word Training',
+  );
+  assert.equal(
+    matchesEvaluator(aiReviewer, '', MATCHING_AGENDAS_FILTER, '', ['Artificial Intelligence & Digital Transformation']),
+    true,
+  );
+  assert.equal(
+    matchesEvaluator(reviewer(), '', MATCHING_AGENDAS_FILTER, '', ['Artificial Intelligence & Digital Transformation']),
+    false,
+  );
 });

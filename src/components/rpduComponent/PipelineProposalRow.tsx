@@ -9,7 +9,7 @@ import { formatDate } from '../../lib/format';
 interface PipelineProposalRowProps {
   proposal: RpduProposal;
   detailHref: string;
-  onAssign: (proposal: RpduProposal) => void;
+  assignHref: string;
 }
 
 /** Why the Assign button is disabled, or null when assignment is allowed. Mirrors the server's first two rules. Not exported: react-refresh/only-export-components. */
@@ -22,7 +22,7 @@ const assignBlockedReason = (proposal: RpduProposal): string | null => {
   return null;
 };
 
-export function PipelineProposalRow({ proposal, detailHref, onAssign }: PipelineProposalRowProps) {
+export function PipelineProposalRow({ proposal, detailHref, assignHref }: PipelineProposalRowProps) {
   const blocked = assignBlockedReason(proposal);
   return (
     <li className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
@@ -38,15 +38,24 @@ export function PipelineProposalRow({ proposal, detailHref, onAssign }: Pipeline
         {blocked && <p className="mt-1 text-[11px] text-slate-500">{blocked}</p>}
       </div>
       <div className="flex gap-2 sm:shrink-0">
-        <button
-          type="button"
-          onClick={() => onAssign(proposal)}
-          disabled={Boolean(blocked)}
-          title={blocked ?? 'Assign an evaluator'}
-          className="inline-flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-sm bg-[#C8102E] px-4 text-sm font-semibold text-white hover:bg-[#A00D26] disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500 sm:flex-none"
-        >
-          <UserPlus className="h-4 w-4" /> Assign
-        </button>
+        {blocked ? (
+          <button
+            type="button"
+            disabled
+            title={blocked}
+            className="inline-flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-sm bg-slate-200 px-4 text-sm font-semibold text-slate-500 cursor-not-allowed sm:flex-none"
+          >
+            <UserPlus className="h-4 w-4" /> Assign
+          </button>
+        ) : (
+          <Link
+            to={assignHref}
+            title="Assign an evaluator"
+            className="inline-flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-sm bg-[#C8102E] px-4 text-sm font-semibold text-white hover:bg-[#A00D26] sm:flex-none"
+          >
+            <UserPlus className="h-4 w-4" /> Assign
+          </Link>
+        )}
         <Link to={detailHref} className="inline-flex min-h-11 flex-1 items-center justify-center rounded-sm border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 hover:bg-slate-50 sm:flex-none">
           View
         </Link>

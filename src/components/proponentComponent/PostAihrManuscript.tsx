@@ -5,8 +5,10 @@ import { useAuth } from '../../context/AuthContext';
 import { API_ENDPOINTS } from '../../config/apiConfig';
 import { request } from '../../lib/apiRequest';
 import { ACCEPTED_DOCUMENT_TYPES, ANONYMITY_ATTESTATION_LABEL, detailedProposalFileError } from '../../lib/proposalPipeline';
+import { VERDICT_META } from '../../lib/aihrMeta';
 import { formatDate, formatDateTime, formatFileSize } from '../../lib/format';
 import { DocumentLink } from '../ui/DocumentLink';
+import { TONE_CLASSES } from '../ui/toneClasses';
 
 export function PostAihrManuscript({ proposal, onSaved }: { proposal: ProponentProposal; onSaved: () => void }) {
   const { session } = useAuth();
@@ -29,10 +31,21 @@ export function PostAihrManuscript({ proposal, onSaved }: { proposal: ProponentP
   };
   return (
     <div className="mt-5 space-y-5 text-sm leading-relaxed">
-      {proposal.aihrOutcome && <div className="rounded-sm border border-slate-200 bg-slate-50 p-4 text-slate-700">
-        <p className="font-semibold text-slate-900">AIHR outcome: {proposal.aihrOutcome.replaceAll('_', ' ')}</p>
-        {proposal.technicalReviewReady ? <p className="mt-1">Cleared for technical review.</p> : proposal.aihrOutcome === 'CONDITIONALLY_APPROVED' ? <p className="mt-1">Awaiting the en banc decision.</p> : proposal.aihrOutcome === 'FAIL' ? <p className="mt-1">This proposal cannot proceed to technical review.</p> : null}
-      </div>}
+      {proposal.aihrOutcome && (() => {
+        const verdict = VERDICT_META[proposal.aihrOutcome];
+        const tone = TONE_CLASSES[verdict.tone];
+        return (
+          <div className="rounded-none border border-slate-200 bg-slate-50 p-4 text-slate-700">
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="font-semibold text-slate-900">AIHR outcome:</p>
+              <span className={`inline-flex items-center rounded-none border px-2.5 py-1 text-xs font-semibold ${tone.badge}`}>
+                {verdict.label}
+              </span>
+            </div>
+            {proposal.technicalReviewReady ? <p className="mt-1.5">Cleared for technical review.</p> : proposal.aihrOutcome === 'CONDITIONALLY_APPROVED' ? <p className="mt-1.5">Awaiting the en banc decision.</p> : proposal.aihrOutcome === 'FAIL' ? <p className="mt-1.5">This proposal cannot proceed to technical review.</p> : null}
+          </div>
+        );
+      })()}
       {proposal.aihrResult && <div className="space-y-3 text-slate-600">
         <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
           {proposal.aihrResult.presentedOn && <p>Presented: {formatDate(proposal.aihrResult.presentedOn)}</p>}

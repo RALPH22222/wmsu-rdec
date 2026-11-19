@@ -34,7 +34,7 @@ const Card = ({ title, badge, children }: { title: string; badge?: ReactNode; ch
 
 /** Rendered keyed by the route id, so a stale response for a previous id can never write into this proposal. */
 function DetailBody({ id, role }: { id: string | undefined; role: 'rpdu' | 'admin' }) {
-  const { proposal, loading, error, refresh, reread, unassign, checkRevision, checkAnonymity, forward, buildActionSheet, saveSummary, publishSummary, resendSummaryEmail, recordEmailReview, clarify, checkNda, saveFundingClassification, setProjectPeriod } = useRpduProposal(id);
+  const { proposal, loading, error, refresh, reread, unassign, checkRevision, checkAnonymity, forward, buildActionSheet, saveSummary, publishSummary, resendSummaryEmail, recordEmailReview, clarify, recordEmailedNda, checkNda, saveFundingClassification, setProjectPeriod } = useRpduProposal(id);
   const backHref = `/${role}/evaluations`;
 
   if (loading) return (
@@ -113,10 +113,10 @@ function DetailBody({ id, role }: { id: string | undefined; role: 'rpdu' | 'admi
       <Card title="Review panel">
         <div className="mb-5"><FundingClassificationField key={proposal.fundingClassification ?? 'unclassified'} value={proposal.fundingClassification ?? null} canEdit={Boolean(proposal.canSetFundingClassification)} onSave={(value) => saveFundingClassification(proposal.id, value)} /></div>
         <PanelDots count={proposal.panel.length} className="mb-2" />
-        <ReviewPanelList externalProposalId={proposal.externalFundingRequestId ? proposal.id : undefined} panel={proposal.panel} canManageReviewers={Boolean(proposal.canManageReviewers)} currentRound={proposal.currentRound} onRemove={unassign} onCheckNda={checkNda} onRecordEmail={recordEmailReview} />
+        <ReviewPanelList proposalId={proposal.id} proposalCode={proposal.code} proposalStatus={proposal.status} externalProposalId={proposal.externalFundingRequestId ? proposal.id : undefined} panel={proposal.panel} canManageReviewers={Boolean(proposal.canManageReviewers)} currentRound={proposal.currentRound} onRemove={unassign} onRecordEmailedNda={recordEmailedNda} onCheckNda={checkNda} onRecordEmail={recordEmailReview} />
         {canAssignMore && (thirdSeatBlocked
-          ? <p className="mt-3 flex items-start gap-1.5 rounded-sm border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800"><ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" /><span><span className="font-semibold">Third seat on hold.</span> {thirdSeatBlocked}. Record it in the Manuscript anonymity card above, then assign the last evaluator from the list.</span></p>
-          : <Link to={backHref} className="mt-3 inline-flex min-h-11 items-center text-xs font-semibold text-[#C8102E]">Assign evaluators from the list →</Link>)}
+          ? <p className="mt-3 flex items-start gap-1.5 rounded-sm border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800"><ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" /><span><span className="font-semibold">Third seat on hold.</span> {thirdSeatBlocked}. Record it in the Manuscript anonymity card above, then assign the last evaluator.</span></p>
+          : <Link to={`/${role}/evaluations/${proposal.id}/assign`} className="mt-3 inline-flex min-h-11 items-center text-xs font-semibold text-[#C8102E] hover:underline">Assign evaluators →</Link>)}
         <DeclinedInvitations declines={proposal.declines} />
       </Card>
 

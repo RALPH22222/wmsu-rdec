@@ -90,7 +90,7 @@ export function RecordEmailReviewModal({ isOpen, seat, onClose, onSubmit }: Reco
   return (
     <ModalShell isOpen={isOpen && Boolean(seat)} onClose={close} title="Record e-mailed evaluation" subtitle={seat ? `${seat.blindLabel} · ${seat.evaluatorName}` : undefined} icon={Mail} size="lg" footer={footer} closeDisabled={busy}>
       <div className="space-y-5">
-        <p className="rounded-sm bg-slate-50 p-3 text-xs text-slate-700">Use this when the evaluator sent their review by e-mail instead of the portal. It counts as their evaluation for this round; no portal acceptance or NDA check is needed. The assessment checklist is not encoded, so the attachment is the assessment.</p>
+        <p className="rounded-sm bg-slate-50 p-3 text-xs text-slate-700">Use this when the evaluator sent their review by e-mail instead of the portal. Once their signed NDA is verified, this records their evaluation for this round; the review attachment stands as the assessment.</p>
 
         <fieldset>
           <legend className="text-sm font-semibold text-slate-900">Recommended action <span className="text-[#C8102E]" aria-hidden="true">*</span><span className="sr-only">(required)</span></legend>

@@ -76,7 +76,7 @@ function Invitation({ invitation, onSaved }: { invitation: ProponentAihrInvitati
   };
 
   return <li className="min-w-0 space-y-4 rounded-sm border border-slate-200 bg-white p-5 sm:p-6">
-    <h2 className="break-words text-xl font-semibold">{invitation.title}</h2>
+    <h2 className="break-words border-l-4 border-[#C8102E] py-0.5 pl-3 text-xl font-semibold">{invitation.title}</h2>
     <div className="space-y-2 border border-slate-200 bg-slate-50 p-4">
       <p className="font-semibold">{AIHR_REPLY_LABELS[invitation.response.status]}</p>
       {invitation.response.replyDeadline && <p className="text-sm text-slate-600">Reply by {formatSubmissionDateTime(invitation.response.replyDeadline)} (Philippine time). You have 2 days after the invitation is sent.</p>}
@@ -196,7 +196,7 @@ export function ProponentAihrInvitationsPage() {
       <span className="sr-only">Loading your invitations…</span>
       <div aria-hidden="true" className="space-y-6 motion-safe:animate-pulse">
         {[0, 1].map((card) => <div key={card} className="space-y-4 rounded-sm border border-slate-200 bg-white p-5 sm:p-6">
-          <div className="h-7 w-2/3 rounded-sm bg-slate-200" />
+          <div className="border-l-4 border-slate-200 py-0.5 pl-3"><div className="h-7 w-2/3 rounded-sm bg-slate-200" /></div>
           <div className="space-y-3 border border-slate-200 bg-slate-50 p-4">
             <div className="h-5 w-40 max-w-full rounded-sm bg-slate-200" />
             <div className="h-4 w-full max-w-lg rounded-sm bg-slate-200" />
