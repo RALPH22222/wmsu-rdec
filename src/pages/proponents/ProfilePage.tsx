@@ -13,6 +13,7 @@ import {
   Clock,
 } from 'lucide-react';
 import { formatSubmissionDateTime } from '../../lib/format';
+import { DeactivationCountdown } from '../../components/ui/DeactivationCountdown';
 
 type ProfileTab = 'personal' | 'contact' | 'affiliation';
 
@@ -209,14 +210,25 @@ export const ProfilePage: React.FC = () => {
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
-      {profile?.is_temporary_evaluator && (
-        <div role="status" className="flex items-start gap-3 rounded-sm border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
-          <Clock className="mt-0.5 h-4 w-4 shrink-0 text-amber-700" aria-hidden="true" />
-          <p>
-            {profile.evaluator_closes_at
-              ? `Temporary evaluator account: all assigned evaluations are submitted. Your account will close at ${formatSubmissionDateTime(profile.evaluator_closes_at)} (24 hours after completion) unless reopened by RPDU.`
-              : 'Temporary evaluator account: your access remains open until 24 hours after you finish evaluating all assigned proposals.'}
-          </p>
+      {profile?.role === 'EVALUATOR' && (profile.is_temporary_evaluator || profile.evaluator_closes_at) && (
+        <div role="status" className="flex flex-col gap-3 rounded-sm border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-start gap-3">
+            <Clock className="mt-0.5 h-4 w-4 shrink-0 text-amber-700" aria-hidden="true" />
+            <p>
+              {profile.evaluator_closes_at
+                ? `All assigned evaluations are submitted and no proposals remain. Your evaluator account will automatically deactivate on ${formatSubmissionDateTime(profile.evaluator_closes_at)} (12 hours after completion) unless reactivated by RPDU.`
+                : 'Evaluator account notice: your access remains active until 12 hours after you finish evaluating all assigned proposals.'}
+            </p>
+          </div>
+          {profile.evaluator_closes_at && (
+            <div className="inline-flex shrink-0 items-center gap-1.5 self-start rounded-none border border-amber-300 bg-white px-3 py-1.5 font-mono text-xs font-bold text-amber-950 sm:self-center">
+              <DeactivationCountdown
+                closesAt={profile.evaluator_closes_at}
+                prefix="Deactivating in "
+                expiredLabel="Deactivated"
+              />
+            </div>
+          )}
         </div>
       )}
       {/* Category Tab Navigation Table */}

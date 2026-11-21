@@ -1,15 +1,17 @@
 import { useEffect, useState } from 'react';
-import { Eye, Mail, RefreshCw, RotateCcw, Search, UserPlus, X } from 'lucide-react';
+import { Clock, Eye, Mail, RefreshCw, RotateCcw, Search, UserCheck, UserPlus, UserX, X } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useCallForProposals } from '../../context/CallForProposalsContext';
 import { useAsyncResource } from '../../hooks/useAsyncResource';
 import { evaluatorFilterOptions, matchesEvaluator } from '../../lib/evaluatorDirectory';
 import { formatSubmissionDateTime } from '../../lib/format';
 import { DEFAULT_PAGE_SIZE, paginate } from '../../lib/pagination';
-import { createTemporaryEvaluatorApi, getPipelineEvaluators, listTemporaryEvaluatorInvitationsApi, reopenTemporaryEvaluatorApi, revokeTemporaryEvaluatorInvitationApi, sendTemporaryEvaluatorInvitationApi } from '../../lib/pipelineApi';
+import { createTemporaryEvaluatorApi, deactivateEvaluatorApi, getPipelineEvaluators, listTemporaryEvaluatorInvitationsApi, reactivateEvaluatorApi, revokeTemporaryEvaluatorInvitationApi, sendTemporaryEvaluatorInvitationApi } from '../../lib/pipelineApi';
 import type { CreatedTemporaryEvaluatorResult, CreateTemporaryEvaluatorInput, PendingTemporaryEvaluatorInvitation, PipelineEvaluator, SendTemporaryEvaluatorInviteResult } from '../../types';
+import { DeactivationCountdown } from '../ui/DeactivationCountdown';
 import { Pagination } from '../ui/Pagination';
 import { CreateTemporaryEvaluatorModal } from './modals/CreateTemporaryEvaluatorModal';
+import { EvaluatorAccountStatusModal } from './modals/EvaluatorAccountStatusModal';
 import { ViewEvaluatorModal } from './modals/ViewEvaluatorModal';
 import { TemporaryAccountBadge } from './TemporaryEvaluatorForm';
 
@@ -41,12 +43,18 @@ export function EvaluatorsRoster() {
   const [discipline, setDiscipline] = useState('');
   const [viewing, setViewing] = useState<PipelineEvaluator | null>(null);
   const [creatingTemp, setCreatingTemp] = useState(false);
-  const [reopeningId, setReopeningId] = useState<string | null>(null);
+  const [statusAction, setStatusAction] = useState<{ person: PipelineEvaluator; action: 'deactivate' | 'reactivate' } | null>(null);
+  const [statusBusy, setStatusBusy] = useState(false);
   const [busyInviteId, setBusyInviteId] = useState<string | null>(null);
   const [expiredIds, setExpiredIds] = useState<Set<string>>(() => new Set());
 
   const evaluators = data?.evaluators ?? [];
   const invitations = data?.invitations;
+  const deactivatingSoon = evaluators
+    .filter((person): person is PipelineEvaluator & { closesAt: string } =>
+      person.accountStatus === 'CLOSING_SOON' && Boolean(person.closesAt))
+    .sort((a, b) => Date.parse(a.closesAt) - Date.parse(b.closesAt));
+  const nextDeactivating = deactivatingSoon[0] ?? null;
 
   useEffect(() => {
     if (!invitations?.length) return;
@@ -159,24 +167,29 @@ export function EvaluatorsRoster() {
     }
   };
 
-  const reopen = async (person: PipelineEvaluator) => {
-    if (reopeningId) return;
-    setReopeningId(person.id);
+  const confirmAccountStatusChange = async () => {
+    if (!statusAction || statusBusy) return;
+    setStatusBusy(true);
     try {
-      const result = await reopenTemporaryEvaluatorApi(person.id, session?.access_token);
+      const { person, action } = statusAction;
+      const result = action === 'deactivate'
+        ? await deactivateEvaluatorApi(person.id, session?.access_token)
+        : await reactivateEvaluatorApi(person.id, session?.access_token);
       setData((current) => current ? {
         ...current,
         evaluators: current.evaluators.map((item) => item.id === person.id ? result.evaluator : item),
       } : null);
+      if (viewing?.id === person.id) setViewing(result.evaluator);
+      setStatusAction(null);
       showToast(
-        result.activatedImmediately
-          ? `Reopened ${person.name}'s temporary account.`
-          : `${person.name} marked for reopening. Assign a proposal in Technical Evaluations to activate login.`,
+        action === 'deactivate'
+          ? `Deactivated ${person.name}'s evaluator account.`
+          : `Reactivated ${person.name}'s evaluator account.`,
       );
     } catch (failure) {
-      showToast(failure instanceof Error ? failure.message : 'Unable to reopen temporary evaluator account.');
+      showToast(failure instanceof Error ? failure.message : 'Unable to update evaluator account status.');
     } finally {
-      setReopeningId(null);
+      setStatusBusy(false);
     }
   };
 
@@ -210,6 +223,19 @@ export function EvaluatorsRoster() {
               {visibleInvitations.length > 0 && ` · ${visibleInvitations.length} pending invitation${visibleInvitations.length === 1 ? '' : 's'}`}
             </p>
             {filtered && <button type="button" onClick={() => { setQuery(''); setDiscipline(''); }} className="min-h-9 font-semibold text-[#C8102E] hover:underline">Clear filters</button>}
+          </div>
+        )}
+        {!loading && !error && nextDeactivating && (
+          <div role="status" className="flex flex-wrap items-center justify-between gap-2 rounded-sm border border-amber-200 bg-amber-50 px-3.5 py-2.5 text-xs text-amber-950">
+            <div className="flex items-center gap-2">
+              <Clock aria-hidden="true" className="h-4 w-4 shrink-0 text-amber-700" />
+              <span>
+                <strong>{deactivatingSoon.length}</strong> evaluator account{deactivatingSoon.length === 1 ? '' : 's'} scheduled for 12-hour auto-deactivation ({nextDeactivating.name} next).
+              </span>
+            </div>
+            <span className="inline-flex items-center rounded-none border border-amber-300 bg-white px-2.5 py-1 font-mono text-xs font-bold text-amber-950">
+              <DeactivationCountdown closesAt={nextDeactivating.closesAt} prefix="Next in " expiredLabel="Deactivated" />
+            </span>
           </div>
         )}
       </div>
@@ -270,11 +296,15 @@ export function EvaluatorsRoster() {
               }
               const { person } = row;
               const totalProposals = person.totalProposals ?? person.activeLoad;
+              const remainingCount = person.pendingEvaluations ?? person.activeLoad;
+              const isInactive = person.accountStatus === 'DEACTIVATED'
+                || person.accountStatus === 'CLOSED'
+                || person.accountStatus === 'REOPEN_PENDING';
               return (
-                <li key={person.id} className="grid gap-4 p-4 sm:p-5 md:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_auto] md:items-start">
+                <li key={person.id} className={`grid gap-4 p-4 sm:p-5 md:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_auto] md:items-start ${isInactive ? 'bg-slate-50/70' : ''}`}>
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
-                      <h3 className="break-words text-sm font-bold text-slate-900">{person.name}</h3>
+                      <h3 className={`break-words text-sm font-bold ${isInactive ? 'text-slate-600' : 'text-slate-900'}`}>{person.name}</h3>
                       <TemporaryAccountBadge evaluator={person} />
                     </div>
                     <p className="mt-1 break-all text-xs text-slate-500">{person.email}</p>
@@ -284,9 +314,22 @@ export function EvaluatorsRoster() {
                         <code className="rounded-xs bg-slate-100 px-1.5 py-0.5 font-mono font-semibold text-slate-900">{person.temporaryPassword}</code>
                       </p>
                     )}
-                    <p className="mt-2 text-xs text-slate-600">
-                      <span className="font-semibold text-slate-800">{totalProposals}</span> total proposal{totalProposals === 1 ? '' : 's'} · {person.activeLoad} active review{person.activeLoad === 1 ? '' : 's'}
-                    </p>
+                    <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-600">
+                      <span>
+                        <span className="font-semibold text-slate-800">{totalProposals}</span> total proposal{totalProposals === 1 ? '' : 's'}
+                      </span>
+                      {totalProposals > 0 && (
+                        remainingCount > 0 ? (
+                          <span className="inline-flex items-center rounded-none border border-amber-200 bg-amber-50 px-2 py-0.5 text-[11px] font-bold text-amber-900">
+                            {remainingCount} remaining (not done)
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center rounded-none border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[11px] font-bold text-emerald-800">
+                            Done evaluating all
+                          </span>
+                        )
+                      )}
+                    </div>
                   </div>
                   <div className="min-w-0">
                     <p className="mb-2 text-xs font-semibold text-slate-500">Specialization</p>
@@ -299,22 +342,32 @@ export function EvaluatorsRoster() {
                     ) : <p className="text-xs text-slate-400">Not specified</p>}
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
-                    {isHead && person.isTemporary && person.accountStatus === 'CLOSED' && (
-                      <button
-                        type="button"
-                        disabled={reopeningId === person.id}
-                        onClick={() => void reopen(person)}
-                        className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-sm bg-[#C8102E] px-3 text-xs font-semibold text-white hover:bg-[#A00D26] disabled:opacity-50"
-                      >
-                        <RotateCcw aria-hidden="true" className="h-3.5 w-3.5" />
-                        <span>{reopeningId === person.id ? 'Reopening…' : 'Reopen account'}</span>
-                      </button>
+                    {isHead && (
+                      isInactive ? (
+                        <button
+                          type="button"
+                          onClick={() => setStatusAction({ person, action: 'reactivate' })}
+                          className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-sm bg-[#C8102E] px-3 text-xs font-semibold text-white hover:bg-[#A00D26] cursor-pointer"
+                        >
+                          <UserCheck aria-hidden="true" className="h-3.5 w-3.5" />
+                          <span>Reactivate</span>
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => setStatusAction({ person, action: 'deactivate' })}
+                          className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-sm border border-red-200 bg-red-50 px-3 text-xs font-semibold text-[#C8102E] hover:bg-red-100 cursor-pointer"
+                        >
+                          <UserX aria-hidden="true" className="h-3.5 w-3.5" />
+                          <span>Deactivate</span>
+                        </button>
+                      )
                     )}
                     <button
                       type="button"
                       onClick={() => setViewing(person)}
                       aria-label={`View details for ${person.name}`}
-                      className="inline-flex min-h-11 items-center justify-center gap-2 rounded-sm border border-slate-200 px-3 text-xs font-semibold text-slate-700 hover:border-red-200 hover:bg-red-50 hover:text-[#C8102E]"
+                      className="inline-flex min-h-11 items-center justify-center gap-2 rounded-sm border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 hover:border-red-200 hover:bg-red-50 hover:text-[#C8102E] cursor-pointer"
                     >
                       <Eye aria-hidden="true" className="h-3.5 w-3.5" />
                       <span>View details</span>
@@ -338,6 +391,15 @@ export function EvaluatorsRoster() {
         </>
       )}
       {viewing && <ViewEvaluatorModal key={viewing.id} evaluator={viewing} onClose={() => setViewing(null)} />}
+      {isHead && statusAction && (
+        <EvaluatorAccountStatusModal
+          evaluator={statusAction.person}
+          action={statusAction.action}
+          busy={statusBusy}
+          onClose={() => { if (!statusBusy) setStatusAction(null); }}
+          onConfirm={confirmAccountStatusChange}
+        />
+      )}
       {isHead && creatingTemp && <CreateTemporaryEvaluatorModal isOpen onClose={() => setCreatingTemp(false)} onCreate={createTemporary} onInvite={sendInvite} />}
     </section>
   );

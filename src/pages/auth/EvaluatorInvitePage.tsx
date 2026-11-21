@@ -69,7 +69,7 @@ export default function EvaluatorInvitePage() {
     if (!token || !details || busy || running.current) return;
 
     const profileCheck = normalizeAndValidateEvaluatorProfile({ firstName, middleInitial, lastName, specialization });
-    if (!profileCheck.ok) {
+    if ('error' in profileCheck) {
       setSubmitError(profileCheck.error);
       return;
     }
@@ -298,7 +298,7 @@ export default function EvaluatorInvitePage() {
                     />
                   </label>
                   <p id="invite-spec-help" className="text-xs text-slate-500">
-                    Separate multiple specializations with commas. Your temporary account closes 24 hours after all assigned evaluations are submitted unless reopened by RPDU.
+                    Separate multiple specializations with commas. Your evaluator account automatically deactivates 12 hours after all assigned evaluations are submitted and no proposals remain, unless reactivated by RPDU.
                   </p>
 
                   <div className="grid gap-3 sm:grid-cols-2">

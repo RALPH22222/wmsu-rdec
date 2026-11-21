@@ -13,6 +13,9 @@ interface ViewEvaluatorModalProps {
 export function ViewEvaluatorModal({ evaluator, onClose }: ViewEvaluatorModalProps) {
   const [copied, setCopied] = useState(false);
   const totalProposals = evaluator.totalProposals ?? evaluator.activeLoad;
+  const remainingCount = evaluator.pendingEvaluations ?? evaluator.activeLoad;
+  const completedCount = evaluator.completedEvaluations ?? Math.max(0, totalProposals - remainingCount);
+  const remainingProposals = evaluator.remainingProposals ?? [];
 
   const copyCredentials = async () => {
     const lines = [`Email: ${evaluator.email}`];
@@ -58,6 +61,22 @@ export function ViewEvaluatorModal({ evaluator, onClose }: ViewEvaluatorModalPro
             </dd>
           </div>
           <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3">
+            <dt className="text-xs font-semibold text-slate-500">Evaluation status</dt>
+            <dd className="flex flex-wrap items-center gap-2 text-xs font-bold">
+              {totalProposals === 0 ? (
+                <span className="text-slate-500 font-medium">No assigned proposals</span>
+              ) : remainingCount > 0 ? (
+                <span className="rounded-none border border-amber-200 bg-amber-50 px-2 py-0.5 text-amber-900">
+                  {remainingCount} remaining · {completedCount} done
+                </span>
+              ) : (
+                <span className="rounded-none border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-emerald-800">
+                  Done evaluating all ({completedCount}/{totalProposals})
+                </span>
+              )}
+            </dd>
+          </div>
+          <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3">
             <dt className="text-xs font-semibold text-slate-500">Created</dt>
             <dd className="text-sm font-semibold text-slate-900">
               {evaluator.createdAt ? formatSubmissionDateTime(evaluator.createdAt) : 'Not available'}
@@ -78,6 +97,22 @@ export function ViewEvaluatorModal({ evaluator, onClose }: ViewEvaluatorModalPro
             </dd>
           </div>
         </dl>
+
+        {remainingProposals.length > 0 && (
+          <div className="space-y-2 rounded-sm border border-amber-200 bg-amber-50 p-3.5 text-xs text-amber-950">
+            <p className="font-bold">Remaining proposals not yet evaluated ({remainingProposals.length})</p>
+            <ul className="space-y-1.5 border-t border-amber-200/80 pt-2">
+              {remainingProposals.map((item) => (
+                <li key={`${item.id}-${item.currentRound}`} className="flex items-baseline justify-between gap-2">
+                  <span className="min-w-0 break-words font-semibold">{item.title}</span>
+                  <span className="shrink-0 rounded-none border border-amber-300 bg-white px-1.5 py-0.5 text-[10px] font-bold">
+                    Round {item.currentRound}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
 
         {evaluator.isTemporary && (
           <div className="space-y-2 rounded-sm border border-slate-200 bg-slate-50 p-3.5 text-xs">

@@ -26,7 +26,8 @@ const blockedReason = (proposal: RpduProposal, evaluator: PipelineEvaluator): st
   if (proposal.panel.length >= MAX_EVALUATORS_PER_PROPOSAL) return 'Panel is full';
   const gate = anonymityGateReason(proposal.panel.length, proposal.anonymity.checkedAt);
   if (gate) return gate;
-  if (evaluator.isTemporary && evaluator.accountStatus === 'CLOSED') return 'Temporary account is closed — reopen before assigning a proposal.';
+  if (evaluator.accountStatus === 'DEACTIVATED') return 'Evaluator account is deactivated — reactivate before assigning a proposal.';
+  if (evaluator.isTemporary && evaluator.accountStatus === 'CLOSED') return 'Temporary account is deactivated — reactivate before assigning a proposal.';
   if (proposal.panel.some((seat) => seat.evaluatorId === evaluator.id)) return 'Already on this panel';
   if (evaluator.id === proposal.proponent.id) return 'Conflict of interest: this is the proponent';
   return null;
@@ -40,7 +41,7 @@ function AssignBody({
   onAssignEmailOnly,
   onCreateTemporary,
   onInviteTemporary,
-  onReopen,
+  onReactivate,
 }: {
   proposal: RpduProposal;
   evaluators: PipelineEvaluator[];
@@ -49,7 +50,7 @@ function AssignBody({
   onAssignEmailOnly: ReturnType<typeof useRpduPipeline>['assignEmailOnly'];
   onCreateTemporary: ReturnType<typeof useRpduPipeline>['createTemporaryEvaluator'];
   onInviteTemporary: ReturnType<typeof useRpduPipeline>['sendTemporaryEvaluatorInvitation'];
-  onReopen: ReturnType<typeof useRpduPipeline>['reopenEvaluator'];
+  onReactivate: ReturnType<typeof useRpduPipeline>['reactivateEvaluator'];
 }) {
   const listHref = `/${role}/evaluations`;
   const detailHref = `/${role}/evaluations/${proposal.id}`;
@@ -143,11 +144,11 @@ function AssignBody({
     }
   };
 
-  const handleReopen = async (evaluatorId: string) => {
+  const handleReactivate = async (evaluatorId: string) => {
     if (reopeningId) return;
     setReopeningId(evaluatorId);
     try {
-      await onReopen(evaluatorId);
+      await onReactivate(evaluatorId);
     } catch {
       // toast already shown by the hook
     } finally {
@@ -310,7 +311,8 @@ function AssignBody({
           {visible.map((evaluator) => {
             const reason = full ? 'Panel is full' : blockedReason(proposal, evaluator);
             const sameDepartment = Boolean(evaluator.department) && evaluator.department === proposal.proponent.department;
-            const isClosedTemp = Boolean(evaluator.isTemporary && evaluator.accountStatus === 'CLOSED');
+            const isDeactivated = evaluator.accountStatus === 'DEACTIVATED'
+              || Boolean(evaluator.isTemporary && evaluator.accountStatus === 'CLOSED');
             const totalProposals = evaluator.totalProposals ?? evaluator.activeLoad;
             const matchedTags = matchesById.get(evaluator.id) ?? [];
             const matchedTagSet = new Set(matchedTags.map((tag) => tag.toLowerCase()));
@@ -359,15 +361,15 @@ function AssignBody({
                   {reason ? <p className="mt-1 text-[11px] text-slate-500">{reason}</p> : sameDepartment ? <p className="mt-1 text-[11px] text-amber-700">Same department as the proponent</p> : null}
                 </div>
                 <div className="flex flex-wrap items-center gap-2 sm:shrink-0">
-                  {isClosedTemp && proposal.canManageReviewers && (
+                  {isDeactivated && proposal.canManageReviewers && (
                     <button
                       type="button"
                       disabled={reopeningId === evaluator.id || busyId !== null || emailOnlyBusy}
-                      onClick={() => void handleReopen(evaluator.id)}
+                      onClick={() => void handleReactivate(evaluator.id)}
                       className="inline-flex min-h-11 items-center gap-1.5 rounded-sm border border-[#C8102E] bg-white px-3 text-xs font-semibold text-[#C8102E] hover:bg-red-50 disabled:opacity-50"
                     >
                       <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" />
-                      <span>{reopeningId === evaluator.id ? 'Reopening…' : 'Reopen'}</span>
+                      <span>{reopeningId === evaluator.id ? 'Reactivating…' : 'Reactivate'}</span>
                     </button>
                   )}
                   <button
@@ -479,7 +481,7 @@ function AssignBody({
 
 export function AssignEvaluatorSubPage({ role = 'rpdu' }: AssignEvaluatorSubPageProps) {
   const { id } = useParams<{ id: string }>();
-  const { proposals, evaluators, loading, error, refresh, assign, assignEmailOnly, createTemporaryEvaluator, sendTemporaryEvaluatorInvitation, reopenEvaluator } = useRpduPipeline();
+  const { proposals, evaluators, loading, error, refresh, assign, assignEmailOnly, createTemporaryEvaluator, sendTemporaryEvaluatorInvitation, reactivateEvaluator } = useRpduPipeline();
   const listHref = `/${role}/evaluations`;
   const proposal = proposals.find((item) => item.id === id) ?? null;
 
@@ -589,7 +591,7 @@ export function AssignEvaluatorSubPage({ role = 'rpdu' }: AssignEvaluatorSubPage
       onAssignEmailOnly={assignEmailOnly}
       onCreateTemporary={createTemporaryEvaluator}
       onInviteTemporary={sendTemporaryEvaluatorInvitation}
-      onReopen={reopenEvaluator}
+      onReactivate={reactivateEvaluator}
     />
   );
 }

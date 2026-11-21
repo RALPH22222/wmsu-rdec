@@ -3,6 +3,7 @@ import { Check, Copy, Mail, UserPlus } from 'lucide-react';
 import type { CreatedTemporaryEvaluatorResult, CreateTemporaryEvaluatorInput, PipelineEvaluator, SendTemporaryEvaluatorInviteResult } from '../../types';
 import { capitalizeFirstLetter, formatSubmissionDateTime } from '../../lib/format';
 import { isValidEvaluatorEmail, normalizeAndValidateEvaluatorProfile } from '../../lib/temporaryEvaluatorValidation';
+import { DeactivationCountdown } from '../ui/DeactivationCountdown';
 
 interface TemporaryEvaluatorFormProps {
   onCreate: (input: CreateTemporaryEvaluatorInput) => Promise<CreatedTemporaryEvaluatorResult>;
@@ -14,11 +15,25 @@ interface TemporaryEvaluatorFormProps {
 }
 
 export function TemporaryAccountBadge({ evaluator }: { evaluator: PipelineEvaluator }) {
+  if (evaluator.accountStatus === 'DEACTIVATED') {
+    return (
+      <span className="inline-flex items-center rounded-none border border-red-200 bg-red-50 px-2 py-0.5 text-[11px] font-bold text-red-800">
+        DEACTIVATED
+      </span>
+    );
+  }
+  if (evaluator.accountStatus === 'CLOSING_SOON' && evaluator.closesAt) {
+    return (
+      <span className="inline-flex items-center rounded-none border border-amber-200 bg-amber-50 px-2 py-0.5 text-[11px] font-bold text-amber-900">
+        <DeactivationCountdown closesAt={evaluator.closesAt} prefix="DEACTIVATING IN " expiredLabel="DEACTIVATED" />
+      </span>
+    );
+  }
   if (!evaluator.isTemporary) return null;
   if (evaluator.accountStatus === 'CLOSED') {
     return (
       <span className="inline-flex items-center rounded-none border border-red-200 bg-red-50 px-2 py-0.5 text-[11px] font-bold text-red-800">
-        CLOSED
+        DEACTIVATED
       </span>
     );
   }
@@ -26,13 +41,6 @@ export function TemporaryAccountBadge({ evaluator }: { evaluator: PipelineEvalua
     return (
       <span className="inline-flex items-center rounded-none border border-amber-200 bg-amber-50 px-2 py-0.5 text-[11px] font-bold text-amber-900">
         REOPENED (ASSIGN PROPOSAL)
-      </span>
-    );
-  }
-  if (evaluator.accountStatus === 'CLOSING_SOON' && evaluator.closesAt) {
-    return (
-      <span className="inline-flex items-center rounded-none border border-amber-200 bg-amber-50 px-2 py-0.5 text-[11px] font-bold text-amber-900">
-        CLOSES {formatSubmissionDateTime(evaluator.closesAt)}
       </span>
     );
   }
@@ -100,7 +108,7 @@ export function TemporaryEvaluatorForm({ onCreate, onInvite, onCreated, onCancel
     if (busy || running.current) return;
 
     const profileCheck = normalizeAndValidateEvaluatorProfile({ firstName, middleInitial, lastName, specialization });
-    if (!profileCheck.ok) {
+    if ('error' in profileCheck) {
       setError(profileCheck.error);
       return;
     }
@@ -194,7 +202,7 @@ export function TemporaryEvaluatorForm({ onCreate, onInvite, onCreated, onCancel
             <div>
               <p className="font-bold">Temporary evaluator created: {created.evaluator.name}</p>
               <p className="mt-1 text-xs text-emerald-800">
-                Share these login details with the evaluator. You can also view them anytime in Evaluators Roster. The account closes 24 hours after all assigned evaluations are submitted.
+                Share these login details with the evaluator. You can also view them anytime in Evaluators Roster. The account automatically deactivates 12 hours after all assigned evaluations are submitted and no proposals remain.
               </p>
             </div>
             <button
@@ -286,7 +294,7 @@ export function TemporaryEvaluatorForm({ onCreate, onInvite, onCreated, onCancel
               />
             </label>
             <p id={`${formId}-invite-help`} className="text-xs text-slate-500">
-              Sends a single-use link (valid for 7 days) so the evaluator can enter their own name, specialization, and password. After finishing assigned evaluations, login closes after 24 hours unless reopened by RPDU.
+              Sends a single-use link (valid for 7 days) so the evaluator can enter their own name, specialization, and password. After finishing all assigned evaluations with no proposals left, the account automatically deactivates after 12 hours unless reactivated by RPDU.
             </p>
           </fieldset>
           <div className="flex flex-wrap items-center justify-end gap-2 pt-1">
@@ -330,7 +338,7 @@ export function TemporaryEvaluatorForm({ onCreate, onInvite, onCreated, onCancel
               </label>
             </div>
             <p id={`${formId}-spec-help`} className="text-xs text-slate-500">
-              Separate multiple specializations with commas. After finishing assigned evaluations, login closes after 24 hours unless reopened by RPDU.
+              Separate multiple specializations with commas. After finishing all assigned evaluations with no proposals left, the account automatically deactivates after 12 hours unless reactivated by RPDU.
             </p>
           </fieldset>
           {onCancel ? (

@@ -40,7 +40,8 @@ const blockedReason = (proposal: RpduProposal, evaluator: PipelineEvaluator): st
   if (proposal.panel.length >= MAX_EVALUATORS_PER_PROPOSAL) return 'Panel is full';
   const gate = anonymityGateReason(proposal.panel.length, proposal.anonymity.checkedAt);
   if (gate) return gate;
-  if (evaluator.isTemporary && evaluator.accountStatus === 'CLOSED') return 'Temporary account is closed — reopen before assigning a proposal.';
+  if (evaluator.accountStatus === 'DEACTIVATED') return 'Evaluator account is deactivated — reactivate before assigning a proposal.';
+  if (evaluator.isTemporary && evaluator.accountStatus === 'CLOSED') return 'Temporary account is deactivated — reactivate before assigning a proposal.';
   if (proposal.panel.some((seat) => seat.evaluatorId === evaluator.id)) return 'Already on this panel';
   if (evaluator.id === proposal.proponent.id) return 'Conflict of interest: this is the proponent';
   return null;

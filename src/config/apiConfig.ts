@@ -80,6 +80,8 @@ export const API_ENDPOINTS = {
     PUBLIC_EVALUATOR_INVITATION: (token: string) => `${API_BASE_URL}/pipeline/evaluator-invitations/${encodeURIComponent(token)}`,
     PUBLIC_EVALUATOR_INVITATION_COMPLETE: (token: string) => `${API_BASE_URL}/pipeline/evaluator-invitations/${encodeURIComponent(token)}/complete`,
     REOPEN_EVALUATOR: (id: string) => `${API_BASE_URL}/pipeline/evaluators/${encodeURIComponent(id)}/reopen`,
+    DEACTIVATE_EVALUATOR: (id: string) => `${API_BASE_URL}/pipeline/evaluators/${encodeURIComponent(id)}/deactivate`,
+    REACTIVATE_EVALUATOR: (id: string) => `${API_BASE_URL}/pipeline/evaluators/${encodeURIComponent(id)}/reactivate`,
     EVALUATOR_PROFILE: (id: string) => `${API_BASE_URL}/pipeline/evaluators/${encodeURIComponent(id)}/profile`,
     MY_REVIEWS: `${API_BASE_URL}/pipeline/my-reviews`,
     MY_REVIEW: (id: string) => `${API_BASE_URL}/pipeline/my-reviews/${encodeURIComponent(id)}`,

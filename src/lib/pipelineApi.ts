@@ -86,6 +86,28 @@ export const reopenTemporaryEvaluatorApi = async (
     AbortSignal.timeout(15_000),
   )).data;
 
+export const deactivateEvaluatorApi = async (
+  id: string,
+  token?: string,
+): Promise<{ evaluator: PipelineEvaluator }> =>
+  (await request<{ evaluator: PipelineEvaluator }>(
+    API_ENDPOINTS.PIPELINE.DEACTIVATE_EVALUATOR(id),
+    token,
+    { method: 'POST' },
+    AbortSignal.timeout(15_000),
+  )).data;
+
+export const reactivateEvaluatorApi = async (
+  id: string,
+  token?: string,
+): Promise<{ evaluator: PipelineEvaluator }> =>
+  (await request<{ evaluator: PipelineEvaluator }>(
+    API_ENDPOINTS.PIPELINE.REACTIVATE_EVALUATOR(id),
+    token,
+    { method: 'POST' },
+    AbortSignal.timeout(15_000),
+  )).data;
+
 export const listTemporaryEvaluatorInvitationsApi = async (
   token?: string,
   signal?: AbortSignal,

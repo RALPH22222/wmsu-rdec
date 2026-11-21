@@ -507,7 +507,14 @@ export interface RpduProposal {
   computedOutcome: PipelineStatus | null;
 }
 
-export type TemporaryEvaluatorAccountStatus = 'PERMANENT' | 'ACTIVE' | 'CLOSING_SOON' | 'CLOSED' | 'REOPEN_PENDING';
+export type TemporaryEvaluatorAccountStatus = 'PERMANENT' | 'ACTIVE' | 'CLOSING_SOON' | 'CLOSED' | 'REOPEN_PENDING' | 'DEACTIVATED';
+
+export interface EvaluatorRemainingProposal {
+  id: string;
+  title: string;
+  status: PipelineStatus | string;
+  currentRound: number;
+}
 
 export interface EvaluatorProfile {
   disciplines: string[];
@@ -523,6 +530,9 @@ export interface PipelineEvaluator extends EvaluatorProfile {
   createdAt?: string | null;
   activeLoad: number;
   totalProposals?: number;
+  pendingEvaluations?: number;
+  completedEvaluations?: number;
+  remainingProposals?: EvaluatorRemainingProposal[];
   isTemporary?: boolean;
   accountStatus?: TemporaryEvaluatorAccountStatus;
   closesAt?: string | null;

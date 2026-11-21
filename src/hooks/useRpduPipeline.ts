@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useCallForProposals } from '../context/CallForProposalsContext';
-import { assignEmailOnlyEvaluatorApi, assignEvaluatorApi, buildActionSheetApi, checkAnonymityApi, checkNdaApi, checkRevisionApi, createTemporaryEvaluatorApi, forwardToReoApi, getPipelineEvaluators, getPipelineProposal, getPipelineProposals, postClarificationApi, publishSummaryApi, recordEmailedNdaApi, recordEmailSubmissionApi, reopenTemporaryEvaluatorApi, resendSummaryEmailApi, saveFundingClassificationApi, saveSummaryApi, sendTemporaryEvaluatorInvitationApi, setProjectPeriodApi, unassignEvaluatorApi } from '../lib/pipelineApi';
+import { assignEmailOnlyEvaluatorApi, assignEvaluatorApi, buildActionSheetApi, checkAnonymityApi, checkNdaApi, checkRevisionApi, createTemporaryEvaluatorApi, forwardToReoApi, getPipelineEvaluators, getPipelineProposal, getPipelineProposals, postClarificationApi, publishSummaryApi, reactivateEvaluatorApi, recordEmailedNdaApi, recordEmailSubmissionApi, reopenTemporaryEvaluatorApi, resendSummaryEmailApi, saveFundingClassificationApi, saveSummaryApi, sendTemporaryEvaluatorInvitationApi, setProjectPeriodApi, unassignEvaluatorApi } from '../lib/pipelineApi';
 import type { ActionSheetInput, EmailSubmissionInput, SummaryInput } from '../lib/pipelineApi';
 import { STATUS_META } from '../lib/proposalPipeline';
 import { formatDateRange } from '../lib/format';
@@ -33,7 +33,9 @@ export function useRpduPipeline() {
               ...person,
               activeLoad: person.activeLoad + 1,
               totalProposals: (person.totalProposals ?? person.activeLoad) + 1,
-              ...(person.isTemporary ? { accountStatus: 'ACTIVE', closesAt: null, reopenedAt: null } : {}),
+              accountStatus: person.isTemporary ? 'ACTIVE' : 'PERMANENT',
+              closesAt: null,
+              reopenedAt: null,
             }
           : person)),
       } : prev));
@@ -105,6 +107,21 @@ export function useRpduPipeline() {
     }
   }, [token, setData, showToast]);
 
+  const reactivateEvaluator = useCallback(async (evaluatorId: string) => {
+    try {
+      const result = await reactivateEvaluatorApi(evaluatorId, token);
+      setData((prev) => (prev ? {
+        ...prev,
+        evaluators: prev.evaluators.map((person) => (person.id === evaluatorId ? result.evaluator : person)),
+      } : prev));
+      showToast(`Reactivated ${result.evaluator.name}'s evaluator account.`);
+      return result;
+    } catch (failure) {
+      showToast(failure instanceof Error ? failure.message : 'Unable to reactivate evaluator account');
+      throw failure;
+    }
+  }, [token, setData, showToast]);
+
   const unassign = useCallback(async (reviewId: string) => {
     try {
       const proposal = await unassignEvaluatorApi(reviewId, token);
@@ -116,7 +133,7 @@ export function useRpduPipeline() {
     }
   }, [token, setData, showToast]);
 
-  return { proposals: resource.data?.proposals ?? [], evaluators: resource.data?.evaluators ?? [], loading: resource.loading, error: resource.error, refresh: resource.refresh, assign, assignEmailOnly, unassign, createTemporaryEvaluator, sendTemporaryEvaluatorInvitation, reopenEvaluator };
+  return { proposals: resource.data?.proposals ?? [], evaluators: resource.data?.evaluators ?? [], loading: resource.loading, error: resource.error, refresh: resource.refresh, assign, assignEmailOnly, unassign, createTemporaryEvaluator, sendTemporaryEvaluatorInvitation, reopenEvaluator, reactivateEvaluator };
 }
 
 export function useRpduProposal(id: string | undefined) {
