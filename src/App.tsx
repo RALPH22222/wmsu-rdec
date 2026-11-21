@@ -159,6 +159,7 @@ export function App() {
                 <Route path="/admin/calls/:callId/edit" element={<CallFormPage role="admin" />} />
                 <Route path="/admin/screening" element={<AdminPreliminaryScreeningPage />} />
                 <Route path="/admin/screening/consolidation" element={<PreliminaryScreeningPage role="admin" view="consolidation" />} />
+                <Route path="/admin/screening/calls" element={<PreliminaryScreeningPage role="admin" view="calls" />} />
                 <Route path="/admin/screening/:proposalId" element={<ScreeningReviewPage role="admin" />} />
                 <Route path="/admin/aihr" element={<AihrDeliberationPage role="admin" />} />
                 <Route path="/admin/aihr-invitations" element={<AihrInvitationsPage role="admin" />} />
@@ -189,6 +190,7 @@ export function App() {
                 <Route path="/rpdu/calls/:callId/edit" element={<CallFormPage role="rpdu" />} />
                 <Route path="/rpdu/screening" element={<PreliminaryScreeningPage role="rpdu" />} />
                 <Route path="/rpdu/screening/consolidation" element={<PreliminaryScreeningPage role="rpdu" view="consolidation" />} />
+                <Route path="/rpdu/screening/calls" element={<PreliminaryScreeningPage role="rpdu" view="calls" />} />
                 <Route path="/rpdu/screening/:proposalId" element={<ScreeningReviewPage role="rpdu" />} />
                 <Route path="/rpdu/passed-proposals" element={<Navigate to="/rpdu/screening" replace />} />
                 <Route path="/rpdu/aihr" element={<AihrDeliberationPage role="rpdu" />} />

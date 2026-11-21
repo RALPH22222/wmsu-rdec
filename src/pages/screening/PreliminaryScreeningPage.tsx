@@ -3,7 +3,7 @@ import { PreliminaryScreeningManager } from '../rpdu/PreliminaryScreeningManager
 
 interface PreliminaryScreeningPageProps {
   role?: 'rpdu' | 'admin';
-  view?: 'proposals' | 'consolidation';
+  view?: 'proposals' | 'consolidation' | 'calls';
 }
 
 export const PreliminaryScreeningPage: React.FC<PreliminaryScreeningPageProps> = ({

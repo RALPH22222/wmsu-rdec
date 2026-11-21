@@ -13,12 +13,15 @@ import {
   FileText,
   ListFilter,
   LayoutGrid,
+  Archive,
   Table as TableIcon
 } from 'lucide-react';
 import { useCallForProposals } from '../../context/CallForProposalsContext';
 import type { ConceptProposal, ScreeningStatus } from '../../types';
 import { ScreeningFeedback } from '../../components/rpduComponent/ScreeningFeedback';
 import { ProposalConsolidation } from '../../components/rpduComponent/ProposalConsolidation';
+import { ScreeningCallsView } from '../../components/rpduComponent/ScreeningCallsView';
+import { activeAndPastCalls } from '../../lib/screeningCalls';
 import { Pagination } from '../../components/ui/Pagination';
 import { paginate } from '../../lib/pagination';
 
@@ -26,7 +29,7 @@ const SCREENING_PAGE_SIZE = 10;
 
 interface PreliminaryScreeningManagerProps {
   role?: 'rpdu' | 'admin';
-  view?: 'proposals' | 'consolidation';
+  view?: 'proposals' | 'consolidation' | 'calls';
 }
 
 export const PreliminaryScreeningManager: React.FC<PreliminaryScreeningManagerProps> = ({
@@ -34,11 +37,14 @@ export const PreliminaryScreeningManager: React.FC<PreliminaryScreeningManagerPr
   view = 'proposals',
 }) => {
   const {
+    calls,
+    loadingCalls,
     conceptProposals,
     loadingConceptProposals,
     screeningError,
     refreshConceptProposals,
-  } = useCallForProposals({ concepts: true });
+  } = useCallForProposals({ calls: true, concepts: true });
+  const callHistoryCount = useMemo(() => activeAndPastCalls(calls).length, [calls]);
   const navigate = useNavigate();
   const restored = useLocation().state?.screeningList;
 
@@ -103,7 +109,7 @@ export const PreliminaryScreeningManager: React.FC<PreliminaryScreeningManagerPr
 
   const handleSummaryFilter = (status: 'all' | ScreeningStatus) => {
     setStatusFilter(status);
-    if (view === 'consolidation') {
+    if (view !== 'proposals') {
       navigate(`/${role}/screening`, { state: { screeningList: { ...screeningList, statusFilter: status } } });
     }
   };
@@ -380,10 +386,35 @@ export const PreliminaryScreeningManager: React.FC<PreliminaryScreeningManagerPr
             <TableIcon className="h-4 w-4" />
             <span>Consolidation by Agenda and Budget</span>
           </Link>
+          <Link
+            to={`/${role}/screening/calls`}
+            state={{ screeningList }}
+            aria-current={view === 'calls' ? 'page' : undefined}
+            className={`flex shrink-0 items-center gap-2 whitespace-nowrap border-b-2 px-1 py-3.5 text-xs font-bold transition-colors focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[#C8102E] sm:text-sm ${view === 'calls' ? 'border-[#C8102E] text-[#C8102E]' : 'border-transparent text-slate-500 hover:text-slate-800'}`}
+          >
+            <Archive className="h-4 w-4" />
+            <span>Calls Archive</span>
+            {!loadingCalls && (
+              <span className="ml-1 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-600 tabular-nums">
+                {callHistoryCount}
+              </span>
+            )}
+          </Link>
         </nav>
       </div>
 
-      {view === 'consolidation' ? <ProposalConsolidation proposals={filteredProposals}>{screeningFilters}</ProposalConsolidation> : screeningFilters}
+      {view === 'calls' ? (
+        <ScreeningCallsView
+          role={role}
+          calls={calls}
+          conceptProposals={conceptProposals}
+          loadingCalls={loadingCalls}
+        />
+      ) : view === 'consolidation' ? (
+        <ProposalConsolidation proposals={filteredProposals}>{screeningFilters}</ProposalConsolidation>
+      ) : (
+        screeningFilters
+      )}
 
       {/* Main Proposals Presentation: Card View */}
 
