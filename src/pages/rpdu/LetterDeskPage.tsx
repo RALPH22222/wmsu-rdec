@@ -119,6 +119,7 @@ export function LetterDeskPage() {
 
   const { session, profile, loadingProfile } = useAuth();
   const { pathname } = useLocation();
+  const headerRole = profile?.role === 'ADMIN' || pathname.startsWith('/admin') ? 'admin' : 'rpdu';
   const evaluationsBase = pathname.startsWith('/admin') ? '/admin/evaluations' : '/rpdu/evaluations';
   const [sources, setSources] = useState<Source[]>([]);
   const externalCertificateRequested = ['WMSU-RPDU-CERT-001.00', 'cotr'].includes(searchParams.get('template') || '');
@@ -139,7 +140,7 @@ export function LetterDeskPage() {
   const [reviewId, setReviewId] = useState('');
 
   const [contractContext, setContractContext] = useState<ContractContext | null>(null);
-  const [contextLoading, setContextLoading] = useState(() => Boolean(searchParams.get('proposal')));
+  const [contextLoading, setContextLoading] = useState(() => !externalCertificateRequested && isContractTemplate(initialTemplate) && Boolean(searchParams.get('proposal')));
   // The PSC cannot be prepared until RPDU sets the project period on the evaluation page.
   const projectPeriodMissing = isContractTemplate(template) && Boolean(contractContext?.missingFields?.includes('projectPeriod'));
   const projectPeriodHint = projectPeriodMissing ? 'Set the project duration first' : undefined;
@@ -321,6 +322,7 @@ export function LetterDeskPage() {
     setTemplate(value);
     setConceptId('');
     setContractContext(null);
+    setContextLoading(false);
     setReviewId('');
     clearDraft();
   };
@@ -487,19 +489,11 @@ export function LetterDeskPage() {
     }
   };
 
-  if (loadingProfile || (roleAllowed && loading)) {
-    return (
-      <div className="mx-auto max-w-5xl space-y-8 p-6" aria-label="Loading official documents">
-        <div className="h-10 w-72 bg-slate-100 rounded-sm animate-pulse" />
-        <div className="h-16 bg-slate-100 rounded-sm animate-pulse" />
-        <div className="h-96 bg-slate-100 rounded-sm animate-pulse" />
-      </div>
-    );
-  }
-
-  if (!roleAllowed) {
+  if (!loadingProfile && !roleAllowed) {
     return <p className="bg-white p-8 text-slate-700">RPDU or Admin access is required for official documents.</p>;
   }
+
+  const deskLoading = loadingProfile || (roleAllowed && loading);
 
   return (
     <div className="mx-auto max-w-5xl space-y-10 pb-16 text-slate-900 font-sans">
@@ -513,13 +507,13 @@ export function LetterDeskPage() {
         </p>
         <div className="mt-3 flex flex-wrap items-center gap-2.5">
           <Link
-            to={`/${profile?.role === 'ADMIN' ? 'admin' : 'rpdu'}/letters/screening-results`}
+            to={`/${headerRole}/letters/screening-results`}
             className="inline-flex min-h-11 items-center rounded-sm bg-[#C8102E] px-4 text-sm font-semibold text-white hover:bg-[#A00D26]"
           >
             Send screening results
           </Link>
           <Link
-            to={`/${profile?.role === 'ADMIN' ? 'admin' : 'rpdu'}/archive`}
+            to={`/${headerRole}/archive`}
             className="inline-flex min-h-11 items-center gap-2 rounded-sm border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 hover:bg-slate-50 shadow-2xs"
           >
             <Archive size={16} className="text-slate-500" />
@@ -573,7 +567,95 @@ export function LetterDeskPage() {
 
       {/* Main Content Card */}
       <section className="rounded-lg border border-slate-200 bg-white p-6 sm:p-10 shadow-2xs">
-        {/* CHOOSE DOCUMENT TYPE */}
+        {deskLoading ? (
+          <div role="status" aria-busy="true">
+            <span className="sr-only">Loading official documents and contracts desk</span>
+            <div aria-hidden="true" className="grid grid-cols-1 gap-8 lg:grid-cols-12 motion-safe:animate-pulse">
+              <div className="min-w-0 space-y-6 lg:col-span-5">
+                <div className="space-y-2">
+                  <div className="h-6 w-52 max-w-full rounded-sm bg-slate-200" />
+                  <div className="h-4 w-72 max-w-full rounded-sm bg-slate-100" />
+                </div>
+
+                <div className="space-y-3">
+                  {[0, 1, 2].map((item) => (
+                    <div key={item} className="rounded-lg border border-slate-200 bg-white p-4 space-y-2.5">
+                      <div className="flex items-center gap-3">
+                        <div className="h-4 w-4 shrink-0 rounded-full bg-slate-200" />
+                        <div className="h-4 w-48 max-w-full rounded-sm bg-slate-200" />
+                      </div>
+                      <div className="pl-7 space-y-1.5">
+                        <div className="h-3 w-full rounded-sm bg-slate-100" />
+                        <div className="h-3 w-3/4 rounded-sm bg-slate-100" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="space-y-2">
+                  <div className="h-3 w-36 rounded-sm bg-slate-200" />
+                  <div className="h-11 w-full rounded-md border border-slate-200 bg-slate-100" />
+                </div>
+
+                <div className="flex items-center justify-between gap-3 pt-2">
+                  <div className="h-10 w-24 rounded-md bg-slate-100" />
+                  <div className="h-11 w-40 rounded-md bg-slate-200" />
+                </div>
+              </div>
+
+              <div className="min-w-0 lg:col-span-7">
+                <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 sm:p-5 space-y-4">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div className="space-y-1.5">
+                      <div className="h-4 w-44 max-w-full rounded-sm bg-slate-200" />
+                      <div className="h-3 w-56 max-w-full rounded-sm bg-slate-100" />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="h-9 w-20 rounded-md bg-slate-200" />
+                      <div className="h-9 w-28 rounded-md bg-slate-200" />
+                    </div>
+                  </div>
+
+                  <div className="rounded-sm border border-slate-200 bg-white p-5 sm:p-8 shadow-2xs space-y-5">
+                    <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
+                      <div className="h-10 w-10 shrink-0 rounded-full bg-slate-200" />
+                      <div className="min-w-0 flex-1 space-y-2">
+                        <div className="h-4 w-56 max-w-full rounded-sm bg-slate-200" />
+                        <div className="h-3 w-36 max-w-full rounded-sm bg-slate-100" />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2.5">
+                      <div className="h-3.5 w-36 rounded-sm bg-slate-200" />
+                      <div className="h-3 w-full rounded-sm bg-slate-100" />
+                      <div className="h-3 w-11/12 rounded-sm bg-slate-100" />
+                      <div className="h-3 w-5/6 rounded-sm bg-slate-100" />
+                    </div>
+
+                    <div className="space-y-2.5 pt-1">
+                      <div className="h-3 w-full rounded-sm bg-slate-100" />
+                      <div className="h-3 w-10/12 rounded-sm bg-slate-100" />
+                      <div className="h-3 w-4/6 rounded-sm bg-slate-100" />
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 border-t border-slate-100 pt-5">
+                      <div className="space-y-2">
+                        <div className="h-3.5 w-32 rounded-sm bg-slate-200" />
+                        <div className="h-2.5 w-24 rounded-sm bg-slate-100" />
+                      </div>
+                      <div className="space-y-2">
+                        <div className="h-3.5 w-32 rounded-sm bg-slate-200" />
+                        <div className="h-2.5 w-24 rounded-sm bg-slate-100" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <>
+            {/* CHOOSE DOCUMENT TYPE */}
         {stage === 1 && (
           <div className="mx-auto max-w-2xl space-y-6">
             <div>
@@ -756,10 +838,48 @@ export function LetterDeskPage() {
               </div>
             )}
 
-            {isContractTemplate(template) && contextLoading && (
-              <p role="status" className="text-sm text-slate-600">
-                Pulling Final Approved Budget, Proponent Name, and Proposal Title from database…
-              </p>
+            {isContractTemplate(template) && Boolean(conceptId) && contextLoading && (
+              <div
+                role="status"
+                aria-busy="true"
+                className="rounded-lg border border-slate-200 bg-white p-5 space-y-4"
+              >
+                <span className="sr-only">
+                  Pulling Final Approved Budget, Proponent Name, and Proposal Title from database…
+                </span>
+                <div aria-hidden="true" className="space-y-4 motion-safe:animate-pulse">
+                  <div className="flex items-center gap-2 border-b border-slate-200 pb-3">
+                    <div className="h-4 w-4 shrink-0 rounded-sm bg-slate-200" />
+                    <div className="h-3.5 w-64 max-w-full rounded-sm bg-slate-200" />
+                  </div>
+                  <div className="grid grid-cols-1 gap-3">
+                    <div className="rounded-md border border-slate-200 bg-white p-3 space-y-2">
+                      <div className="h-2.5 w-44 max-w-full rounded-sm bg-slate-100" />
+                      <div className="h-4 w-3/4 rounded-sm bg-slate-200" />
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div className="rounded-md border border-slate-200 bg-white p-3 space-y-2">
+                        <div className="h-2.5 w-40 max-w-full rounded-sm bg-slate-100" />
+                        <div className="h-4 w-2/3 rounded-sm bg-slate-200" />
+                        <div className="h-3 w-1/2 rounded-sm bg-slate-100" />
+                      </div>
+                      <div className="rounded-md border border-slate-200 bg-white p-3 space-y-2">
+                        <div className="h-2.5 w-40 max-w-full rounded-sm bg-slate-100" />
+                        <div className="h-4 w-32 max-w-full rounded-sm bg-slate-200" />
+                        <div className="h-3 w-44 max-w-full rounded-sm bg-slate-100" />
+                      </div>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 border-t border-slate-200 pt-2">
+                    {[0, 1, 2].map((item) => (
+                      <div key={item} className="rounded border border-slate-200 bg-white p-2.5 space-y-2">
+                        <div className="h-2.5 w-24 max-w-full rounded-sm bg-slate-100" />
+                        <div className="h-3.5 w-32 max-w-full rounded-sm bg-slate-200" />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
             )}
 
             {/* Database Autofill Summary Card */}
@@ -1358,6 +1478,8 @@ export function LetterDeskPage() {
               </Link>
             )}
           </div>
+        )}
+          </>
         )}
       </section>
     </div>

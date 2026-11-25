@@ -1595,9 +1595,80 @@ export const InceptionSchedulingManager: React.FC = () => {
 
           if (isLoading) {
             return (
-              <div className="py-16 text-center text-slate-400">
-                <RotateCcw className="w-7 h-7 mx-auto mb-2.5 text-[#C8102E] animate-spin" aria-hidden="true" />
-                <p className="font-semibold text-slate-700 text-sm">Loading inception meetings...</p>
+              <div role="status" aria-busy="true">
+                <span className="sr-only">Loading inception meetings</span>
+                <div aria-hidden="true">
+                  {/* Mobile & Compact Laptop (< 1280px): responsive card skeleton, zero horizontal scrollbar */}
+                  <div className="xl:hidden divide-y divide-slate-100 motion-safe:animate-pulse">
+                    {[0, 1, 2, 3].map((item) => (
+                      <div key={item} className="p-4 sm:p-5 space-y-3 bg-white">
+                        <div className="flex flex-wrap items-start justify-between gap-2.5">
+                          <div className="space-y-1.5">
+                            <div className="h-4 w-32 rounded-sm bg-slate-200" />
+                            <div className="h-3 w-20 rounded-sm bg-slate-100" />
+                          </div>
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            <div className="h-6 w-24 rounded-sm bg-slate-200" />
+                            <div className="h-6 w-20 rounded-sm bg-slate-100" />
+                          </div>
+                        </div>
+                        <div className="h-4 w-3/4 max-w-full rounded-sm bg-slate-200" />
+                        <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                          <div className="h-7 w-28 rounded-sm bg-slate-200" />
+                          <div className="h-7 w-24 rounded-sm bg-slate-100" />
+                          <div className="h-7 w-7 rounded-sm bg-slate-100" />
+                          <div className="h-7 w-7 rounded-sm bg-slate-100" />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Desktop (>= 1280px): 5-column table skeleton fitted to container */}
+                  <div className="hidden xl:block">
+                    <table className="w-full text-left text-sm text-slate-600">
+                      <thead className="bg-slate-50 text-xs uppercase tracking-wider font-bold text-slate-500 border-b border-slate-200">
+                        <tr>
+                          <th className="py-3.5 px-4 whitespace-nowrap">Date &amp; Time</th>
+                          <th className="py-3.5 px-4">Venue</th>
+                          <th className="py-3.5 px-4 whitespace-nowrap">SO Status</th>
+                          <th className="py-3.5 px-4 text-center whitespace-nowrap">Meeting Status</th>
+                          <th className="py-3.5 px-4 text-right whitespace-nowrap">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 motion-safe:animate-pulse">
+                        {[0, 1, 2, 3].map((item) => (
+                          <tr key={item}>
+                            <td className="py-4 px-4 align-middle whitespace-nowrap">
+                              <div className="space-y-1.5">
+                                <div className="h-4 w-28 rounded-sm bg-slate-200" />
+                                <div className="h-3 w-20 rounded-sm bg-slate-100" />
+                              </div>
+                            </td>
+                            <td className="py-4 px-4 align-middle min-w-[180px]">
+                              <div className="space-y-1.5">
+                                <div className="h-4 w-56 max-w-full rounded-sm bg-slate-200" />
+                                <div className="h-3 w-36 max-w-full rounded-sm bg-slate-100" />
+                              </div>
+                            </td>
+                            <td className="py-4 px-4 align-middle whitespace-nowrap">
+                              <div className="h-6 w-28 rounded-sm bg-slate-200" />
+                            </td>
+                            <td className="py-4 px-4 align-middle text-center whitespace-nowrap">
+                              <div className="mx-auto h-6 w-24 rounded-sm bg-slate-200" />
+                            </td>
+                            <td className="py-4 px-4 align-middle text-right">
+                              <div className="flex items-center justify-end gap-1.5">
+                                <div className="h-7 w-28 rounded-sm bg-slate-200" />
+                                <div className="h-7 w-24 rounded-sm bg-slate-100" />
+                                <div className="h-7 w-7 rounded-sm bg-slate-100" />
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
               </div>
             );
           }

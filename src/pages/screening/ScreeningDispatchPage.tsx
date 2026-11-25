@@ -61,7 +61,36 @@ export function ScreeningDispatchPage({ role }: { role: 'rpdu' | 'admin' }) {
       <header><h1 className="text-2xl font-bold text-slate-900">Send screening results</h1><p className="mt-2 text-sm text-slate-600">Preview an issued screening letter, confirm its recipient, and send it through the portal or email.</p></header>
       {error && <p role="alert" className="rounded-sm border border-red-200 bg-red-50 p-4 text-sm text-red-800">{error}</p>}
       {notice && <p role="status" className="rounded-sm border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">{notice}</p>}
-      {list.loading ? <div role="status" className="space-y-3 rounded-sm border border-slate-200 bg-white p-5"><span className="sr-only">Loading screening letters</span><div aria-hidden="true" className="h-32 rounded bg-slate-100 motion-safe:animate-pulse" /></div>
+      {list.loading ? (
+        <div role="status" aria-busy="true" className="space-y-4 rounded-sm border border-slate-200 bg-white p-4 sm:p-5">
+          <span className="sr-only">Loading screening letters</span>
+          <div aria-hidden="true" className="space-y-4 motion-safe:animate-pulse">
+            <div className="space-y-2">
+              <div className="h-3 w-36 rounded-sm bg-slate-200" />
+              <div className="h-11 w-full rounded-sm border border-slate-200 bg-slate-100" />
+            </div>
+            <div className="divide-y divide-slate-100 border-t border-slate-200">
+              {[0, 1, 2].map((item) => (
+                <div key={item} className="flex flex-col gap-3 py-3.5 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="min-w-0 flex-1 space-y-2">
+                    <div className="h-4 w-3/4 max-w-sm rounded-sm bg-slate-200" />
+                    <div className="h-3 w-32 rounded-sm bg-slate-100" />
+                  </div>
+                  <div className="min-w-0 flex-1 space-y-2">
+                    <div className="h-3.5 w-40 max-w-full rounded-sm bg-slate-200" />
+                    <div className="h-3 w-48 max-w-full rounded-sm bg-slate-100" />
+                  </div>
+                  <div className="space-y-2 sm:w-32">
+                    <div className="h-3 w-24 rounded-sm bg-slate-200" />
+                    <div className="h-3 w-28 rounded-sm bg-slate-100" />
+                  </div>
+                  <div className="h-11 w-32 shrink-0 rounded-sm bg-slate-200" />
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )
         : list.error ? <p role="alert" className="rounded-sm border border-red-200 bg-red-50 p-4 text-sm text-red-800">{list.error}<button type="button" onClick={list.refresh} className="ml-3 min-h-11 font-semibold underline">Try again</button></p>
         : <>
           {!list.data?.emailAvailable && <p className="rounded-sm border border-slate-200 bg-white p-4 text-sm text-slate-600">Portal delivery is available. Email delivery will be available once the sender is configured.</p>}
@@ -77,7 +106,35 @@ export function ScreeningDispatchPage({ role }: { role: 'rpdu' | 'admin' }) {
           </div>
           {selected && <section aria-label="Screening letter dispatch" className="space-y-4 rounded-sm border border-slate-200 bg-white p-4 sm:p-5">
             <h2 className="text-lg font-bold text-slate-900">Review letter and recipient</h2>
-            {preview.loading ? <div role="status" className="h-48 rounded bg-slate-100 motion-safe:animate-pulse"><span className="sr-only">Loading issued letter preview</span></div>
+            {preview.loading ? (
+              <div role="status" aria-busy="true" className="space-y-4">
+                <span className="sr-only">Loading issued letter preview</span>
+                <div aria-hidden="true" className="space-y-4 motion-safe:animate-pulse">
+                  <div className="flex flex-wrap gap-x-8 gap-y-3 rounded-sm border border-slate-200 bg-slate-50 p-4">
+                    <div className="space-y-2">
+                      <div className="h-3 w-20 rounded-sm bg-slate-200" />
+                      <div className="h-4 w-44 max-w-full rounded-sm bg-slate-200" />
+                      <div className="h-3 w-52 max-w-full rounded-sm bg-slate-100" />
+                    </div>
+                    <div className="space-y-2">
+                      <div className="h-3 w-32 rounded-sm bg-slate-200" />
+                      <div className="h-3 w-40 rounded-sm bg-slate-100" />
+                    </div>
+                  </div>
+                  <div className="space-y-3 rounded-sm border border-slate-200 bg-white p-5 sm:p-6">
+                    <div className="h-4 w-48 max-w-full rounded-sm bg-slate-200" />
+                    <div className="h-3 w-full rounded-sm bg-slate-100" />
+                    <div className="h-3 w-11/12 rounded-sm bg-slate-100" />
+                    <div className="h-3 w-4/5 rounded-sm bg-slate-100" />
+                    <div className="h-3 w-5/6 rounded-sm bg-slate-100" />
+                  </div>
+                  <div className="space-y-3 border-t border-slate-200 pt-4">
+                    <div className="h-11 w-full rounded-sm border border-slate-200 bg-slate-100 sm:max-w-xs" />
+                    <div className="h-11 w-full rounded-sm bg-slate-200 sm:w-48" />
+                  </div>
+                </div>
+              </div>
+            )
               : preview.error ? <p role="alert" className="text-sm text-red-700">{preview.error}<button type="button" onClick={preview.refresh} className="ml-3 min-h-11 font-semibold underline">Try again</button></p>
               : preview.data && <>
                 <div className="flex flex-wrap gap-x-8 gap-y-3 rounded-sm bg-slate-50 p-4 text-sm"><div><p className="text-xs text-slate-500">Recipient</p><p className="mt-1 font-semibold text-slate-800">{preview.data.recipientName}</p><p className="text-slate-600 [overflow-wrap:anywhere]">{preview.data.recipientEmail || 'No email on record'}</p></div><div className="text-xs leading-6 text-slate-600"><p>Portal: {selected.portalSentAt ? dateTime(selected.portalSentAt) : 'Not sent'}</p><p>Email: {emailLabel[selected.emailStatus]}{selected.emailSentAt ? ` · ${dateTime(selected.emailSentAt)}` : ''}</p>{selected.emailTo && <p>Last email recipient: {selected.emailTo}</p>}</div></div>

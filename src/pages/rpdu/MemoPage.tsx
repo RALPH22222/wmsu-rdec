@@ -195,6 +195,18 @@ export const MemoPage: React.FC<MemoPageProps> = () => {
     return `${API_BASE_URL.replace('/api', '')}${url}`;
   };
 
+  const memoTableHead = (
+    <thead className="bg-slate-50 text-[11px] uppercase font-bold text-slate-500 border-b border-slate-200">
+      <tr>
+        <th className="py-3.5 px-5 w-36 whitespace-nowrap">Date</th>
+        <th className="py-3.5 px-5">Memorandum Subject</th>
+        <th className="py-3.5 px-5">Proposed Project</th>
+        <th className="py-3.5 px-5 w-64">Attached File</th>
+        <th className="py-3.5 px-5 text-right w-28 whitespace-nowrap">Action</th>
+      </tr>
+    </thead>
+  );
+
   return (
     <div className="mx-auto max-w-7xl space-y-6 pb-12">
       {/* Header */}
@@ -265,7 +277,7 @@ export const MemoPage: React.FC<MemoPageProps> = () => {
                 className="w-full max-w-full truncate px-3.5 py-2.5 text-sm rounded-md border border-slate-300 bg-white focus:outline-hidden focus:border-brand focus:ring-1 focus:ring-brand/20 font-medium text-slate-800 cursor-pointer"
               >
                 {recipientsData.proposals.length === 0 ? (
-                  <option value="">No qualified proposals found</option>
+                  <option value="">{loading ? 'Loading qualified proposals...' : 'No qualified proposals found'}</option>
                 ) : (
                   recipientsData.proposals.map((proj) => {
                     const shortTitle = proj.title.length > 75 ? `${proj.title.slice(0, 75).trim()}...` : proj.title;
@@ -385,15 +397,59 @@ export const MemoPage: React.FC<MemoPageProps> = () => {
             )}
           </div>
 
-          <span className="text-xs sm:text-sm text-slate-500 font-medium">
-            {filteredMemos.length} {filteredMemos.length === 1 ? 'memorandum' : 'memorandums'}
+          <span className="text-xs sm:text-sm text-slate-500 font-medium tabular-nums">
+            {loading
+              ? 'Loading memoranda...'
+              : `${filteredMemos.length} ${filteredMemos.length === 1 ? 'memorandum' : 'memorandums'}`}
           </span>
         </div>
 
         {loading ? (
-          <div className="p-10 text-center text-slate-500 text-xs">
-            <Clock className="w-5 h-5 text-slate-400 mx-auto mb-2 animate-spin" />
-            Loading memoranda...
+          <div role="status" aria-busy="true" className="overflow-x-auto">
+            <span className="sr-only">Loading memoranda</span>
+            <table className="w-full text-left text-xs sm:text-sm">
+              {memoTableHead}
+              <tbody className="divide-y divide-slate-100">
+                {[0, 1, 2, 3].map((idx) => (
+                  <tr key={idx} aria-hidden="true" className="motion-safe:animate-pulse">
+                    <td className="py-4 px-5 align-middle whitespace-nowrap">
+                      <div className="flex items-center gap-2">
+                        <div className="h-4 w-4 shrink-0 rounded-sm bg-slate-200" />
+                        <div className="h-4 w-20 rounded-sm bg-slate-200" />
+                      </div>
+                    </td>
+                    <td className="py-4 px-5 align-middle">
+                      <div className="space-y-1.5">
+                        <div className="h-4 w-56 max-w-full rounded-sm bg-slate-200" />
+                        <div className="h-3.5 w-36 max-w-full rounded-sm bg-slate-100" />
+                      </div>
+                    </td>
+                    <td className="py-4 px-5 align-middle">
+                      <div className="space-y-1.5">
+                        <div className="h-4 w-52 max-w-full rounded-sm bg-slate-200" />
+                        <div className="h-3 w-36 max-w-full rounded-sm bg-slate-100" />
+                      </div>
+                    </td>
+                    <td className="py-4 px-5 align-middle">
+                      <div className="flex items-center gap-2.5">
+                        <div className="h-4 w-4 shrink-0 rounded-sm bg-slate-200" />
+                        <div className="min-w-0 space-y-1.5">
+                          <div className="h-4 w-40 max-w-full rounded-sm bg-slate-200" />
+                          <div className="h-3 w-14 rounded-sm bg-slate-100" />
+                        </div>
+                      </div>
+                    </td>
+                    <td className="py-4 px-5 align-middle text-right whitespace-nowrap">
+                      <div className="flex items-center justify-end gap-1.5">
+                        <div className="h-8 w-8 rounded-sm bg-slate-200" />
+                        <div className="h-8 w-8 rounded-sm bg-slate-100" />
+                        <div className="h-8 w-8 rounded-sm bg-slate-100" />
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         ) : error ? (
           <div className="p-8 text-center text-red-600 text-xs">
@@ -422,15 +478,7 @@ export const MemoPage: React.FC<MemoPageProps> = () => {
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs sm:text-sm">
-              <thead className="bg-slate-50 text-[11px] uppercase font-bold text-slate-500 border-b border-slate-200">
-                <tr>
-                  <th className="py-3.5 px-5 w-36 whitespace-nowrap">Date</th>
-                  <th className="py-3.5 px-5">Memorandum Subject</th>
-                  <th className="py-3.5 px-5">Proposed Project</th>
-                  <th className="py-3.5 px-5 w-64">Attached File</th>
-                  <th className="py-3.5 px-5 text-right w-28 whitespace-nowrap">Action</th>
-                </tr>
-              </thead>
+              {memoTableHead}
               <tbody className="divide-y divide-slate-100">
                 {filteredMemos.map((memo) => {
                   const fileUrl = getFullFileUrl(memo.fileUrl);

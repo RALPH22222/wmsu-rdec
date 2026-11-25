@@ -483,7 +483,7 @@ export const buildLibPrintableHtml = (params: BuildLibPrintableHtmlParams): stri
       flex-direction: column;
     }
     .sig-caption {
-      margin-bottom: 32px;
+      margin-bottom: 20px;
       font-weight: 400;
       color: #000000;
     }

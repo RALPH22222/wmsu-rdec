@@ -65,6 +65,78 @@ const TAB_BASE = 'inline-flex min-h-11 flex-1 items-center justify-center gap-2 
 const TAB_ACTIVE = 'bg-[#C8102E] text-white shadow-xs';
 const TAB_INACTIVE = 'border border-slate-200 bg-slate-50 text-slate-700 hover:border-slate-300 hover:bg-slate-100 hover:text-slate-900';
 
+const SKELETON_TITLE_WIDTHS = ['w-3/4', 'w-2/3', 'w-4/5'] as const;
+
+/** Structured row placeholders matching AihrConceptRow and Pagination inside the tab panel. */
+function AihrConceptListSkeleton() {
+  return (
+    <div role="status" aria-busy="true">
+      <span className="sr-only">Loading AIHR and en banc deliberation concepts…</span>
+      <div aria-hidden="true" className="space-y-4 motion-safe:animate-pulse">
+        {SKELETON_TITLE_WIDTHS.map((titleWidth, row) => (
+          <div
+            key={row}
+            className="rounded-sm border border-slate-200 bg-white p-5 shadow-xs sm:p-6"
+          >
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+              <div className="min-w-0 flex-1 space-y-2.5">
+                <div className="flex flex-wrap items-center gap-2">
+                  <div className="h-6 w-32 rounded-sm bg-slate-200" />
+                  <div className="h-6 w-24 rounded-sm bg-slate-100" />
+                </div>
+                <div className={`h-6 ${titleWidth} max-w-full rounded-sm bg-slate-200`} />
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
+                  <div className="h-4 w-32 rounded-sm bg-slate-100" />
+                  <div className="h-4 w-28 rounded-sm bg-slate-100" />
+                  <div className="h-4 w-36 rounded-sm bg-slate-100" />
+                  <div className="h-4 w-28 rounded-sm bg-slate-100" />
+                </div>
+                <div className="h-4 w-full max-w-xl rounded-sm bg-slate-100" />
+              </div>
+              <div className="flex flex-col gap-2.5 sm:shrink-0 sm:flex-row">
+                <div className="h-11 w-full rounded-sm bg-slate-200 sm:w-36" />
+              </div>
+            </div>
+
+            <div className="mt-5 space-y-3 border-t border-slate-100 pt-4">
+              <div className="flex flex-col gap-3 rounded-sm border border-slate-200/80 bg-slate-50/60 p-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="min-w-0 space-y-2">
+                  <div className="h-3.5 w-28 rounded-sm bg-slate-200" />
+                  <div className="h-4 w-44 max-w-full rounded-sm bg-slate-100" />
+                </div>
+                <div className="flex flex-col gap-2.5 sm:shrink-0 sm:flex-row">
+                  <div className="h-11 w-full rounded-sm bg-slate-200 sm:w-32" />
+                  <div className="h-11 w-full rounded-sm bg-slate-100 sm:w-36" />
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-4 border-t border-slate-100 pt-4">
+              <div className="flex min-h-11 items-center justify-between gap-3 rounded-sm border border-slate-200 bg-slate-50 px-4 py-3">
+                <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+                  <div className="h-4 w-36 max-w-full rounded-sm bg-slate-200 sm:w-44" />
+                  <div className="h-5 w-20 shrink-0 rounded-sm bg-slate-100" />
+                </div>
+                <div className="h-4 w-4 shrink-0 rounded-sm bg-slate-200" />
+              </div>
+            </div>
+          </div>
+        ))}
+
+        <div className="flex flex-col items-center justify-between gap-2 sm:flex-row">
+          <div className="h-4 w-40 rounded-sm bg-slate-100" />
+          <div className="flex items-center gap-1">
+            <div className="h-11 w-24 rounded-sm bg-slate-100" />
+            <div className="hidden h-11 w-11 rounded-sm bg-slate-200 sm:block" />
+            <div className="hidden h-11 w-11 rounded-sm bg-slate-100 sm:block" />
+            <div className="h-11 w-20 rounded-sm bg-slate-100" />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function AihrDeliberationPage({ role = 'rpdu' }: AihrDeliberationPageProps) {
   const { concepts, loading, error, refresh, logVerdict, recordDecision, withdrawDecision, recordAttendance } = useAihrConcepts();
   const ids = useId();
@@ -199,6 +271,8 @@ export function AihrDeliberationPage({ role = 'rpdu' }: AihrDeliberationPageProp
     }
   };
 
+  const initialLoading = loading && concepts.length === 0;
+
   const tabButton = (value: Tab, label: string, count: number) => {
     const active = tab === value;
     return (
@@ -213,7 +287,12 @@ export function AihrDeliberationPage({ role = 'rpdu' }: AihrDeliberationPageProp
       >
         <span>{label}</span>
         <span className={`rounded-sm px-2 py-0.5 text-xs font-bold tabular-nums ${active ? 'bg-white/20 text-white' : 'bg-white text-slate-700 border border-slate-200/80'}`}>
-          {count}
+          {initialLoading ? (
+            <span
+              aria-hidden="true"
+              className={`inline-block h-3 w-4 rounded-xs align-middle motion-safe:animate-pulse ${active ? 'bg-white/40' : 'bg-slate-200'}`}
+            />
+          ) : count}
         </span>
       </button>
     );
@@ -226,7 +305,14 @@ export function AihrDeliberationPage({ role = 'rpdu' }: AihrDeliberationPageProp
           <div key={card.label} className={STAT_CARD_SPANS[index]}>
             <StatCard
               label={card.label}
-              value={loading ? '—' : counts(card.stages)}
+              value={
+                initialLoading ? (
+                  <>
+                    <span className="inline-block h-8 w-12 rounded-sm bg-slate-200 motion-safe:animate-pulse align-middle" aria-hidden="true" />
+                    <span className="sr-only">Loading</span>
+                  </>
+                ) : counts(card.stages)
+              }
               icon={card.icon}
               tone={card.tone}
               onClick={() => toggleFilter(card.stages)}
@@ -296,11 +382,8 @@ export function AihrDeliberationPage({ role = 'rpdu' }: AihrDeliberationPageProp
       )}
 
       <div id={`${ids}-panel`} role="tabpanel" aria-labelledby={`${ids}-tab-${tab}`}>
-        {loading ? (
-          <div className="space-y-4" aria-label="Loading concepts">
-            <div className="h-32 animate-pulse rounded-sm bg-slate-100" />
-            <div className="h-32 animate-pulse rounded-sm bg-slate-100" />
-          </div>
+        {initialLoading ? (
+          <AihrConceptListSkeleton />
         ) : tab === 'attendance' ? (
           /* ATTENDANCE SESSIONS TAB */
           <div className="space-y-4">

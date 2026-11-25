@@ -241,7 +241,34 @@ export function EvaluatorsRoster() {
       </div>
 
       {loading ? (
-        <div role="status" aria-busy="true" className="space-y-4 p-4 sm:p-5"><span className="sr-only">Loading evaluators</span><div aria-hidden="true" className="space-y-4 motion-safe:animate-pulse">{[0, 1, 2].map((index) => <div key={index} className="space-y-3 border-b border-slate-100 pb-4"><div className="h-4 w-48 max-w-full rounded-sm bg-slate-200" /><div className="h-3 w-2/3 rounded-sm bg-slate-100" /><div className="h-7 w-32 rounded-sm bg-slate-100" /></div>)}</div></div>
+        <div role="status" aria-busy="true">
+          <span className="sr-only">Loading evaluators</span>
+          <div aria-hidden="true" className="divide-y divide-slate-100 motion-safe:animate-pulse">
+            {[0, 1, 2].map((index) => (
+              <div key={index} className="grid gap-4 p-4 sm:p-5 md:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_auto] md:items-start">
+                <div className="min-w-0 space-y-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <div className="h-4 w-40 max-w-full rounded-sm bg-slate-200" />
+                    <div className="h-5 w-20 rounded-none bg-slate-100" />
+                  </div>
+                  <div className="h-3 w-52 max-w-full rounded-sm bg-slate-100" />
+                  <div className="h-3 w-32 rounded-sm bg-slate-100" />
+                </div>
+                <div className="min-w-0 space-y-2">
+                  <div className="h-3 w-24 rounded-sm bg-slate-100" />
+                  <div className="flex flex-wrap gap-1.5">
+                    <div className="h-6 w-24 rounded-none bg-slate-200" />
+                    <div className="h-6 w-20 rounded-none bg-slate-100" />
+                  </div>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <div className="h-11 w-24 rounded-sm bg-slate-100" />
+                  <div className="h-11 w-28 rounded-sm bg-slate-200" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       ) : error ? (
         <div role="alert" className="m-4 flex flex-wrap items-center justify-between gap-3 rounded-sm border border-red-200 bg-red-50 p-4 text-sm text-red-800"><p>{error}</p><button type="button" onClick={refresh} className="min-h-11 rounded-sm border border-red-300 px-3 text-xs font-semibold">Try again</button></div>
       ) : !rosterRows.length ? (

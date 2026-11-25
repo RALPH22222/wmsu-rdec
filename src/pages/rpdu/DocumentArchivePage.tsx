@@ -256,20 +256,9 @@ export function DocumentArchivePage({ role = 'rpdu' }: DocumentArchivePageProps)
     setPageState({ key: filterKey, page: next });
   };
 
-  if (loadingProfile || (roleAllowed && loading)) {
-    return (
-      <div className="mx-auto max-w-6xl space-y-6 p-4 sm:p-6" aria-label="Loading document archive">
-        <div className="h-10 w-80 bg-slate-100 rounded-sm animate-pulse" />
-        <div className="h-16 bg-slate-100 rounded-sm animate-pulse" />
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="h-44 bg-slate-100 rounded-lg animate-pulse" />
-          <div className="h-44 bg-slate-100 rounded-lg animate-pulse" />
-        </div>
-      </div>
-    );
-  }
+  const isArchiveLoading = loadingProfile || (roleAllowed && loading);
 
-  if (!roleAllowed) {
+  if (!loadingProfile && !roleAllowed) {
     return (
       <div className="mx-auto max-w-2xl bg-white p-8 rounded-lg border border-slate-200 text-center space-y-3 mt-8">
         <Archive className="w-12 h-12 text-slate-400 mx-auto" />
@@ -318,81 +307,120 @@ export function DocumentArchivePage({ role = 'rpdu' }: DocumentArchivePageProps)
       )}
 
       {/* Controls: Filter Pills & Search */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 bg-white p-3.5 rounded-md border border-slate-200 shadow-2xs">
-        {/* Filter Pills */}
-        <div className="flex flex-wrap items-center gap-1.5 bg-slate-100 p-1 rounded-md text-xs font-semibold">
-          <button
-            type="button"
-            onClick={() => handleFilterChange('ALL')}
-            className={`px-3 py-1.5 rounded-md transition-colors cursor-pointer ${
-              archiveFilter === 'ALL'
-                ? 'bg-white text-slate-900 shadow-2xs font-bold'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            All ({counts.all})
-          </button>
-          <button
-            type="button"
-            onClick={() => handleFilterChange('CERTIFICATE')}
-            className={`px-3 py-1.5 rounded-md transition-colors cursor-pointer ${
-              archiveFilter === 'CERTIFICATE'
-                ? 'bg-white text-emerald-800 shadow-2xs font-bold'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            COTR Clearances ({counts.cotr})
-          </button>
-          <button
-            type="button"
-            onClick={() => handleFilterChange('CONTRACT')}
-            className={`px-3 py-1.5 rounded-md transition-colors cursor-pointer ${
-              archiveFilter === 'CONTRACT'
-                ? 'bg-white text-indigo-800 shadow-2xs font-bold'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            Contracts (PSC) ({counts.contract})
-          </button>
-          <button
-            type="button"
-            onClick={() => handleFilterChange('LETTERS')}
-            className={`px-3 py-1.5 rounded-md transition-colors cursor-pointer ${
-              archiveFilter === 'LETTERS'
-                ? 'bg-white text-[#C8102E] shadow-2xs font-bold'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            Letters ({counts.letters})
-          </button>
-        </div>
-
-        {/* Search Input */}
-        <div className="relative w-full md:w-80">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
-          <input
-            type="text"
-            placeholder="Search by proposal title, recipient, or contract ref..."
-            value={archiveSearch}
-            onChange={(e) => setArchiveSearch(e.target.value)}
-            className="w-full pl-9 pr-8 py-2 rounded-md border border-slate-200 bg-slate-50/70 text-xs text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-[#C8102E] focus:outline-hidden transition-colors"
-          />
-          {archiveSearch && (
+      <div className="space-y-3 bg-white p-3.5 rounded-md border border-slate-200 shadow-2xs">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+          {/* Filter Pills */}
+          <div className="flex flex-wrap items-center gap-1.5 bg-slate-100 p-1 rounded-md text-xs font-semibold">
             <button
               type="button"
-              onClick={() => setArchiveSearch('')}
-              title="Clear search"
-              aria-label="Clear search"
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+              onClick={() => handleFilterChange('ALL')}
+              className={`px-3 py-1.5 rounded-md transition-colors cursor-pointer ${
+                archiveFilter === 'ALL'
+                  ? 'bg-white text-slate-900 shadow-2xs font-bold'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
             >
-              <X className="w-3.5 h-3.5" />
+              All ({isArchiveLoading ? '—' : counts.all})
             </button>
-          )}
+            <button
+              type="button"
+              onClick={() => handleFilterChange('CERTIFICATE')}
+              className={`px-3 py-1.5 rounded-md transition-colors cursor-pointer ${
+                archiveFilter === 'CERTIFICATE'
+                  ? 'bg-white text-emerald-800 shadow-2xs font-bold'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              COTR Clearances ({isArchiveLoading ? '—' : counts.cotr})
+            </button>
+            <button
+              type="button"
+              onClick={() => handleFilterChange('CONTRACT')}
+              className={`px-3 py-1.5 rounded-md transition-colors cursor-pointer ${
+                archiveFilter === 'CONTRACT'
+                  ? 'bg-white text-indigo-800 shadow-2xs font-bold'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              Contracts (PSC) ({isArchiveLoading ? '—' : counts.contract})
+            </button>
+            <button
+              type="button"
+              onClick={() => handleFilterChange('LETTERS')}
+              className={`px-3 py-1.5 rounded-md transition-colors cursor-pointer ${
+                archiveFilter === 'LETTERS'
+                  ? 'bg-white text-[#C8102E] shadow-2xs font-bold'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              Letters ({isArchiveLoading ? '—' : counts.letters})
+            </button>
+          </div>
+
+          {/* Search Input */}
+          <div className="relative w-full md:w-80">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+            <input
+              type="text"
+              placeholder="Search by proposal title, recipient, or contract ref..."
+              aria-label="Search issued documents"
+              value={archiveSearch}
+              onChange={(e) => setArchiveSearch(e.target.value)}
+              className="w-full pl-9 pr-8 py-2 rounded-md border border-slate-200 bg-slate-50/70 text-xs text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-[#C8102E] focus:outline-hidden transition-colors"
+            />
+            {archiveSearch && (
+              <button
+                type="button"
+                onClick={() => setArchiveSearch('')}
+                title="Clear search"
+                aria-label="Clear search"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
         </div>
+
+        <p className="border-t border-slate-100 pt-2.5 text-xs font-semibold text-slate-600">
+          {isArchiveLoading
+            ? 'Loading documents...'
+            : `${filteredIssuedDocs.length} of ${issuedDocs.length} ${issuedDocs.length === 1 ? 'document' : 'documents'}`}
+        </p>
       </div>
 
       {/* Main List Section */}
-      {filteredIssuedDocs.length === 0 ? (
+      {isArchiveLoading ? (
+        <div role="status" aria-busy="true" className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <span className="sr-only">Loading archived documents</span>
+          {[0, 1, 2, 3].map((item) => (
+            <div
+              key={item}
+              aria-hidden="true"
+              className="flex flex-col justify-between rounded-md border border-slate-200 bg-white p-5 shadow-2xs motion-safe:animate-pulse"
+            >
+              <div>
+                <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <div className="h-5 w-24 rounded-sm bg-slate-200" />
+                    {item % 2 === 0 && <div className="h-5 w-32 rounded-sm bg-slate-100" />}
+                  </div>
+                  <div className="h-3.5 w-24 rounded-sm bg-slate-100" />
+                </div>
+                <div className="mt-1 space-y-2">
+                  <div className="h-4 w-5/6 max-w-full rounded-sm bg-slate-200" />
+                  <div className="h-4 w-2/3 max-w-full rounded-sm bg-slate-200" />
+                </div>
+                <div className="mt-3 h-3.5 w-1/2 max-w-full rounded-sm bg-slate-100" />
+              </div>
+              <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-3">
+                {item % 2 === 0 ? <div className="h-7 w-36 rounded-md bg-slate-100" /> : <div />}
+                <div className="ml-auto h-7 w-36 rounded-md bg-slate-200" />
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : filteredIssuedDocs.length === 0 ? (
         <div className="rounded-md border border-dashed border-slate-200 bg-white p-14 text-center text-slate-500 shadow-2xs">
           <FileText className="w-10 h-10 mx-auto mb-3 text-slate-300 stroke-1" />
           <p className="font-bold text-slate-800 text-sm">No issued records match your criteria.</p>

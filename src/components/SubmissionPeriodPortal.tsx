@@ -180,15 +180,15 @@ export const SubmissionPeriodPortal: React.FC<SubmissionPeriodPortalProps> = ({ 
                   <div className="h-12 w-56 rounded-none bg-slate-200" />
                 </div>
               </div>
-              <div className="min-w-0 rounded-none border border-slate-200 bg-white shadow-sm">
+              <div className="min-w-0 overflow-hidden rounded-md border border-slate-200 bg-white shadow-sm">
                 <div className="bg-slate-200 px-5 py-4 sm:px-7 sm:py-5 space-y-2">
                   <div className="h-5 w-44 rounded-none bg-slate-300" />
                   <div className="h-3.5 w-52 rounded-none bg-slate-300" />
                 </div>
                 <div className="space-y-5 p-5 sm:p-7">
-                  <div className="h-14 rounded-none bg-slate-100" />
-                  <div className="h-20 rounded-none bg-slate-100" />
-                  <div className="h-16 rounded-none bg-slate-100" />
+                  <div className="h-14 rounded-sm bg-slate-100" />
+                  <div className="h-20 rounded-sm bg-slate-100" />
+                  <div className="h-16 rounded-sm bg-slate-100" />
                 </div>
               </div>
             </div>
@@ -254,7 +254,7 @@ export const SubmissionPeriodPortal: React.FC<SubmissionPeriodPortalProps> = ({ 
               </a>
             </div>
 
-            <aside aria-label="Submission details" className="lg:col-start-2 lg:row-start-1 lg:row-span-2 min-w-0 rounded-none border border-slate-200 bg-white shadow-sm">
+            <aside aria-label="Submission details" className="lg:col-start-2 lg:row-start-1 lg:row-span-2 min-w-0 overflow-hidden rounded-md border border-slate-200 bg-white shadow-sm">
               <div className={`px-5 py-4 text-white sm:px-7 sm:py-5 ${isOpen ? 'bg-[#C8102E]' : 'bg-slate-700'}`}>
                 <h2 className="text-base font-bold tracking-tight text-white sm:text-lg">
                   {isClosed ? 'Submission window' : 'Submission schedule'}
@@ -281,8 +281,8 @@ export const SubmissionPeriodPortal: React.FC<SubmissionPeriodPortalProps> = ({ 
               <div className="p-5 sm:p-7">
                 {!loadingCalls && isClosed && targetCall && (
                   <div role="status" className="mb-6 border-b border-slate-100 pb-5">
-                    <div className="flex items-start gap-3 rounded-none border border-slate-200 bg-slate-50 p-4">
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-none bg-white text-[#A00D26]">
+                    <div className="flex items-start gap-3 rounded-sm border border-slate-200 bg-slate-50 p-4">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-sm bg-white text-[#A00D26]">
                         <LockKeyhole aria-hidden="true" className="h-5 w-5" />
                       </div>
                       <div>
@@ -306,7 +306,7 @@ export const SubmissionPeriodPortal: React.FC<SubmissionPeriodPortalProps> = ({ 
                       <time dateTime={targetCall?.startDate}>{formattedStartDate || 'To be announced'}</time>
                     </dd>
                   </div>
-                  <div className={`rounded-none border p-4 sm:p-5 ${isOpen ? 'border-red-100 border-l-4 border-l-[#C8102E] bg-red-50/50' : 'border-slate-200 bg-slate-50'}`}>
+                  <div className={`rounded-sm border p-4 sm:p-5 ${isOpen ? 'border-red-100 border-l-4 border-l-[#C8102E] bg-red-50/50' : 'border-slate-200 bg-slate-50'}`}>
                     <dt className={`text-[11px] font-semibold uppercase tracking-wider ${isOpen ? 'text-[#A00D26]' : 'text-slate-500'}`}>{isClosed ? 'Scheduled deadline' : 'Submission deadline'}</dt>
                     <dd className={`mt-2 break-words text-base font-semibold leading-snug tracking-tight ${isOpen ? 'text-[#A00D26]' : 'text-slate-800'}`}>
                       <time dateTime={targetCall?.endDate}>{formattedEndDate || 'To be announced'}</time>
@@ -319,9 +319,9 @@ export const SubmissionPeriodPortal: React.FC<SubmissionPeriodPortalProps> = ({ 
                   <a
                     href={memoDetails?.dataUrl || '#'}
                     onClick={handleOpenMemo}
-                    className="group flex items-start gap-3 rounded-none border border-slate-200 p-3 transition-colors hover:border-red-200 hover:bg-red-50/40 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#C8102E]"
+                    className="group flex items-start gap-3 rounded-sm border border-slate-200 p-3 transition-colors hover:border-red-200 hover:bg-red-50/40 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#C8102E]"
                   >
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-none bg-slate-100 text-slate-600">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-sm bg-slate-100 text-slate-600">
                       <FileText aria-hidden="true" className="h-5 w-5" />
                     </div>
                     <div className="min-w-0 flex-1">

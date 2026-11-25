@@ -153,9 +153,52 @@ export const RpduBudgetAllocationPage: React.FC = () => {
         </div>
 
         {isLoading ? (
-          <div className="p-12 text-center text-xs text-slate-500 space-y-2">
-            <div className="w-6 h-6 border-2 border-[#C8102E] border-t-transparent rounded-full animate-spin mx-auto" />
-            <p className="font-semibold">Loading submitted budget allocations from database...</p>
+          <div role="status" aria-busy="true">
+            <span className="sr-only">Loading submitted budget allocations</span>
+            <div aria-hidden="true" className="overflow-x-auto">
+              <table className="w-full text-left text-xs text-slate-700 border-collapse">
+                <thead className="bg-slate-50 text-[11px] uppercase tracking-wider font-bold text-slate-500 border-b border-slate-200">
+                  <tr>
+                    <th className="py-3 px-4 w-[32%] min-w-[220px]">PROPOSAL</th>
+                    <th className="py-3 px-4 w-[26%] min-w-[180px]">PROPONENT &amp; COLLEGE</th>
+                    <th className="py-3 px-4 text-right w-[18%] min-w-[120px]">ALLOCATION (₱)</th>
+                    <th className="py-3 px-4 text-center w-[14%] min-w-[110px]">STATUS</th>
+                    <th className="py-3 px-4 text-center w-[10%] min-w-[90px]">ACTION</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 motion-safe:animate-pulse">
+                  {[0, 1, 2, 3].map((row) => (
+                    <tr key={row}>
+                      <td className="py-4 px-4">
+                        <div className="space-y-2">
+                          <div className="h-3.5 w-24 rounded-sm bg-slate-200" />
+                          <div className="h-4 w-56 max-w-full rounded-sm bg-slate-200" />
+                          <div className="h-3 w-40 max-w-full rounded-sm bg-slate-100" />
+                        </div>
+                      </td>
+                      <td className="py-4 px-4">
+                        <div className="space-y-2">
+                          <div className="h-4 w-36 max-w-full rounded-sm bg-slate-200" />
+                          <div className="h-3 w-44 max-w-full rounded-sm bg-slate-100" />
+                        </div>
+                      </td>
+                      <td className="py-4 px-4 text-right">
+                        <div className="space-y-2">
+                          <div className="ml-auto h-4 w-24 rounded-sm bg-slate-200" />
+                          <div className="ml-auto h-3 w-28 rounded-sm bg-slate-100" />
+                        </div>
+                      </td>
+                      <td className="py-4 px-4 text-center">
+                        <div className="mx-auto h-6 w-28 rounded-full bg-slate-200" />
+                      </td>
+                      <td className="py-4 px-4 text-center">
+                        <div className="mx-auto h-7 w-20 rounded-sm bg-slate-100" />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         ) : filteredAllocations.length === 0 ? (
           <div className="p-12 text-center text-xs text-slate-500 space-y-2">

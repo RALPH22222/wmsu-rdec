@@ -10,7 +10,6 @@ import {
   Building,
   Calendar,
   ShieldCheck,
-  RefreshCw,
   Scale,
   Lock,
   Send,
@@ -158,9 +157,95 @@ export const RpduBudgetAllocationReviewPage: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="p-12 text-center text-xs text-slate-500 space-y-3">
-        <RefreshCw className="w-8 h-8 text-[#C8102E] animate-spin mx-auto" />
-        <p className="font-semibold text-slate-700 text-sm">Loading budget allocation details...</p>
+      <div className="space-y-6 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <Link
+            to="/rpdu/budgets"
+            className="inline-flex min-h-11 items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-slate-900 transition-colors"
+          >
+            <ArrowLeft className="h-4 w-4" aria-hidden="true" /> Back to Budget Allocations
+          </Link>
+        </div>
+
+        <div role="status" aria-busy="true" className="space-y-6">
+          <span className="sr-only">Loading budget allocation details</span>
+          <div aria-hidden="true" className="space-y-6 motion-safe:animate-pulse">
+            <div className="bg-white p-6 rounded-md border border-slate-200 shadow-xs space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100">
+                <div className="flex flex-wrap items-center gap-2.5">
+                  <div className="h-6 w-24 rounded bg-slate-200" />
+                  <div className="h-4 w-52 max-w-full rounded-sm bg-slate-100" />
+                </div>
+                <div className="h-6 w-28 rounded-full bg-slate-200" />
+              </div>
+              <div className="space-y-2.5">
+                <div className="h-6 w-3/4 max-w-full rounded-sm bg-slate-200" />
+                <div className="h-3.5 w-1/2 max-w-full rounded-sm bg-slate-100" />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className="lg:col-span-2 space-y-6">
+                <div className="bg-white p-5 rounded-md border border-slate-200 shadow-xs space-y-4">
+                  <div className="h-4 w-48 max-w-full rounded-sm bg-slate-200" />
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    {[0, 1, 2].map((tile) => (
+                      <div key={tile} className="p-3 bg-slate-50 rounded-md border border-slate-100 space-y-2">
+                        <div className="h-2.5 w-24 rounded-sm bg-slate-200" />
+                        <div className="h-4 w-32 max-w-full rounded-sm bg-slate-200" />
+                        <div className="h-2.5 w-20 rounded-sm bg-slate-100" />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-md border border-slate-200 shadow-xs overflow-hidden">
+                  <div className="p-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between gap-3">
+                    <div className="h-4 w-52 max-w-full rounded-sm bg-slate-200" />
+                    <div className="h-4 w-28 rounded-sm bg-slate-200" />
+                  </div>
+                  <div className="divide-y divide-slate-100 p-4">
+                    {[0, 1, 2, 3, 4].map((row) => (
+                      <div key={row} className="flex items-center justify-between gap-4 py-3 first:pt-0 last:pb-0">
+                        <div className="h-3.5 w-48 max-w-full rounded-sm bg-slate-200" />
+                        <div className="flex items-center gap-4 shrink-0">
+                          <div className="hidden sm:block h-3.5 w-20 rounded-sm bg-slate-100" />
+                          <div className="hidden sm:block h-3.5 w-20 rounded-sm bg-slate-100" />
+                          <div className="h-3.5 w-24 rounded-sm bg-slate-200" />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-6">
+                <div className="bg-white p-5 rounded-md border border-slate-200 shadow-xs space-y-4">
+                  <div className="space-y-2 border-b border-slate-100 pb-3">
+                    <div className="h-3 w-28 rounded-sm bg-slate-100" />
+                    <div className="h-4 w-48 max-w-full rounded-sm bg-slate-200" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <div className="h-3 w-full rounded-sm bg-slate-100" />
+                    <div className="h-3 w-5/6 rounded-sm bg-slate-100" />
+                  </div>
+                  <div className="rounded-md border border-slate-200 bg-slate-50/70 p-3.5 space-y-3">
+                    {[0, 1].map((box) => (
+                      <div key={box} className="space-y-1.5">
+                        <div className="h-3 w-36 rounded-sm bg-slate-200" />
+                        <div className="h-9 w-full rounded bg-white border border-slate-200 px-3 flex items-center justify-between">
+                          <div className="h-2.5 w-24 rounded-sm bg-slate-100" />
+                          <div className="h-3.5 w-20 rounded-sm bg-slate-200" />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="h-11 w-full rounded-md bg-slate-200" />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }

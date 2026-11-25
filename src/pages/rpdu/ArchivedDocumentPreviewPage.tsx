@@ -295,15 +295,15 @@ export function ArchivedDocumentPreviewPage({ role }: ArchivedDocumentPreviewPag
       <div className="space-y-4">
         {/* Top Navigation & Controls */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 sm:p-5 border-b border-slate-200">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 min-w-0">
             <Link
               to={`/${activeRole}/archive`}
-              className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 px-3 py-2 rounded-md transition-colors cursor-pointer"
+              className="inline-flex shrink-0 items-center gap-1.5 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 px-3 py-2 rounded-md transition-colors cursor-pointer"
             >
               <ArrowLeft size={14} /> Back to Archive
             </Link>
 
-            <div className="border-l border-slate-200 pl-3">
+            <div className="border-l border-slate-200 pl-3 min-w-0">
               <span className="flex items-center gap-1.5 text-xs font-semibold text-slate-500">
                 {docIcon}
                 {docTypeName}
@@ -379,7 +379,21 @@ export function ArchivedDocumentPreviewPage({ role }: ArchivedDocumentPreviewPag
         </div>
 
         {/* Document Meta Ribbon */}
-        {docData && (
+        {loading && !docData ? (
+          <div
+            role="status"
+            aria-busy="true"
+            className="bg-white px-5 py-3 border border-slate-200 rounded-md flex flex-wrap items-center justify-between gap-4"
+          >
+            <span className="sr-only">Loading document metadata</span>
+            <div aria-hidden="true" className="flex flex-wrap items-center gap-4 motion-safe:animate-pulse">
+              <div className="h-4 w-36 max-w-full rounded-sm bg-slate-200" />
+              <div className="h-4 w-44 max-w-full rounded-sm bg-slate-100" />
+              <div className="h-4 w-32 max-w-full rounded-sm bg-slate-100" />
+            </div>
+            <div aria-hidden="true" className="h-5 w-32 max-w-full rounded-sm bg-slate-100 motion-safe:animate-pulse" />
+          </div>
+        ) : docData ? (
           <div className="bg-slate-50 px-5 py-3 border border-slate-200 rounded-md flex flex-wrap items-center justify-between gap-4 text-xs">
             <div className="flex flex-wrap items-center gap-4 text-slate-700">
               {isPsc && contractMeta?.contractNumber ? (
@@ -469,7 +483,7 @@ export function ArchivedDocumentPreviewPage({ role }: ArchivedDocumentPreviewPag
               </div>
             )}
           </div>
-        )}
+        ) : null}
 
         {/* Error Alert */}
         {error && (
@@ -482,9 +496,63 @@ export function ArchivedDocumentPreviewPage({ role }: ArchivedDocumentPreviewPag
         {/* Full-Page Live Document Viewer */}
         <div className="bg-white rounded-md border border-slate-200 shadow-xs overflow-hidden">
           {loading ? (
-            <div className="h-[800px] flex flex-col items-center justify-center space-y-3 bg-slate-50">
-              <div className="w-10 h-10 border-4 border-[#C8102E] border-t-transparent rounded-full animate-spin" />
-              <p className="text-xs font-semibold text-slate-600">Loading document preview...</p>
+            <div role="status" aria-busy="true" className="h-[800px] bg-slate-50 p-4 sm:p-8">
+              <span className="sr-only">Loading document preview</span>
+              <div
+                aria-hidden="true"
+                className="mx-auto flex h-full max-w-3xl flex-col justify-between overflow-hidden rounded-sm border border-slate-200 bg-white p-6 shadow-2xs motion-safe:animate-pulse sm:p-10"
+              >
+                <div className="space-y-4 sm:space-y-5">
+                  <div className="flex flex-col items-center gap-2 border-b border-slate-100 pb-5">
+                    <div className="h-10 w-10 rounded-sm bg-slate-200" />
+                    <div className="h-4 w-56 max-w-full rounded-sm bg-slate-200" />
+                    <div className="h-3 w-40 max-w-full rounded-sm bg-slate-100" />
+                  </div>
+
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div className="h-3.5 w-32 rounded-sm bg-slate-100" />
+                    <div className="h-3.5 w-28 rounded-sm bg-slate-100" />
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="h-4 w-48 max-w-full rounded-sm bg-slate-200" />
+                    <div className="h-3.5 w-36 max-w-full rounded-sm bg-slate-100" />
+                  </div>
+
+                  <div className="h-5 w-3/4 max-w-full rounded-sm bg-slate-200" />
+
+                  <div className="space-y-2.5 pt-1">
+                    <div className="h-3 w-full rounded-sm bg-slate-100" />
+                    <div className="h-3 w-11/12 rounded-sm bg-slate-100" />
+                    <div className="h-3 w-3/4 rounded-sm bg-slate-100" />
+                  </div>
+
+                  <div className="space-y-2.5">
+                    <div className="h-3 w-full rounded-sm bg-slate-100" />
+                    <div className="h-3 w-5/6 rounded-sm bg-slate-100" />
+                    <div className="h-3 w-2/3 rounded-sm bg-slate-100" />
+                  </div>
+
+                  <div className="space-y-2.5 rounded-sm border border-slate-100 p-4">
+                    <div className="h-3.5 w-1/3 rounded-sm bg-slate-200" />
+                    <div className="h-3 w-full rounded-sm bg-slate-100" />
+                    <div className="h-3 w-4/5 rounded-sm bg-slate-100" />
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap items-end justify-between gap-6 border-t border-slate-100 pt-5">
+                  <div className="space-y-2">
+                    <div className="h-3 w-24 rounded-sm bg-slate-100" />
+                    <div className="h-4 w-40 max-w-full rounded-sm bg-slate-200" />
+                    <div className="h-3 w-32 rounded-sm bg-slate-100" />
+                  </div>
+                  <div className="space-y-2">
+                    <div className="h-3 w-24 rounded-sm bg-slate-100" />
+                    <div className="h-4 w-40 max-w-full rounded-sm bg-slate-200" />
+                    <div className="h-3 w-32 rounded-sm bg-slate-100" />
+                  </div>
+                </div>
+              </div>
             </div>
           ) : !htmlOrUrl ? (
             <div className="h-64 flex items-center justify-center text-xs text-slate-500">

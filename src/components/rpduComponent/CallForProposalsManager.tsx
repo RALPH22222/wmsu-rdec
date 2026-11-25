@@ -220,12 +220,32 @@ export const CallForProposalsManager: React.FC = () => {
       {/* Cards List Grid (Full-width Horizontal Cards) */}
       <div className="grid grid-cols-1 gap-4">
         {loadingCalls ? (
-          <div className="space-y-4">
+          <div role="status" aria-busy="true" className="space-y-4">
+            <span className="sr-only">Loading calls for proposals</span>
             {[1, 2, 3].map((i) => (
-              <div key={i} className="bg-white rounded-sm border border-slate-200 p-6 animate-pulse space-y-3 shadow-xs">
-                <div className="h-4 bg-slate-100 rounded w-1/4" />
-                <div className="h-6 bg-slate-100 rounded w-2/3" />
-                <div className="h-4 bg-slate-100 rounded w-1/2" />
+              <div
+                key={i}
+                aria-hidden="true"
+                className="flex flex-col justify-between gap-6 rounded-sm border border-slate-200 bg-white p-5 shadow-xs motion-safe:animate-pulse sm:p-6 lg:flex-row lg:items-center"
+              >
+                <div className="min-w-0 flex-1 space-y-3">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <div className="h-5 w-20 rounded-sm bg-slate-200" />
+                    <div className="h-4 w-16 rounded-sm bg-slate-100" />
+                  </div>
+                  <div className="space-y-2">
+                    <div className="h-6 w-2/3 max-w-full rounded-sm bg-slate-200" />
+                    <div className="h-3.5 w-full max-w-2xl rounded-sm bg-slate-100" />
+                  </div>
+                  <div className="flex flex-wrap items-center gap-x-6 gap-y-2 pt-1">
+                    <div className="h-4 w-44 max-w-full rounded-sm bg-slate-100" />
+                    <div className="h-4 w-32 rounded-sm bg-slate-100" />
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-2 lg:shrink-0">
+                  <div className="h-9 w-24 rounded-sm bg-slate-200" />
+                  <div className="h-9 w-24 rounded-sm bg-slate-100" />
+                </div>
               </div>
             ))}
           </div>

@@ -93,30 +93,6 @@ export function ScreeningCallsView({
     }));
   };
 
-  if (loadingCalls) {
-    return (
-      <div role="status" aria-busy="true" className="space-y-4">
-        <span className="sr-only">Loading calls for proposals archive</span>
-        <div aria-hidden="true" className="space-y-4 motion-safe:animate-pulse">
-          <div className="h-20 rounded-sm border border-slate-200 bg-white p-4" />
-          {[0, 1, 2].map((idx) => (
-            <div key={idx} className="space-y-3 rounded-sm border border-slate-200 bg-white p-5">
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-2">
-                  <div className="h-5 w-20 rounded-none bg-slate-200" />
-                  <div className="h-4 w-16 rounded-sm bg-slate-100" />
-                </div>
-                <div className="h-5 w-5 rounded-sm bg-slate-100" />
-              </div>
-              <div className="h-6 w-2/3 rounded-sm bg-slate-200" />
-              <div className="h-4 w-1/2 rounded-sm bg-slate-100" />
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  }
-
   return (
     <section aria-labelledby="screening-calls-archive-heading" className="space-y-4 rounded-sm bg-white p-5">
       {/* Header matching Consolidation by agenda and budget */}
@@ -139,9 +115,9 @@ export function ScreeningCallsView({
               onChange={(event) => setBucketFilter(event.target.value as ScreeningCallFilter)}
               className="mt-1 block min-h-11 max-w-full rounded-sm border border-slate-300 bg-white px-3 text-sm text-slate-800 focus:border-[#C8102E] focus:outline-none"
             >
-              <option value="all">All calls ({visibleEntries.length})</option>
-              <option value="active">Active calls ({activeCount})</option>
-              <option value="past">Archived / closed calls ({pastCount})</option>
+              <option value="all">{loadingCalls ? 'All calls' : `All calls (${visibleEntries.length})`}</option>
+              <option value="active">{loadingCalls ? 'Active calls' : `Active calls (${activeCount})`}</option>
+              <option value="past">{loadingCalls ? 'Archived / closed calls' : `Archived / closed calls (${pastCount})`}</option>
             </select>
           </label>
 
@@ -204,12 +180,37 @@ export function ScreeningCallsView({
         </div>
 
         <p className="text-sm font-semibold text-slate-800 tabular-nums">
-          {filtered.length} call{filtered.length === 1 ? '' : 's'} shown · {activeCount} active · {pastCount} archived
+          {loadingCalls
+            ? 'Loading calls archive...'
+            : `${filtered.length} call${filtered.length === 1 ? '' : 's'} shown · ${activeCount} active · ${pastCount} archived`}
         </p>
       </div>
 
       {/* Archive Records List */}
-      {filtered.length === 0 ? (
+      {loadingCalls ? (
+        <div role="status" aria-busy="true" className="space-y-3">
+          <span className="sr-only">Loading calls for proposals archive</span>
+          {[0, 1, 2].map((idx) => (
+            <div
+              key={idx}
+              aria-hidden="true"
+              className="flex items-start justify-between gap-4 rounded-sm border border-slate-200 bg-white p-4 shadow-2xs sm:p-5 motion-safe:animate-pulse"
+            >
+              <div className="min-w-0 flex-1 space-y-2.5">
+                <div className="flex flex-wrap items-center gap-2">
+                  <div className="h-5 w-20 rounded-none bg-slate-200" />
+                  <div className="h-4 w-16 rounded-sm bg-slate-100" />
+                  <div className="h-4 w-36 max-w-full rounded-sm bg-slate-100" />
+                  <div className="h-4 w-24 rounded-sm bg-slate-100" />
+                </div>
+                <div className="h-5 w-2/3 max-w-full rounded-sm bg-slate-200" />
+                <div className="h-4 w-1/2 max-w-full rounded-sm bg-slate-100" />
+              </div>
+              <div className="mt-1 h-8 w-8 shrink-0 rounded-sm border border-slate-200 bg-slate-100" />
+            </div>
+          ))}
+        </div>
+      ) : filtered.length === 0 ? (
         <p className="py-6 text-sm text-slate-600">
           {visibleEntries.length === 0
             ? 'No active or archived calls for proposals are available yet.'
@@ -484,15 +485,17 @@ export function ScreeningCallsView({
         </div>
       )}
 
-      <Pagination
-        page={page}
-        totalItems={filtered.length}
-        pageSize={CALLS_PAGE_SIZE}
-        onPageChange={handlePageChange}
-        itemLabel="calls"
-        label="Calls archive pages"
-        alwaysShowNav
-      />
+      {!loadingCalls && (
+        <Pagination
+          page={page}
+          totalItems={filtered.length}
+          pageSize={CALLS_PAGE_SIZE}
+          onPageChange={handlePageChange}
+          itemLabel="calls"
+          label="Calls archive pages"
+          alwaysShowNav
+        />
+      )}
     </section>
   );
 }

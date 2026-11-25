@@ -127,6 +127,52 @@ export const PreliminaryScreeningManager: React.FC<PreliminaryScreeningManagerPr
     handleOpenReview(proposal);
   };
 
+  const renderMetricValue = (value: number) => (
+    loadingConceptProposals ? (
+      <>
+        <span className="sr-only">Loading</span>
+        <span
+          aria-hidden="true"
+          className="block h-8 w-12 rounded-sm bg-slate-200 motion-safe:animate-pulse"
+        />
+      </>
+    ) : (
+      <span className="text-2xl font-black text-slate-900 tracking-tight block tabular-nums">{value}</span>
+    )
+  );
+
+  const renderFilterCount = (count: number, active: boolean) => (
+    loadingConceptProposals ? (
+      <span
+        aria-hidden="true"
+        className={`ml-1.5 inline-block h-3.5 w-5 rounded-sm align-middle motion-safe:animate-pulse ${
+          active ? 'bg-white/30' : 'bg-slate-200'
+        }`}
+      />
+    ) : (
+      <span
+        className={`ml-1.5 px-1.5 py-0.5 rounded-sm text-[10px] font-extrabold tabular-nums ${
+          active ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-700'
+        }`}
+      >
+        {count}
+      </span>
+    )
+  );
+
+  const proposalsTableHead = (
+    <thead className="bg-slate-50 text-slate-600 uppercase font-bold text-[10px] border-b border-slate-200 tracking-wider">
+      <tr>
+        <th className="p-3.5">Name of Proponent</th>
+        <th className="p-3.5">Title</th>
+        <th className="p-3.5">College</th>
+        <th className="p-3.5">Date Submitted</th>
+        <th className="p-3.5">Status</th>
+        <th className="p-3.5 text-right">Screening Actions</th>
+      </tr>
+    </thead>
+  );
+
   const screeningFilters = (
     <div className={view === 'consolidation' ? 'space-y-3.5 border-b border-slate-200 pb-4' : 'bg-white p-4 rounded-md border border-slate-200 shadow-2xs space-y-3.5'}>
         <div className="flex flex-col lg:flex-row gap-3 items-stretch lg:items-center justify-between">
@@ -142,9 +188,7 @@ export const PreliminaryScreeningManager: React.FC<PreliminaryScreeningManagerPr
                 }`}
             >
               All Proposals
-              <span className={`ml-1.5 px-1.5 py-0.5 rounded-sm text-[10px] font-extrabold ${statusFilter === 'all' ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-700'}`}>
-                {stats.total}
-              </span>
+              {renderFilterCount(stats.total, statusFilter === 'all')}
             </button>
             <button
               type="button"
@@ -156,9 +200,7 @@ export const PreliminaryScreeningManager: React.FC<PreliminaryScreeningManagerPr
             >
               <Clock className={`w-3.5 h-3.5 ${statusFilter === 'pending' ? 'text-white/80' : 'text-slate-400'}`} />
               <span>Pending Review</span>
-              <span className={`ml-1 px-1.5 py-0.5 rounded-sm text-[10px] font-extrabold ${statusFilter === 'pending' ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-700'}`}>
-                {stats.pending}
-              </span>
+              {renderFilterCount(stats.pending, statusFilter === 'pending')}
             </button>
             <button
               type="button"
@@ -170,9 +212,7 @@ export const PreliminaryScreeningManager: React.FC<PreliminaryScreeningManagerPr
             >
               <CheckCircle2 className={`w-3.5 h-3.5 ${statusFilter === 'passed' ? 'text-white/80' : 'text-slate-400'}`} />
               <span>Passed</span>
-              <span className={`ml-1 px-1.5 py-0.5 rounded-sm text-[10px] font-extrabold ${statusFilter === 'passed' ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-700'}`}>
-                {stats.passed}
-              </span>
+              {renderFilterCount(stats.passed, statusFilter === 'passed')}
             </button>
             <button
               type="button"
@@ -184,9 +224,7 @@ export const PreliminaryScreeningManager: React.FC<PreliminaryScreeningManagerPr
             >
               <XCircle className={`w-3.5 h-3.5 ${statusFilter === 'failed' ? 'text-white/80' : 'text-slate-400'}`} />
               <span>Failed</span>
-              <span className={`ml-1 px-1.5 py-0.5 rounded-sm text-[10px] font-extrabold ${statusFilter === 'failed' ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-700'}`}>
-                {stats.failed}
-              </span>
+              {renderFilterCount(stats.failed, statusFilter === 'failed')}
             </button>
           </div>}
 
@@ -278,18 +316,6 @@ export const PreliminaryScreeningManager: React.FC<PreliminaryScreeningManagerPr
       </div>
   );
 
-  if (loadingConceptProposals) return (
-    <div role="status" aria-label="Loading screening information">
-      <span className="sr-only">Loading screening information</span>
-      <div aria-hidden="true" className="space-y-5 motion-safe:animate-pulse">
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">{Array.from({ length: 4 }, (_, index) => <div key={index} className="h-24 rounded-sm border border-slate-200 bg-white p-4"><div className="h-3 w-2/3 rounded bg-slate-100" /><div className="mt-4 h-6 w-10 rounded bg-slate-100" /></div>)}</div>
-        <div className="h-24 rounded-sm border border-slate-200 bg-white" />
-        {Array.from({ length: 3 }, (_, index) => <div key={index} className="space-y-3 rounded-sm border border-slate-200 bg-white p-5"><div className="h-4 w-2/3 rounded bg-slate-100" /><div className="h-3 w-1/3 rounded bg-slate-100" /></div>)}
-      </div>
-    </div>
-  );
-  if (screeningError) return <div role="alert" className="rounded-sm border border-red-200 bg-red-50 p-5 text-sm text-red-800">{screeningError}<button type="button" onClick={() => void refreshConceptProposals()} className="ml-3 font-semibold underline">Try again</button></div>;
-
   return (
     <div className="space-y-6">
       {/* Metric Counters */}
@@ -306,7 +332,7 @@ export const PreliminaryScreeningManager: React.FC<PreliminaryScreeningManagerPr
             <FileText className="w-3.5 h-3.5 text-slate-400" />
           </div>
           <div className="mt-2">
-            <span className="text-2xl font-black text-slate-900 tracking-tight block">{stats.total}</span>
+            {renderMetricValue(stats.total)}
             <span className="text-[11px] text-slate-500 font-medium mt-0.5 block">Faculty Concept Proposals</span>
           </div>
         </div>
@@ -323,7 +349,7 @@ export const PreliminaryScreeningManager: React.FC<PreliminaryScreeningManagerPr
             <Clock className="w-3.5 h-3.5 text-slate-400" />
           </div>
           <div className="mt-2">
-            <span className="text-2xl font-black text-slate-900 tracking-tight block">{stats.pending}</span>
+            {renderMetricValue(stats.pending)}
             <span className="text-[11px] text-slate-500 font-medium mt-0.5 block">Requires RPDU Action</span>
           </div>
         </div>
@@ -340,9 +366,9 @@ export const PreliminaryScreeningManager: React.FC<PreliminaryScreeningManagerPr
             <CheckCircle2 className="w-3.5 h-3.5 text-slate-400" />
           </div>
           <div className="mt-2">
-            <span className="text-2xl font-black text-slate-900 tracking-tight block">{stats.passed}</span>
+            {renderMetricValue(stats.passed)}
             <span className="text-[11px] text-slate-500 font-medium mt-0.5 block">
-              Endorsed ({stats.passRate}% pass rate)
+              {loadingConceptProposals ? 'Endorsed proposals' : `Endorsed (${stats.passRate}% pass rate)`}
             </span>
           </div>
         </div>
@@ -359,7 +385,7 @@ export const PreliminaryScreeningManager: React.FC<PreliminaryScreeningManagerPr
             <XCircle className="w-3.5 h-3.5 text-slate-400" />
           </div>
           <div className="mt-2">
-            <span className="text-2xl font-black text-slate-900 tracking-tight block">{stats.failed}</span>
+            {renderMetricValue(stats.failed)}
             <span className="text-[11px] text-slate-500 font-medium mt-0.5 block">With Evaluation Notes</span>
           </div>
         </div>
@@ -375,7 +401,11 @@ export const PreliminaryScreeningManager: React.FC<PreliminaryScreeningManagerPr
           >
             <ClipboardCheck className="h-4 w-4" />
             <span>Preliminary Screening</span>
-            <span className="ml-1 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-600">{stats.total}</span>
+            {loadingConceptProposals ? (
+              <span aria-hidden="true" className="ml-1 inline-block h-4 w-6 rounded-full bg-slate-200 motion-safe:animate-pulse" />
+            ) : (
+              <span className="ml-1 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-600 tabular-nums">{stats.total}</span>
+            )}
           </Link>
           <Link
             to={`/${role}/screening/consolidation`}
@@ -411,14 +441,80 @@ export const PreliminaryScreeningManager: React.FC<PreliminaryScreeningManagerPr
           loadingCalls={loadingCalls}
         />
       ) : view === 'consolidation' ? (
-        <ProposalConsolidation proposals={filteredProposals}>{screeningFilters}</ProposalConsolidation>
+        loadingConceptProposals ? (
+          <section className="space-y-4 rounded-sm border border-slate-200 bg-white p-5 shadow-2xs" aria-labelledby="consolidation-loading-title">
+            <div className="space-y-2">
+              <h2 id="consolidation-loading-title" className="text-base font-bold text-slate-900">Consolidation by agenda and budget</h2>
+              <p className="text-sm text-slate-600">Filter by agenda, college, call, or budget. Totals and CSV use the selected scope and filters.</p>
+            </div>
+            {screeningFilters}
+            <div role="status" aria-busy="true" className="space-y-3 pt-2">
+              <span className="sr-only">Loading consolidation data</span>
+              {[0, 1, 2, 3].map((idx) => (
+                <div key={idx} aria-hidden="true" className="grid grid-cols-2 gap-4 border-b border-slate-100 pb-3 sm:grid-cols-5 motion-safe:animate-pulse">
+                  <div className="h-4 w-40 max-w-full rounded-sm bg-slate-200 sm:col-span-2" />
+                  <div className="h-4 w-12 rounded-sm bg-slate-100" />
+                  <div className="hidden h-4 w-12 rounded-sm bg-slate-100 sm:block" />
+                  <div className="h-4 w-24 rounded-sm bg-slate-200" />
+                </div>
+              ))}
+            </div>
+          </section>
+        ) : screeningError ? (
+          <section className="space-y-4 rounded-sm border border-slate-200 bg-white p-5 shadow-2xs">
+            {screeningFilters}
+            <div role="alert" className="rounded-sm border border-red-200 bg-red-50 p-5 text-sm text-red-800">
+              {screeningError}
+              <button type="button" onClick={() => void refreshConceptProposals()} className="ml-3 font-semibold underline cursor-pointer">Try again</button>
+            </div>
+          </section>
+        ) : (
+          <ProposalConsolidation proposals={filteredProposals}>{screeningFilters}</ProposalConsolidation>
+        )
       ) : (
         screeningFilters
+      )}
+
+      {view === 'proposals' && screeningError && !loadingConceptProposals && (
+        <div role="alert" className="rounded-sm border border-red-200 bg-red-50 p-5 text-sm text-red-800">
+          {screeningError}
+          <button type="button" onClick={() => void refreshConceptProposals()} className="ml-3 font-semibold underline cursor-pointer">Try again</button>
+        </div>
       )}
 
       {/* Main Proposals Presentation: Card View */}
 
       {view === 'proposals' && viewMode === 'cards' && (
+        loadingConceptProposals ? (
+          <div ref={listTopRef} role="status" aria-busy="true" className="grid scroll-mt-4 grid-cols-1 gap-4">
+            <span className="sr-only">Loading concept proposals</span>
+            {[0, 1, 2, 3].map((idx) => (
+              <div
+                key={idx}
+                aria-hidden="true"
+                className="bg-white rounded-md border border-slate-200 p-3 sm:p-5 shadow-2xs motion-safe:animate-pulse"
+              >
+                <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
+                  <div className="space-y-2.5 flex-1 min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <div className="h-5 w-28 rounded-none bg-slate-200" />
+                      <div className="h-4 w-44 max-w-full rounded-sm bg-slate-100" />
+                    </div>
+                    <div className="h-5 w-3/4 max-w-full rounded-sm bg-slate-200" />
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
+                      <div className="h-3.5 w-36 rounded-sm bg-slate-100" />
+                      <div className="h-3.5 w-28 rounded-sm bg-slate-100" />
+                      <div className="h-3.5 w-36 rounded-sm bg-slate-100" />
+                    </div>
+                  </div>
+                  <div className="flex flex-col sm:flex-row md:flex-col items-stretch md:items-end justify-between gap-2 shrink-0 self-stretch md:self-start border-t md:border-t-0 pt-3 md:pt-0">
+                    <div className="h-8 w-32 rounded bg-slate-200" />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : !screeningError ? (
         <div ref={listTopRef} className="grid scroll-mt-4 grid-cols-1 gap-4">
           {pagedProposals.map((proposal) => {
             const isPassed = proposal.screeningStatus === 'passed';
@@ -522,22 +618,57 @@ export const PreliminaryScreeningManager: React.FC<PreliminaryScreeningManagerPr
             );
           })}
         </div>
+        ) : null
       )}
 
       {/* Main Proposals Presentation: Compact Table View */}
       {view === 'proposals' && viewMode === 'table' && (
+        loadingConceptProposals ? (
+          <div ref={listTopRef} role="status" aria-busy="true" className="scroll-mt-4 bg-white rounded-md border border-slate-200 overflow-x-auto shadow-2xs">
+            <span className="sr-only">Loading concept proposals</span>
+            <table className="w-full text-left text-xs">
+              {proposalsTableHead}
+              <tbody className="divide-y divide-slate-100">
+                {[0, 1, 2, 3, 4].map((idx) => (
+                  <tr key={idx} aria-hidden="true" className="motion-safe:animate-pulse">
+                    <td className="p-3.5 whitespace-nowrap">
+                      <div className="space-y-1.5">
+                        <div className="h-3.5 w-32 rounded-sm bg-slate-200" />
+                        <div className="h-3 w-40 rounded-sm bg-slate-100" />
+                      </div>
+                    </td>
+                    <td className="p-3.5 max-w-md">
+                      <div className="space-y-1.5">
+                        <div className="h-3.5 w-64 max-w-full rounded-sm bg-slate-200" />
+                        <div className="h-3.5 w-40 max-w-full rounded-sm bg-slate-100" />
+                      </div>
+                    </td>
+                    <td className="p-3.5 whitespace-nowrap">
+                      <div className="space-y-1.5">
+                        <div className="h-3.5 w-24 rounded-sm bg-slate-200" />
+                        <div className="h-3 w-28 rounded-sm bg-slate-100" />
+                      </div>
+                    </td>
+                    <td className="p-3.5 whitespace-nowrap">
+                      <div className="h-3.5 w-28 rounded-sm bg-slate-100" />
+                    </td>
+                    <td className="p-3.5 whitespace-nowrap">
+                      <div className="h-6 w-16 rounded-none bg-slate-200" />
+                    </td>
+                    <td className="p-3.5 text-right whitespace-nowrap">
+                      <div className="flex items-center justify-end gap-1.5">
+                        <div className="h-7 w-24 rounded bg-slate-200" />
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : !screeningError ? (
         <div ref={listTopRef} className="scroll-mt-4 bg-white rounded-md border border-slate-200 overflow-x-auto shadow-2xs">
           <table className="w-full text-left text-xs">
-            <thead className="bg-slate-50 text-slate-600 uppercase font-bold text-[10px] border-b border-slate-200 tracking-wider">
-              <tr>
-                <th className="p-3.5">Name of Proponent</th>
-                <th className="p-3.5">Title</th>
-                <th className="p-3.5">College</th>
-                <th className="p-3.5">Date Submitted</th>
-                <th className="p-3.5">Status</th>
-                <th className="p-3.5 text-right">Screening Actions</th>
-              </tr>
-            </thead>
+            {proposalsTableHead}
             <tbody className="divide-y divide-slate-100">
               {pagedProposals.map((proposal) => {
                 const isPassed = proposal.screeningStatus === 'passed';
@@ -620,14 +751,15 @@ export const PreliminaryScreeningManager: React.FC<PreliminaryScreeningManagerPr
           </table>
 
         </div>
+        ) : null
       )}
 
-      {view === 'proposals' && (
+      {view === 'proposals' && !loadingConceptProposals && !screeningError && (
         <Pagination page={page} totalItems={filteredProposals.length} pageSize={SCREENING_PAGE_SIZE} onPageChange={handlePageChange} itemLabel="proposals" label="Screening proposals pages" alwaysShowNav />
       )}
 
       {/* Empty State */}
-      {view === 'proposals' && filteredProposals.length === 0 && (
+      {view === 'proposals' && !loadingConceptProposals && !screeningError && filteredProposals.length === 0 && (
         <div className="bg-white p-12 text-center rounded-md border border-slate-200">
           <FileText className="w-12 h-12 text-slate-300 mx-auto mb-3" />
           <h4 className="text-base font-bold text-slate-800">No Concept Proposals Found</h4>
