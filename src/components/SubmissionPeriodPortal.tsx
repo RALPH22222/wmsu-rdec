@@ -1,6 +1,5 @@
 import React, { useState, useMemo } from 'react';
 import {
-  Calendar,
   ArrowRight,
   Download,
   FileText,
@@ -181,14 +180,14 @@ export const SubmissionPeriodPortal: React.FC<SubmissionPeriodPortalProps> = ({ 
                   <div className="h-12 w-56 rounded-none bg-slate-200" />
                 </div>
               </div>
-              <div className="min-w-0 rounded-none border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
-                <div className="flex justify-between gap-4">
-                  <div className="h-5 w-40 rounded-none bg-slate-100" />
-                  <div className="h-6 w-16 rounded-none bg-slate-100" />
+              <div className="min-w-0 rounded-none border border-slate-200 bg-white shadow-sm">
+                <div className="bg-slate-200 px-5 py-4 sm:px-7 sm:py-5 space-y-2">
+                  <div className="h-5 w-44 rounded-none bg-slate-300" />
+                  <div className="h-3.5 w-52 rounded-none bg-slate-300" />
                 </div>
-                <div className="mt-6 space-y-5 border-t border-slate-100 pt-6">
-                  <div className="h-16 rounded-none bg-slate-100" />
-                  <div className="h-24 rounded-none bg-slate-100" />
+                <div className="space-y-5 p-5 sm:p-7">
+                  <div className="h-14 rounded-none bg-slate-100" />
+                  <div className="h-20 rounded-none bg-slate-100" />
                   <div className="h-16 rounded-none bg-slate-100" />
                 </div>
               </div>
@@ -255,81 +254,93 @@ export const SubmissionPeriodPortal: React.FC<SubmissionPeriodPortalProps> = ({ 
               </a>
             </div>
 
-            <aside aria-label="Submission details" className="lg:col-start-2 lg:row-start-1 lg:row-span-2 min-w-0 rounded-none border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <h2 className="flex items-center gap-3 text-base font-semibold text-slate-900">
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-none bg-red-50 text-[#C8102E]">
-                    <Calendar aria-hidden="true" className="h-5 w-5" />
-                  </span>
+            <aside aria-label="Submission details" className="lg:col-start-2 lg:row-start-1 lg:row-span-2 min-w-0 rounded-none border border-slate-200 bg-white shadow-sm">
+              <div className={`px-5 py-4 text-white sm:px-7 sm:py-5 ${isOpen ? 'bg-[#C8102E]' : 'bg-slate-700'}`}>
+                <h2 className="text-base font-bold tracking-tight text-white sm:text-lg">
                   {isClosed ? 'Submission window' : 'Submission schedule'}
                 </h2>
-                  <span className={`inline-flex items-center gap-1.5 rounded-none border px-2.5 py-1 text-xs font-semibold ${isOpen ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : isClosed ? 'border-red-200 bg-red-50 text-[#A00D26]' : 'border-slate-200 bg-slate-50 text-slate-600'}`}>
-                    <span aria-hidden="true" className={`h-1.5 w-1.5 rounded-full ${isOpen ? 'bg-emerald-600' : isClosed ? 'bg-[#C8102E]' : 'bg-slate-500'}`} />
-                    {loadingCalls ? 'LOADING' : isOpen ? 'OPEN' : isClosed ? 'CLOSED' : 'NO OPEN CALL'}
+                <p className="mt-1 flex items-center gap-2 text-xs font-medium text-white/90">
+                  <span
+                    aria-hidden="true"
+                    className={`h-2 w-2 shrink-0 rounded-full ${isOpen ? 'bg-emerald-300' : isClosed ? 'bg-red-300' : 'bg-slate-300'}`}
+                  />
+                  <span>
+                    {loadingCalls
+                      ? 'Checking call status…'
+                      : isOpen
+                        ? 'Now accepting proposal submissions'
+                        : isClosed
+                          ? targetCall?.scheduledOpen
+                            ? 'Closed · Scheduled to reopen'
+                            : 'Submissions are currently closed'
+                          : 'No active call for proposals'}
                   </span>
+                </p>
               </div>
 
-              {!loadingCalls && isClosed && targetCall && (
-                <div role="status" className="mt-6">
-                  <div className="flex items-start gap-3 rounded-none border border-slate-200 bg-slate-50 p-4">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-none bg-white text-[#A00D26]">
-                      <LockKeyhole aria-hidden="true" className="h-5 w-5" />
+              <div className="p-5 sm:p-7">
+                {!loadingCalls && isClosed && targetCall && (
+                  <div role="status" className="mb-6 border-b border-slate-100 pb-5">
+                    <div className="flex items-start gap-3 rounded-none border border-slate-200 bg-slate-50 p-4">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-none bg-white text-[#A00D26]">
+                        <LockKeyhole aria-hidden="true" className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <h3 className="text-base font-semibold text-[#A00D26]">{targetCall?.scheduledOpen ? 'Scheduled to reopen' : 'Officially closed'}</h3>
+                        <p className="mt-1 text-sm leading-6 text-slate-700">{targetCall?.scheduledOpen ? `Submissions remain closed until ${formattedStartDate}.` : 'This call is no longer accepting proposals.'}</p>
+                      </div>
                     </div>
-                    <div>
-                      <h3 className="text-base font-semibold text-[#A00D26]">{targetCall?.scheduledOpen ? 'Scheduled to reopen' : 'Officially closed'}</h3>
-                      <p className="mt-1 text-sm leading-6 text-slate-700">{targetCall?.scheduledOpen ? `Submissions remain closed until ${formattedStartDate}.` : 'This call is no longer accepting proposals.'}</p>
+                    {(targetCall.publicNotice || targetCall.closureReason) && <div className="mt-5 border-l-2 border-red-200 pl-4">
+                      <h3 className="text-sm font-semibold text-slate-900">Public notice</h3>
+                      <p className="mt-2 whitespace-pre-wrap break-words text-sm leading-7 text-slate-700">
+                        {targetCall.publicNotice || targetCall.closureReason}
+                      </p>
+                    </div>}
+                  </div>
+                )}
+
+                <dl className="space-y-5">
+                  <div>
+                    <dt className="text-xs font-semibold uppercase tracking-wider text-slate-500">{targetCall?.scheduledOpen ? 'Next opening' : isClosed ? 'Opened on' : 'Submissions open'}</dt>
+                    <dd className="mt-2 break-words text-base font-semibold leading-snug text-slate-800">
+                      <time dateTime={targetCall?.startDate}>{formattedStartDate || 'To be announced'}</time>
+                    </dd>
+                  </div>
+                  <div className={`rounded-none border p-4 sm:p-5 ${isOpen ? 'border-red-100 border-l-4 border-l-[#C8102E] bg-red-50/50' : 'border-slate-200 bg-slate-50'}`}>
+                    <dt className={`text-[11px] font-semibold uppercase tracking-wider ${isOpen ? 'text-[#A00D26]' : 'text-slate-500'}`}>{isClosed ? 'Scheduled deadline' : 'Submission deadline'}</dt>
+                    <dd className={`mt-2 break-words text-base font-semibold leading-snug tracking-tight ${isOpen ? 'text-[#A00D26]' : 'text-slate-800'}`}>
+                      <time dateTime={targetCall?.endDate}>{formattedEndDate || 'To be announced'}</time>
+                    </dd>
+                  </div>
+                </dl>
+
+                {memoDetails && <div className="mt-6 border-t border-slate-100 pt-5">
+                  <h3 className="mb-3 text-sm font-semibold text-slate-800">Official memorandum</h3>
+                  <a
+                    href={memoDetails?.dataUrl || '#'}
+                    onClick={handleOpenMemo}
+                    className="group flex items-start gap-3 rounded-none border border-slate-200 p-3 transition-colors hover:border-red-200 hover:bg-red-50/40 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#C8102E]"
+                  >
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-none bg-slate-100 text-slate-600">
+                      <FileText aria-hidden="true" className="h-5 w-5" />
                     </div>
-                  </div>
-                  {(targetCall.publicNotice || targetCall.closureReason) && <div className="mt-5 border-l-2 border-red-200 pl-4">
-                    <h3 className="text-sm font-semibold text-slate-900">Public notice</h3>
-                    <p className="mt-2 whitespace-pre-wrap break-words text-sm leading-7 text-slate-700">
-                      {targetCall.publicNotice || targetCall.closureReason}
-                    </p>
-                  </div>}
-                </div>
-              )}
+                    <div className="min-w-0 flex-1">
+                      <p className="break-words text-sm font-medium leading-6 text-slate-800 group-hover:text-[#C8102E]">{memoFileName}</p>
+                      <p className="mt-1 text-xs leading-5 text-slate-600">{memoExtension} &middot; View guidelines and terms</p>
+                    </div>
+                    <ExternalLink aria-hidden="true" className="mt-2 h-4 w-4 shrink-0 text-slate-500" />
+                  </a>
+                </div>}
 
-              <dl className="mt-6 space-y-5 border-t border-slate-100 pt-5">
-                <div>
-                  <dt className="text-xs font-semibold uppercase tracking-wider text-slate-500">{targetCall?.scheduledOpen ? 'Next opening' : isClosed ? 'Opened on' : 'Submissions open'}</dt>
-                  <dd className="mt-2 break-words text-base font-semibold leading-snug text-slate-800">
-                    <time dateTime={targetCall?.startDate}>{formattedStartDate || 'To be announced'}</time>
-                  </dd>
-                </div>
-                <div className={`rounded-none border p-4 sm:p-5 ${isOpen ? 'border-red-100 bg-red-50/70' : 'border-slate-200 bg-slate-50'}`}>
-                  <dt className={`text-[11px] font-semibold uppercase tracking-wider ${isOpen ? 'text-[#A00D26]' : 'text-slate-500'}`}>{isClosed ? 'Scheduled deadline' : 'Submission deadline'}</dt>
-                  <dd className={`mt-2 break-words text-base font-semibold leading-snug tracking-tight ${isOpen ? 'text-[#A00D26]' : 'text-slate-800'}`}>
-                    <time dateTime={targetCall?.endDate}>{formattedEndDate || 'To be announced'}</time>
-                  </dd>
-                </div>
-              </dl>
-
-              {memoDetails && <div className="mt-6 border-t border-slate-100 pt-5">
-                <h3 className="mb-3 text-sm font-semibold text-slate-800">Official memorandum</h3>
-                <a
-                  href={memoDetails?.dataUrl || '#'}
-                  onClick={handleOpenMemo}
-                  className="group flex items-start gap-3 rounded-none border border-slate-200 p-3 transition-colors hover:border-red-200 hover:bg-red-50/40 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#C8102E]"
-                >
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-none bg-slate-100 text-slate-600">
-                    <FileText aria-hidden="true" className="h-5 w-5" />
+                <div className="mt-6 flex items-center gap-3 border-t border-slate-100 pt-5">
+                  <div className="flex shrink-0 items-center gap-2">
+                    <img src="/WMSU.png" alt="WMSU logo" width={40} height={40} className="h-10 w-10 object-contain" />
+                    <img src="/RDEC-WMSU.png" alt="RDEC logo" width={40} height={40} className="h-10 w-10 object-contain" />
                   </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="break-words text-sm font-medium leading-6 text-slate-800 group-hover:text-[#C8102E]">{memoFileName}</p>
-                    <p className="mt-1 text-xs leading-5 text-slate-600">{memoExtension} &middot; View guidelines and terms</p>
+                  <div className="min-w-0 border-l border-slate-200 pl-3">
+                    <p className="text-xs font-semibold text-slate-700">WMSU RDEC</p>
+                    <p className="mt-0.5 text-xs leading-5 text-slate-500">Research Development &amp; Extension Center</p>
                   </div>
-                  <ExternalLink aria-hidden="true" className="mt-2 h-4 w-4 shrink-0 text-slate-500" />
-                </a>
-              </div>}
-
-              <div className="mt-6 flex items-center gap-3 border-t border-slate-100 pt-5">
-                <div className="flex shrink-0 items-center gap-2">
-                  <img src="/WMSU.png" alt="WMSU logo" width={40} height={40} className="h-10 w-10 object-contain" />
-                  <img src="/RDEC-WMSU.png" alt="RDEC logo" width={40} height={40} className="h-10 w-10 object-contain" />
-                </div>
-                <div className="min-w-0 border-l border-slate-200 pl-3">
-                  <p className="text-xs font-semibold text-slate-700">WMSU RDEC</p>
-                  <p className="mt-0.5 text-xs leading-5 text-slate-500">Research Development &amp; Extension Center</p>
                 </div>
               </div>
             </aside>
@@ -381,11 +392,10 @@ export const SubmissionPeriodPortal: React.FC<SubmissionPeriodPortalProps> = ({ 
               <button
                 type="button"
                 onClick={() => setSelectedCategory('all')}
-                className={`min-h-11 px-4 py-2 rounded-none text-sm font-medium transition-colors cursor-pointer ${
-                  selectedCategory === 'all'
-                    ? 'bg-slate-900 text-white shadow-xs'
-                    : 'bg-white text-slate-600 border border-slate-200 hover:border-slate-300'
-                }`}
+                className={`min-h-11 px-4 py-2 rounded-none text-sm font-medium transition-colors cursor-pointer ${selectedCategory === 'all'
+                  ? 'bg-slate-900 text-white shadow-xs'
+                  : 'bg-white text-slate-600 border border-slate-200 hover:border-slate-300'
+                  }`}
               >
                 All Domains ({dynamicPriorityAreas.length})
               </button>
@@ -394,11 +404,10 @@ export const SubmissionPeriodPortal: React.FC<SubmissionPeriodPortalProps> = ({ 
                   key={area.id}
                   type="button"
                   onClick={() => setSelectedCategory(area.id)}
-                  className={`min-h-11 px-4 py-2 rounded-none text-sm font-medium transition-colors cursor-pointer ${
-                    selectedCategory === area.id
-                      ? 'bg-[#C8102E] text-white shadow-xs'
-                      : 'bg-white text-slate-600 border border-slate-200 hover:border-slate-300'
-                  }`}
+                  className={`min-h-11 px-4 py-2 rounded-none text-sm font-medium transition-colors cursor-pointer ${selectedCategory === area.id
+                    ? 'bg-[#C8102E] text-white shadow-xs'
+                    : 'bg-white text-slate-600 border border-slate-200 hover:border-slate-300'
+                    }`}
                 >
                   {area.category}
                 </button>
@@ -563,34 +572,34 @@ export const SubmissionPeriodPortal: React.FC<SubmissionPeriodPortalProps> = ({ 
       {/* QUICK ASSISTANCE BANNER */}
       <section className="py-12 bg-white border-t border-slate-100">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="rounded-none bg-slate-900 text-white p-6 sm:p-8 flex flex-col md:flex-row items-center justify-between gap-6">
+          <div className="rounded-none bg-slate-50 border border-slate-200 border-l-4 border-l-[#C8102E] text-slate-900 p-6 sm:p-8 flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="space-y-1.5 text-center md:text-left">
-              <span className="text-xs uppercase tracking-wider text-red-400 font-semibold">
+              <span className="text-xs uppercase tracking-wider text-[#C8102E] font-semibold">
                 RPDU Help &amp; Consultation
               </span>
-              <h4 className="text-lg sm:text-xl font-bold">
+              <h4 className="text-lg sm:text-xl font-bold text-slate-900">
                 Need guidance on your research proposal?
               </h4>
-              <p className="text-sm sm:text-base font-normal leading-7 text-slate-200 max-w-lg">
+              <p className="text-sm sm:text-base font-normal leading-7 text-slate-600 max-w-lg">
                 The Research Project Development Unit is available for format inquiries, proposal consultation, and technical assistance.
               </p>
             </div>
 
-            <div className="flex flex-col sm:flex-row items-center gap-3 shrink-0">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 shrink-0 w-full sm:w-auto">
               <a
                 href="mailto:rpdu@wmsu.edu.ph"
-                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-none bg-white/10 hover:bg-white/20 border border-white/15 text-xs sm:text-sm font-medium transition-colors"
+                className="inline-flex min-h-11 items-center justify-center gap-2 whitespace-nowrap px-4 py-2.5 rounded-none bg-white hover:bg-red-50 border border-slate-300 hover:border-[#C8102E]/40 text-slate-800 text-xs sm:text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#C8102E]"
               >
-                <Mail className="w-4 h-4 text-red-400" />
+                <Mail className="w-4 h-4 text-[#C8102E] shrink-0" />
                 <span>rpdu@wmsu.edu.ph</span>
               </a>
               <button
                 type="button"
                 onClick={onSignInClick}
-                className="group inline-flex items-center gap-2 px-5 py-2.5 rounded-none bg-[#C8102E] hover:bg-[#A00D26] text-xs sm:text-sm font-semibold transition-colors cursor-pointer"
+                className="group inline-flex min-h-11 items-center justify-center gap-2 whitespace-nowrap px-5 py-2.5 rounded-none bg-[#C8102E] hover:bg-[#A00D26] text-white text-xs sm:text-sm font-semibold transition-colors cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#C8102E]"
               >
                 <span>Sign In to Portal</span>
-                <ArrowRight className="w-4 h-4 transition-transform duration-300 ease-out group-hover:translate-x-1.5" />
+                <ArrowRight className="w-4 h-4 shrink-0 transition-transform duration-300 ease-out group-hover:translate-x-1.5" />
               </button>
             </div>
           </div>

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Mail, Phone, MapPin, ExternalLink } from 'lucide-react';
+import { Mail, Phone, MapPin, Download } from 'lucide-react';
 
 export const Footer: React.FC = () => {
   return (
@@ -50,14 +50,8 @@ export const Footer: React.FC = () => {
               </li>
               <li>
                 <a href="/DOST_Form_No.1b.docx" download className="hover:text-[#C8102E] transition-colors inline-flex items-center gap-1">
-                  <span>DOST Form 1B (Word)</span>
-                  <ExternalLink className="w-3 h-3 text-slate-400" />
-                </a>
-              </li>
-              <li>
-                <a href="/DOST_Form_No.1b.pdf" target="_blank" rel="noopener noreferrer" className="hover:text-[#C8102E] transition-colors inline-flex items-center gap-1">
-                  <span>DOST Form 1B (PDF)</span>
-                  <ExternalLink className="w-3 h-3 text-slate-400" />
+                  <span>Concept Proposal Template</span>
+                  <Download className="w-3 h-3 text-slate-400" />
                 </a>
               </li>
             </ul>
