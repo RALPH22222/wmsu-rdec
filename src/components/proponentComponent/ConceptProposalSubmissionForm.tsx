@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useId, useRef } from 'react';
+import React, { useState, useEffect, useId, useMemo, useRef } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { proposalResearchAgendas } from '../../lib/researchAgendas';
 import {
@@ -14,7 +14,6 @@ import {
   X,
   FileCheck,
   Calendar,
-  Search,
   Plus,
   AlertCircle,
   Layers,
@@ -25,9 +24,15 @@ import {
   ChevronRight
 } from 'lucide-react';
 import { ProponentPipelineTracker } from './ProponentPipelineTracker';
+import { ProposalSearchBar } from '../ui/ProposalSearchBar';
 import { useCallForProposals } from '../../context/CallForProposalsContext';
 import { useAuth } from '../../context/AuthContext';
-import { checkConceptProposalTitleApi, ConceptProposalTitleExistsError } from '../../lib/conceptProposalApi';
+import { useProposalSearch } from '../../hooks/useProposalSearch';
+import {
+  checkConceptProposalTitleApi,
+  ConceptProposalTitleExistsError,
+  getMyConceptProposalsApi,
+} from '../../lib/conceptProposalApi';
 import type { ConceptProposal } from '../../types';
 import { paginateConceptProposals } from '../../lib/conceptProposalPagination';
 import {
@@ -112,7 +117,10 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
   const { user, profile, session } = useAuth();
   const [confirmedCallId, setConfirmedCallId] = useState<string | null>(null);
   const canSubmit = Boolean(!loadingCalls && activeCall && profile?.is_eligible_to_submit === true);
-  const mySubmissions = conceptProposals.filter((proposal) => proposal.proponentId === user?.id);
+  const mySubmissions = useMemo(
+    () => conceptProposals.filter((proposal) => proposal.proponentId === user?.id),
+    [conceptProposals, user?.id],
+  );
 
   const endorsementInputId = useId();
   const conceptDocInputId = useId();
@@ -381,18 +389,57 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
     }
   };
 
-  const filteredSubmissions = mySubmissions.filter((item) => {
-    const matchesStatus =
-      submissionStatusFilter === 'all' || item.screeningStatus === submissionStatusFilter;
-    const matchesSearch =
-      item.title.toLowerCase().includes(submissionSearchQuery.toLowerCase()) ||
-      item.thematicArea.toLowerCase().includes(submissionSearchQuery.toLowerCase()) ||
-      (item.callTitle && item.callTitle.toLowerCase().includes(submissionSearchQuery.toLowerCase()));
-    const matchesAgenda =
-      submissionAgendaFilter === 'all' || proposalResearchAgendas(item).includes(submissionAgendaFilter);
+  const submissionAgendaOptions = useMemo(() => {
+    const defaults = RESEARCH_AGENDAS.map((agenda) => agenda.name);
+    const extras = mySubmissions
+      .flatMap(proposalResearchAgendas)
+      .filter((agenda) => !defaults.includes(agenda));
+    return Array.from(new Set([...defaults, ...extras]));
+  }, [mySubmissions]);
 
-    return matchesStatus && matchesSearch && matchesAgenda;
+  const localFilteredSubmissions = useMemo(() => {
+    const q = submissionSearchQuery.trim().toLowerCase();
+    return mySubmissions.filter((item) => {
+      const matchesStatus =
+        submissionStatusFilter === 'all' || item.screeningStatus === submissionStatusFilter;
+      const matchesSearch =
+        !q ||
+        item.title.toLowerCase().includes(q) ||
+        item.thematicArea.toLowerCase().includes(q) ||
+        Boolean(item.callTitle && item.callTitle.toLowerCase().includes(q));
+      const matchesAgenda =
+        submissionAgendaFilter === 'all' || proposalResearchAgendas(item).includes(submissionAgendaFilter);
+
+      return matchesStatus && matchesSearch && matchesAgenda;
+    });
+  }, [mySubmissions, submissionStatusFilter, submissionSearchQuery, submissionAgendaFilter]);
+
+  const {
+    items: filteredSubmissions,
+    searching: searchingSubmissions,
+    hasActiveFilters: hasActiveSubmissionFilters,
+    activeFilterCount: activeSubmissionFilterCount,
+    fallbackNotice: submissionFallbackNotice,
+  } = useProposalSearch({
+    baseline: mySubmissions,
+    fallbackItems: localFilteredSubmissions,
+    filters: {
+      q: submissionSearchQuery,
+      status: submissionStatusFilter,
+      agenda: submissionAgendaFilter,
+    },
+    token: session?.access_token,
+    enabled: activeTab === 'my-submissions' && !loadingConceptProposals,
+    fetchFiltered: getMyConceptProposalsApi,
   });
+
+  const handleResetSubmissionFilters = () => {
+    setSubmissionStatusFilter('all');
+    setSubmissionAgendaFilter('all');
+    setSubmissionSearchQuery('');
+    setSubmissionPage(1);
+  };
+
   const pagination = paginateConceptProposals(filteredSubmissions, submissionPage);
   const changeSubmissionPage = (page: number) => {
     setSubmissionPage(page);
@@ -962,34 +1009,39 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
             </div>
 
             {/* Search & Agenda Select */}
-            <div className="flex flex-col sm:flex-row sm:items-center gap-3 w-full">
-              <div className="relative min-w-0 flex-1">
-                <Search className="w-5 h-5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                <input
-                  type="text"
-                  autoCapitalize="sentences"
-                  value={submissionSearchQuery}
-                  onChange={(e) => { setSubmissionSearchQuery(capitalizeFirstLetter(e.target.value)); setSubmissionPage(1); }}
-                  placeholder="Search proposal title or agenda..."
-                  aria-label="Search submitted concept proposals"
-                  className="min-h-11 w-full pl-10 pr-3 py-3 rounded-sm border border-slate-200 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E]"
-                />
-              </div>
-
+            <ProposalSearchBar
+              value={submissionSearchQuery}
+              onChange={(nextValue) => {
+                setSubmissionSearchQuery(nextValue ? capitalizeFirstLetter(nextValue) : '');
+                setSubmissionPage(1);
+              }}
+              placeholder="Search proposal title, call, or agenda..."
+              ariaLabel="Search submitted concept proposals"
+              autoCapitalize="sentences"
+              searching={searchingSubmissions}
+              activeFilterCount={activeSubmissionFilterCount}
+              onReset={handleResetSubmissionFilters}
+              resultSummary={
+                submissionFallbackNotice ||
+                (hasActiveSubmissionFilters && !loadingConceptProposals
+                  ? `${filteredSubmissions.length} matching proposal${filteredSubmissions.length === 1 ? '' : 's'}`
+                  : undefined)
+              }
+            >
               <select
                 value={submissionAgendaFilter}
                 onChange={(e) => { setSubmissionAgendaFilter(e.target.value); setSubmissionPage(1); }}
                 aria-label="Filter submitted proposals by research agenda"
-                className="min-h-11 min-w-0 w-full sm:w-64 px-3 py-3 rounded-sm border border-slate-200 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#C8102E] cursor-pointer"
+                className="min-h-11 min-w-0 w-full sm:w-64 px-3 py-2.5 rounded-sm border border-slate-200 bg-white text-sm text-slate-700 focus:border-[#C8102E] focus:outline-none focus:ring-2 focus:ring-[#C8102E]/20 cursor-pointer"
               >
                 <option value="all">All Agendas</option>
-                {RESEARCH_AGENDAS.map((agenda) => (
-                  <option key={agenda.id} value={agenda.name}>
-                    {agenda.name}
+                {submissionAgendaOptions.map((agendaName) => (
+                  <option key={agendaName} value={agendaName}>
+                    {agendaName}
                   </option>
                 ))}
               </select>
-            </div>
+            </ProposalSearchBar>
           </div>
 
           {/* Cards List Grid (Full-width Horizontal Cards Matching CallForProposalsManager) */}

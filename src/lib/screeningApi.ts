@@ -1,5 +1,6 @@
 import { API_BASE_URL, API_ENDPOINTS } from '../config/apiConfig';
 import type { ConceptProposal, ScreeningReviewDetails } from '../types';
+import { buildProposalQueryString, type ProposalSearchFilters } from './proposalSearch';
 
 const normalizeProposal = (proposal: ConceptProposal): ConceptProposal => ({
   ...proposal,
@@ -22,8 +23,12 @@ const request = async (token: string | undefined, path = '', init: RequestInit =
   return result.data;
 };
 
-export async function getScreeningProposals(token: string): Promise<ConceptProposal[]> {
-  return (await request(token)).map(normalizeProposal);
+export async function getScreeningProposals(
+  token: string,
+  filters?: ProposalSearchFilters,
+  signal?: AbortSignal,
+): Promise<ConceptProposal[]> {
+  return (await request(token, buildProposalQueryString(filters), signal ? { signal } : {})).map(normalizeProposal);
 }
 
 export async function getScreeningProposal(id: string, token?: string, signal?: AbortSignal): Promise<ConceptProposal> {

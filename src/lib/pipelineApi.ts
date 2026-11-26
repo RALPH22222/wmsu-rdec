@@ -3,11 +3,16 @@ import type {
   ActionSheetPoints, AssignEmailOnlyEvaluatorInput, BlindReview, Checklist, CompleteEvaluatorInvitationInput, CompleteEvaluatorInvitationResult, CreatedTemporaryEvaluatorResult, CreateTemporaryEvaluatorInput, DeclineReason, EligibleConcept, EvaluatorInvitationDetails, EvaluatorProfile, FundingClassification, OutsourcedProject, PendingConcept, PendingTemporaryEvaluatorInvitation, PipelineEvaluator, ProponentProposal, ReopenTemporaryEvaluatorResult, ReviewRecommendation, RevisionHistoryDraft, RpduProposal, SendTemporaryEvaluatorInviteResult,
 } from '../types';
 import { publicRequest, request } from './apiRequest';
+import { appendProposalQuery, type ProposalSearchFilters } from './proposalSearch';
 
 // ---- RPDU / Admin ---------------------------------------------------------
 
-export const getPipelineProposals = async (token?: string, signal?: AbortSignal): Promise<RpduProposal[]> =>
-  (await request<RpduProposal[]>(API_ENDPOINTS.PIPELINE.PROPOSALS, token, {}, signal)).data;
+export const getPipelineProposals = async (
+  token?: string,
+  signal?: AbortSignal,
+  filters?: ProposalSearchFilters,
+): Promise<RpduProposal[]> =>
+  (await request<RpduProposal[]>(appendProposalQuery(API_ENDPOINTS.PIPELINE.PROPOSALS, filters), token, {}, signal)).data;
 
 export const getPipelineProposal = async (id: string, token?: string, signal?: AbortSignal): Promise<RpduProposal> =>
   (await request<RpduProposal>(API_ENDPOINTS.PIPELINE.PROPOSAL_BY_ID(id), token, {}, signal)).data;

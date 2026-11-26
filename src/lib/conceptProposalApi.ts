@@ -1,5 +1,6 @@
 import { API_BASE_URL, API_ENDPOINTS } from '../config/apiConfig';
 import type { ConceptProposal } from '../types';
+import { appendProposalQuery, type ProposalSearchFilters } from './proposalSearch';
 
 export class ConceptProposalTitleExistsError extends Error {
   constructor() {
@@ -179,7 +180,11 @@ export async function submitConceptProposalApi(
 /**
  * Get all concept proposals for the authenticated proponent
  */
-export async function getMyConceptProposalsApi(token?: string) {
+export async function getMyConceptProposalsApi(
+  token?: string,
+  filters?: ProposalSearchFilters,
+  signal?: AbortSignal,
+) {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
   };
@@ -187,9 +192,10 @@ export async function getMyConceptProposalsApi(token?: string) {
     headers['Authorization'] = `Bearer ${token}`;
   }
 
-  const response = await fetch(API_ENDPOINTS.PROPONENT.CONCEPT_PROPOSALS, {
+  const response = await fetch(appendProposalQuery(API_ENDPOINTS.PROPONENT.CONCEPT_PROPOSALS, filters), {
     method: 'GET',
     headers,
+    signal,
   });
 
   const result = await response.json();

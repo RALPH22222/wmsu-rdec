@@ -3,7 +3,6 @@ import { proposalResearchAgendas } from '../../lib/researchAgendas';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   ClipboardCheck,
-  Search,
   CheckCircle2,
   XCircle,
   Clock,
@@ -11,11 +10,11 @@ import {
   Building,
   Calendar,
   FileText,
-  ListFilter,
   LayoutGrid,
   Archive,
   Table as TableIcon
 } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
 import { useCallForProposals } from '../../context/CallForProposalsContext';
 import type { ConceptProposal, ScreeningStatus } from '../../types';
 import { ScreeningFeedback } from '../../components/rpduComponent/ScreeningFeedback';
@@ -23,7 +22,10 @@ import { ProposalConsolidation } from '../../components/rpduComponent/ProposalCo
 import { ScreeningCallsView } from '../../components/rpduComponent/ScreeningCallsView';
 import { activeAndPastCalls } from '../../lib/screeningCalls';
 import { Pagination } from '../../components/ui/Pagination';
+import { ProposalSearchBar } from '../../components/ui/ProposalSearchBar';
+import { useProposalSearch } from '../../hooks/useProposalSearch';
 import { paginate } from '../../lib/pagination';
+import { getScreeningProposals } from '../../lib/screeningApi';
 
 const SCREENING_PAGE_SIZE = 10;
 
@@ -36,6 +38,7 @@ export const PreliminaryScreeningManager: React.FC<PreliminaryScreeningManagerPr
   role = 'rpdu',
   view = 'proposals',
 }) => {
+  const { session } = useAuth();
   const {
     calls,
     loadingCalls,
@@ -52,9 +55,10 @@ export const PreliminaryScreeningManager: React.FC<PreliminaryScreeningManagerPr
   const [statusFilter, setStatusFilter] = useState<'all' | ScreeningStatus>(['all', 'pending', 'passed', 'failed'].includes(restored?.statusFilter) ? restored.statusFilter : 'all');
   const [thematicFilter, setThematicFilter] = useState<string>(typeof restored?.thematicFilter === 'string' ? restored.thematicFilter : 'all');
   const [collegeFilter, setCollegeFilter] = useState<string>(typeof restored?.collegeFilter === 'string' ? restored.collegeFilter : 'all');
+  const [callFilter, setCallFilter] = useState<string>(typeof restored?.callFilter === 'string' ? restored.callFilter : 'all');
   const [viewMode, setViewMode] = useState<'cards' | 'table'>(restored?.viewMode === 'table' ? 'table' : 'cards');
   // The page belongs to one combination of filters; any search or filter change derives page 1 instead of resetting state in an effect.
-  const filterKey = JSON.stringify([searchQuery, statusFilter, thematicFilter, collegeFilter]);
+  const filterKey = JSON.stringify([searchQuery, statusFilter, thematicFilter, collegeFilter, callFilter]);
   const [pageState, setPageState] = useState(() => ({ key: filterKey, page: typeof restored?.page === 'number' ? restored.page : 1 }));
   const listTopRef = useRef<HTMLDivElement>(null);
 
@@ -77,14 +81,28 @@ export const PreliminaryScreeningManager: React.FC<PreliminaryScreeningManagerPr
     return Array.from(new Set(conceptProposals.map((p) => p.college)));
   }, [conceptProposals]);
 
-  // Filtered Proposals
-  const filteredProposals = useMemo(() => {
+  const callOptions = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const call of calls) {
+      if (call.id && call.title) map.set(call.id, call.title);
+    }
+    for (const proposal of conceptProposals) {
+      if (proposal.callId && proposal.callTitle && !map.has(proposal.callId)) {
+        map.set(proposal.callId, proposal.callTitle);
+      }
+    }
+    return Array.from(map, ([id, title]) => ({ id, title }));
+  }, [calls, conceptProposals]);
+
+  // Client-side fallback filter over loaded baseline proposals
+  const localFilteredProposals = useMemo(() => {
     return conceptProposals.filter((p) => {
       const matchesStatus = view === 'consolidation'
         ? true
         : statusFilter === 'all' || p.screeningStatus === statusFilter;
       const matchesThematic = thematicFilter === 'all' || proposalResearchAgendas(p).includes(thematicFilter);
       const matchesCollege = collegeFilter === 'all' || p.college === collegeFilter;
+      const matchesCall = callFilter === 'all' || p.callId === callFilter;
       const q = searchQuery.toLowerCase().trim();
       const matchesSearch =
         !q ||
@@ -92,11 +110,34 @@ export const PreliminaryScreeningManager: React.FC<PreliminaryScreeningManagerPr
         p.code.toLowerCase().includes(q) ||
         p.leadInvestigator.toLowerCase().includes(q) ||
         p.college.toLowerCase().includes(q) ||
-        p.department.toLowerCase().includes(q);
+        p.department.toLowerCase().includes(q) ||
+        p.thematicArea.toLowerCase().includes(q) ||
+        p.callTitle.toLowerCase().includes(q);
 
-      return matchesStatus && matchesThematic && matchesCollege && matchesSearch;
+      return matchesStatus && matchesThematic && matchesCollege && matchesCall && matchesSearch;
     });
-  }, [conceptProposals, statusFilter, thematicFilter, collegeFilter, searchQuery, view]);
+  }, [conceptProposals, statusFilter, thematicFilter, collegeFilter, callFilter, searchQuery, view]);
+
+  const {
+    items: filteredProposals,
+    searching: searchingProposals,
+    hasActiveFilters,
+    activeFilterCount,
+    fallbackNotice,
+  } = useProposalSearch({
+    baseline: conceptProposals,
+    fallbackItems: localFilteredProposals,
+    filters: {
+      q: searchQuery,
+      status: view === 'consolidation' ? undefined : statusFilter,
+      agenda: thematicFilter,
+      college: collegeFilter,
+      callId: callFilter,
+    },
+    token: session?.access_token,
+    enabled: view !== 'calls' && !loadingConceptProposals,
+    fetchFiltered: getScreeningProposals,
+  });
 
   const { page, items: pagedProposals } = paginate(filteredProposals, pageState.key === filterKey ? pageState.page : 1, SCREENING_PAGE_SIZE);
 
@@ -105,7 +146,15 @@ export const PreliminaryScreeningManager: React.FC<PreliminaryScreeningManagerPr
     listTopRef.current?.scrollIntoView({ block: 'start', behavior: 'smooth' });
   };
 
-  const screeningList = { searchQuery, statusFilter, thematicFilter, collegeFilter, viewMode, page };
+  const handleResetFilters = () => {
+    if (view === 'proposals') setStatusFilter('all');
+    setThematicFilter('all');
+    setCollegeFilter('all');
+    setCallFilter('all');
+    setSearchQuery('');
+  };
+
+  const screeningList = { searchQuery, statusFilter, thematicFilter, collegeFilter, callFilter, viewMode, page };
 
   const handleSummaryFilter = (status: 'all' | ScreeningStatus) => {
     setStatusFilter(status);
@@ -174,80 +223,68 @@ export const PreliminaryScreeningManager: React.FC<PreliminaryScreeningManagerPr
   );
 
   const screeningFilters = (
-    <div className={view === 'consolidation' ? 'space-y-3.5 border-b border-slate-200 pb-4' : 'bg-white p-4 rounded-md border border-slate-200 shadow-2xs space-y-3.5'}>
-        <div className="flex flex-col lg:flex-row gap-3 items-stretch lg:items-center justify-between">
-
-          {/* Status Tabs */}
-          {view === 'proposals' && <div className="flex items-center gap-1.5 overflow-x-auto pb-1 lg:pb-0 scrollbar-none">
-            <button
-              type="button"
-              onClick={() => setStatusFilter('all')}
-              className={`px-3 py-1.5 rounded-sm text-xs font-bold transition-all cursor-pointer shrink-0 ${statusFilter === 'all'
-                ? 'bg-[#C8102E] text-white shadow-xs'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-                }`}
-            >
-              All Proposals
-              {renderFilterCount(stats.total, statusFilter === 'all')}
-            </button>
-            <button
-              type="button"
-              onClick={() => setStatusFilter('pending')}
-              className={`px-3 py-1.5 rounded-sm text-xs font-bold transition-all cursor-pointer shrink-0 flex items-center gap-1.5 ${statusFilter === 'pending'
-                ? 'bg-[#C8102E] text-white shadow-xs'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-                }`}
-            >
-              <Clock className={`w-3.5 h-3.5 ${statusFilter === 'pending' ? 'text-white/80' : 'text-slate-400'}`} />
-              <span>Pending Review</span>
-              {renderFilterCount(stats.pending, statusFilter === 'pending')}
-            </button>
-            <button
-              type="button"
-              onClick={() => setStatusFilter('passed')}
-              className={`px-3 py-1.5 rounded-sm text-xs font-bold transition-all cursor-pointer shrink-0 flex items-center gap-1.5 ${statusFilter === 'passed'
-                ? 'bg-[#C8102E] text-white shadow-xs'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-                }`}
-            >
-              <CheckCircle2 className={`w-3.5 h-3.5 ${statusFilter === 'passed' ? 'text-white/80' : 'text-slate-400'}`} />
-              <span>Passed</span>
-              {renderFilterCount(stats.passed, statusFilter === 'passed')}
-            </button>
-            <button
-              type="button"
-              onClick={() => setStatusFilter('failed')}
-              className={`px-3 py-1.5 rounded-sm text-xs font-bold transition-all cursor-pointer shrink-0 flex items-center gap-1.5 ${statusFilter === 'failed'
-                ? 'bg-[#C8102E] text-white shadow-xs'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-                }`}
-            >
-              <XCircle className={`w-3.5 h-3.5 ${statusFilter === 'failed' ? 'text-white/80' : 'text-slate-400'}`} />
-              <span>Failed</span>
-              {renderFilterCount(stats.failed, statusFilter === 'failed')}
-            </button>
-          </div>}
-
-          {/* Right Controls: Search, View Mode */}
-          <div className="flex flex-wrap items-center gap-2.5">
-            {/* Search Box */}
-            <div className="relative flex-1 sm:w-64">
-              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-              <input
-                type="text"
-                placeholder="Search proposal, proponent, college..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs py-1.5 pl-9 pr-3 rounded focus:outline-none focus:ring-2 focus:ring-[#C8102E]/20 focus:border-[#C8102E]"
-              />
+    <div className={view === 'consolidation' ? 'space-y-3.5 border-b border-slate-200 pb-4' : 'bg-white p-4 rounded-sm border border-slate-200 shadow-2xs space-y-3.5'}>
+        {view === 'proposals' && (
+          <div className="flex flex-wrap gap-3 items-center justify-between">
+            {/* Status Tabs */}
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
+              <button
+                type="button"
+                onClick={() => setStatusFilter('all')}
+                className={`min-h-11 px-3 py-1.5 rounded-sm text-xs font-bold transition-all cursor-pointer shrink-0 ${statusFilter === 'all'
+                  ? 'bg-[#C8102E] text-white shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                  }`}
+              >
+                All Proposals
+                {renderFilterCount(stats.total, statusFilter === 'all')}
+              </button>
+              <button
+                type="button"
+                onClick={() => setStatusFilter('pending')}
+                className={`min-h-11 px-3 py-1.5 rounded-sm text-xs font-bold transition-all cursor-pointer shrink-0 flex items-center gap-1.5 ${statusFilter === 'pending'
+                  ? 'bg-[#C8102E] text-white shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                  }`}
+              >
+                <Clock className={`w-3.5 h-3.5 ${statusFilter === 'pending' ? 'text-white/80' : 'text-slate-400'}`} />
+                <span>Pending Review</span>
+                {renderFilterCount(stats.pending, statusFilter === 'pending')}
+              </button>
+              <button
+                type="button"
+                onClick={() => setStatusFilter('passed')}
+                className={`min-h-11 px-3 py-1.5 rounded-sm text-xs font-bold transition-all cursor-pointer shrink-0 flex items-center gap-1.5 ${statusFilter === 'passed'
+                  ? 'bg-[#C8102E] text-white shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                  }`}
+              >
+                <CheckCircle2 className={`w-3.5 h-3.5 ${statusFilter === 'passed' ? 'text-white/80' : 'text-slate-400'}`} />
+                <span>Passed</span>
+                {renderFilterCount(stats.passed, statusFilter === 'passed')}
+              </button>
+              <button
+                type="button"
+                onClick={() => setStatusFilter('failed')}
+                className={`min-h-11 px-3 py-1.5 rounded-sm text-xs font-bold transition-all cursor-pointer shrink-0 flex items-center gap-1.5 ${statusFilter === 'failed'
+                  ? 'bg-[#C8102E] text-white shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                  }`}
+              >
+                <XCircle className={`w-3.5 h-3.5 ${statusFilter === 'failed' ? 'text-white/80' : 'text-slate-400'}`} />
+                <span>Failed</span>
+                {renderFilterCount(stats.failed, statusFilter === 'failed')}
+              </button>
             </div>
 
             {/* View Mode Toggle */}
-            {view === 'proposals' && <div className="flex items-center bg-slate-100 p-0.5 rounded border border-slate-200">
+            <div className="flex items-center bg-slate-100 p-0.5 rounded-sm border border-slate-200 ml-auto">
               <button
                 type="button"
                 onClick={() => setViewMode('cards')}
-                className={`p-1.5 rounded cursor-pointer ${viewMode === 'cards' ? 'bg-white shadow-2xs text-[#C8102E]' : 'text-slate-500 hover:text-slate-800'
+                aria-label="Card view"
+                aria-pressed={viewMode === 'cards'}
+                className={`min-h-10 min-w-10 inline-flex items-center justify-center rounded-sm cursor-pointer ${viewMode === 'cards' ? 'bg-white shadow-2xs text-[#C8102E]' : 'text-slate-500 hover:text-slate-800'
                   }`}
                 title="Card View"
               >
@@ -256,26 +293,39 @@ export const PreliminaryScreeningManager: React.FC<PreliminaryScreeningManagerPr
               <button
                 type="button"
                 onClick={() => setViewMode('table')}
-                className={`p-1.5 rounded cursor-pointer ${viewMode === 'table' ? 'bg-white shadow-2xs text-[#C8102E]' : 'text-slate-500 hover:text-slate-800'
+                aria-label="Table view"
+                aria-pressed={viewMode === 'table'}
+                className={`min-h-10 min-w-10 inline-flex items-center justify-center rounded-sm cursor-pointer ${viewMode === 'table' ? 'bg-white shadow-2xs text-[#C8102E]' : 'text-slate-500 hover:text-slate-800'
                   }`}
                 title="Table View"
               >
                 <TableIcon className="w-4 h-4" />
               </button>
-            </div>}
+            </div>
           </div>
-        </div>
+        )}
 
-        {/* Secondary Filter Dropdowns */}
-        <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-slate-100 text-xs">
-          <span className="text-slate-400 font-semibold flex items-center gap-1">
-            <ListFilter className="w-3.5 h-3.5" /> Filters:
-          </span>
-
+        <ProposalSearchBar
+          value={searchQuery}
+          onChange={setSearchQuery}
+          placeholder="Search proposal, proponent, college, or agenda..."
+          ariaLabel="Search screening proposals"
+          searching={searchingProposals}
+          activeFilterCount={activeFilterCount}
+          onReset={handleResetFilters}
+          resultSummary={
+            fallbackNotice ||
+            (hasActiveFilters && !loadingConceptProposals
+              ? `${filteredProposals.length} matching proposal${filteredProposals.length === 1 ? '' : 's'}`
+              : undefined)
+          }
+          className={view === 'proposals' ? 'pt-2 border-t border-slate-100' : ''}
+        >
           <select
             value={thematicFilter}
             onChange={(e) => setThematicFilter(e.target.value)}
-            className="bg-slate-50 border border-slate-200 text-slate-700 py-1 px-2.5 rounded text-xs focus:outline-none focus:ring-1 focus:ring-[#C8102E]"
+            aria-label="Filter by thematic priority area"
+            className="min-h-11 max-w-full rounded-sm border border-slate-200 bg-slate-50 px-3 text-xs font-medium text-slate-700 focus:border-[#C8102E] focus:outline-none focus:ring-2 focus:ring-[#C8102E]/20 cursor-pointer"
           >
             <option value="all">All Thematic Priority Areas</option>
             {uniqueThematicAreas.map((area) => (
@@ -288,7 +338,8 @@ export const PreliminaryScreeningManager: React.FC<PreliminaryScreeningManagerPr
           <select
             value={collegeFilter}
             onChange={(e) => setCollegeFilter(e.target.value)}
-            className="bg-slate-50 border border-slate-200 text-slate-700 py-1 px-2.5 rounded text-xs focus:outline-none focus:ring-1 focus:ring-[#C8102E]"
+            aria-label="Filter by college"
+            className="min-h-11 max-w-full rounded-sm border border-slate-200 bg-slate-50 px-3 text-xs font-medium text-slate-700 focus:border-[#C8102E] focus:outline-none focus:ring-2 focus:ring-[#C8102E]/20 cursor-pointer"
           >
             <option value="all">All WMSU Colleges</option>
             {uniqueColleges.map((col) => (
@@ -298,21 +349,20 @@ export const PreliminaryScreeningManager: React.FC<PreliminaryScreeningManagerPr
             ))}
           </select>
 
-          {((view === 'proposals' && statusFilter !== 'all') || thematicFilter !== 'all' || collegeFilter !== 'all' || searchQuery) && (
-            <button
-              type="button"
-              onClick={() => {
-                if (view === 'proposals') setStatusFilter('all');
-                setThematicFilter('all');
-                setCollegeFilter('all');
-                setSearchQuery('');
-              }}
-              className="text-[11px] font-semibold text-[#C8102E] hover:underline cursor-pointer ml-auto"
-            >
-              Reset Filters
-            </button>
-          )}
-        </div>
+          <select
+            value={callFilter}
+            onChange={(e) => setCallFilter(e.target.value)}
+            aria-label="Filter by call for proposals"
+            className="min-h-11 max-w-full rounded-sm border border-slate-200 bg-slate-50 px-3 text-xs font-medium text-slate-700 focus:border-[#C8102E] focus:outline-none focus:ring-2 focus:ring-[#C8102E]/20 cursor-pointer"
+          >
+            <option value="all">All Calls for Proposals</option>
+            {callOptions.map((call) => (
+              <option key={call.id} value={call.id}>
+                {call.title}
+              </option>
+            ))}
+          </select>
+        </ProposalSearchBar>
       </div>
   );
 
@@ -768,13 +818,8 @@ export const PreliminaryScreeningManager: React.FC<PreliminaryScreeningManagerPr
           </p>
           <button
             type="button"
-            onClick={() => {
-              setStatusFilter('all');
-              setThematicFilter('all');
-              setCollegeFilter('all');
-              setSearchQuery('');
-            }}
-            className="mt-4 px-4 py-2 rounded text-xs font-bold text-[#C8102E] bg-red-50 hover:bg-red-100 transition-colors cursor-pointer"
+            onClick={handleResetFilters}
+            className="mt-4 min-h-11 px-4 py-2 rounded-sm text-xs font-bold text-[#C8102E] bg-red-50 hover:bg-red-100 transition-colors cursor-pointer"
           >
             Clear All Filters
           </button>
