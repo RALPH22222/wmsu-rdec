@@ -38,3 +38,33 @@ export const recordAttendanceApi = async (conceptId: string, status: 'PRESENT' |
     body: JSON.stringify({ status }),
   });
 };
+
+export const downloadAihrResultSummaryDocx = async (
+  options: { scope?: 'all' | 'enbanc'; callId?: string } = {},
+  token?: string,
+): Promise<string> => {
+  if (!token) throw new Error('Please sign in to continue.');
+  const params = new URLSearchParams();
+  if (options.scope) params.set('scope', options.scope);
+  if (options.callId) params.set('callId', options.callId);
+  const query = params.toString();
+  const url = query ? `${API_ENDPOINTS.AIHR.RESULT_SUMMARY_DOCX}?${query}` : API_ENDPOINTS.AIHR.RESULT_SUMMARY_DOCX;
+  const response = await fetch(url, {
+    method: 'GET',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!response.ok) {
+    const result = await response.json().catch(() => ({}));
+    throw new Error(result.message || `Unable to generate AIHR Result Summary (${response.status}).`);
+  }
+  const fileName = options.scope === 'enbanc' ? '5 AIHR-Result-Summary-En-Banc.docx' : '5 AIHR-Result-Summary.docx';
+  const objectUrl = URL.createObjectURL(await response.blob());
+  const link = document.createElement('a');
+  link.href = objectUrl;
+  link.download = fileName;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+  return fileName;
+};

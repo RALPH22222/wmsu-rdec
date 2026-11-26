@@ -8,6 +8,7 @@ import {
   ChevronDown,
   ClipboardList,
   Clock,
+  Download,
   FileText,
   Gavel,
   MapPin,
@@ -18,8 +19,11 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import type { AihrConcept, AihrStage } from '../../types';
-import { STAGE_ORDER } from '../../lib/aihrMeta';
+import { STAGE_META, STAGE_ORDER } from '../../lib/aihrMeta';
 import { useAihrConcepts } from '../../hooks/useAihrConcepts';
+import { useAuth } from '../../context/AuthContext';
+import { useCallForProposals } from '../../context/CallForProposalsContext';
+import { downloadAihrResultSummaryDocx } from '../../lib/aihrApi';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { Pagination } from '../../components/ui/Pagination';
 import { DocumentLink } from '../../components/ui/DocumentLink';
@@ -54,6 +58,19 @@ const STAGE_CARDS: StageCard[] = [
 
 /** Grid spans per stat card (see the grid below): phones 2 columns, tablets 6 (3 + 2 halves), desktop 5. */
 const STAT_CARD_SPANS = ['sm:col-span-2 lg:col-span-1', 'sm:col-span-2 lg:col-span-1', 'sm:col-span-2 lg:col-span-1', 'sm:col-span-3 lg:col-span-1', 'col-span-2 sm:col-span-3 lg:col-span-1'];
+
+const EN_BANC_STAGES: AihrStage[] = ['QUEUED_FOR_EN_BANC', 'CLEARED', 'DETAILED_SUBMITTED', 'OUTSOURCED', 'NOT_APPROVED'];
+const ATTENDANCE_STATUS_OPTIONS = [
+  { value: 'PRESENT', label: 'Present' },
+  { value: 'ABSENT', label: 'Absent' },
+  { value: 'PENDING', label: 'Pending' },
+] as const;
+
+const agendasOf = (item: AihrConcept): string[] =>
+  (item.researchAgenda || '')
+    .split(';')
+    .map((part) => part.trim())
+    .filter(Boolean);
 
 const byStageThenTitle = (a: AihrConcept, b: AihrConcept) =>
   STAGE_ORDER.indexOf(a.stage) - STAGE_ORDER.indexOf(b.stage) || a.title.localeCompare(b.title);
@@ -134,19 +151,33 @@ function AihrConceptListSkeleton() {
 }
 
 export function AihrDeliberationPage({ role = 'rpdu' }: AihrDeliberationPageProps) {
+  const { session } = useAuth();
+  const { showToast } = useCallForProposals();
   const { concepts, loading, error, refresh, logVerdict, recordDecision, withdrawDecision, recordAttendance } = useAihrConcepts();
   const ids = useId();
   const [tab, setTab] = useState<Tab>('results');
   const [query, setQuery] = useState('');
   const [stageFilter, setStageFilter] = useState<AihrStage[] | null>(null);
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [agendaFilter, setAgendaFilter] = useState<string>('all');
   const [verdictFor, setVerdictFor] = useState<string | null>(null);
   const [decisionFor, setDecisionFor] = useState<string | null>(null);
   const [savingConceptId, setSavingConceptId] = useState<string | null>(null);
   const [markingAllKey, setMarkingAllKey] = useState<string | null>(null);
+  const [downloadingSummary, setDownloadingSummary] = useState(false);
+  const [summaryError, setSummaryError] = useState('');
   const [expandedSessions, setExpandedSessions] = useState<Record<string, boolean>>({});
 
-  const filterKey = `${tab}|${query.trim().toLowerCase()}|${stageFilter ? stageFilter.join(',') : ''}`;
+  const filterKey = `${tab}|${query.trim().toLowerCase()}|${stageFilter ? stageFilter.join(',') : ''}|${statusFilter}|${agendaFilter}`;
   const [pageState, setPageState] = useState({ key: filterKey, page: 1 });
+
+  const agendaOptions = useMemo(() => {
+    const unique = new Set<string>();
+    for (const item of concepts) {
+      for (const agenda of agendasOf(item)) unique.add(agenda);
+    }
+    return Array.from(unique).sort((a, b) => a.localeCompare(b));
+  }, [concepts]);
 
   const counts = useMemo(() => {
     const byStage = new Map<AihrStage, number>();
@@ -183,30 +214,41 @@ export function AihrDeliberationPage({ role = 'rpdu' }: AihrDeliberationPageProp
   }, [scheduledConcepts]);
 
   const filteredSessions = useMemo(() => {
-    if (!query.trim()) return sessions;
     const needle = query.trim().toLowerCase();
     return sessions
       .map((session) => {
         const matching = session.concepts.filter((c) => {
           const proxy = (c.invitation?.proxy_requests || []).find((p) => p.status === 'APPROVED');
-          return (
+          const matchesQuery =
+            !needle ||
             c.title.toLowerCase().includes(needle) ||
             c.proponent.name.toLowerCase().includes(needle) ||
             session.venue.toLowerCase().includes(needle) ||
-            (proxy && proxy.proxy_name.toLowerCase().includes(needle))
-          );
+            (proxy && proxy.proxy_name.toLowerCase().includes(needle));
+          const attStatus = c.attendance?.status || 'PENDING';
+          const matchesStatus = statusFilter === 'all' || attStatus === statusFilter;
+          const matchesAgenda = agendaFilter === 'all' || agendasOf(c).includes(agendaFilter);
+          return matchesQuery && matchesStatus && matchesAgenda;
         });
         return matching.length > 0 ? { ...session, concepts: matching } : null;
       })
       .filter((s): s is AttendanceSession => s !== null);
-  }, [sessions, query]);
+  }, [sessions, query, statusFilter, agendaFilter]);
 
   const visible = useMemo(() => {
     const needle = query.trim().toLowerCase();
-    const matches = (item: AihrConcept) => !needle || item.title.toLowerCase().includes(needle) || item.proponent.name.toLowerCase().includes(needle);
+    const matches = (item: AihrConcept) => {
+      const matchesQuery =
+        !needle ||
+        item.title.toLowerCase().includes(needle) ||
+        item.proponent.name.toLowerCase().includes(needle);
+      const matchesAgenda = agendaFilter === 'all' || agendasOf(item).includes(agendaFilter);
+      const matchesStatus = statusFilter === 'all' || item.stage === statusFilter;
+      return matchesQuery && matchesAgenda && matchesStatus;
+    };
     if (tab === 'enbanc') return enBancQueue.filter(matches).sort(queuedFirst);
     return concepts.filter((item) => (!stageFilter || stageFilter.includes(item.stage)) && matches(item)).sort(byStageThenTitle);
-  }, [concepts, enBancQueue, query, stageFilter, tab]);
+  }, [concepts, enBancQueue, query, stageFilter, statusFilter, agendaFilter, tab]);
 
   const { page, items: pagedConcepts } = paginate(
     visible,
@@ -225,17 +267,30 @@ export function AihrDeliberationPage({ role = 'rpdu' }: AihrDeliberationPageProp
 
   const verdictConcept = verdictFor ? concepts.find((item) => item.id === verdictFor) ?? null : null;
   const decisionConcept = decisionFor ? concepts.find((item) => item.id === decisionFor) ?? null : null;
-  const filtering = Boolean(query.trim()) || (tab === 'results' && stageFilter !== null);
+  const activeFilterCount =
+    Number(Boolean(query.trim())) +
+    Number(tab === 'results' && stageFilter !== null) +
+    Number(statusFilter !== 'all') +
+    Number(agendaFilter !== 'all');
+  const filtering = activeFilterCount > 0;
   const tabTotal = tab === 'results' ? concepts.length : tab === 'enbanc' ? enBancQueue.length : scheduledConcepts.length;
+
+  const switchTab = (next: Tab) => {
+    setTab(next);
+    setStatusFilter('all');
+  };
 
   const toggleFilter = (stages: AihrStage[]) => {
     setTab('results');
+    setStatusFilter('all');
     setStageFilter((current) => (current === stages ? null : stages));
   };
 
   const clearFilters = () => {
     setQuery('');
     setStageFilter(null);
+    setStatusFilter('all');
+    setAgendaFilter('all');
   };
 
   const toggleSession = (key: string, index: number) => {
@@ -267,6 +322,26 @@ export function AihrDeliberationPage({ role = 'rpdu' }: AihrDeliberationPageProp
     }
   };
 
+  const loggedAihrCount = useMemo(() => concepts.filter((item) => Boolean(item.aihr)).length, [concepts]);
+  const enBancInstitutionalCount = useMemo(
+    () => concepts.filter((item) => item.aihr?.verdict === 'CONDITIONALLY_APPROVED' && item.fundingClassification !== 'OUTSOURCE').length,
+    [concepts],
+  );
+
+  const handleDownloadSummary = async (scope: 'all' | 'enbanc') => {
+    if (downloadingSummary) return;
+    setDownloadingSummary(true);
+    setSummaryError('');
+    try {
+      const fileName = await downloadAihrResultSummaryDocx({ scope }, session?.access_token);
+      showToast(`Downloaded ${fileName}.`);
+    } catch (failure) {
+      setSummaryError(failure instanceof Error ? failure.message : 'Unable to generate AIHR Result Summary.');
+    } finally {
+      setDownloadingSummary(false);
+    }
+  };
+
   const initialLoading = loading && concepts.length === 0;
 
   const tabButton = (value: Tab, label: string, Icon: LucideIcon, count: number) => {
@@ -278,7 +353,7 @@ export function AihrDeliberationPage({ role = 'rpdu' }: AihrDeliberationPageProp
         id={`${ids}-tab-${value}`}
         aria-selected={active}
         aria-controls={`${ids}-panel`}
-        onClick={() => setTab(value)}
+        onClick={() => switchTab(value)}
         className={`flex shrink-0 items-center gap-2 whitespace-nowrap border-b-2 px-1 py-3.5 text-xs font-bold transition-colors cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[#C8102E] sm:text-sm ${
           active ? 'border-[#C8102E] text-[#C8102E]' : 'border-transparent text-slate-500 hover:text-slate-800'
         }`}
@@ -339,19 +414,50 @@ export function AihrDeliberationPage({ role = 'rpdu' }: AihrDeliberationPageProp
         })}
       </div>
 
-      {/* Underline Section Tabs (matches Preliminary Screening tabs) */}
-      <div className="border-b border-slate-200">
+      {/* Underline Section Tabs + Export Action */}
+      <div className="flex flex-col gap-3 border-b border-slate-200 sm:flex-row sm:items-end sm:justify-between">
         <div role="tablist" aria-label="AIHR and en banc views" className="flex space-x-6 overflow-x-auto sm:space-x-8">
           {tabButton('results', 'AIHR Results', ClipboardList, concepts.length)}
           {tabButton('attendance', 'Attendance', CalendarCheck, scheduledConcepts.length)}
           {tabButton('enbanc', 'En Banc Queue', Gavel, enBancQueue.length)}
         </div>
+        {tab !== 'attendance' && (() => {
+          const scope: 'all' | 'enbanc' = tab === 'enbanc' ? 'enbanc' : 'all';
+          const readyCount = scope === 'enbanc' ? enBancInstitutionalCount : loggedAihrCount;
+          const disabled = initialLoading || downloadingSummary || readyCount === 0;
+          return (
+            <button
+              type="button"
+              disabled={disabled}
+              onClick={() => void handleDownloadSummary(scope)}
+              title={readyCount === 0
+                ? 'Log at least one AIHR verdict first to generate the summary.'
+                : `Generate and download ${scope === 'enbanc' ? '5 AIHR-Result-Summary-En-Banc.docx' : '5 AIHR-Result-Summary.docx'} (WMSU-RPDU-FR-003.00)`}
+              className="mb-2 inline-flex min-h-10 shrink-0 items-center justify-center gap-2 rounded-sm border border-slate-300 bg-white px-3.5 py-2 text-xs font-semibold text-slate-800 shadow-2xs transition-colors hover:border-[#C8102E]/40 hover:bg-red-50/40 hover:text-[#C8102E] cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#C8102E] disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <Download className="h-4 w-4 shrink-0 text-[#C8102E]" aria-hidden="true" />
+              <span>
+                {downloadingSummary
+                  ? 'Generating…'
+                  : scope === 'enbanc'
+                    ? 'Export En Banc Summary (.docx)'
+                    : 'Export AIHR Summary (.docx)'}
+              </span>
+            </button>
+          );
+        })()}
       </div>
 
-      {/* Search & Stage Filter Toolbar */}
+      {summaryError && (
+        <p role="alert" className="rounded-sm border border-red-200 bg-red-50 px-4 py-3 text-xs font-medium text-red-800">
+          {summaryError}
+        </p>
+      )}
+
+      {/* Search, Status & Research Agenda Filter Toolbar */}
       <div className="rounded-sm border border-slate-200 bg-white p-3.5 shadow-2xs sm:p-4">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="relative min-w-0 flex-1 sm:max-w-md">
+        <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1fr)]">
+          <div className="relative min-w-0 sm:col-span-2 lg:col-span-1">
             <label className="relative block">
               <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
               <input
@@ -374,22 +480,70 @@ export function AihrDeliberationPage({ role = 'rpdu' }: AihrDeliberationPageProp
             </label>
           </div>
 
-          {activeStageCard && (
-            <div className="flex items-center gap-2">
-              <span className="inline-flex min-h-9 items-center gap-2 rounded-sm border border-red-200 bg-red-50/70 px-3 py-1 text-xs font-semibold text-[#C8102E]">
-                <span>Stage: {activeStageCard.label}</span>
-                <button
-                  type="button"
-                  onClick={() => setStageFilter(null)}
-                  className="rounded-sm p-0.5 text-[#C8102E] hover:bg-red-100 cursor-pointer"
-                  aria-label={`Clear ${activeStageCard.label} filter`}
-                >
-                  <X className="h-3.5 w-3.5" />
-                </button>
-              </span>
-            </div>
-          )}
+          <select
+            value={statusFilter}
+            onChange={(e) => {
+              setStatusFilter(e.target.value);
+              if (e.target.value !== 'all') setStageFilter(null);
+            }}
+            aria-label="Filter by status"
+            className="min-h-11 w-full min-w-0 rounded-sm border border-slate-200 bg-slate-50/60 px-3 text-sm font-medium text-slate-700 transition-colors focus:border-[#C8102E] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#C8102E]/20 cursor-pointer"
+          >
+            <option value="all">All Statuses</option>
+            {tab === 'attendance'
+              ? ATTENDANCE_STATUS_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>{option.label}</option>
+                ))
+              : (tab === 'enbanc' ? EN_BANC_STAGES : STAGE_ORDER).map((stage) => (
+                  <option key={stage} value={stage}>{STAGE_META[stage].label}</option>
+                ))}
+          </select>
+
+          <select
+            value={agendaFilter}
+            onChange={(e) => setAgendaFilter(e.target.value)}
+            aria-label="Filter by research agenda"
+            className="min-h-11 w-full min-w-0 rounded-sm border border-slate-200 bg-slate-50/60 px-3 text-sm font-medium text-slate-700 transition-colors focus:border-[#C8102E] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#C8102E]/20 cursor-pointer"
+          >
+            <option value="all">All Research Agendas</option>
+            {agendaOptions.map((agenda) => (
+              <option key={agenda} value={agenda}>{agenda}</option>
+            ))}
+          </select>
         </div>
+
+        {(filtering || activeStageCard) && (
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-2.5">
+            <div className="flex flex-wrap items-center gap-2">
+              <p role="status" aria-live="polite" className="text-xs font-medium text-slate-600 tabular-nums">
+                {tab === 'attendance'
+                  ? `${filteredSessions.reduce((sum, s) => sum + s.concepts.length, 0)} matching proposal${filteredSessions.reduce((sum, s) => sum + s.concepts.length, 0) === 1 ? '' : 's'}`
+                  : `${visible.length} matching proposal${visible.length === 1 ? '' : 's'}`}
+              </p>
+              {activeStageCard && (
+                <span className="inline-flex items-center gap-1.5 rounded-sm border border-red-200 bg-red-50/70 px-2.5 py-0.5 text-xs font-semibold text-[#C8102E]">
+                  <span>Stage: {activeStageCard.label}</span>
+                  <button
+                    type="button"
+                    onClick={() => setStageFilter(null)}
+                    className="rounded-sm p-0.5 text-[#C8102E] hover:bg-red-100 cursor-pointer"
+                    aria-label={`Clear ${activeStageCard.label} filter`}
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </span>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={clearFilters}
+              className="inline-flex items-center gap-1.5 rounded-sm px-2 py-1 text-xs font-semibold text-[#C8102E] transition-colors hover:bg-red-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#C8102E] cursor-pointer"
+            >
+              <RotateCcw aria-hidden="true" className="h-3.5 w-3.5 shrink-0" />
+              <span>Clear filters ({activeFilterCount})</span>
+            </button>
+          </div>
+        )}
       </div>
 
       {error && (

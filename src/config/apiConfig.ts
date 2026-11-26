@@ -134,6 +134,7 @@ export const API_ENDPOINTS = {
     PROXY_DECISION: (id: string) => `${API_BASE_URL}/aihr/proxy-requests/${encodeURIComponent(id)}`,
     INVITATION: (id: string) => `${API_BASE_URL}/aihr/concepts/${encodeURIComponent(id)}/invitation`,
     CONCEPTS: `${API_BASE_URL}/aihr/concepts`,
+    RESULT_SUMMARY_DOCX: `${API_BASE_URL}/aihr/result-summary/docx`,
     ATTENDANCE: (id: string) => `${API_BASE_URL}/aihr/concepts/${encodeURIComponent(id)}/attendance`,
     VERDICT: (id: string) => `${API_BASE_URL}/aihr/concepts/${encodeURIComponent(id)}/verdict`,
     DELIBERATION: (id: string) => `${API_BASE_URL}/aihr/concepts/${encodeURIComponent(id)}/deliberation`,
