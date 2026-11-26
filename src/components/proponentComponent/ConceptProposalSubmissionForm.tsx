@@ -111,8 +111,9 @@ const formatWindowDate = (date: string) => new Date(`${date}T00:00:00+08:00`).to
 
 export const ConceptProposalSubmissionForm: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
-  const restoredList = useLocation().state?.proposalList;
+  const restoredList = location.state?.proposalList;
   const { activeCall, loadingCalls, conceptProposals, loadingConceptProposals, screeningError, refreshConceptProposals, submitConceptProposal, showToast } = useCallForProposals({ calls: true, concepts: true });
   const { user, profile, session } = useAuth();
   const [confirmedCallId, setConfirmedCallId] = useState<string | null>(null);
@@ -127,12 +128,21 @@ export const ConceptProposalSubmissionForm: React.FC = () => {
   const titleErrorId = useId();
 
   // Tab View: 'submit' | 'my-submissions' | 'tracker'
-  const initialTab = searchParams.get('tab') === 'tracker' ? 'tracker' : 'my-submissions';
-  const [activeTab, setActiveTab] = useState<'submit' | 'my-submissions' | 'tracker'>(initialTab);
+  const [selectedTab, setSelectedTab] = useState<'submit' | 'my-submissions' | 'tracker' | null>(() => {
+    if (searchParams.get('tab') === 'tracker') return 'tracker';
+    if (location.pathname === '/proponent/submit') return 'submit';
+    if (restoredList) return 'my-submissions';
+    return null;
+  });
+  const defaultTab: 'submit' | 'my-submissions' =
+    !loadingConceptProposals && mySubmissions.length === 0 && canSubmit
+      ? 'submit'
+      : 'my-submissions';
+  const rawTab = selectedTab ?? defaultTab;
+  const activeTab: 'submit' | 'my-submissions' | 'tracker' =
+    rawTab === 'submit' && !loadingCalls && !canSubmit ? 'my-submissions' : rawTab;
+  const setActiveTab = (tab: 'submit' | 'my-submissions' | 'tracker') => setSelectedTab(tab);
   const [trackerProposalId, setTrackerProposalId] = useState<string | null>(() => searchParams.get('proposal'));
-  useEffect(() => {
-    if (!loadingCalls && !canSubmit && activeTab === 'submit') setActiveTab('my-submissions');
-  }, [loadingCalls, canSubmit, activeTab]);
 
   // 1. Research Agenda State
   const [selectedAgendas, setSelectedAgendas] = useState<string[]>([]);

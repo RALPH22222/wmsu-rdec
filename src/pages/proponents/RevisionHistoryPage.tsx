@@ -95,7 +95,7 @@ export function RevisionHistoryPage() {
         <div className="space-y-6">
           {proposals.length > 1 && <div className="rounded-sm border border-slate-200 bg-white p-5 sm:p-6">
             <label htmlFor={`${ids}-proposal`} className="mb-2 block text-sm font-semibold text-slate-700">Select a proposal</label>
-            <select id={`${ids}-proposal`} value={selected?.id ?? ''} onChange={(event) => { setSelectedId(event.target.value); setChosenTab(null); }} className="min-h-11 w-full min-w-0 rounded-sm border border-slate-300 bg-white px-3 py-2 text-base sm:text-sm text-slate-800 focus:border-[#C8102E] focus:outline-none focus:ring-2 focus:ring-[#C8102E]/20">
+            <select id={`${ids}-proposal`} value={selected?.id ?? ''} onChange={(event) => { setSelectedId(event.target.value); setChosenTab(null); }} className="min-h-11 w-full min-w-0 rounded-sm border border-slate-300 bg-white px-3 py-2 text-base font-bold text-slate-900 focus:border-[#C8102E] focus:outline-none focus:ring-2 focus:ring-[#C8102E]/20 sm:text-sm">
               {proposals.map((item) => <option key={item.id} value={item.id}>{item.title}</option>)}
             </select>
           </div>}
@@ -105,7 +105,7 @@ export function RevisionHistoryPage() {
               <ReturnedRevisionCard proposalId={selected.id} onCorrected={refresh} />
               <header className="rounded-sm border border-slate-200 bg-white p-5 shadow-xs sm:p-6">
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-2"><ProposalStatusBadge proposal={selected} size="sm" /><span className="text-sm text-slate-500">Round {selected.currentRound} · Submitted {formatDate(selected.submittedAt)}</span></div>
-                <h2 className="mt-4 border-l-4 border-[#C8102E] pl-3 break-words font-brand text-lg font-bold leading-snug text-slate-900 sm:text-xl">{selected.title}</h2>
+                <h2 className="mt-4 border-l-4 border-[#C8102E] pl-3 break-words text-lg font-bold leading-snug text-slate-900 sm:text-xl">{selected.title}</h2>
                 <div className="mt-5 flex flex-col gap-4 rounded-sm bg-slate-50 p-4 sm:flex-row sm:items-center sm:justify-between">
                   <div><p className="text-sm font-semibold text-slate-800">Next action</p><p className="mt-1 text-sm leading-relaxed text-slate-700">{selected.preReviewStage ? stageExplanation(selected.preReviewStage) : nextStepFor(selected.status, 'proponent')}</p></div>
                   {selected.status === 'APPROVED' && <button type="button" onClick={() => selectTab('post-approval')} className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-sm bg-[#C8102E] px-4 py-3 text-sm font-semibold text-white hover:bg-[#A00D26] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#C8102E]"><ClipboardCheck aria-hidden="true" className="h-5 w-5" />Complete post-approval documents</button>}

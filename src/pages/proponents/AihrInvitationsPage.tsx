@@ -76,7 +76,7 @@ function Invitation({ invitation, onSaved }: { invitation: ProponentAihrInvitati
   };
 
   return <article className="min-w-0 space-y-4 rounded-sm border border-slate-200 bg-white p-5 sm:p-6">
-    <h2 className="break-words border-l-4 border-[#C8102E] py-0.5 pl-3 text-xl font-semibold">{invitation.title}</h2>
+    <h2 className="break-words border-l-4 border-[#C8102E] py-0.5 pl-3 text-xl font-bold text-slate-900">{invitation.title}</h2>
     <div className="space-y-2 border border-slate-200 bg-slate-50 p-4">
       <p className="font-semibold">{AIHR_REPLY_LABELS[invitation.response.status]}</p>
       {invitation.response.replyDeadline && <p className="text-sm text-slate-600">Reply by {formatSubmissionDateTime(invitation.response.replyDeadline)} (Philippine time). You have 2 days after the invitation is sent.</p>}
@@ -234,7 +234,7 @@ export function ProponentAihrInvitationsPage() {
                 setSelectedId(event.target.value);
                 setMessage('');
               }}
-              className="min-h-11 w-full min-w-0 rounded-sm border border-slate-300 bg-white px-3 py-2 text-base text-slate-800 focus:border-[#C8102E] focus:outline-none focus:ring-2 focus:ring-[#C8102E]/20 sm:text-sm"
+              className="min-h-11 w-full min-w-0 rounded-sm border border-slate-300 bg-white px-3 py-2 text-base font-bold text-slate-900 focus:border-[#C8102E] focus:outline-none focus:ring-2 focus:ring-[#C8102E]/20 sm:text-sm"
             >
               {invitations.map((item) => (
                 <option key={item.conceptId} value={item.conceptId}>{item.title}</option>
