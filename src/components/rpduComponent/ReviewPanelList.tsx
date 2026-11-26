@@ -203,7 +203,7 @@ export function ReviewPanelList({
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="rounded-none bg-slate-900 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wider text-white">{seat.blindLabel}</span>
+                    <span className="rounded-none bg-[#C8102E] px-2 py-0.5 text-[11px] font-bold uppercase tracking-wider text-white">{seat.blindLabel}</span>
                     <span className="break-words text-sm font-semibold text-slate-900">{seat.evaluatorName}</span>
                     {isEmailOnly && (
                       <span className="inline-flex items-center gap-1 rounded-none border border-blue-200 bg-blue-50 px-2 py-0.5 text-[11px] font-bold text-blue-800">
