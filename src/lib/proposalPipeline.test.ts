@@ -61,6 +61,7 @@ test('anonymityGateReason blocks only the third seat while RPDU has not checked 
 
 test('every status and recommendation has display metadata', () => {
   assert.equal(Object.keys(STATUS_META).length, 8);
+  assert.equal(new Set(Object.values(STATUS_META).map((meta) => meta.tone)).size, 8);
   assert.equal(STATUS_META.FORWARDED_TO_REO.tone, 'emerald');
   assert.equal(isTerminalStatus('FORWARDED_TO_REO'), true);
   assert.equal(isTerminalStatus('OUTSOURCED'), true);

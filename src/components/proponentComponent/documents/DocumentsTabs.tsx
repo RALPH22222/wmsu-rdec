@@ -1,10 +1,12 @@
 import type { KeyboardEvent } from 'react';
+import type { LucideIcon } from 'lucide-react';
 import type { DocumentFilter } from './types';
 
 export interface DocumentsTab {
   key: DocumentFilter;
   label: string;
   count: number;
+  icon: LucideIcon;
 }
 
 interface DocumentsTabsProps {
@@ -31,10 +33,11 @@ export function DocumentsTabs({ tabs, active, onChange, idPrefix }: DocumentsTab
       role="tablist"
       aria-label="Filter documents by type"
       onKeyDown={onKeyDown}
-      className="grid grid-cols-4 gap-1 border-b border-slate-200 sm:flex"
+      className="flex flex-wrap items-center gap-1 border-b border-slate-200 sm:gap-2"
     >
       {tabs.map((tab) => {
         const selected = tab.key === active;
+        const Icon = tab.icon;
         return (
           <button
             key={tab.key}
@@ -45,16 +48,15 @@ export function DocumentsTabs({ tabs, active, onChange, idPrefix }: DocumentsTab
             aria-controls={`${idPrefix}-panel`}
             tabIndex={selected ? 0 : -1}
             onClick={() => onChange(tab.key)}
-            className={`-mb-px inline-flex min-h-11 cursor-pointer items-center justify-center gap-1 border-b-2 px-1 text-xs font-semibold transition-colors sm:shrink-0 sm:justify-start sm:gap-2 sm:px-3 sm:text-sm focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[#C8102E] ${
-              selected ? 'border-[#C8102E] text-[#C8102E]' : 'border-transparent text-slate-600 hover:border-slate-300 hover:text-slate-900'
+            className={`-mb-px inline-flex min-h-11 shrink-0 cursor-pointer items-center gap-2 whitespace-nowrap border-b-2 px-3 py-3 text-sm font-bold transition-all sm:px-4 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[#C8102E] ${
+              selected
+                ? 'border-[#C8102E] text-[#C8102E]'
+                : 'border-transparent text-slate-500 hover:text-slate-800'
             }`}
           >
-            {tab.label}
-            <span
-              className={`min-w-6 rounded-full px-1.5 py-0.5 text-center text-[11px] font-bold tabular-nums ${
-                selected ? 'bg-[#C8102E] text-white' : 'bg-slate-100 text-slate-600'
-              }`}
-            >
+            <Icon aria-hidden="true" className="h-4 w-4 shrink-0" />
+            <span>{tab.label}</span>
+            <span className="ml-1 rounded-full bg-slate-200 px-1.5 py-0.5 text-center text-[10px] font-bold tabular-nums text-slate-700">
               {tab.count}
             </span>
           </button>

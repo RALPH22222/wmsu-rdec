@@ -35,7 +35,10 @@ function ConceptStageList({ concepts }: { concepts: PendingConcept[] }) {
               <p className="border-l-4 border-[#C8102E] pl-3 break-words text-base font-semibold leading-snug text-slate-900">{concept.title}</p>
               <p className="mt-2 text-sm leading-relaxed text-slate-600">{stageExplanation(concept.stage)}</p>
             </div>
-            <span className={`inline-flex shrink-0 items-center self-start rounded-none border px-3 py-1.5 text-xs font-semibold ${tone.badge}`}>{stage.label}</span>
+            <span className={`inline-flex shrink-0 items-center gap-1.5 self-start rounded-none border px-3 py-1.5 text-xs font-semibold ${tone.badge}`}>
+              <span aria-hidden="true" className={`h-1.5 w-1.5 shrink-0 rounded-full ${tone.dot}`} />
+              {stage.label}
+            </span>
           </li>
         );
       })}

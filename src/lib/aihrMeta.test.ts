@@ -5,6 +5,8 @@ import { OUTCOME_META, STAGE_META, STAGE_ORDER, VERDICT_META, stageExplanation }
 test('every stage, verdict and outcome has display metadata', () => {
   assert.deepEqual(STAGE_ORDER, ['AWAITING_DETAILED', 'AWAITING_AIHR', 'QUEUED_FOR_EN_BANC', 'CLEARED', 'DETAILED_SUBMITTED', 'OUTSOURCED', 'AIHR_FAILED', 'NOT_APPROVED']);
   assert.equal(STAGE_META.AWAITING_AIHR.label, 'Ready for AIHR');
+  assert.equal(STAGE_META.AWAITING_AIHR.tone, 'sky');
+  assert.equal(new Set(Object.values(STAGE_META).map((stage) => stage.tone)).size, STAGE_ORDER.length);
   assert.equal(STAGE_META.QUEUED_FOR_EN_BANC.tone, 'amber');
   assert.equal(STAGE_META.CLEARED.tone, 'emerald');
   assert.equal(STAGE_META.DETAILED_SUBMITTED.tone, 'blue');

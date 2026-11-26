@@ -11,7 +11,7 @@ interface InteractiveSectionProps {
 export const InteractiveSection: React.FC<InteractiveSectionProps> = ({
   processSteps,
   onOpenTemplateModal,
-  templateDocxUrl = '/DOST_Form_No.1b.docx',
+  templateDocxUrl = '/Concept_Proposal_Template.docx',
 }) => {
   const [mobileStep, setMobileStep] = useState(0);
 
@@ -26,7 +26,7 @@ export const InteractiveSection: React.FC<InteractiveSectionProps> = ({
   const handleDownload = () => {
     const link = document.createElement('a');
     link.href = templateDocxUrl;
-    link.download = 'DOST-Project-Proposal-Template.docx';
+    link.download = 'Concept-Proposal-Template.docx';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -36,7 +36,7 @@ export const InteractiveSection: React.FC<InteractiveSectionProps> = ({
     <section id="interactive" className="py-20 bg-gradient-to-b from-white to-gray-50">
       <div className="max-w-7xl mx-auto px-6 lg:px-8">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
-          {/* Left Column: DOST Form 1B Template Card */}
+          {/* Left Column: Concept Proposal Template Card */}
           <div className="order-2 lg:order-1">
             <div className="mb-3">
               <span className="inline-block px-3 py-1 text-xs font-semibold rounded-full bg-red-50 text-red-700 border border-red-200">
@@ -45,11 +45,11 @@ export const InteractiveSection: React.FC<InteractiveSectionProps> = ({
             </div>
 
             <h2 className="text-3xl md:text-4xl font-bold mb-6 bg-gradient-to-r from-gray-800 to-red-700 bg-clip-text text-transparent">
-              Research Proposal Template
+              Concept Proposal Template
             </h2>
 
             <p className="text-lg text-gray-600 mb-8 leading-relaxed">
-              Use our standardized DOST Form 1B template to ensure your research proposal meets all requirements. This template follows the official CAPSULE Research &amp; Development Proposal format for proper documentation and faster approval.
+              Use our standardized Concept Proposal template to ensure your research proposal meets all requirements for proper documentation and faster review.
             </p>
 
             <div className="bg-white rounded-2xl shadow-xl p-6 transform hover:shadow-[0_20px_50px_rgba(128,0,0,0.15)] transition-all duration-300 border border-gray-100">
@@ -65,8 +65,8 @@ export const InteractiveSection: React.FC<InteractiveSectionProps> = ({
                   </svg>
                 </div>
                 <div>
-                  <h3 className="text-xl font-semibold text-gray-800">DOST Form 1B Template</h3>
-                  <p className="text-gray-600 text-sm">CAPSULE Research &amp; Development Proposal</p>
+                  <h3 className="text-xl font-semibold text-gray-800">Concept Proposal Template</h3>
+                  <p className="text-gray-600 text-sm">WMSU RDEC Concept Proposal</p>
                 </div>
               </div>
 
@@ -81,7 +81,7 @@ export const InteractiveSection: React.FC<InteractiveSectionProps> = ({
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-2 h-2 bg-red-600 rounded-full" />
-                  <span className="text-sm text-gray-600">Compliant with DOST guidelines</span>
+                  <span className="text-sm text-gray-600">Compliant with WMSU RDEC guidelines</span>
                 </div>
               </div>
 

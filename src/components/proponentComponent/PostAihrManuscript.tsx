@@ -38,7 +38,8 @@ export function PostAihrManuscript({ proposal, onSaved }: { proposal: ProponentP
           <div className="rounded-none border border-slate-200 bg-slate-50 p-4 text-slate-700">
             <div className="flex flex-wrap items-center gap-2">
               <p className="font-semibold text-slate-900">AIHR outcome:</p>
-              <span className={`inline-flex items-center rounded-none border px-2.5 py-1 text-xs font-semibold ${tone.badge}`}>
+              <span className={`inline-flex items-center gap-1.5 rounded-none border px-2.5 py-1 text-xs font-semibold ${tone.badge}`}>
+                <span aria-hidden="true" className={`h-1.5 w-1.5 shrink-0 rounded-full ${tone.dot}`} />
                 {verdict.label}
               </span>
             </div>

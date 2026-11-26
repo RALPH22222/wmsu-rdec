@@ -78,7 +78,7 @@ const defaultFaq: FAQData = {
           id: 'q_sub_1',
           question: 'What documents are required for proposal submission?',
           answer:
-            'Required documents include: completed DOST Form 1B, project timeline, budget breakdown, and endorsement from department head.',
+            'Required documents include: completed Concept Proposal, project timeline, budget breakdown, and endorsement from department head.',
         },
         {
           id: 'q_sub_2',

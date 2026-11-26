@@ -22,7 +22,7 @@ export const MAX_ACTION_SHEET_COMMENT_LENGTH = 7000;
 export const MAX_OTHER_COMMENTS_LENGTH = 5000;
 export const MAX_COVER_NOTE_LENGTH = 2000;
 
-export type StatusTone = 'slate' | 'blue' | 'amber' | 'emerald' | 'red';
+export type StatusTone = 'slate' | 'sky' | 'blue' | 'indigo' | 'violet' | 'amber' | 'orange' | 'teal' | 'emerald' | 'rose' | 'red';
 
 export interface StatusMeta {
   label: string;
@@ -33,12 +33,12 @@ export interface StatusMeta {
 export const STATUS_META: Record<PipelineStatus, StatusMeta> = {
   PENDING_ASSIGNMENT: { label: 'Awaiting Evaluators', description: 'Fewer than three evaluators assigned', tone: 'slate' },
   UNDER_REVIEW: { label: 'Under Review', description: 'Technical review in progress', tone: 'blue' },
-  AWAITING_SUMMARY: { label: 'Evaluations being summarised', description: 'All evaluations are in; the RPDU Head is compiling the summary', tone: 'slate' },
+  AWAITING_SUMMARY: { label: 'Evaluations being summarised', description: 'All evaluations are in; the RPDU Head is compiling the summary', tone: 'violet' },
   REVISION_REQUESTED: { label: 'Revision Requested', description: 'Proponent must upload a revised manuscript', tone: 'amber' },
-  APPROVED: { label: 'Approved', description: 'Cleared by the technical review panel', tone: 'emerald' },
+  APPROVED: { label: 'Approved', description: 'Cleared by the technical review panel', tone: 'teal' },
   REJECTED: { label: 'Rejected', description: 'Not endorsed by the technical review panel', tone: 'red' },
   FORWARDED_TO_REO: { label: 'Forwarded to REO', description: 'Technical review complete; forwarded to the Research Ethics Office', tone: 'emerald' },
-  OUTSOURCED: { label: 'Outsourced', description: 'Endorsed outside the university workflow', tone: 'slate' },
+  OUTSOURCED: { label: 'Outsourced', description: 'Endorsed outside the university workflow', tone: 'indigo' },
 };
 
 /** The proponent's attestation wording; the same sentence the backend requires on every manuscript upload. */

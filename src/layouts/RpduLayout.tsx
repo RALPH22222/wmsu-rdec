@@ -17,6 +17,7 @@ export const RpduLayout: React.FC = () => {
     if (location.pathname.startsWith('/rpdu/letters')) return 'Official Letters';
     if (location.pathname.startsWith('/rpdu/memos') || location.pathname.startsWith('/rpdu/aihr-memos')) return 'Official Memoranda Desk';
     if (location.pathname.startsWith('/rpdu/outsourced-projects')) return 'Outsourced Projects';
+    if (location.pathname.startsWith('/rpdu/aihr-invitations')) return 'AIHR Invitations';
     if (location.pathname.startsWith('/rpdu/aihr')) return 'AIHR & En Banc Deliberation';
     if (location.pathname.startsWith('/rpdu/screening')) return 'Preliminary Screening — Concept Proposals';
     if (location.pathname.startsWith('/rpdu/clearance')) return 'Technical Review Clearance (COTR)';

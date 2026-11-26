@@ -220,3 +220,26 @@ input[type="time"]::-webkit-calendar-picker-indicator {
   cursor: pointer;
   margin-right: 0.5rem;
 }
+
+/* Notification bell ring animation on hover/focus */
+@keyframes bellRing {
+  0% { transform: rotate(0deg); }
+  12% { transform: rotate(16deg); }
+  26% { transform: rotate(-14deg); }
+  40% { transform: rotate(11deg); }
+  54% { transform: rotate(-8deg); }
+  68% { transform: rotate(5deg); }
+  82% { transform: rotate(-2deg); }
+  100% { transform: rotate(0deg); }
+}
+
+.bell-ring-target {
+  transform-origin: 50% 15%;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .group:hover .bell-ring-target,
+  .group:focus-visible .bell-ring-target {
+    animation: bellRing 0.65s ease-in-out;
+  }
+}

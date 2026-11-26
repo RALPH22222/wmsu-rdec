@@ -13,6 +13,7 @@ export default function Layout() {
     if (location.pathname.startsWith('/proponent/proposals/')) return 'Concept Proposal Details & Feedback';
     if (location.pathname === '/proponent/profile') return 'Institutional Profile & Affiliation';
     if (location.pathname === '/proponent/detailed-proposals') return 'Detailed Proposal Submission Hub';
+    if (location.pathname === '/proponent/aihr-invitations') return 'AIHR Invitations';
     if (location.pathname === '/proponent/external-funding') return 'External Funding Endorsement Request';
     if (location.pathname === '/proponent/budget') return 'Line-Item Budget Allocation';
     if (location.pathname.startsWith('/proponent/memos/preview') || location.pathname.includes('/memos/') && location.pathname.includes('/preview')) {

@@ -4,14 +4,14 @@ import type { StatusTone } from './proposalPipeline.ts';
 export interface StageMeta { label: string; description: string; tone: StatusTone }
 
 export const STAGE_META: Record<AihrStage, StageMeta> = {
-  AWAITING_DETAILED: { label: 'Awaiting detailed proposal', description: 'Passed screening; collect the detailed proposal before AIHR', tone: 'amber' },
-  AWAITING_AIHR: { label: 'Ready for AIHR', description: 'Detailed proposal received; scheduling and review are handled on the AIHR page', tone: 'slate' },
+  AWAITING_DETAILED: { label: 'Awaiting detailed proposal', description: 'Passed screening; collect the detailed proposal before AIHR', tone: 'orange' },
+  AWAITING_AIHR: { label: 'Ready for AIHR', description: 'Detailed proposal received; scheduling and review are handled on the AIHR page', tone: 'sky' },
   QUEUED_FOR_EN_BANC: { label: 'Queued for en banc', description: 'Conditionally approved at the AIHR; awaiting deliberation', tone: 'amber' },
   CLEARED: { label: 'Cleared for technical review', description: 'AIHR and any required en banc approval are complete', tone: 'emerald' },
   DETAILED_SUBMITTED: { label: 'Technical review started', description: 'In the technical review pipeline', tone: 'blue' },
   AIHR_FAILED: { label: 'Did not qualify (AIHR)', description: 'Below the qualifying mark or failed at the AIHR presentation', tone: 'red' },
-  OUTSOURCED: { label: 'Outsourced', description: 'Conditionally approved and endorsed outside the university workflow', tone: 'slate' },
-  NOT_APPROVED: { label: 'Not approved (en banc)', description: 'The en banc deliberation did not approve it for implementation', tone: 'red' },
+  OUTSOURCED: { label: 'Outsourced', description: 'Conditionally approved and endorsed outside the university workflow', tone: 'indigo' },
+  NOT_APPROVED: { label: 'Not approved (en banc)', description: 'The en banc deliberation did not approve it for implementation', tone: 'rose' },
 };
 
 export const STAGE_ORDER: AihrStage[] = ['AWAITING_DETAILED', 'AWAITING_AIHR', 'QUEUED_FOR_EN_BANC', 'CLEARED', 'DETAILED_SUBMITTED', 'OUTSOURCED', 'AIHR_FAILED', 'NOT_APPROVED'];

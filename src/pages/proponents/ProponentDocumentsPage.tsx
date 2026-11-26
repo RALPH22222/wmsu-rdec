@@ -313,10 +313,10 @@ export default function ProponentDocumentsPage() {
     .sort((a, b) => b.latest - a.latest);
 
   const tabs: DocumentsTab[] = [
-    { key: 'ALL', label: 'All', count: totalCount },
-    { key: 'LETTERS', label: 'Letters', count: letters.length },
-    { key: 'COTR', label: 'Clearances', count: clearances.length },
-    { key: 'PSC', label: 'Contracts', count: proposals.length },
+    { key: 'ALL', label: 'All', count: totalCount, icon: Inbox },
+    { key: 'LETTERS', label: 'Letters', count: letters.length, icon: MailCheck },
+    { key: 'COTR', label: 'Clearances', count: clearances.length, icon: FileCheck },
+    { key: 'PSC', label: 'Contracts', count: proposals.length, icon: FileSignature },
   ];
 
   const renderEntry = (entry: DocumentEntry) => {

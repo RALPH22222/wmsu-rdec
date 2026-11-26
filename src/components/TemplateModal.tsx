@@ -10,8 +10,8 @@ interface TemplateModalProps {
 export const TemplateModal: React.FC<TemplateModalProps> = ({
   isOpen,
   onClose,
-  templateUrl = '/DOST_Form_No.1b.pdf',
-  templateDocxUrl = '/DOST_Form_No.1b.docx',
+  templateUrl = '/Concept_Proposal_Template.pdf',
+  templateDocxUrl = '/Concept_Proposal_Template.docx',
 }) => {
   React.useEffect(() => {
     if (isOpen) {
@@ -28,7 +28,7 @@ export const TemplateModal: React.FC<TemplateModalProps> = ({
   const handleDownloadWord = () => {
     const link = document.createElement('a');
     link.href = templateDocxUrl;
-    link.download = 'DOST-Project-Proposal-Template.docx';
+    link.download = 'Concept-Proposal-Template.docx';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -67,10 +67,10 @@ export const TemplateModal: React.FC<TemplateModalProps> = ({
             </div>
             <div>
               <h2 className="text-xl font-bold text-[#C8102E] tracking-tight">
-                DOST Project Proposal Template
+                Concept Proposal Template
               </h2>
               <p className="text-slate-500 text-xs mt-0.5 font-normal">
-                DOST Form No. 1B (Preview Mode)
+                Concept Proposal (Preview Mode)
               </p>
             </div>
           </div>
@@ -81,7 +81,7 @@ export const TemplateModal: React.FC<TemplateModalProps> = ({
           <div className="w-full h-full bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
             <iframe
               src={`${templateUrl}#view=FitH`}
-              title="DOST Proposal Template Document"
+              title="Concept Proposal Template Document"
               className="w-full h-full border-none"
             />
           </div>

@@ -1,4 +1,4 @@
-import { useRef, useState, type FormEvent } from 'react';
+import { useId, useRef, useState, type FormEvent } from 'react';
 import { Download, RefreshCw } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useAsyncResource } from '../../hooks/useAsyncResource';
@@ -75,7 +75,7 @@ function Invitation({ invitation, onSaved }: { invitation: ProponentAihrInvitati
     finally { setBusy(false); running.current = false; }
   };
 
-  return <li className="min-w-0 space-y-4 rounded-sm border border-slate-200 bg-white p-5 sm:p-6">
+  return <article className="min-w-0 space-y-4 rounded-sm border border-slate-200 bg-white p-5 sm:p-6">
     <h2 className="break-words border-l-4 border-[#C8102E] py-0.5 pl-3 text-xl font-semibold">{invitation.title}</h2>
     <div className="space-y-2 border border-slate-200 bg-slate-50 p-4">
       <p className="font-semibold">{AIHR_REPLY_LABELS[invitation.response.status]}</p>
@@ -184,18 +184,27 @@ function Invitation({ invitation, onSaved }: { invitation: ProponentAihrInvitati
           }} className={`${inputClass} file:mr-3 file:rounded-sm file:border-0 file:bg-slate-100 file:px-3 file:py-2`} /></label>
           {reasonFile && <div className="flex flex-wrap items-center gap-3 text-sm"><p className="min-w-0 break-words">{reasonFile.name} - PDF - {(reasonFile.size / 1024).toFixed(1)} KB</p><button type="button" onClick={() => { setReasonFile(null); if (fileInput.current) fileInput.current.value = ''; }} className={buttonClass}>Remove PDF</button></div>}
           <button type="submit" className={`${buttonClass} border-brand bg-brand text-white enabled:hover:bg-brand-dark`}>{busy ? 'Submitting…' : 'Submit proxy for approval'}</button></fieldset></form></details>}
-  </li>;
+  </article>;
 }
 
 export function ProponentAihrInvitationsPage() {
   const resource = useAsyncResource<ProponentAihrInvitation[]>(async (signal, token) => (await request<ProponentAihrInvitation[]>(API_ENDPOINTS.AIHR.MY_INVITATIONS, token, {}, signal)).data, []);
   const [message, setMessage] = useState('');
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const ids = useId();
+  const invitations = resource.data ?? [];
+  const selected = invitations.find((item) => item.conceptId === selectedId) ?? invitations[0] ?? null;
+
   return <section className="space-y-6 text-slate-900"><header className="flex flex-wrap items-start justify-between gap-4"><div><h1 className="text-2xl font-bold">AIHR Invitations</h1><p className="mt-2 max-w-3xl text-base text-slate-600">View your AIHR schedule and track RPDU’s decision on a proxy request.</p></div><button type="button" disabled={resource.loading} onClick={resource.refresh} className={buttonClass}><RefreshCw aria-hidden="true" className="h-4 w-4" />Refresh invitations</button></header>
     {message && <p role="status" className="text-emerald-800">{message}</p>}
     {resource.loading && <div role="status">
       <span className="sr-only">Loading your invitations…</span>
       <div aria-hidden="true" className="space-y-6 motion-safe:animate-pulse">
-        {[0, 1].map((card) => <div key={card} className="space-y-4 rounded-sm border border-slate-200 bg-white p-5 sm:p-6">
+        <div className="space-y-2 rounded-sm border border-slate-200 bg-white p-5 sm:p-6">
+          <div className="h-4 w-32 rounded-sm bg-slate-200" />
+          <div className="h-11 w-full rounded-sm bg-slate-100" />
+        </div>
+        <div className="space-y-4 rounded-sm border border-slate-200 bg-white p-5 sm:p-6">
           <div className="border-l-4 border-slate-200 py-0.5 pl-3"><div className="h-7 w-2/3 rounded-sm bg-slate-200" /></div>
           <div className="space-y-3 border border-slate-200 bg-slate-50 p-4">
             <div className="h-5 w-40 max-w-full rounded-sm bg-slate-200" />
@@ -207,11 +216,35 @@ export function ProponentAihrInvitationsPage() {
             {[0, 1, 2].map((field) => <div key={field} className="space-y-2"><div className="h-4 w-20 rounded-sm bg-slate-100" /><div className="h-5 w-32 max-w-full rounded-sm bg-slate-200" /></div>)}
           </div>
           <div className="space-y-2 border-t border-slate-200 pt-4"><div className="h-5 w-64 max-w-full rounded-sm bg-slate-200" /><div className="h-4 w-full rounded-sm bg-slate-100" /><div className="h-4 w-3/4 rounded-sm bg-slate-100" /><div className="h-12 w-56 max-w-full rounded-sm bg-slate-200" /></div>
-        </div>)}
+        </div>
       </div>
     </div>}
     {resource.error && <p role="alert" className="text-red-700">{resource.error} Use Refresh invitations to retry.</p>}
-    {!resource.loading && !resource.error && (!resource.data?.length ? <div className="rounded-sm border border-slate-200 bg-white p-6"><h2 className="text-xl font-semibold">No AIHR invitations yet</h2><p className="mt-2 text-base text-slate-600">Your invitation will appear here after RPDU sends it.</p></div> : <ul className="space-y-6">{resource.data.map((invitation) => <Invitation key={invitation.conceptId} invitation={invitation} onSaved={(notice) => { setMessage(notice); resource.refresh(); }} />)}</ul>)}
+    {!resource.loading && !resource.error && (!selected ? (
+      <div className="rounded-sm border border-slate-200 bg-white p-6"><h2 className="text-xl font-semibold">No AIHR invitations yet</h2><p className="mt-2 text-base text-slate-600">Your invitation will appear here after RPDU sends it.</p></div>
+    ) : (
+      <div className="space-y-6">
+        {invitations.length > 1 && (
+          <div className="rounded-sm border border-slate-200 bg-white p-5 sm:p-6">
+            <label htmlFor={`${ids}-proposal`} className="mb-2 block text-sm font-semibold text-slate-700">Select a proposal</label>
+            <select
+              id={`${ids}-proposal`}
+              value={selected.conceptId}
+              onChange={(event) => {
+                setSelectedId(event.target.value);
+                setMessage('');
+              }}
+              className="min-h-11 w-full min-w-0 rounded-sm border border-slate-300 bg-white px-3 py-2 text-base text-slate-800 focus:border-[#C8102E] focus:outline-none focus:ring-2 focus:ring-[#C8102E]/20 sm:text-sm"
+            >
+              {invitations.map((item) => (
+                <option key={item.conceptId} value={item.conceptId}>{item.title}</option>
+              ))}
+            </select>
+          </div>
+        )}
+        <Invitation key={selected.conceptId} invitation={selected} onSaved={(notice) => { setMessage(notice); resource.refresh(); }} />
+      </div>
+    ))}
   </section>;
 }
 

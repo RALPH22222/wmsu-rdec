@@ -134,9 +134,9 @@ export const SubmissionPeriodPortal: React.FC<SubmissionPeriodPortalProps> = ({ 
     {
       step: '01',
       title: 'Download Official Template',
-      description: 'Acquire DOST Form 1B and review the prescribed proposal format, line-item budget requirements, and work plan template.',
-      actionLabel: 'Download Form 1B',
-      actionUrl: '/DOST_Form_No.1b.docx',
+      description: 'Download the Concept Proposal template and review the prescribed proposal format, line-item budget requirements, and work plan template.',
+      actionLabel: 'Download Concept Proposal',
+      actionUrl: '/Concept_Proposal_Template.docx',
       isDownload: true,
     },
     {
@@ -242,11 +242,11 @@ export const SubmissionPeriodPortal: React.FC<SubmissionPeriodPortalProps> = ({ 
                   {isClosed ? <LockKeyhole className="h-4 w-4" /> : <ArrowRight className="h-4 w-4" />}
                 </button>
                 <a
-                  href="/DOST_Form_No.1b.docx"
+                  href="/Concept_Proposal_Template.docx"
                   download
                   className="inline-flex min-h-12 items-center justify-center gap-2 rounded-none border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#C8102E]"
                 >
-                  <Download className="h-4 w-4" /> Download Proposal Template
+                  <Download className="h-4 w-4" /> Download Concept Proposal Template
                 </a>
               </div>
               <a href="#how-to-submit" className="mt-4 inline-flex min-h-11 items-center gap-2 text-sm font-medium text-slate-600 underline decoration-slate-300 underline-offset-4 hover:text-[#C8102E] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#C8102E]">
@@ -539,16 +539,16 @@ export const SubmissionPeriodPortal: React.FC<SubmissionPeriodPortalProps> = ({ 
             <div className="space-y-2 text-center md:text-left">
               <h3 className="text-lg sm:text-xl font-bold text-slate-900 flex items-center justify-center md:justify-start gap-2">
                 <FileText className="w-5 h-5 text-[#C8102E]" />
-                <span>Official DOST Form No. 1B (Detailed Proposal)</span>
+                <span>Official Concept Proposal Template</span>
               </h3>
               <p className="text-sm sm:text-base font-normal text-slate-600 max-w-xl leading-relaxed">
-                Download the prescribed proposal template. Ensure all required sections including the line-item budget, work plan, and proponent details are complete prior to submission.
+                Download the prescribed concept proposal template. Ensure all required sections including the line-item budget, work plan, and proponent details are complete prior to submission.
               </p>
             </div>
 
             <div className="flex flex-col sm:flex-row items-center gap-3 shrink-0 w-full sm:w-auto">
               <a
-                href="/DOST_Form_No.1b.docx"
+                href="/Concept_Proposal_Template.docx"
                 download
                 className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-none font-semibold text-xs sm:text-sm text-white bg-[#C8102E] hover:bg-[#A00D26] shadow-xs hover:shadow transition-all"
               >
@@ -556,7 +556,7 @@ export const SubmissionPeriodPortal: React.FC<SubmissionPeriodPortalProps> = ({ 
                 <span>Download Word (.docx)</span>
               </a>
               <a
-                href="/DOST_Form_No.1b.pdf"
+                href="/Concept_Proposal_Template.pdf"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-none font-medium text-xs sm:text-sm text-slate-700 bg-slate-50 hover:bg-slate-100 border border-slate-200 transition-colors"

@@ -49,7 +49,7 @@ export const Footer: React.FC = () => {
                 </a>
               </li>
               <li>
-                <a href="/DOST_Form_No.1b.docx" download className="hover:text-[#C8102E] transition-colors inline-flex items-center gap-1">
+                <a href="/Concept_Proposal_Template.docx" download className="hover:text-[#C8102E] transition-colors inline-flex items-center gap-1">
                   <span>Concept Proposal Template</span>
                   <Download className="w-3 h-3 text-slate-400" />
                 </a>

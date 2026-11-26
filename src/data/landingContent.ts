@@ -170,7 +170,7 @@ export const landingContent: LandingContent = {
     ]
   },
   templates: {
-    research_url: "/DOST_Form_No.1b.docx",
+    research_url: "/Concept_Proposal_Template.docx",
     project_url: "",
     lib_template_url: "",
     lib_sample_url: ""
@@ -178,7 +178,7 @@ export const landingContent: LandingContent = {
   process_steps: [
     {
       title: "Download & Submit Documentation",
-      description: "Ensure you have your DOST project proposal template ready and all required fields are properly filled out. Proceed to the Submission page to submit your proposal. Double-check all information before submitting, as it cannot be edited unless the R&D requests a revision."
+      description: "Ensure you have your Concept Proposal template ready and all required fields are properly filled out. Proceed to the Submission page to submit your proposal. Double-check all information before submitting, as it cannot be edited unless the R&D requests a revision."
     },
     {
       title: "Admin Checking & Assignment",
@@ -243,7 +243,7 @@ export const landingContent: LandingContent = {
           {
             id: "q_sub_1",
             question: "What documents are required for proposal submission?",
-            answer: "Required documents include: completed DOST Form 1B, project timeline, budget breakdown, and endorsement from department head."
+            answer: "Required documents include: completed Concept Proposal, project timeline, budget breakdown, and endorsement from department head."
           },
           {
             id: "q_sub_2",

@@ -95,7 +95,10 @@ export function ConceptProposalDetailsPage() {
         : proposal ? <>
           <header className="space-y-3">
             <h1 className="break-words text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">{proposal.screeningStatus === 'pending' ? 'Proposal details' : 'Preliminary-screening feedback'}</h1>
-            <span className={`inline-flex rounded-none border px-3 py-1.5 text-sm font-semibold ${proposal.screeningStatus === 'passed' ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : proposal.screeningStatus === 'failed' ? 'border-rose-200 bg-rose-50 text-rose-700' : 'border-amber-200 bg-amber-50 text-amber-800'}`}>{proposal.screeningStatus === 'passed' ? 'Passed Preliminary Screening' : proposal.screeningStatus === 'failed' ? 'Failed Preliminary Screening' : 'Under Preliminary Screening'}</span>
+            <span className={`inline-flex items-center gap-2 rounded-none border px-3 py-1.5 text-sm font-semibold ${proposal.screeningStatus === 'passed' ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : proposal.screeningStatus === 'failed' ? 'border-rose-200 bg-rose-50 text-rose-700' : 'border-amber-200 bg-amber-50 text-amber-800'}`}>
+              <span aria-hidden="true" className={`h-2 w-2 shrink-0 rounded-full ${proposal.screeningStatus === 'passed' ? 'bg-emerald-500' : proposal.screeningStatus === 'failed' ? 'bg-rose-500' : 'bg-amber-500 animate-pulse'}`} />
+              {proposal.screeningStatus === 'passed' ? 'Passed Preliminary Screening' : proposal.screeningStatus === 'failed' ? 'Failed Preliminary Screening' : 'Under Preliminary Screening'}
+            </span>
           </header>
           {proposal.screeningStatus !== 'pending' ? <ScreeningFeedback key={proposal.id} proposal={proposal} size="sm" readOnly defaultOpen /> : <p className="rounded-sm border border-amber-200 bg-amber-50 p-5 text-sm leading-relaxed text-amber-900">Your proposal is awaiting preliminary screening. No comments have been recorded yet.</p>}
           {proposal.screeningStatus === 'passed' && <PassedScreeningLetter key={proposal.id} proposalId={proposal.id} />}
