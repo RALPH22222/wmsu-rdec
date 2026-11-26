@@ -107,8 +107,8 @@ function NotificationInbox({ token }: { token: string }) {
   }}>
     <button ref={trigger} type="button" aria-label={`Notifications${feed ? `, ${count} unread` : ''}`} aria-expanded={open} aria-controls={panelId}
       onClick={() => { setOpen((value) => !value); if (!open && !saving.current) { setLoading(true); void refresh(); } }}
-      className={`group relative inline-flex min-h-11 min-w-11 cursor-pointer items-center justify-center rounded-sm text-slate-600 hover:bg-slate-100 hover:text-slate-900 ${focus}`}>
-      <Bell aria-hidden="true" size={20} className="bell-ring-target" />
+      className={`notification-bell-btn relative inline-flex min-h-11 min-w-11 cursor-pointer items-center justify-center rounded-sm text-slate-600 hover:bg-slate-100 hover:text-slate-900 ${focus}`}>
+      <span className="bell-ring-target"><Bell aria-hidden="true" size={20} /></span>
       {count > 0 && <span aria-hidden="true" className="absolute -right-1 -top-1 min-w-5 rounded-full bg-brand px-1 text-center text-xs font-semibold leading-5 text-white">{count > 99 ? '99+' : count}</span>}
     </button>
     {open && <section id={panelId} aria-label="Notifications" className="fixed left-3 right-3 top-20 max-h-[calc(100dvh-6rem)] overflow-y-auto rounded-sm border border-slate-200 bg-white text-slate-900 shadow-sm sm:absolute sm:left-auto sm:right-0 sm:top-full sm:mt-2 sm:w-96">
