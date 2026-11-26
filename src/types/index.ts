@@ -806,6 +806,7 @@ export interface AihrConcept {
   researchAgenda: string;
   proposedBudget: number;
   proponent: { id: string; name: string; email: string | null; department: string | null };
+  submittedAt?: string | null;
   screenedAt: string | null;
   stage: AihrStage;
   aihr: AihrResult | null;

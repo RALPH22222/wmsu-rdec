@@ -3,10 +3,15 @@ import { proposalResearchAgendas } from './researchAgendas.ts';
 
 export type ConsolidationPopulation = 'all-received' | 'screening-passed';
 
+const submittedTime = (proposal: ConceptProposal): number => {
+  const parsed = Date.parse(proposal.submittedTimestamp || proposal.submittedAt || '');
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
 export const consolidateProposals = (proposals: ConceptProposal[], minimum = '', maximum = '', callId = 'all', population: ConsolidationPopulation = 'all-received') => {
   const rows = proposals.filter((p) => (population === 'all-received' || p.screeningStatus === 'passed') && (callId === 'all' || p.callId === callId) &&
     (minimum === '' || p.budgetRequested >= Number(minimum)) && (maximum === '' || p.budgetRequested <= Number(maximum)))
-    .sort((a, b) => a.thematicArea.localeCompare(b.thematicArea) || b.budgetRequested - a.budgetRequested || a.title.localeCompare(b.title));
+    .sort((a, b) => (submittedTime(b) - submittedTime(a)) || a.thematicArea.localeCompare(b.thematicArea) || b.budgetRequested - a.budgetRequested || a.title.localeCompare(b.title));
   const agendas = new Map<string, { agenda: string; count: number; budget: number; passed: number; detailed: number }>();
   for (const row of rows) {
     for (const agenda of proposalResearchAgendas(row)) {

@@ -48,3 +48,10 @@ test('all received includes ten submissions while screening passed includes only
   assert.equal(consolidateProposals(searched, '', '', 'call', 'all-received').totalBudget, 100);
   assert.equal(consolidateProposals(searched, '', '', 'call', 'screening-passed').totalBudget, 0);
 });
+
+test('compilation orders latest submitted proposals first ahead of older titles', () => {
+  const older = proposal('old', 'Agriculture', 500, { title: 'Alpha Old', submittedTimestamp: '2026-10-01T08:00:00Z' });
+  const latest = proposal('new', 'Technology', 100, { title: 'Zeta Latest', submittedTimestamp: '2026-11-27T08:00:00Z' });
+  const result = consolidateProposals([older, latest]);
+  assert.deepEqual(result.rows.map((p) => p.id), ['new', 'old']);
+});

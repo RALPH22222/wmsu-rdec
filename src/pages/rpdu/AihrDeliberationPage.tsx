@@ -72,11 +72,18 @@ const agendasOf = (item: AihrConcept): string[] =>
     .map((part) => part.trim())
     .filter(Boolean);
 
-const byStageThenTitle = (a: AihrConcept, b: AihrConcept) =>
-  STAGE_ORDER.indexOf(a.stage) - STAGE_ORDER.indexOf(b.stage) || a.title.localeCompare(b.title);
+const timestampOf = (value?: string | null): number => {
+  const parsed = Date.parse(value || '');
+  return Number.isFinite(parsed) ? parsed : 0;
+};
 
-const queuedFirst = (a: AihrConcept, b: AihrConcept) =>
-  Number(b.stage === 'QUEUED_FOR_EN_BANC') - Number(a.stage === 'QUEUED_FOR_EN_BANC') || a.title.localeCompare(b.title);
+const latestTimestampOf = (item: AihrConcept): number =>
+  timestampOf(item.submittedAt) || timestampOf(item.detailedProposal?.submittedAt) || timestampOf(item.screenedAt);
+
+const byLatestFirst = (a: AihrConcept, b: AihrConcept) =>
+  (latestTimestampOf(b) - latestTimestampOf(a))
+  || (timestampOf(b.screenedAt) - timestampOf(a.screenedAt))
+  || a.title.localeCompare(b.title);
 
 const SKELETON_TITLE_WIDTHS = ['w-3/4', 'w-2/3', 'w-4/5'] as const;
 
@@ -246,8 +253,8 @@ export function AihrDeliberationPage({ role = 'rpdu' }: AihrDeliberationPageProp
       const matchesStatus = statusFilter === 'all' || item.stage === statusFilter;
       return matchesQuery && matchesAgenda && matchesStatus;
     };
-    if (tab === 'enbanc') return enBancQueue.filter(matches).sort(queuedFirst);
-    return concepts.filter((item) => (!stageFilter || stageFilter.includes(item.stage)) && matches(item)).sort(byStageThenTitle);
+    if (tab === 'enbanc') return enBancQueue.filter(matches).sort(byLatestFirst);
+    return concepts.filter((item) => (!stageFilter || stageFilter.includes(item.stage)) && matches(item)).sort(byLatestFirst);
   }, [concepts, enBancQueue, query, stageFilter, statusFilter, agendaFilter, tab]);
 
   const { page, items: pagedConcepts } = paginate(

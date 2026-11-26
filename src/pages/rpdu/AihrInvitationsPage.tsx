@@ -132,7 +132,9 @@ export function AihrInvitationsPage({ role = 'rpdu' }: { role?: 'rpdu' | 'admin'
       setVenueOpen(true);
     });
   };
-  const proxyRows = callConcepts.flatMap((item) => [...(item.invitation?.proxy_requests || []), ...(item.invitation?.proxy_history || [])].map((proxy) => ({ item, proxy })));
+  const proxyRows = callConcepts
+    .flatMap((item) => [...(item.invitation?.proxy_requests || []), ...(item.invitation?.proxy_history || [])].map((proxy) => ({ item, proxy })))
+    .sort((a, b) => (Date.parse(b.proxy.requested_at || '') || 0) - (Date.parse(a.proxy.requested_at || '') || 0));
   const replaceInvitation = (id: string, invitation: AihrInvitationRecord) => resource.setData((rows) => rows?.map((row) => {
     if (row.id !== id) return row;
     const proxies = [...(row.invitation?.proxy_requests || []), ...(row.invitation?.proxy_history || [])];

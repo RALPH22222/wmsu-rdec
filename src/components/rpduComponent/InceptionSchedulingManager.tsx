@@ -699,7 +699,7 @@ export const InceptionSchedulingManager: React.FC = () => {
     if (statusFilter === 'completed' && meeting.status !== 'completed') return false;
     if (statusFilter === 'other' && meeting.status !== 'rescheduled' && meeting.status !== 'cancelled') return false;
     return true;
-  });
+  }).sort((a, b) => (Date.parse(b.createdAt || b.updatedAt || '') || 0) - (Date.parse(a.createdAt || a.updatedAt || '') || 0));
 
   const renderSoStatusBadge = (soStatus?: string, size: 'sm' | 'md' = 'sm') => {
     const normalized = normalizeSpecialOrderStatus(soStatus);
