@@ -4,7 +4,7 @@ import { request } from '../../lib/apiRequest';
 import { downloadSeatNdaTemplate, type EmailSubmissionInput } from '../../lib/pipelineApi';
 import { ACCEPTED_NDA_TYPES, MAX_UPLOAD_BYTES } from '../../lib/proposalPipeline';
 import { useId, useState } from 'react';
-import { CheckCircle2, Circle, Clock, Download, Mail, ShieldCheck, ShieldX, Upload, UserMinus, XCircle } from 'lucide-react';
+import { CheckCircle2, Circle, Clock, Download, Mail, ShieldCheck, ShieldX, Upload, UserMinus, UserX, XCircle } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import type { PipelineStatus, RpduReview } from '../../types';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
@@ -195,6 +195,8 @@ export function ReviewPanelList({
           const hasDocuments = Boolean(seat.assessmentFileUrl || seat.actionSheetUrl || seat.nda.fileUrl);
           const hasCurrentSubmission = seat.submissions.some((s) => s.round === currentRound);
           const needsNdaBeforeSharing = proposalStatus === 'UNDER_REVIEW' && !hasCurrentSubmission && seat.nda.state !== 'VERIFIED';
+          const isDeactivated = !isEmailOnly && Boolean(seat.evaluatorDeactivated);
+          const proposalOpen = !['APPROVED', 'REJECTED', 'FORWARDED_TO_REO', 'OUTSOURCED'].includes(proposalStatus || '');
 
           return (
             <li key={seat.id} className="rounded-sm border border-slate-200 bg-white p-4 shadow-xs">
@@ -209,6 +211,12 @@ export function ReviewPanelList({
                         Email-only
                       </span>
                     )}
+                    {isDeactivated && (
+                      <span className="inline-flex items-center gap-1 rounded-none border border-rose-200 bg-rose-50 px-2 py-0.5 text-[11px] font-bold text-rose-800">
+                        <UserX className="h-3 w-3" aria-hidden="true" />
+                        Account deactivated
+                      </span>
+                    )}
                   </div>
                   <p className="mt-1 break-all text-xs text-slate-500">
                     {seat.department || (isEmailOnly ? 'External email-only reviewer' : 'No department')}
@@ -221,6 +229,12 @@ export function ReviewPanelList({
               <ol className="mt-3 grid gap-2 sm:grid-cols-4" aria-label={`${seat.blindLabel} progress`}>
                 {seatSteps(seat, currentRound).map((step) => <ProgressStep key={step.label} step={step} />)}
               </ol>
+
+              {isDeactivated && !hasCurrentSubmission && proposalOpen && (
+                <p className="mt-2 rounded-sm border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-900">
+                  This evaluator&apos;s account is deactivated and cannot submit via the portal. Reactivate their account in the Evaluators roster, remove and replace this seat, or record an e-mailed evaluation once their NDA is verified.
+                </p>
+              )}
 
               {seat.nda.state === 'REQUIRED' && seat.nda.reportedEmailedAt && (
                 <p className="mt-2 rounded-sm border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-900">

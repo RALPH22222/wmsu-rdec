@@ -7,6 +7,8 @@ import {
   CheckCircle2,
   ChevronDown,
   ClipboardList,
+  Clock,
+  FileText,
   Gavel,
   MapPin,
   RotateCcw,
@@ -16,10 +18,8 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import type { AihrConcept, AihrStage } from '../../types';
-import type { StatusTone } from '../../lib/proposalPipeline';
 import { STAGE_ORDER } from '../../lib/aihrMeta';
 import { useAihrConcepts } from '../../hooks/useAihrConcepts';
-import { StatCard } from '../../components/ui/StatCard';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { Pagination } from '../../components/ui/Pagination';
 import { DocumentLink } from '../../components/ui/DocumentLink';
@@ -34,7 +34,7 @@ interface AihrDeliberationPageProps { role?: 'rpdu' | 'admin' }
 
 type Tab = 'results' | 'attendance' | 'enbanc';
 
-interface StageCard { label: string; stages: AihrStage[]; tone: StatusTone; icon: LucideIcon }
+interface StageCard { label: string; subtitle: string; stages: AihrStage[]; icon: LucideIcon }
 
 interface AttendanceSession {
   key: string;
@@ -45,11 +45,11 @@ interface AttendanceSession {
 }
 
 const STAGE_CARDS: StageCard[] = [
-  { label: 'Awaiting manuscript', stages: ['AWAITING_DETAILED'], tone: 'amber', icon: ClipboardList },
-  { label: 'Awaiting verdict', stages: ['AWAITING_AIHR'], tone: 'slate', icon: ClipboardList },
-  { label: 'En banc queue', stages: ['QUEUED_FOR_EN_BANC'], tone: 'amber', icon: Gavel },
-  { label: 'Cleared', stages: ['CLEARED', 'DETAILED_SUBMITTED'], tone: 'emerald', icon: CheckCircle2 },
-  { label: 'Closed', stages: ['AIHR_FAILED', 'NOT_APPROVED'], tone: 'red', icon: XCircle },
+  { label: 'Awaiting Manuscript', subtitle: 'Pending Detailed File', stages: ['AWAITING_DETAILED'], icon: FileText },
+  { label: 'Awaiting Verdict', subtitle: 'Requires AIHR Outcome', stages: ['AWAITING_AIHR'], icon: Clock },
+  { label: 'En Banc Queue', subtitle: 'Conditionally Approved', stages: ['QUEUED_FOR_EN_BANC'], icon: Gavel },
+  { label: 'Cleared', subtitle: 'For Technical Review', stages: ['CLEARED', 'DETAILED_SUBMITTED'], icon: CheckCircle2 },
+  { label: 'Closed', subtitle: 'Failed or Not Approved', stages: ['AIHR_FAILED', 'NOT_APPROVED'], icon: XCircle },
 ];
 
 /** Grid spans per stat card (see the grid below): phones 2 columns, tablets 6 (3 + 2 halves), desktop 5. */
@@ -60,10 +60,6 @@ const byStageThenTitle = (a: AihrConcept, b: AihrConcept) =>
 
 const queuedFirst = (a: AihrConcept, b: AihrConcept) =>
   Number(b.stage === 'QUEUED_FOR_EN_BANC') - Number(a.stage === 'QUEUED_FOR_EN_BANC') || a.title.localeCompare(b.title);
-
-const TAB_BASE = 'inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-sm px-4 text-sm font-semibold transition-colors cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#C8102E] sm:flex-none';
-const TAB_ACTIVE = 'bg-[#C8102E] text-white shadow-xs';
-const TAB_INACTIVE = 'border border-slate-200 bg-slate-50 text-slate-700 hover:border-slate-300 hover:bg-slate-100 hover:text-slate-900';
 
 const SKELETON_TITLE_WIDTHS = ['w-3/4', 'w-2/3', 'w-4/5'] as const;
 
@@ -273,7 +269,7 @@ export function AihrDeliberationPage({ role = 'rpdu' }: AihrDeliberationPageProp
 
   const initialLoading = loading && concepts.length === 0;
 
-  const tabButton = (value: Tab, label: string, count: number) => {
+  const tabButton = (value: Tab, label: string, Icon: LucideIcon, count: number) => {
     const active = tab === value;
     return (
       <button
@@ -283,79 +279,87 @@ export function AihrDeliberationPage({ role = 'rpdu' }: AihrDeliberationPageProp
         aria-selected={active}
         aria-controls={`${ids}-panel`}
         onClick={() => setTab(value)}
-        className={`${TAB_BASE} ${active ? TAB_ACTIVE : TAB_INACTIVE}`}
+        className={`flex shrink-0 items-center gap-2 whitespace-nowrap border-b-2 px-1 py-3.5 text-xs font-bold transition-colors cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[#C8102E] sm:text-sm ${
+          active ? 'border-[#C8102E] text-[#C8102E]' : 'border-transparent text-slate-500 hover:text-slate-800'
+        }`}
       >
+        <Icon className="h-4 w-4" aria-hidden="true" />
         <span>{label}</span>
-        <span className={`rounded-sm px-2 py-0.5 text-xs font-bold tabular-nums ${active ? 'bg-white/20 text-white' : 'bg-white text-slate-700 border border-slate-200/80'}`}>
-          {initialLoading ? (
-            <span
-              aria-hidden="true"
-              className={`inline-block h-3 w-4 rounded-xs align-middle motion-safe:animate-pulse ${active ? 'bg-white/40' : 'bg-slate-200'}`}
-            />
-          ) : count}
-        </span>
+        {initialLoading ? (
+          <span aria-hidden="true" className="ml-1 inline-block h-4 w-6 rounded-full bg-slate-200 motion-safe:animate-pulse" />
+        ) : (
+          <span className="ml-1 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-600 tabular-nums">
+            {count}
+          </span>
+        )}
       </button>
     );
   };
 
   return (
-    <section className="mx-auto max-w-7xl space-y-5" aria-label="AIHR &amp; En Banc Deliberation">
-      <div className="grid grid-cols-2 gap-3.5 sm:grid-cols-6 lg:grid-cols-5">
-        {STAGE_CARDS.map((card, index) => (
-          <div key={card.label} className={STAT_CARD_SPANS[index]}>
-            <StatCard
-              label={card.label}
-              value={
-                initialLoading ? (
-                  <>
-                    <span className="inline-block h-8 w-12 rounded-sm bg-slate-200 motion-safe:animate-pulse align-middle" aria-hidden="true" />
-                    <span className="sr-only">Loading</span>
-                  </>
-                ) : counts(card.stages)
-              }
-              icon={card.icon}
-              tone={card.tone}
+    <section className="mx-auto max-w-7xl space-y-6" aria-label="AIHR &amp; En Banc Deliberation">
+      {/* Metric Counters (matches Preliminary Screening layout) */}
+      <div className="grid grid-cols-2 gap-3 text-xs sm:grid-cols-6 lg:grid-cols-5">
+        {STAGE_CARDS.map((card, index) => {
+          const Icon = card.icon;
+          const active = tab === 'results' && stageFilter === card.stages;
+          return (
+            <button
+              key={card.label}
+              type="button"
+              aria-pressed={active}
               onClick={() => toggleFilter(card.stages)}
-              active={tab === 'results' && stageFilter === card.stages}
-            />
-          </div>
-        ))}
+              className={`${STAT_CARD_SPANS[index]} flex flex-col justify-between rounded-sm border bg-white p-3.5 text-left shadow-2xs transition-colors hover:bg-slate-50/50 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#C8102E] ${
+                active ? 'border-[#C8102E] ring-1 ring-[#C8102E]/20' : 'border-slate-200/90'
+              }`}
+            >
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                  {card.label}
+                </span>
+                <Icon className="h-3.5 w-3.5 shrink-0 text-slate-400" aria-hidden="true" />
+              </div>
+              <div className="mt-2">
+                {initialLoading ? (
+                  <>
+                    <span className="sr-only">Loading</span>
+                    <span aria-hidden="true" className="block h-8 w-12 rounded-sm bg-slate-200 motion-safe:animate-pulse" />
+                  </>
+                ) : (
+                  <span className="block text-2xl font-black tracking-tight text-slate-900 tabular-nums">
+                    {counts(card.stages)}
+                  </span>
+                )}
+                <span className="mt-0.5 block text-[11px] font-medium text-slate-500">
+                  {card.subtitle}
+                </span>
+              </div>
+            </button>
+          );
+        })}
       </div>
 
-      {/* Unified Workspace Toolbar */}
-      <div className="rounded-sm border border-slate-200 bg-white p-3.5 shadow-xs sm:p-4">
+      {/* Underline Section Tabs (matches Preliminary Screening tabs) */}
+      <div className="border-b border-slate-200">
+        <div role="tablist" aria-label="AIHR and en banc views" className="flex space-x-6 overflow-x-auto sm:space-x-8">
+          {tabButton('results', 'AIHR Results', ClipboardList, concepts.length)}
+          {tabButton('attendance', 'Attendance', CalendarCheck, scheduledConcepts.length)}
+          {tabButton('enbanc', 'En Banc Queue', Gavel, enBancQueue.length)}
+        </div>
+      </div>
+
+      {/* Search & Stage Filter Toolbar */}
+      <div className="rounded-sm border border-slate-200 bg-white p-3.5 shadow-2xs sm:p-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex flex-wrap items-center gap-2.5">
-            <div role="tablist" aria-label="AIHR and en banc views" className="flex w-full gap-2 sm:w-auto">
-              {tabButton('results', 'AIHR results', concepts.length)}
-              {tabButton('attendance', 'Attendance', scheduledConcepts.length)}
-              {tabButton('enbanc', 'En banc queue', enBancQueue.length)}
-            </div>
-
-            {activeStageCard && (
-              <span className="inline-flex min-h-9 items-center gap-2 rounded-sm border border-red-200 bg-red-50/70 px-3 py-1 text-xs font-semibold text-[#C8102E]">
-                <span>Stage: {activeStageCard.label}</span>
-                <button
-                  type="button"
-                  onClick={() => setStageFilter(null)}
-                  className="rounded-sm p-0.5 text-[#C8102E] hover:bg-red-100 cursor-pointer"
-                  aria-label={`Clear ${activeStageCard.label} filter`}
-                >
-                  <X className="h-3.5 w-3.5" />
-                </button>
-              </span>
-            )}
-          </div>
-
-          <div className="flex items-center gap-2 sm:w-80">
-            <label className="relative block flex-1">
+          <div className="relative min-w-0 flex-1 sm:max-w-md">
+            <label className="relative block">
               <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
               <input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder={tab === 'attendance' ? 'Search title, attendee, or venue' : 'Search title or proponent'}
                 aria-label="Search concepts"
-                className="min-h-11 w-full rounded-sm border border-slate-300 bg-slate-50/60 pl-10 pr-9 text-sm text-slate-800 placeholder:text-slate-400 transition-colors focus:border-[#C8102E] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#C8102E]"
+                className="min-h-11 w-full rounded-sm border border-slate-200 bg-slate-50/60 pl-10 pr-9 text-sm text-slate-800 placeholder:text-slate-400 transition-colors focus:border-[#C8102E] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#C8102E]/20"
               />
               {query && (
                 <button
@@ -369,6 +373,22 @@ export function AihrDeliberationPage({ role = 'rpdu' }: AihrDeliberationPageProp
               )}
             </label>
           </div>
+
+          {activeStageCard && (
+            <div className="flex items-center gap-2">
+              <span className="inline-flex min-h-9 items-center gap-2 rounded-sm border border-red-200 bg-red-50/70 px-3 py-1 text-xs font-semibold text-[#C8102E]">
+                <span>Stage: {activeStageCard.label}</span>
+                <button
+                  type="button"
+                  onClick={() => setStageFilter(null)}
+                  className="rounded-sm p-0.5 text-[#C8102E] hover:bg-red-100 cursor-pointer"
+                  aria-label={`Clear ${activeStageCard.label} filter`}
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </span>
+            </div>
+          )}
         </div>
       </div>
 

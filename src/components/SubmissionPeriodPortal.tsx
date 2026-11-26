@@ -393,7 +393,7 @@ export const SubmissionPeriodPortal: React.FC<SubmissionPeriodPortalProps> = ({ 
                 type="button"
                 onClick={() => setSelectedCategory('all')}
                 className={`min-h-11 px-4 py-2 rounded-none text-sm font-medium transition-colors cursor-pointer ${selectedCategory === 'all'
-                  ? 'bg-slate-900 text-white shadow-xs'
+                  ? 'bg-brand-dark text-white shadow-xs'
                   : 'bg-white text-slate-600 border border-slate-200 hover:border-slate-300'
                   }`}
               >

@@ -1,4 +1,5 @@
-import { AlertTriangle, CheckCircle2, Info, UserCheck, UserX } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { AlertTriangle, ArrowUpRight, CheckCircle2, Info, UserCheck, UserX } from 'lucide-react';
 import type { PipelineEvaluator } from '../../../types';
 import { ModalShell } from '../../ui/ModalShell';
 
@@ -6,6 +7,7 @@ interface EvaluatorAccountStatusModalProps {
   evaluator: PipelineEvaluator;
   action: 'deactivate' | 'reactivate';
   busy: boolean;
+  evaluationBasePath?: string;
   onClose: () => void;
   onConfirm: () => Promise<void>;
 }
@@ -14,6 +16,7 @@ export function EvaluatorAccountStatusModal({
   evaluator,
   action,
   busy,
+  evaluationBasePath = '/rpdu/evaluations',
   onClose,
   onConfirm,
 }: EvaluatorAccountStatusModalProps) {
@@ -121,7 +124,18 @@ export function EvaluatorAccountStatusModal({
                 <ul className="mt-2 space-y-1.5 border-t border-amber-200/80 pt-2">
                   {remainingProposals.map((item) => (
                     <li key={`${item.id}-${item.currentRound}`} className="flex items-baseline justify-between gap-2 text-amber-950">
-                      <span className="min-w-0 break-words font-semibold">{item.title}</span>
+                      {item.id ? (
+                        <Link
+                          to={`${evaluationBasePath}/${encodeURIComponent(item.id)}`}
+                          onClick={onClose}
+                          className="group inline-flex min-w-0 items-baseline gap-1 font-semibold text-amber-950 underline decoration-amber-400 underline-offset-2 hover:text-[#C8102E] hover:decoration-[#C8102E] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#C8102E]"
+                        >
+                          <span className="break-words">{item.title}</span>
+                          <ArrowUpRight aria-hidden="true" className="h-3.5 w-3.5 shrink-0 translate-y-0.5 text-amber-700 group-hover:text-[#C8102E]" />
+                        </Link>
+                      ) : (
+                        <span className="min-w-0 break-words font-semibold">{item.title}</span>
+                      )}
                       <span className="shrink-0 rounded-none border border-amber-300 bg-white px-1.5 py-0.5 text-[10px] font-bold text-amber-900">
                         Round {item.currentRound}
                       </span>

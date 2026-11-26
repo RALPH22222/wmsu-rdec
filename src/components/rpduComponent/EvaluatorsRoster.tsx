@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Clock, Eye, Mail, RefreshCw, RotateCcw, Search, UserCheck, UserPlus, UserX, X } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useCallForProposals } from '../../context/CallForProposalsContext';
@@ -26,7 +27,9 @@ type RosterRow =
 
 export function EvaluatorsRoster() {
   const { session, profile, user } = useAuth();
+  const { pathname } = useLocation();
   const { showToast } = useCallForProposals();
+  const evaluationBasePath = pathname.startsWith('/admin') ? '/admin/evaluations' : '/rpdu/evaluations';
   const isHead = profile?.role === 'ADMIN' || Boolean(profile?.is_rpdu_head || user?.user_metadata?.is_rpdu_head);
   const { data, loading, error, refresh, setData } = useAsyncResource<RosterPayload>(
     async (signal, token) => {
@@ -423,6 +426,7 @@ export function EvaluatorsRoster() {
           evaluator={statusAction.person}
           action={statusAction.action}
           busy={statusBusy}
+          evaluationBasePath={evaluationBasePath}
           onClose={() => { if (!statusBusy) setStatusAction(null); }}
           onConfirm={confirmAccountStatusChange}
         />

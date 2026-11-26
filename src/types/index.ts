@@ -344,6 +344,8 @@ export interface RpduReview {
   evaluatorId: string | null;
   evaluatorName: string;
   evaluatorEmail?: string | null;
+  evaluatorAccountStatus?: TemporaryEvaluatorAccountStatus | null;
+  evaluatorDeactivated?: boolean;
   department: string;
   blindLabel: string;
   status: ReviewRowStatus;

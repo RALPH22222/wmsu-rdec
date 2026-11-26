@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useId, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { getDepartments, updateProfile, type UserDepartment, type SexType } from '../../lib/api';
 import {
@@ -13,37 +13,116 @@ import {
   Clock,
 } from 'lucide-react';
 import { formatSubmissionDateTime } from '../../lib/format';
+import { formatUserFullName } from '../../utils/userUtils';
 import { DeactivationCountdown } from '../../components/ui/DeactivationCountdown';
 
 type ProfileTab = 'personal' | 'contact' | 'affiliation';
 
+interface RoleBadgeStyle {
+  label: string;
+  badgeClass: string;
+  avatarClass: string;
+}
+
+function getRoleBadgeStyle(role?: string | null, isRpduHead?: boolean): RoleBadgeStyle {
+  const normalized = String(role || '').toUpperCase();
+  if (normalized === 'ADMIN') {
+    return {
+      label: 'Administrator',
+      badgeClass: 'border-slate-900 bg-slate-900 text-white',
+      avatarClass: 'border-slate-900 bg-slate-900 text-white',
+    };
+  }
+  if (normalized === 'RPDU') {
+    if (isRpduHead) {
+      return {
+        label: 'RPDU Head',
+        badgeClass: 'border-amber-300 bg-amber-100 text-amber-900',
+        avatarClass: 'border-amber-300 bg-amber-100 text-amber-800',
+      };
+    }
+    return {
+      label: 'RPDU Staff',
+      badgeClass: 'border-slate-300 bg-slate-200/80 text-slate-800',
+      avatarClass: 'border-slate-200 bg-slate-100 text-slate-700',
+    };
+  }
+  if (normalized === 'EVALUATOR') {
+    return {
+      label: 'Technical Evaluator',
+      badgeClass: 'border-emerald-300 bg-emerald-100 text-emerald-900',
+      avatarClass: 'border-emerald-300 bg-emerald-100 text-emerald-800',
+    };
+  }
+  return {
+    label: 'Proponent',
+    badgeClass: 'border-red-200 bg-red-50 text-brand',
+    avatarClass: 'border-red-100 bg-red-50 text-brand',
+  };
+}
+
+const INPUT_CLASS =
+  'min-h-11 w-full rounded border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 transition-colors focus:border-[#C8102E] focus:outline-none focus:ring-2 focus:ring-[#C8102E]/20';
+
+const LABEL_CLASS = 'block text-xs font-semibold uppercase tracking-wider text-slate-600';
+
+const capitalizeWords = (str: string) => {
+  if (!str) return '';
+  return str.replace(/\b([a-z])/g, (c) => c.toUpperCase());
+};
+
+interface ProfileFormValues {
+  firstName: string;
+  middleName: string;
+  lastName: string;
+  suffix: string;
+  sex: SexType | '';
+  contactNumber: string;
+  departmentId: string;
+}
+
 export const ProfilePage: React.FC = () => {
   const { session, user, profile, loadingProfile, refreshProfile } = useAuth();
+  const tabIdPrefix = useId();
 
   const [activeTab, setActiveTab] = useState<ProfileTab>('personal');
   const [departments, setDepartments] = useState<UserDepartment[]>([]);
   const [loadingDepts, setLoadingDepts] = useState(true);
 
-  // Capitalize first letter of each word helper
-  const capitalizeWords = (str: string) => {
-    if (!str) return '';
-    return str.replace(/\b([a-z])/g, (c) => c.toUpperCase());
+  const initialValues: ProfileFormValues = {
+    firstName: capitalizeWords(profile?.first_name || user?.user_metadata?.first_name || ''),
+    middleName: capitalizeWords(profile?.middle_name || user?.user_metadata?.middle_name || ''),
+    lastName: capitalizeWords(profile?.last_name || user?.user_metadata?.last_name || ''),
+    suffix: capitalizeWords(profile?.suffix || user?.user_metadata?.suffix || ''),
+    sex: (profile?.sex || user?.user_metadata?.sex)
+      ? (String(profile?.sex || user?.user_metadata?.sex).toUpperCase() as SexType)
+      : '',
+    contactNumber: profile?.contact_number || user?.user_metadata?.contact_number || '',
+    departmentId: profile?.department_id
+      ? String(profile.department_id)
+      : user?.user_metadata?.department_id
+        ? String(user.user_metadata.department_id)
+        : '',
   };
 
-  // Form State for chopped names and attributes
-  const [firstName, setFirstName] = useState('');
-  const [middleName, setMiddleName] = useState('');
-  const [lastName, setLastName] = useState('');
-  const [suffix, setSuffix] = useState('');
-  const [sex, setSex] = useState<SexType | ''>('');
-  const [contactNumber, setContactNumber] = useState('');
-  const [departmentId, setDepartmentId] = useState<string>('');
+  const sourceKey = JSON.stringify([profile?.id ?? user?.id ?? '', initialValues]);
+  const [draft, setDraft] = useState<{ key: string; values: ProfileFormValues } | null>(null);
+  const values = draft && draft.key === sourceKey ? draft.values : initialValues;
+  const { firstName, middleName, lastName, suffix, sex, contactNumber, departmentId } = values;
+
+  const updateField = <K extends keyof ProfileFormValues>(field: K, value: ProfileFormValues[K]) => {
+    setDraft((prev) => {
+      const base = prev && prev.key === sourceKey ? prev.values : initialValues;
+      return { key: sourceKey, values: { ...base, [field]: value } };
+    });
+    if (errorMsg) setErrorMsg(null);
+    if (successMsg) setSuccessMsg(null);
+  };
 
   const [saving, setSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
-  // Fetch departments from backend
   useEffect(() => {
     let isMounted = true;
     getDepartments()
@@ -63,74 +142,24 @@ export const ProfilePage: React.FC = () => {
     };
   }, []);
 
-  // Sync profile data into form fields when loaded
-  useEffect(() => {
-    if (profile || user) {
-      const initialFirst = profile?.first_name || user?.user_metadata?.first_name || '';
-      const initialMiddle = profile?.middle_name || user?.user_metadata?.middle_name || '';
-      const initialLast = profile?.last_name || user?.user_metadata?.last_name || '';
-      const initialSuffix = profile?.suffix || user?.user_metadata?.suffix || '';
-      const rawSex = profile?.sex || user?.user_metadata?.sex || '';
-      const initialContact = profile?.contact_number || user?.user_metadata?.contact_number || '';
-      const initialDept = profile?.department_id
-        ? String(profile.department_id)
-        : user?.user_metadata?.department_id
-        ? String(user.user_metadata.department_id)
-        : '';
-
-      setFirstName(capitalizeWords(initialFirst));
-      setMiddleName(capitalizeWords(initialMiddle));
-      setLastName(capitalizeWords(initialLast));
-      setSuffix(capitalizeWords(initialSuffix));
-      setSex(rawSex ? (String(rawSex).toUpperCase() as SexType) : '');
-      setContactNumber(initialContact);
-      setDepartmentId(initialDept);
-    }
-  }, [profile, user]);
-
   const handleReset = () => {
     setErrorMsg(null);
     setSuccessMsg(null);
-    if (profile || user) {
-      const initialFirst = profile?.first_name || user?.user_metadata?.first_name || '';
-      const initialMiddle = profile?.middle_name || user?.user_metadata?.middle_name || '';
-      const initialLast = profile?.last_name || user?.user_metadata?.last_name || '';
-      const initialSuffix = profile?.suffix || user?.user_metadata?.suffix || '';
-      const rawSex = profile?.sex || user?.user_metadata?.sex || '';
-      const initialContact = profile?.contact_number || user?.user_metadata?.contact_number || '';
-      const initialDept = profile?.department_id
-        ? String(profile.department_id)
-        : user?.user_metadata?.department_id
-        ? String(user.user_metadata.department_id)
-        : '';
-
-      setFirstName(capitalizeWords(initialFirst));
-      setMiddleName(capitalizeWords(initialMiddle));
-      setLastName(capitalizeWords(initialLast));
-      setSuffix(capitalizeWords(initialSuffix));
-      setSex(rawSex ? (String(rawSex).toUpperCase() as SexType) : '');
-      setContactNumber(initialContact);
-      setDepartmentId(initialDept);
-    }
+    setDraft(null);
   };
 
-  // Capitalize first letter of each word automatically as the user types
   const handleNameInput = (
     value: string,
-    setter: (val: string) => void
+    field: 'firstName' | 'middleName' | 'lastName' | 'suffix',
   ) => {
-    const filtered = value.replace(/[^A-Za-z\s\-]/g, '');
+    const filtered = value.replace(/[^A-Za-z\s-]/g, '');
     const capitalized = filtered.replace(/\b([a-z])/g, (c) => c.toUpperCase());
-    setter(capitalized);
-    if (errorMsg) setErrorMsg(null);
-    if (successMsg) setSuccessMsg(null);
+    updateField(field, capitalized);
   };
 
   const handleContactInput = (value: string) => {
     const filtered = value.replace(/(?!^\+)[^\d]/g, '');
-    setContactNumber(filtered);
-    if (errorMsg) setErrorMsg(null);
-    if (successMsg) setSuccessMsg(null);
+    updateField('contactNumber', filtered);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -174,6 +203,7 @@ export const ProfilePage: React.FC = () => {
       });
 
       await refreshProfile();
+      setDraft(null);
       setSuccessMsg('Academic profile updated successfully.');
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Failed to update profile. Please try again.';
@@ -183,21 +213,28 @@ export const ProfilePage: React.FC = () => {
     }
   };
 
-  // Skeleton UI for loading state (Austere subtle light gray blocks)
   if (loadingProfile && !profile) {
     return (
-      <div className="max-w-4xl mx-auto space-y-6 animate-in fade-in duration-200">
-        <div className="h-10 w-80 bg-slate-100 rounded-sm" />
-        <div className="bg-white p-8 rounded-sm space-y-6">
-          <div className="h-5 w-40 bg-slate-100 rounded-sm" />
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div className="space-y-2">
-              <div className="h-3 w-24 bg-slate-100 rounded-sm" />
-              <div className="h-9 w-full bg-slate-100 rounded-sm" />
+      <div role="status" aria-busy="true" className="mx-auto max-w-4xl space-y-6">
+        <span className="sr-only">Loading institutional profile</span>
+        <div aria-hidden="true" className="space-y-6 motion-safe:animate-pulse">
+          <div className="flex items-center gap-4 rounded-sm border border-slate-200 bg-white p-5 sm:p-6">
+            <div className="h-14 w-14 shrink-0 rounded-sm bg-slate-200" />
+            <div className="min-w-0 flex-1 space-y-2">
+              <div className="h-5 w-52 max-w-full rounded-sm bg-slate-200" />
+              <div className="h-4 w-64 max-w-full rounded-sm bg-slate-100" />
             </div>
-            <div className="space-y-2">
-              <div className="h-3 w-24 bg-slate-100 rounded-sm" />
-              <div className="h-9 w-full bg-slate-100 rounded-sm" />
+          </div>
+          <div className="h-12 w-full border-b border-slate-200" />
+          <div className="space-y-6 rounded-sm border border-slate-200 bg-white p-6 sm:p-8">
+            <div className="h-5 w-44 rounded-sm bg-slate-200" />
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+              {[0, 1, 2, 3].map((idx) => (
+                <div key={idx} className="space-y-2">
+                  <div className="h-3 w-24 rounded-sm bg-slate-100" />
+                  <div className="h-11 w-full rounded bg-slate-100" />
+                </div>
+              ))}
             </div>
           </div>
         </div>
@@ -205,11 +242,28 @@ export const ProfilePage: React.FC = () => {
     );
   }
 
+  const resolvedRole = profile?.role || user?.user_metadata?.role || 'PROPONENT';
+  const isRpduHead = Boolean(profile?.is_rpdu_head || user?.user_metadata?.is_rpdu_head);
+  const roleStyle = getRoleBadgeStyle(resolvedRole, isRpduHead);
   const userEmail = profile?.email || session?.user?.email || 'N/A';
-  const assignedDept = departments.find((d) => String(d.id) === departmentId)?.name;
+  const assignedDept = departments.find((d) => String(d.id) === departmentId)?.name || profile?.departments?.name || '';
+  const displayName =
+    [firstName, middleName, lastName, suffix].filter((part) => part.trim()).join(' ').trim() ||
+    formatUserFullName(profile, user, roleStyle.label);
+  const initials = [firstName, lastName]
+    .map((part) => part.trim().charAt(0))
+    .filter(Boolean)
+    .join('')
+    .toUpperCase();
+
+  const tabs: { id: ProfileTab; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
+    { id: 'personal', label: 'Personal Details', icon: User },
+    { id: 'contact', label: 'Demographic & Contact', icon: Phone },
+    { id: 'affiliation', label: 'Academic Affiliation', icon: Building2 },
+  ];
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <div className="mx-auto max-w-4xl space-y-6">
       {profile?.role === 'EVALUATOR' && (profile.is_temporary_evaluator || profile.evaluator_closes_at) && (
         <div role="status" className="flex flex-col gap-3 rounded-sm border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-start gap-3">
@@ -231,60 +285,86 @@ export const ProfilePage: React.FC = () => {
           )}
         </div>
       )}
-      {/* Category Tab Navigation Table */}
-      <div className="flex items-center gap-1 bg-white p-1.5 rounded-sm shadow-2xs">
-        <button
-          type="button"
-          onClick={() => setActiveTab('personal')}
-          className={`flex-1 py-3 px-4 text-xs sm:text-sm font-semibold transition-all rounded-sm flex items-center justify-center gap-2 cursor-pointer border-b-2 ${
-            activeTab === 'personal'
-              ? 'text-red-800 border-red-800 bg-red-50/50'
-              : 'text-slate-500 hover:text-slate-900 border-transparent hover:bg-slate-50'
-          }`}
-        >
-          <User className="w-4 h-4 shrink-0" />
-          <span className="truncate">Personal Details</span>
-        </button>
 
-        <button
-          type="button"
-          onClick={() => setActiveTab('contact')}
-          className={`flex-1 py-3 px-4 text-xs sm:text-sm font-semibold transition-all rounded-sm flex items-center justify-center gap-2 cursor-pointer border-b-2 ${
-            activeTab === 'contact'
-              ? 'text-red-800 border-red-800 bg-red-50/50'
-              : 'text-slate-500 hover:text-slate-900 border-transparent hover:bg-slate-50'
-          }`}
-        >
-          <Phone className="w-4 h-4 shrink-0" />
-          <span className="truncate">Demographic & Contact</span>
-        </button>
+      {/* Institutional Profile Summary Banner */}
+      <section aria-label="Account summary" className="rounded-sm border border-slate-200 bg-white p-5 shadow-2xs sm:p-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex min-w-0 items-center gap-4">
+            <div
+              aria-hidden="true"
+              className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-sm border text-lg font-extrabold tracking-tight ${roleStyle.avatarClass}`}
+            >
+              {initials || <User className="h-6 w-6" strokeWidth={1.75} />}
+            </div>
+            <div className="min-w-0 space-y-1">
+              <div className="flex flex-wrap items-center gap-2.5">
+                <h2 className="min-w-0 break-words text-lg font-bold tracking-tight text-slate-900 sm:text-xl">
+                  {displayName}
+                </h2>
+                <span
+                  className={`inline-flex shrink-0 items-center rounded-none border px-2.5 py-0.5 text-[11px] font-extrabold uppercase tracking-wider ${roleStyle.badgeClass}`}
+                >
+                  {roleStyle.label}
+                </span>
+              </div>
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-600 sm:text-sm">
+                <span className="inline-flex min-w-0 items-center gap-1.5 break-all">
+                  <Mail className="h-3.5 w-3.5 shrink-0 text-slate-400" aria-hidden="true" />
+                  <span>{userEmail}</span>
+                </span>
+                {assignedDept && (
+                  <span className="inline-flex min-w-0 items-center gap-1.5">
+                    <Building2 className="h-3.5 w-3.5 shrink-0 text-slate-400" aria-hidden="true" />
+                    <span className="truncate">{assignedDept}</span>
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
 
-        <button
-          type="button"
-          onClick={() => setActiveTab('affiliation')}
-          className={`flex-1 py-3 px-4 text-xs sm:text-sm font-semibold transition-all rounded-sm flex items-center justify-center gap-2 cursor-pointer border-b-2 ${
-            activeTab === 'affiliation'
-              ? 'text-red-800 border-red-800 bg-red-50/50'
-              : 'text-slate-500 hover:text-slate-900 border-transparent hover:bg-slate-50'
-          }`}
-        >
-          <Building2 className="w-4 h-4 shrink-0" />
-          <span className="truncate">Academic Affiliation</span>
-        </button>
+      {/* Section Underline Tabs */}
+      <div className="border-b border-slate-200">
+        <div role="tablist" aria-label="Profile sections" className="flex space-x-6 overflow-x-auto sm:space-x-8">
+          {tabs.map((tab) => {
+            const Icon = tab.icon;
+            const active = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                role="tab"
+                id={`${tabIdPrefix}-tab-${tab.id}`}
+                aria-selected={active}
+                aria-controls={`${tabIdPrefix}-panel-${tab.id}`}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex min-h-11 shrink-0 items-center gap-2 whitespace-nowrap border-b-2 px-1 py-3 text-xs font-bold transition-colors cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[#C8102E] sm:text-sm ${
+                  active
+                    ? 'border-[#C8102E] text-[#C8102E]'
+                    : 'border-transparent text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
+                <span>{tab.label}</span>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
-      {/* Notifications */}
+      {/* Feedback Banners */}
       {errorMsg && (
-        <div className="p-4 bg-red-50 text-red-800 rounded-sm flex items-start gap-3">
-          <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
-          <div className="text-xs font-medium leading-relaxed">{errorMsg}</div>
+        <div role="alert" className="flex items-start gap-3 rounded-sm border border-red-200 bg-red-50 p-4 text-red-800">
+          <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
+          <div className="text-sm font-medium leading-relaxed">{errorMsg}</div>
         </div>
       )}
 
       {successMsg && (
-        <div className="p-4 bg-emerald-50 text-emerald-800 rounded-sm flex items-start gap-3">
-          <CheckCircle2 className="w-5 h-5 shrink-0 mt-0.5" />
-          <div className="text-xs font-medium leading-relaxed">{successMsg}</div>
+        <div role="status" className="flex items-start gap-3 rounded-sm border border-emerald-200 bg-emerald-50 p-4 text-emerald-800">
+          <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
+          <div className="text-sm font-medium leading-relaxed">{successMsg}</div>
         </div>
       )}
 
@@ -292,132 +372,108 @@ export const ProfilePage: React.FC = () => {
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* TAB 1: PERSONAL DETAILS */}
         {activeTab === 'personal' && (
-          <div className="bg-white p-6 sm:p-8 rounded-sm shadow-2xs space-y-6 animate-in fade-in duration-200">
-            <div className="space-y-1">
-              <h2 className="text-base font-semibold text-slate-900">
+          <div
+            role="tabpanel"
+            id={`${tabIdPrefix}-panel-personal`}
+            aria-labelledby={`${tabIdPrefix}-tab-personal`}
+            className="rounded-sm border border-slate-200 bg-white p-5 shadow-2xs sm:p-6 space-y-6"
+          >
+            <div className="space-y-1 border-b border-slate-100 pb-4">
+              <h3 className="text-base font-bold text-slate-900 sm:text-lg">
                 Personal Identification
-              </h2>
-              <p className="text-xs text-slate-500 font-normal">
+              </h3>
+              <p className="text-sm text-slate-600">
                 Enter your official name as recognized in university registries and research publications.
               </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-2">
+            <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
               {/* First Name */}
-              <div className="space-y-2">
-                <label
-                  htmlFor="firstName"
-                  className="text-xs uppercase tracking-wider text-slate-600 font-semibold block"
-                >
-                  First Name <span className="text-red-800">*</span>
+              <div className="space-y-1.5">
+                <label htmlFor="firstName" className={LABEL_CLASS}>
+                  First Name <span className="text-brand">*</span>
                 </label>
                 <div className="relative flex items-center">
-                  <User className="w-4 h-4 text-slate-400 absolute left-3 pointer-events-none" />
+                  <User className="pointer-events-none absolute left-3.5 h-4 w-4 text-slate-400" aria-hidden="true" />
                   <input
                     id="firstName"
                     type="text"
                     required
                     maxLength={50}
                     value={firstName}
-                    onChange={(e) => handleNameInput(e.target.value, setFirstName)}
+                    onChange={(e) => handleNameInput(e.target.value, 'firstName')}
                     placeholder="Enter your first name"
-                    className="w-full bg-slate-50/70 border-b border-slate-300 pl-9 pr-3 py-2 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-red-800 focus:bg-white transition-colors"
+                    className={`${INPUT_CLASS} pl-10`}
                   />
                 </div>
               </div>
 
               {/* Middle Name */}
-              <div className="space-y-2">
-                <label
-                  htmlFor="middleName"
-                  className="text-xs uppercase tracking-wider text-slate-600 font-semibold block"
-                >
+              <div className="space-y-1.5">
+                <label htmlFor="middleName" className={LABEL_CLASS}>
                   Middle Name
                 </label>
-                <div className="relative flex items-center">
-                  <input
-                    id="middleName"
-                    type="text"
-                    maxLength={50}
-                    value={middleName}
-                    onChange={(e) => handleNameInput(e.target.value, setMiddleName)}
-                    placeholder="Enter your middle name"
-                    className="w-full bg-slate-50/70 border-b border-slate-300 px-3 py-2 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-red-800 focus:bg-white transition-colors"
-                  />
-                </div>
+                <input
+                  id="middleName"
+                  type="text"
+                  maxLength={50}
+                  value={middleName}
+                  onChange={(e) => handleNameInput(e.target.value, 'middleName')}
+                  placeholder="Enter your middle name"
+                  className={INPUT_CLASS}
+                />
               </div>
 
               {/* Last Name */}
-              <div className="space-y-2">
-                <label
-                  htmlFor="lastName"
-                  className="text-xs uppercase tracking-wider text-slate-600 font-semibold block"
-                >
-                  Last Name <span className="text-red-800">*</span>
+              <div className="space-y-1.5">
+                <label htmlFor="lastName" className={LABEL_CLASS}>
+                  Last Name <span className="text-brand">*</span>
                 </label>
-                <div className="relative flex items-center">
-                  <input
-                    id="lastName"
-                    type="text"
-                    required
-                    maxLength={50}
-                    value={lastName}
-                    onChange={(e) => handleNameInput(e.target.value, setLastName)}
-                    placeholder="Enter your last name"
-                    className="w-full bg-slate-50/70 border-b border-slate-300 px-3 py-2 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-red-800 focus:bg-white transition-colors"
-                  />
-                </div>
+                <input
+                  id="lastName"
+                  type="text"
+                  required
+                  maxLength={50}
+                  value={lastName}
+                  onChange={(e) => handleNameInput(e.target.value, 'lastName')}
+                  placeholder="Enter your last name"
+                  className={INPUT_CLASS}
+                />
               </div>
 
               {/* Suffix */}
-              <div className="space-y-2">
-                <label
-                  htmlFor="suffix"
-                  className="text-xs uppercase tracking-wider text-slate-600 font-semibold block"
-                >
+              <div className="space-y-1.5">
+                <label htmlFor="suffix" className={LABEL_CLASS}>
                   Suffix
                 </label>
-                <div className="relative flex items-center">
-                  <input
-                    id="suffix"
-                    type="text"
-                    maxLength={20}
-                    value={suffix}
-                    onChange={(e) => handleNameInput(e.target.value, setSuffix)}
-                    placeholder="Enter your suffix"
-                    className="w-full bg-slate-50/70 border-b border-slate-300 px-3 py-2 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-red-800 focus:bg-white transition-colors"
-                  />
-                </div>
+                <input
+                  id="suffix"
+                  type="text"
+                  maxLength={20}
+                  value={suffix}
+                  onChange={(e) => handleNameInput(e.target.value, 'suffix')}
+                  placeholder="e.g. Jr., III, PhD"
+                  className={INPUT_CLASS}
+                />
               </div>
 
-              {/* Sex Selector - Left-aligned and compact width */}
-              <div className="md:col-span-2 flex justify-start pt-1">
-                <div className="w-full max-w-[240px] space-y-2">
-                  <label
-                    htmlFor="sex"
-                    className="text-xs uppercase tracking-wider text-slate-600 font-semibold block text-left"
-                  >
-                    Sex
-                  </label>
-                  <div className="relative">
-                    <select
-                      id="sex"
-                      value={sex}
-                      onChange={(e) => {
-                        setSex(e.target.value as SexType);
-                        if (errorMsg) setErrorMsg(null);
-                        if (successMsg) setSuccessMsg(null);
-                      }}
-                      className="w-full bg-slate-50/70 border-b border-slate-300 px-3 py-2 text-sm text-slate-900 focus:outline-none focus:border-red-800 focus:bg-white transition-colors cursor-pointer text-left"
-                    >
-                      <option value="">Select Sex</option>
-                      <option value="MALE">Male</option>
-                      <option value="FEMALE">Female</option>
-                      <option value="OTHER">Other</option>
-                      <option value="PREFER_NOT_TO_SAY">Prefer not to say</option>
-                    </select>
-                  </div>
-                </div>
+              {/* Sex */}
+              <div className="space-y-1.5">
+                <label htmlFor="sex" className={LABEL_CLASS}>
+                  Sex
+                </label>
+                <select
+                  id="sex"
+                  value={sex}
+                  onChange={(e) => updateField('sex', e.target.value as SexType | '')}
+                  className={`${INPUT_CLASS} cursor-pointer`}
+                >
+                  <option value="">Select Sex</option>
+                  <option value="MALE">Male</option>
+                  <option value="FEMALE">Female</option>
+                  <option value="OTHER">Other</option>
+                  <option value="PREFER_NOT_TO_SAY">Prefer not to say</option>
+                </select>
               </div>
             </div>
           </div>
@@ -425,61 +481,67 @@ export const ProfilePage: React.FC = () => {
 
         {/* TAB 2: DEMOGRAPHIC & CONTACT */}
         {activeTab === 'contact' && (
-          <div className="bg-white p-6 sm:p-8 rounded-sm shadow-2xs space-y-6 animate-in fade-in duration-200">
-            <div className="space-y-1">
-              <h2 className="text-base font-semibold text-slate-900">
-                Contact & Communication Points
-              </h2>
-              <p className="text-xs text-slate-500 font-normal">
-                Official contact coordinates for research notifications and administrative correspondence.
+          <div
+            role="tabpanel"
+            id={`${tabIdPrefix}-panel-contact`}
+            aria-labelledby={`${tabIdPrefix}-tab-contact`}
+            className="rounded-sm border border-slate-200 bg-white p-5 shadow-2xs sm:p-6 space-y-6"
+          >
+            <div className="space-y-1 border-b border-slate-100 pb-4">
+              <h3 className="text-base font-bold text-slate-900 sm:text-lg">
+                Contact &amp; Communication Points
+              </h3>
+              <p className="text-sm text-slate-600">
+                Official contact details for research notifications and administrative correspondence.
               </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-2">
+            <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
               {/* Contact Number */}
-              <div className="space-y-2">
-                <label
-                  htmlFor="contactNumber"
-                  className="text-xs uppercase tracking-wider text-slate-600 font-semibold block"
-                >
+              <div className="space-y-1.5">
+                <label htmlFor="contactNumber" className={LABEL_CLASS}>
                   Contact Number
                 </label>
                 <div className="relative flex items-center">
-                  <Phone className="w-4 h-4 text-slate-400 absolute left-3 pointer-events-none" />
+                  <Phone className="pointer-events-none absolute left-3.5 h-4 w-4 text-slate-400" aria-hidden="true" />
                   <input
                     id="contactNumber"
                     type="tel"
                     maxLength={15}
                     value={contactNumber}
                     onChange={(e) => handleContactInput(e.target.value)}
-                    placeholder="Enter your contact number"
-                    className="w-full bg-slate-50/70 border-b border-slate-300 pl-9 pr-3 py-2 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-red-800 focus:bg-white transition-colors"
+                    placeholder="e.g. 09171234567"
+                    className={`${INPUT_CLASS} pl-10`}
                   />
                 </div>
+                <p className="text-xs text-slate-500">
+                  10 to 15 digits, optional leading + for international numbers.
+                </p>
               </div>
 
               {/* Read-Only Institutional Email */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <label className="text-xs uppercase tracking-wider text-slate-600 font-semibold block">
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between gap-2">
+                  <label htmlFor="institutionalEmail" className={LABEL_CLASS}>
                     Institutional Email
                   </label>
-                  <span className="text-[10px] font-semibold text-red-800 uppercase tracking-wider">
+                  <span className="rounded-none border border-slate-200 bg-slate-100 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-slate-600">
                     Read Only
                   </span>
                 </div>
                 <div className="relative flex items-center">
-                  <Mail className="w-4 h-4 text-slate-400 absolute left-3 pointer-events-none" />
+                  <Mail className="pointer-events-none absolute left-3.5 h-4 w-4 text-slate-400" aria-hidden="true" />
                   <input
+                    id="institutionalEmail"
                     type="email"
                     readOnly
                     disabled
                     value={userEmail}
-                    className="w-full bg-slate-100 text-slate-600 border-b border-slate-200 pl-9 pr-3 py-2 text-sm cursor-not-allowed select-none"
+                    className="min-h-11 w-full cursor-not-allowed select-none rounded border border-slate-200 bg-slate-50 py-2.5 pl-10 pr-3.5 text-sm text-slate-600"
                   />
                 </div>
-                <p className="text-[11px] text-slate-500 font-normal">
-                  Bound to university authentication account.
+                <p className="text-xs text-slate-500">
+                  Bound to your university authentication account.
                 </p>
               </div>
             </div>
@@ -488,84 +550,73 @@ export const ProfilePage: React.FC = () => {
 
         {/* TAB 3: ACADEMIC AFFILIATION */}
         {activeTab === 'affiliation' && (
-          <div className="bg-white p-6 sm:p-8 rounded-sm shadow-2xs space-y-6 animate-in fade-in duration-200">
-            <div className="space-y-1">
-              <h2 className="text-base font-semibold text-slate-900">
-                Academic Affiliation & Department
-              </h2>
-              <p className="text-xs text-slate-500 font-normal">
+          <div
+            role="tabpanel"
+            id={`${tabIdPrefix}-panel-affiliation`}
+            aria-labelledby={`${tabIdPrefix}-tab-affiliation`}
+            className="rounded-sm border border-slate-200 bg-white p-5 shadow-2xs sm:p-6 space-y-6"
+          >
+            <div className="space-y-1 border-b border-slate-100 pb-4">
+              <h3 className="text-base font-bold text-slate-900 sm:text-lg">
+                Academic Affiliation &amp; Department
+              </h3>
+              <p className="text-sm text-slate-600">
                 Your organizational college or departmental unit within Western Mindanao State University.
               </p>
             </div>
 
-            <div className="grid grid-cols-1 gap-8 pt-2">
-              {/* Department Dropdown */}
-              <div className="space-y-2 max-w-xl">
-                <label
-                  htmlFor="departmentId"
-                  className="text-xs uppercase tracking-wider text-slate-600 font-semibold block"
-                >
-                  College / Department
-                </label>
-                <div className="relative flex items-center">
-                  <Building2 className="w-4 h-4 text-slate-400 absolute left-3 pointer-events-none" />
-                  {loadingDepts ? (
-                    <div className="h-9 w-full bg-slate-100 animate-pulse rounded-sm" />
-                  ) : (
-                    <select
-                      id="departmentId"
-                      value={departmentId}
-                      onChange={(e) => {
-                        setDepartmentId(e.target.value);
-                        if (errorMsg) setErrorMsg(null);
-                        if (successMsg) setSuccessMsg(null);
-                      }}
-                      className="w-full bg-slate-50/70 border-b border-slate-300 pl-9 pr-3 py-2 text-sm text-slate-900 focus:outline-none focus:border-red-800 focus:bg-white transition-colors cursor-pointer"
-                    >
-                      <option value="">Select College / Department</option>
-                      {departments.map((dept) => (
-                        <option key={dept.id} value={dept.id}>
-                          {dept.name}
-                        </option>
-                      ))}
-                    </select>
-                  )}
-                </div>
-                {assignedDept && (
-                  <p className="text-[11px] text-slate-500 font-normal mt-1">
-                    Currently assigned to: <span className="font-semibold text-slate-700">{assignedDept}</span>
-                  </p>
+            <div className="max-w-xl space-y-2">
+              <label htmlFor="departmentId" className={LABEL_CLASS}>
+                College / Department
+              </label>
+              <div className="relative flex items-center">
+                <Building2 className="pointer-events-none absolute left-3.5 h-4 w-4 text-slate-400" aria-hidden="true" />
+                {loadingDepts ? (
+                  <div className="h-11 w-full rounded bg-slate-100 motion-safe:animate-pulse" />
+                ) : (
+                  <select
+                    id="departmentId"
+                    value={departmentId}
+                    onChange={(e) => updateField('departmentId', e.target.value)}
+                    className={`${INPUT_CLASS} cursor-pointer pl-10`}
+                  >
+                    <option value="">Select College / Department</option>
+                    {departments.map((dept) => (
+                      <option key={dept.id} value={dept.id}>
+                        {dept.name}
+                      </option>
+                    ))}
+                  </select>
                 )}
               </div>
+              {assignedDept && (
+                <p className="text-xs text-slate-600">
+                  Currently assigned to: <span className="font-semibold text-slate-900">{assignedDept}</span>
+                </p>
+              )}
             </div>
           </div>
         )}
 
-        {/* Global Action Buttons */}
-        <div className="flex items-center justify-end gap-4 pt-2">
+        {/* Global Action Bar */}
+        <div className="flex flex-col-reverse gap-3 border-t border-slate-200 pt-4 sm:flex-row sm:items-center sm:justify-end">
           <button
             type="button"
             onClick={handleReset}
             disabled={saving}
-            className="px-5 py-2.5 rounded-sm text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors flex items-center gap-2 cursor-pointer disabled:opacity-50"
+            className="inline-flex min-h-12 items-center justify-center gap-2 rounded-sm border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition-colors enabled:hover:bg-slate-50 enabled:hover:text-slate-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
           >
-            <RotateCcw className="w-3.5 h-3.5" />
+            <RotateCcw className="h-4 w-4" aria-hidden="true" />
             <span>Reset</span>
           </button>
 
           <button
             type="submit"
             disabled={saving}
-            className="px-6 py-2.5 rounded-sm bg-red-800 hover:bg-red-900 text-white text-xs font-semibold shadow-2xs hover:shadow-xs transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
+            className="inline-flex min-h-12 items-center justify-center gap-2 rounded-sm bg-brand px-5 py-3 text-sm font-semibold text-white shadow-2xs transition-colors enabled:hover:bg-brand-dark focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brand cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {saving ? (
-              <span className="inline-block h-3.5 w-16 bg-white/30 animate-pulse rounded-xs" />
-            ) : (
-              <>
-                <Save className="w-3.5 h-3.5" />
-                <span>Save Profile Changes</span>
-              </>
-            )}
+            <Save className="h-4 w-4" aria-hidden="true" />
+            <span>{saving ? 'Saving…' : 'Save Profile Changes'}</span>
           </button>
         </div>
       </form>
