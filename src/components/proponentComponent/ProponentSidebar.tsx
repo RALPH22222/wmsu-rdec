@@ -73,26 +73,26 @@ export const ProponentSidebar: React.FC<ProponentSidebarProps> = ({
 
   const navGroups = [
     {
-      id: 'proposals-review',
-      label: 'Proposals & Review',
+      id: 'submission-aihr',
+      label: 'Submission & AIHR',
       items: [
         { name: 'Concept Proposal', path: '/proponent', icon: FileText, active: isProposalActive },
         { name: 'Detailed Proposal', path: '/proponent/detailed-proposals', icon: FileUp, active: isDetailedProposalActive },
-        { name: 'Evaluation & Revisions', path: '/proponent/revisions', icon: History, active: isRevisionsActive },
         { name: 'AIHR Invitations', path: '/proponent/aihr-invitations', icon: Mail, active: isAihrActive },
-      ],
-    },
-    {
-      id: 'funding-budget',
-      label: 'Funding & Budget',
-      items: [
-        { name: 'Budget Allocation', path: '/proponent/budget', icon: DollarSign, active: isBudgetActive },
         { name: 'External Funding', path: '/proponent/external-funding', icon: Handshake, active: isExternalFundingActive },
       ],
     },
     {
-      id: 'official-documents',
-      label: 'Official Documents',
+      id: 'review-budget',
+      label: 'Technical Review & Budget',
+      items: [
+        { name: 'Evaluation & Revisions', path: '/proponent/revisions', icon: History, active: isRevisionsActive },
+        { name: 'Budget Allocation', path: '/proponent/budget', icon: DollarSign, active: isBudgetActive },
+      ],
+    },
+    {
+      id: 'contracts-implementation',
+      label: 'Contracts & Implementation',
       items: [
         { name: 'Documents & Contracts', path: '/proponent/documents', icon: FileSignature, active: isDocumentsActive },
         { name: 'Memorandums', path: '/proponent/memos', icon: ScrollText, active: isMemosActive },

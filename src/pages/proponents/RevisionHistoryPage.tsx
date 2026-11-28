@@ -1,6 +1,6 @@
 import { stageExplanation } from '../../lib/aihrMeta';
 import { useId, useState, type KeyboardEvent, type ReactNode } from 'react';
-import { ClipboardCheck, FileSearch, History, MessageSquare, ShieldCheck, Upload } from 'lucide-react';
+import { ClipboardCheck, FileSearch, FileUp, History, MessageSquare, ShieldCheck, Upload } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useMyPipelineProposals } from '../../hooks/useMyPipelineProposals';
 import { nextStepFor } from '../../lib/proposalPipeline';
@@ -60,7 +60,7 @@ export function RevisionHistoryPage() {
       <header>
         <div className="flex flex-wrap items-center justify-between gap-4">
           <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">Evaluation &amp; Revisions</h1>
-          <Link to="/proponent/detailed-proposals" className="inline-flex min-h-11 items-center rounded-sm bg-[#C8102E] px-4 py-2 text-sm font-semibold text-white hover:bg-[#A00D26]">Submit detailed proposal</Link>
+          <Link to="/proponent/detailed-proposals" className="inline-flex min-h-11 items-center gap-2 rounded-sm bg-[#C8102E] px-4 py-2 text-sm font-semibold text-white hover:bg-[#A00D26]"><FileUp className="h-4 w-4 shrink-0" aria-hidden="true" />Submit detailed proposal</Link>
         </div>
         <p className="mt-3 max-w-3xl text-sm leading-relaxed text-slate-600 sm:text-base">Read evaluator feedback, submit requested revisions, and track your proposal’s manuscript and review history.</p>
       </header>

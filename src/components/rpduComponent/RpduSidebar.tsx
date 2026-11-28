@@ -24,39 +24,33 @@ export type RpduSidebarProps = { mobileOpen?: boolean; onCloseMobile?: () => voi
 
 const navGroups = [
   {
-    id: 'proposal-pipeline',
-    label: 'Proposal Pipeline',
+    id: 'call-screening-aihr',
+    label: 'Call, Screening & AIHR',
     items: [
       { name: 'Call for Proposals', path: '/rpdu', icon: Calendar },
       { name: 'Preliminary Screening', path: '/rpdu/screening', icon: ClipboardCheck },
-      { name: 'Technical Evaluations', path: '/rpdu/evaluations', icon: Users },
-    ],
-  },
-  {
-    id: 'aihr-scheduling',
-    label: 'AIHR & Scheduling',
-    items: [
       { name: 'AIHR Invitations', path: '/rpdu/aihr-invitations', icon: Mail },
       { name: 'AIHR & En Banc', path: '/rpdu/aihr', icon: Gavel },
-      { name: 'Inception Scheduling', path: '/rpdu/scheduling', icon: CalendarCheck },
-    ],
-  },
-  {
-    id: 'funding-external',
-    label: 'Funding & External Projects',
-    items: [
-      { name: 'Budget Allocations', path: '/rpdu/budgets', icon: Receipt },
-      { name: 'External Funding Requests', path: '/rpdu/external-funding', icon: Handshake },
       { name: 'Outsourced Projects', path: '/rpdu/outsourced-projects', icon: FolderArchive },
     ],
   },
   {
-    id: 'documents-archive',
-    label: 'Documents & Archive',
+    id: 'review-budget',
+    label: 'Full Proposal, Review & Budget',
     items: [
-      { name: 'Official Memorandums', path: '/rpdu/memos', icon: ScrollText },
+      { name: 'External Funding Requests', path: '/rpdu/external-funding', icon: Handshake },
+      { name: 'Technical Evaluations', path: '/rpdu/evaluations', icon: Users },
+      { name: 'Budget Allocations', path: '/rpdu/budgets', icon: Receipt },
+    ],
+  },
+  {
+    id: 'contracts-implementation',
+    label: 'Contracts, Inception & Designations',
+    items: [
       { name: 'Official Letters & Contracts', path: '/rpdu/letters', icon: Mail },
       { name: 'Issued Documents Archive', path: '/rpdu/archive', icon: Archive },
+      { name: 'Inception Scheduling', path: '/rpdu/scheduling', icon: CalendarCheck },
+      { name: 'Official Memorandums', path: '/rpdu/memos', icon: ScrollText },
     ],
   },
 ];

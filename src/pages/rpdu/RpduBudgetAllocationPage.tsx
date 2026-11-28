@@ -1,54 +1,51 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  FileText,
-  Search,
-  CheckCircle2,
-  Clock,
-  Eye,
   Building,
-  User,
   Calendar,
+  Eye,
   Receipt,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { API_ENDPOINTS } from '../../config/apiConfig';
+import { formatDate } from '../../lib/format';
 import type { RpduBudgetAllocationItem } from '../../types';
+import { ProposalSearchBar } from '../../components/ui/ProposalSearchBar';
+import { EmptyState } from '../../components/ui/EmptyState';
 
 export const RpduBudgetAllocationPage: React.FC = () => {
   const { session } = useAuth();
+  const accessToken = session?.access_token;
   const [allocations, setAllocations] = useState<RpduBudgetAllocationItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'PENDING' | 'APPROVED'>('ALL');
 
-  const fetchAllocations = useCallback(async () => {
-    if (!session?.access_token) return;
-    setIsLoading(true);
-    try {
-      const res = await fetch(API_ENDPOINTS.RPDU.BUDGET_ALLOCATIONS, {
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
-      });
-      const json = await res.json();
-      if (json.success && Array.isArray(json.data)) {
-        setAllocations(json.data);
-      } else {
-        setAllocations([]);
-      }
-    } catch (err) {
-      console.error('Failed to fetch RPDU budget allocations:', err);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [session?.access_token]);
-
   useEffect(() => {
-    fetchAllocations();
-  }, [fetchAllocations]);
+    if (!accessToken) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(API_ENDPOINTS.RPDU.BUDGET_ALLOCATIONS, {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        });
+        const json = await res.json();
+        if (!cancelled) {
+          setAllocations(json.success && Array.isArray(json.data) ? json.data : []);
+        }
+      } catch (err) {
+        console.error('Failed to fetch RPDU budget allocations:', err);
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [accessToken]);
 
-  // Helper to resolve the 2-stage status of an allocation
   const getAllocationStage = (item: RpduBudgetAllocationItem): 'PENDING' | 'APPROVED' => {
     if (item.isApproved || item.reviewStatus === 'APPROVED' || item.reviewStatus === 'SIGNED') {
       return 'APPROVED';
@@ -56,7 +53,6 @@ export const RpduBudgetAllocationPage: React.FC = () => {
     return 'PENDING';
   };
 
-  // Statistics for Filter Tabs
   const stats = useMemo(() => {
     const total = allocations.length;
     const pending = allocations.filter((a) => getAllocationStage(a) === 'PENDING').length;
@@ -64,7 +60,6 @@ export const RpduBudgetAllocationPage: React.FC = () => {
     return { total, pending, approved };
   }, [allocations]);
 
-  // Filtered allocations
   const filteredAllocations = useMemo(() => {
     return allocations.filter((a) => {
       const stage = getAllocationStage(a);
@@ -80,225 +75,170 @@ export const RpduBudgetAllocationPage: React.FC = () => {
     });
   }, [allocations, statusFilter, searchQuery]);
 
+  const activeFilterCount = Number(Boolean(searchQuery.trim())) + Number(statusFilter !== 'ALL');
+
+  const handleResetFilters = () => {
+    setSearchQuery('');
+    setStatusFilter('ALL');
+  };
+
   return (
-    <div className="space-y-6 max-w-7xl mx-auto">
-      {/* Header Bar matching Inception Scheduling */}
-      <div className="bg-white p-6 rounded-md border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#C8102E]">
-            <Receipt className="w-4 h-4 text-[#C8102E]" />
-            <span>Allocation Review Desk</span>
-          </div>
-          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 mt-1">
-            Line-Item Budget Allocations Review
-          </h1>
-          <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
-            Review multi-year Line-Item Budget (LIB) submissions across Personnel Services, MOOE, and Equipment Outlay. Approving an allocation authorizes the proponent to route the document for physical endorsement signatures.
-          </p>
-        </div>
-      </div>
+    <section className="mx-auto max-w-7xl space-y-6 text-slate-900" aria-labelledby="budget-allocations-title">
+      {/* Unboxed Page Header matching Technical Evaluations & Inception Scheduling */}
+      <header>
+        <h1 id="budget-allocations-title" className="text-2xl font-bold tracking-tight text-slate-900">
+          Line-Item Budget Allocations Review
+        </h1>
+        <p className="mt-2 max-w-3xl text-base text-slate-600">
+          Review multi-year Line-Item Budget (LIB) submissions across Personnel Services, MOOE, and Equipment Outlay. Approving an allocation authorizes the proponent to route the document for physical endorsement signatures.
+        </p>
+      </header>
 
-      {/* Allocations Table */}
-      <div className="bg-white rounded-md border border-slate-200 shadow-xs overflow-hidden">
-        {/* Table Header: Search & Filter Tabs matching Inception Scheduling */}
-        <div className="p-4 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-3 bg-slate-50/50">
-          {/* Search Input */}
-          <div className="relative flex-1 max-w-md">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search by proposal, proponent, or code..."
-              className="w-full pl-9 pr-3 py-2 bg-white border border-slate-200 rounded-sm text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-[#C8102E]"
-            />
-          </div>
+      {/* Search & Status Filter matching Technical Evaluations */}
+      <ProposalSearchBar
+        value={searchQuery}
+        onChange={setSearchQuery}
+        placeholder="Search by proposal title, proponent, college, or code..."
+        ariaLabel="Search budget allocations"
+        activeFilterCount={activeFilterCount}
+        onReset={handleResetFilters}
+        resultSummary={
+          activeFilterCount > 0 && !isLoading
+            ? `${filteredAllocations.length} matching submission${filteredAllocations.length === 1 ? '' : 's'}`
+            : undefined
+        }
+      >
+        <select
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value as 'ALL' | 'PENDING' | 'APPROVED')}
+          aria-label="Filter by budget review status"
+          className="min-h-11 rounded-sm border border-slate-200 bg-white px-3 text-sm text-slate-700 focus:border-[#C8102E] focus:outline-none focus:ring-2 focus:ring-[#C8102E]/20 cursor-pointer"
+        >
+          <option value="ALL">All statuses ({stats.total})</option>
+          <option value="PENDING">Pending Review ({stats.pending})</option>
+          <option value="APPROVED">Accepted ({stats.approved})</option>
+        </select>
+      </ProposalSearchBar>
 
-          {/* Status Filter Tabs */}
-          <div className="flex items-center gap-1 self-start md:self-auto overflow-x-auto">
-            <button
-              type="button"
-              onClick={() => setStatusFilter('ALL')}
-              className={`px-3 py-1.5 text-xs font-semibold rounded-sm transition-colors cursor-pointer ${
-                statusFilter === 'ALL'
-                  ? 'bg-slate-900 text-white font-bold'
-                  : 'bg-white text-slate-600 hover:text-slate-900 border border-slate-200'
-              }`}
-            >
-              All ({stats.total})
-            </button>
-            <button
-              type="button"
-              onClick={() => setStatusFilter('PENDING')}
-              className={`px-3 py-1.5 text-xs font-semibold rounded-sm transition-colors cursor-pointer ${
-                statusFilter === 'PENDING'
-                  ? 'bg-slate-900 text-white font-bold'
-                  : 'bg-white text-slate-600 hover:text-slate-900 border border-slate-200'
-              }`}
-            >
-              Pending Review ({stats.pending})
-            </button>
-            <button
-              type="button"
-              onClick={() => setStatusFilter('APPROVED')}
-              className={`px-3 py-1.5 text-xs font-semibold rounded-sm transition-colors cursor-pointer ${
-                statusFilter === 'APPROVED'
-                  ? 'bg-slate-900 text-white font-bold'
-                  : 'bg-white text-slate-600 hover:text-slate-900 border border-slate-200'
-              }`}
-            >
-              Accepted ({stats.approved})
-            </button>
-          </div>
-        </div>
-
-        {isLoading ? (
-          <div role="status" aria-busy="true">
-            <span className="sr-only">Loading submitted budget allocations</span>
-            <div aria-hidden="true" className="overflow-x-auto">
-              <table className="w-full text-left text-xs text-slate-700 border-collapse">
-                <thead className="bg-slate-50 text-[11px] uppercase tracking-wider font-bold text-slate-500 border-b border-slate-200">
-                  <tr>
-                    <th className="py-3 px-4 w-[32%] min-w-[220px]">PROPOSAL</th>
-                    <th className="py-3 px-4 w-[26%] min-w-[180px]">PROPONENT &amp; COLLEGE</th>
-                    <th className="py-3 px-4 text-right w-[18%] min-w-[120px]">ALLOCATION (₱)</th>
-                    <th className="py-3 px-4 text-center w-[14%] min-w-[110px]">STATUS</th>
-                    <th className="py-3 px-4 text-center w-[10%] min-w-[90px]">ACTION</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 motion-safe:animate-pulse">
-                  {[0, 1, 2, 3].map((row) => (
-                    <tr key={row}>
-                      <td className="py-4 px-4">
-                        <div className="space-y-2">
-                          <div className="h-3.5 w-24 rounded-sm bg-slate-200" />
-                          <div className="h-4 w-56 max-w-full rounded-sm bg-slate-200" />
-                          <div className="h-3 w-40 max-w-full rounded-sm bg-slate-100" />
-                        </div>
-                      </td>
-                      <td className="py-4 px-4">
-                        <div className="space-y-2">
-                          <div className="h-4 w-36 max-w-full rounded-sm bg-slate-200" />
-                          <div className="h-3 w-44 max-w-full rounded-sm bg-slate-100" />
-                        </div>
-                      </td>
-                      <td className="py-4 px-4 text-right">
-                        <div className="space-y-2">
-                          <div className="ml-auto h-4 w-24 rounded-sm bg-slate-200" />
-                          <div className="ml-auto h-3 w-28 rounded-sm bg-slate-100" />
-                        </div>
-                      </td>
-                      <td className="py-4 px-4 text-center">
-                        <div className="mx-auto h-6 w-28 rounded-full bg-slate-200" />
-                      </td>
-                      <td className="py-4 px-4 text-center">
-                        <div className="mx-auto h-7 w-20 rounded-sm bg-slate-100" />
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+      {/* Structured Row List matching Technical Evaluations & Inception Scheduling */}
+      {isLoading ? (
+        <div role="status" aria-busy="true" className="divide-y divide-slate-100 rounded-sm border border-slate-200 bg-white shadow-2xs">
+          <span className="sr-only">Loading submitted budget allocations</span>
+          {[0, 1, 2, 3].map((row) => (
+            <div key={row} aria-hidden="true" className="flex flex-col gap-4 p-5 sm:p-6 lg:flex-row lg:items-center lg:justify-between motion-safe:animate-pulse">
+              <div className="min-w-0 flex-1 space-y-2.5">
+                <div className="flex flex-wrap items-center gap-2">
+                  <div className="h-6 w-28 rounded-none bg-slate-200" />
+                  <div className="h-6 w-28 rounded-none bg-slate-100" />
+                </div>
+                <div className="h-5 w-3/4 max-w-lg rounded-sm bg-slate-200" />
+                <div className="flex flex-wrap gap-4">
+                  <div className="h-4 w-36 rounded-sm bg-slate-100" />
+                  <div className="h-4 w-44 rounded-sm bg-slate-100" />
+                  <div className="h-4 w-32 rounded-sm bg-slate-100" />
+                </div>
+              </div>
+              <div className="h-11 w-28 rounded-sm bg-slate-200 lg:shrink-0" />
             </div>
-          </div>
-        ) : filteredAllocations.length === 0 ? (
-          <div className="p-12 text-center text-xs text-slate-500 space-y-2">
-            <FileText className="w-8 h-8 text-slate-300 mx-auto" />
-            <p className="font-bold text-slate-800 text-sm">No Budget Allocations Found</p>
-            <p className="text-slate-400 max-w-sm mx-auto">
-              {searchQuery
-                ? `No submissions matched "${searchQuery}". Try a different search term.`
-                : 'There are currently no Line-Item Budget submissions matching this status filter.'}
-            </p>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs text-slate-700 border-collapse">
-              <thead className="bg-slate-50 text-[11px] uppercase tracking-wider font-bold text-slate-500 border-b border-slate-200">
-                <tr>
-                  <th className="py-3 px-4 w-[32%] min-w-[220px]">PROPOSAL</th>
-                  <th className="py-3 px-4 w-[26%] min-w-[180px]">PROPONENT &amp; COLLEGE</th>
-                  <th className="py-3 px-4 text-right w-[18%] min-w-[120px]">ALLOCATION (₱)</th>
-                  <th className="py-3 px-4 text-center w-[14%] min-w-[110px]">STATUS</th>
-                  <th className="py-3 px-4 text-center w-[10%] min-w-[90px]">ACTION</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 font-medium">
-                {filteredAllocations.map((item) => {
-                  const ceiling = item.enBancApprovedAmount ?? item.callBudgetCap ?? 500000;
-                  const isOver = item.totalApprovedAmount > ceiling + 0.01;
+          ))}
+        </div>
+      ) : filteredAllocations.length === 0 ? (
+        <div className="rounded-sm border border-slate-200 bg-white p-6 shadow-2xs">
+          <EmptyState
+            icon={Receipt}
+            title={allocations.length === 0 ? 'No budget allocations submitted yet' : 'No budget allocations match'}
+            description={
+              allocations.length === 0
+                ? 'Line-Item Budget submissions will appear here once proponents with an approved Certificate of Technical Review submit their LIB.'
+                : 'Try a different search term or status filter.'
+            }
+          />
+        </div>
+      ) : (
+        <ul className="divide-y divide-slate-200 rounded-sm border border-slate-200 bg-white shadow-2xs">
+          {filteredAllocations.map((item) => {
+            const stage = getAllocationStage(item);
+            const isApproved = stage === 'APPROVED';
+            const ceiling = item.enBancApprovedAmount ?? item.callBudgetCap ?? 500000;
+            const isOver = item.totalApprovedAmount > ceiling + 0.01;
+            const enBancAmount = item.enBancApprovedAmount ?? item.totalApprovedAmount;
 
-                  return (
-                    <tr key={item.id} className="hover:bg-slate-50/70 transition-colors">
-                      {/* Proposal Column */}
-                      <td className="py-4 px-4">
-                        <div className="font-mono text-xs font-bold text-[#C8102E]">
-                          {item.proposalCode}
-                        </div>
-                        <div className="font-bold text-slate-900 text-sm line-clamp-1 mt-0.5" title={item.proposalTitle}>
-                          {item.proposalTitle}
-                        </div>
-                        <div className="text-xs text-slate-400 mt-1 flex items-center gap-1.5">
-                          <Calendar className="w-3.5 h-3.5" />
-                          <span>Submitted {new Date(item.createdAt).toLocaleDateString()}</span>
-                          <span>&bull;</span>
-                          <span>{item.metadata.projectDuration || '1 Year'}</span>
-                        </div>
-                      </td>
+            return (
+              <li
+                key={item.id}
+                className="flex flex-col gap-4 p-5 transition-colors hover:bg-slate-50/60 sm:p-6 lg:flex-row lg:items-center lg:justify-between"
+              >
+                <div className="min-w-0 flex-1 space-y-2">
+                  {/* Status & Budget Summary Badges */}
+                  <div className="flex flex-wrap items-center gap-2">
+                    {isApproved ? (
+                      <span className="inline-flex items-center gap-1.5 rounded-none border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-800 whitespace-nowrap">
+                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" aria-hidden="true" />
+                        Accepted
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1.5 rounded-none border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-bold text-amber-800 whitespace-nowrap">
+                        <span className="h-1.5 w-1.5 rounded-full bg-amber-500" aria-hidden="true" />
+                        Pending Review
+                      </span>
+                    )}
+                    <span
+                      className={`inline-flex items-center rounded-none border px-2.5 py-1 font-mono text-xs font-bold tabular-nums ${
+                        isOver
+                          ? 'border-red-200 bg-red-50 text-red-700'
+                          : 'border-slate-200 bg-slate-50 text-slate-800'
+                      }`}
+                    >
+                      ₱{item.totalApprovedAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                    </span>
+                    <span className="text-xs text-slate-500 tabular-nums">
+                      En Banc: ₱{enBancAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                    </span>
+                  </div>
 
-                      {/* Proponent & College */}
-                      <td className="py-4 px-4">
-                        <div className="flex items-center gap-1.5 font-bold text-slate-900 text-sm">
-                          <User className="w-4 h-4 text-slate-400 shrink-0" />
-                          <span className="truncate">{item.proponentName}</span>
-                        </div>
-                        <div className="flex items-center gap-1.5 text-xs text-slate-500 mt-1">
-                          <Building className="w-4 h-4 text-slate-400 shrink-0" />
-                          <span className="truncate">{item.proponentDepartment || 'WMSU Department'}</span>
-                        </div>
-                      </td>
+                  {/* Proposal Title */}
+                  <h2 className="break-words text-base font-bold leading-snug text-slate-900">
+                    {item.proposalTitle}
+                  </h2>
 
-                      {/* Total Allocation & Step 8.2 En Banc Ceiling */}
-                      <td className="py-4 px-4 text-right">
-                        <div className={`font-black text-sm sm:text-base font-mono ${isOver ? 'text-rose-600' : 'text-slate-900'}`}>
-                          ₱{item.totalApprovedAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                        </div>
-                        <div className="mt-1 flex items-center justify-end gap-1.5 text-[11px]">
-                          <span className="text-slate-400">
-                            En Banc: ₱{(item.enBancApprovedAmount ?? item.totalApprovedAmount).toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                          </span>
-                        </div>
-                      </td>
+                  {/* Simple inline metadata matching Preliminary Screening */}
+                  <div className="flex flex-wrap items-center gap-y-1.5 gap-x-4 text-xs text-slate-600">
+                    <span className="flex items-center gap-1.5">
+                      <strong className="text-slate-800">Proponent:</strong>
+                      <span className="break-words">{item.proponentName}</span>
+                    </span>
+                    <span className="flex items-center gap-1.5 min-w-0">
+                      <Building className="w-3.5 h-3.5 shrink-0 text-slate-400" aria-hidden="true" />
+                      <span className="break-words">{item.proponentDepartment || 'WMSU Department'}</span>
+                    </span>
+                    <span className="flex items-center gap-1.5">
+                      <Calendar className="w-3.5 h-3.5 shrink-0 text-slate-400" aria-hidden="true" />
+                      <span>
+                        Submitted {formatDate(item.createdAt)} · {item.metadata.projectDuration || '1 Year'}
+                      </span>
+                    </span>
+                  </div>
+                </div>
 
-                      {/* 2-Stage Review Status Badge */}
-                      <td className="py-4 px-4 text-center">
-                        {getAllocationStage(item) === 'APPROVED' ? (
-                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 whitespace-nowrap">
-                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> Accepted
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200 whitespace-nowrap">
-                            <Clock className="w-3.5 h-3.5 text-amber-600" /> Pending Review
-                          </span>
-                        )}
-                      </td>
-
-                      {/* Actions */}
-                      <td className="py-4 px-4 text-center">
-                        <Link
-                          to={`/rpdu/budgets/${item.id}`}
-                          className="px-3.5 py-1.5 text-xs font-semibold text-slate-700 bg-white hover:bg-slate-50 hover:text-slate-900 border border-slate-200 rounded-sm shadow-2xs transition-colors inline-flex items-center gap-1.5 cursor-pointer"
-                        >
-                          <Eye className="w-3.5 h-3.5 text-slate-400" /> Review
-                        </Link>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
-    </div>
+                {/* Action */}
+                <div className="flex items-center gap-2 border-t border-slate-100 pt-3 lg:shrink-0 lg:justify-end lg:border-t-0 lg:pt-0">
+                  <Link
+                    to={`/rpdu/budgets/${item.id}`}
+                    className={`inline-flex min-h-11 items-center justify-center gap-1.5 rounded-sm px-4 text-sm font-semibold transition-colors whitespace-nowrap ${
+                      isApproved
+                        ? 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:text-slate-900'
+                        : 'bg-[#C8102E] text-white hover:bg-[#A00D26]'
+                    }`}
+                  >
+                    <Eye className="h-4 w-4 shrink-0" aria-hidden="true" />
+                    {isApproved ? 'View LIB' : 'Review LIB'}
+                  </Link>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </section>
   );
 };

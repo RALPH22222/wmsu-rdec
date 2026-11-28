@@ -4,7 +4,6 @@ import {
   ArrowLeft,
   CheckCircle2,
   AlertTriangle,
-  Clock,
   FileText,
   User,
   Building,
@@ -255,9 +254,9 @@ export const RpduBudgetAllocationReviewPage: React.FC = () => {
       <div className="space-y-4 max-w-4xl mx-auto">
         <Link
           to="/rpdu/budgets"
-          className="inline-flex min-h-11 items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-slate-900 transition-colors"
+          className="inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-slate-600 hover:text-[#C8102E] transition-colors"
         >
-          <ArrowLeft className="h-4 w-4" /> Back to Budget Allocations
+          <ArrowLeft className="h-4 w-4" aria-hidden="true" /> Back to Budget Allocations
         </Link>
         <div className="p-6 bg-white border border-rose-200 rounded-md shadow-xs text-center space-y-2">
           <AlertTriangle className="w-8 h-8 text-rose-600 mx-auto" />
@@ -410,9 +409,9 @@ export const RpduBudgetAllocationReviewPage: React.FC = () => {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Link
           to="/rpdu/budgets"
-          className="inline-flex min-h-11 items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-slate-900 transition-colors"
+          className="inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-slate-600 hover:text-[#C8102E] transition-colors"
         >
-          <ArrowLeft className="h-4 w-4" /> Back to Budget Allocations
+          <ArrowLeft className="h-4 w-4" aria-hidden="true" /> Back to Budget Allocations
         </Link>
         <div className="flex flex-wrap items-center gap-2">
           <button
@@ -465,12 +464,12 @@ export const RpduBudgetAllocationReviewPage: React.FC = () => {
 
           <div className="flex flex-wrap items-center gap-2">
             {syncValidation.stage === 'APPROVED' ? (
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> Accepted
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-none text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" aria-hidden="true" /> Accepted
               </span>
             ) : (
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200">
-                <Clock className="w-3.5 h-3.5 text-amber-600" /> Pending Review
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-none text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200">
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-500" aria-hidden="true" /> Pending Review
               </span>
             )}
           </div>

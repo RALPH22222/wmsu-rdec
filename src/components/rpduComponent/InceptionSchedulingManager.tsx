@@ -3,14 +3,11 @@ import {
   Calendar,
   Clock,
   MapPin,
-  Search,
-  FileCheck,
   Trash2,
   Edit2,
   FileText,
   Plus,
   RotateCcw,
-  AlertCircle,
   ArrowLeft,
   AlertTriangle,
   Send,
@@ -45,6 +42,9 @@ import { InceptionRosterMinutesWorkspace } from './InceptionRosterMinutesWorkspa
 import { addDaysIso, isAllowedMeetingDate, isPastManilaDate, manilaToday } from '../../lib/manilaDate';
 import { formatDate } from '../../lib/format';
 import { Pagination } from '../ui/Pagination';
+import { EmptyState } from '../ui/EmptyState';
+import { ConfirmDialog } from '../ui/ConfirmDialog';
+import { ProposalSearchBar } from '../ui/ProposalSearchBar';
 import { InceptionStatusChip } from './inception/InceptionStatusChip';
 import { formatMeetingTime } from './inception/inceptionDisplay';
 
@@ -107,9 +107,11 @@ export const InceptionSchedulingManager: React.FC = () => {
   // Contracts for selecting projects (fetched from backend)
   const [contracts, setContracts] = useState<ProfessionalServiceContract[]>([]);
 
-  // Active meeting for viewing/editing
+  // Active meeting for viewing/editing/deleting
   const [selectedMeeting, setSelectedMeeting] = useState<InceptionMeeting | null>(null);
   const [editingMeeting, setEditingMeeting] = useState<InceptionMeeting | null>(null);
+  const [meetingToDelete, setMeetingToDelete] = useState<InceptionMeeting | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Pagination for Included Research Projects in Details View (max 3 per page)
   const [projectsPage, setProjectsPage] = useState(1);
@@ -548,16 +550,15 @@ export const InceptionSchedulingManager: React.FC = () => {
     }
   };
 
-  const handleDeleteMeeting = async (id: string) => {
-    if (window.confirm('Are you sure you want to delete this Inception Meeting record?')) {
-      try {
-        if (session?.access_token) {
-          await deleteInceptionMeeting(id, session.access_token).catch((err) => {
-            console.warn('Backend delete notice:', err);
-          });
-        }
-      } catch (err) {
-        console.warn('Delete error:', err);
+  const confirmDeleteMeeting = async () => {
+    if (!meetingToDelete || isDeleting) return;
+    const id = meetingToDelete.id;
+    setIsDeleting(true);
+    try {
+      if (session?.access_token) {
+        await deleteInceptionMeeting(id, session.access_token).catch((err) => {
+          console.warn('Backend delete notice:', err);
+        });
       }
       setMeetings((prev) => {
         const next = prev.filter((c) => c.id !== id);
@@ -568,6 +569,11 @@ export const InceptionSchedulingManager: React.FC = () => {
         setSelectedMeeting(null);
         setViewMode('list');
       }
+      setMeetingToDelete(null);
+    } catch (err) {
+      console.warn('Delete error:', err);
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -707,9 +713,9 @@ export const InceptionSchedulingManager: React.FC = () => {
     if (normalized === 'approved') {
       return (
         <span
-          className={`inline-flex items-center gap-1.5 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-sm font-bold whitespace-nowrap ${sizeClasses}`}
+          className={`inline-flex items-center gap-1.5 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-none font-bold whitespace-nowrap ${sizeClasses}`}
         >
-          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" aria-hidden="true" />
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" aria-hidden="true" />
           Approved
         </span>
       );
@@ -717,18 +723,18 @@ export const InceptionSchedulingManager: React.FC = () => {
     if (normalized === 'forwarded_to_op') {
       return (
         <span
-          className={`inline-flex items-center gap-1.5 bg-blue-50 text-blue-800 border border-blue-200 rounded-sm font-bold whitespace-nowrap ${sizeClasses}`}
+          className={`inline-flex items-center gap-1.5 bg-blue-50 text-blue-800 border border-blue-200 rounded-none font-bold whitespace-nowrap ${sizeClasses}`}
         >
-          <FileCheck className="w-3.5 h-3.5 text-blue-600" aria-hidden="true" />
+          <span className="w-1.5 h-1.5 rounded-full bg-blue-500" aria-hidden="true" />
           Forwarded to OP
         </span>
       );
     }
     return (
       <span
-        className={`inline-flex items-center gap-1.5 bg-amber-50 text-amber-800 border border-amber-200 rounded-sm font-bold whitespace-nowrap ${sizeClasses}`}
+        className={`inline-flex items-center gap-1.5 bg-amber-50 text-amber-800 border border-amber-200 rounded-none font-bold whitespace-nowrap ${sizeClasses}`}
       >
-        <AlertCircle className="w-3.5 h-3.5 text-amber-600" aria-hidden="true" />
+        <span className="w-1.5 h-1.5 rounded-full bg-amber-500" aria-hidden="true" />
         Request Prepared
       </span>
     );
@@ -741,68 +747,59 @@ export const InceptionSchedulingManager: React.FC = () => {
     const derivedPreviewStatus = resolveMeetingStatusFromSo(formSpecialOrderStatus, formMeetingStatus);
 
     return (
-      <div className="max-w-7xl mx-auto space-y-6 pb-10">
-        {/* Navigation Breadcrumb */}
-        <div className="flex items-center justify-between pb-3.5 border-b border-slate-200">
-          <button
-            type="button"
-            onClick={() => setViewMode('list')}
-            className="inline-flex items-center gap-2 font-semibold text-slate-600 hover:text-[#C8102E] text-sm cursor-pointer transition-colors"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Back to Inception Meetings
-          </button>
-          <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
-            {editingMeeting ? 'Edit Schedule' : 'New Inception Schedule'}
-          </span>
-        </div>
+      <section className="mx-auto max-w-5xl space-y-6 pb-10 text-slate-900">
+        {/* Navigation */}
+        <button
+          type="button"
+          onClick={() => setViewMode('list')}
+          className="inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-slate-600 hover:text-[#C8102E] cursor-pointer transition-colors"
+        >
+          <ArrowLeft className="w-4 h-4" aria-hidden="true" />
+          Back to Inception Meetings
+        </button>
 
-        {/* Form Header */}
-        <div className="bg-white p-6 sm:p-8 rounded-md border border-slate-200 shadow-xs">
-          <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#C8102E]">
-            <Calendar className="w-4 h-4 text-[#C8102E]" />
-            <span>Inception Scheduling</span>
-          </div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 mt-1">
+        {/* Flat Page Header matching reference RPDU pages */}
+        <header>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900">
             {editingMeeting ? 'Edit Inception Meeting' : 'Schedule Inception Meeting & Special Order'}
           </h1>
-          <p className="text-sm text-slate-500 mt-1">
+          <p className="mt-2 max-w-3xl text-base text-slate-600">
             Coordinate kickoff orientation for approved research projects and prepare the Special Order (SO) endorsement request.
           </p>
-        </div>
+        </header>
 
         {formError && (
-          <div className="p-4 bg-rose-50 border border-rose-200 text-rose-800 rounded-md flex items-center gap-3">
-            <AlertTriangle className="w-5 h-5 shrink-0 text-rose-600" />
+          <div role="alert" className="p-4 bg-red-50 border border-red-200 text-red-800 rounded-sm flex items-center gap-3">
+            <AlertTriangle className="w-5 h-5 shrink-0 text-red-600" aria-hidden="true" />
             <span className="text-sm font-medium">{formError}</span>
           </div>
         )}
 
         <form onSubmit={handleSaveForm} className="space-y-6">
           {/* Section: Research Projects */}
-          <div className="bg-white p-6 sm:p-8 rounded-md border border-slate-200 shadow-xs space-y-5">
+          <div className="bg-white p-5 sm:p-6 rounded-sm border border-slate-200 shadow-2xs space-y-5">
             <div className="border-b border-slate-100 pb-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
-                <h2 className="text-base font-bold text-slate-900 uppercase tracking-wider">
+                <h2 className="text-base font-bold text-slate-900">
                   Research Projects
                 </h2>
-                <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
+                <p className="text-xs sm:text-sm text-slate-600 mt-0.5">
                   All approved research projects ready for kickoff orientation are automatically selected for this session.
                 </p>
               </div>
               {formSelectedProjects.length > 1 && (
-                <span className="text-xs font-semibold text-slate-800 bg-slate-100 px-3 py-1.5 rounded-sm border border-slate-200 flex items-center gap-1.5 self-start sm:self-auto shrink-0">
-                  <Layers className="w-3.5 h-3.5 text-slate-600" /> Joint Session ({formSelectedProjects.length} Projects)
+                <span className="text-xs font-semibold text-slate-800 bg-slate-100 px-3 py-1.5 rounded-none border border-slate-200 flex items-center gap-1.5 self-start sm:self-auto shrink-0">
+                  <Layers className="w-3.5 h-3.5 text-slate-600" aria-hidden="true" /> Joint Session ({formSelectedProjects.length} Projects)
                 </span>
               )}
             </div>
 
             {formSelectedProjects.length === 0 ? (
-              <div className="p-8 bg-slate-50 border border-dashed border-slate-300 rounded-md text-center text-sm text-slate-500 space-y-1.5">
-                <CheckCircle2 className="w-6 h-6 text-slate-400 mx-auto mb-1.5" />
+              <div className="p-8 bg-slate-50 border border-dashed border-slate-300 rounded-sm text-center text-sm text-slate-500 space-y-1.5">
+                <CheckCircle2 className="w-6 h-6 text-slate-400 mx-auto mb-1.5" aria-hidden="true" />
                 <p className="font-semibold text-slate-700">No projects currently ready for inception scheduling.</p>
-                <p className="text-slate-400 text-xs sm:text-sm">
-                  All approved research projects have already been scheduled or are awaiting notarized contracts.
+                <p className="text-slate-500 text-xs sm:text-sm">
+                  All approved research projects have already been scheduled or are awaiting acknowledged contracts.
                 </p>
               </div>
             ) : (
@@ -810,11 +807,11 @@ export const InceptionSchedulingManager: React.FC = () => {
                 <div className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center justify-between">
                   <span>Selected Projects ({formSelectedProjects.length})</span>
                   {formSelectedProjects.length > 1 && (
-                    <span className="text-slate-400 font-normal">Clients conduct joint sessions together in a day</span>
+                    <span className="text-slate-400 font-normal normal-case tracking-normal">Joint sessions can cover multiple projects on the same day</span>
                   )}
                 </div>
 
-                <div className="border border-slate-200 rounded-md overflow-hidden bg-white shadow-2xs">
+                <div className="border border-slate-200 rounded-sm overflow-hidden bg-white shadow-2xs">
                   {/* Mobile (< 768px): compact cards, zero horizontal scroll */}
                   <div className="md:hidden divide-y divide-slate-100">
                     {paginatedSelectedProjects.map((project, idx) => {
@@ -953,12 +950,12 @@ export const InceptionSchedulingManager: React.FC = () => {
           </div>
 
           {/* Section 2: Meeting Details */}
-          <div className="bg-white p-6 sm:p-8 rounded-md border border-slate-200 shadow-xs space-y-5">
+          <div className="bg-white p-5 sm:p-6 rounded-sm border border-slate-200 shadow-2xs space-y-5">
             <div className="border-b border-slate-100 pb-3">
-              <h2 className="text-base font-bold text-slate-900 uppercase tracking-wider">
+              <h2 className="text-base font-bold text-slate-900">
                 Meeting Details
               </h2>
-              <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
+              <p className="text-xs sm:text-sm text-slate-600 mt-0.5">
                 Set the meeting date, time, and venue.
               </p>
             </div>
@@ -981,7 +978,7 @@ export const InceptionSchedulingManager: React.FC = () => {
                   }}
                   aria-invalid={dateError ? true : undefined}
                   aria-describedby={dateError ? 'meeting-date-error' : keepsPastDate ? 'meeting-date-hint' : undefined}
-                  className={`w-full min-h-12 bg-white border rounded-md px-3.5 py-2.5 text-sm text-slate-900 focus:outline-none focus:ring-1 focus:ring-[#C8102E] ${dateError ? 'border-red-400' : 'border-slate-300'}`}
+                  className={`w-full min-h-12 bg-white border rounded px-3.5 py-2.5 text-sm text-slate-900 focus:outline-none focus:ring-1 focus:ring-[#C8102E] ${dateError ? 'border-red-400' : 'border-slate-300'}`}
                   required
                 />
                 {dateError ? (
@@ -1002,7 +999,7 @@ export const InceptionSchedulingManager: React.FC = () => {
                   id="meeting-time"
                   value={formMeetingTime}
                   onChange={(e) => setFormMeetingTime(e.target.value)}
-                  className="w-full min-h-12 bg-white border border-slate-300 rounded-md px-3.5 py-2.5 pr-10 text-sm text-slate-900 focus:outline-none focus:ring-1 focus:ring-[#C8102E] font-medium cursor-pointer"
+                  className="w-full min-h-12 bg-white border border-slate-300 rounded px-3.5 py-2.5 pr-10 text-sm text-slate-900 focus:outline-none focus:ring-1 focus:ring-[#C8102E] font-medium cursor-pointer"
                   required
                 >
                   {MEETING_TIME_OPTIONS.map((slot) => (
@@ -1025,7 +1022,7 @@ export const InceptionSchedulingManager: React.FC = () => {
                   id="meeting-venue"
                   value={formVenueSelect}
                   onChange={(e) => setFormVenueSelect(e.target.value)}
-                  className="w-full min-h-12 bg-white border border-slate-300 rounded-md px-3.5 py-2.5 pr-10 text-sm text-slate-900 focus:outline-none focus:ring-1 focus:ring-[#C8102E] font-medium cursor-pointer"
+                  className="w-full min-h-12 bg-white border border-slate-300 rounded px-3.5 py-2.5 pr-10 text-sm text-slate-900 focus:outline-none focus:ring-1 focus:ring-[#C8102E] font-medium cursor-pointer"
                 >
                   {WMSU_VENUES.map((venue) => (
                     <option key={venue} value={venue}>
@@ -1040,14 +1037,14 @@ export const InceptionSchedulingManager: React.FC = () => {
                       Other Venue Name *
                     </label>
                     <div className="relative">
-                      <MapPin className="w-4 h-4 text-[#C8102E] absolute left-3.5 top-1/2 -translate-y-1/2" />
+                      <MapPin className="w-4 h-4 text-[#C8102E] absolute left-3.5 top-1/2 -translate-y-1/2" aria-hidden="true" />
                       <input
                         id="custom-venue"
                         type="text"
                         value={formCustomVenue}
                         onChange={(e) => setFormCustomVenue(e.target.value)}
                         placeholder="e.g. CTE Multi-Purpose Hall, 3rd Floor"
-                        className="w-full min-h-12 pl-10 pr-3.5 py-2.5 bg-white border border-slate-300 rounded-md text-sm text-slate-900 focus:outline-none focus:ring-1 focus:ring-[#C8102E]"
+                        className="w-full min-h-12 pl-10 pr-3.5 py-2.5 bg-white border border-slate-300 rounded text-sm text-slate-900 focus:outline-none focus:ring-1 focus:ring-[#C8102E]"
                         required={formVenueSelect === 'Other venue'}
                       />
                     </div>
@@ -1058,12 +1055,12 @@ export const InceptionSchedulingManager: React.FC = () => {
           </div>
 
           {/* Section 3: Special Order & Meeting Status Alignment */}
-          <div className="bg-white p-6 sm:p-8 rounded-md border border-slate-200 shadow-xs space-y-5">
+          <div className="bg-white p-5 sm:p-6 rounded-sm border border-slate-200 shadow-2xs space-y-5">
             <div className="border-b border-slate-100 pb-3">
-              <h2 className="text-base font-bold text-slate-900 uppercase tracking-wider">
+              <h2 className="text-base font-bold text-slate-900">
                 Special Order (SO) &amp; Meeting Status
               </h2>
-              <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
+              <p className="text-xs sm:text-sm text-slate-600 mt-0.5">
                 Prepare the Special Order request (10.1) and forward it to the Office of the President (10.2). The meeting status remains <strong>Not Scheduled</strong> until the Special Order is <strong>Approved</strong>.
               </p>
             </div>
@@ -1081,7 +1078,7 @@ export const InceptionSchedulingManager: React.FC = () => {
                     setFormSpecialOrderStatus(nextSo);
                     setFormMeetingStatus(resolveMeetingStatusFromSo(nextSo, formMeetingStatus));
                   }}
-                  className="w-full min-h-12 bg-white border border-slate-300 rounded-md px-3.5 py-2.5 pr-10 text-sm text-slate-900 focus:outline-none focus:ring-1 focus:ring-[#C8102E] font-medium cursor-pointer"
+                  className="w-full min-h-12 bg-white border border-slate-300 rounded px-3.5 py-2.5 pr-10 text-sm text-slate-900 focus:outline-none focus:ring-1 focus:ring-[#C8102E] font-medium cursor-pointer"
                 >
                   <option value="pending_request">10.1 Request Prepared</option>
                   <option value="forwarded_to_op">10.2 Forwarded to OP</option>
@@ -1093,7 +1090,7 @@ export const InceptionSchedulingManager: React.FC = () => {
                 <span className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
                   Resulting Meeting Status
                 </span>
-                <div className="min-h-12 px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-md flex items-center justify-between gap-3">
+                <div className="min-h-12 px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-sm flex items-center justify-between gap-3">
                   <InceptionStatusChip status={derivedPreviewStatus} size="md" />
                   <span className="text-xs text-slate-500">
                     {formSpecialOrderStatus === 'approved'
@@ -1104,7 +1101,7 @@ export const InceptionSchedulingManager: React.FC = () => {
               </div>
             </div>
 
-            <div className="p-4 bg-slate-50 border border-slate-200 rounded-md">
+            <div className="p-4 bg-slate-50 border border-slate-200 rounded-sm">
               <label className="flex items-start gap-3 cursor-pointer">
                 <input
                   type="checkbox"
@@ -1130,21 +1127,21 @@ export const InceptionSchedulingManager: React.FC = () => {
               type="button"
               onClick={() => setViewMode('list')}
               disabled={isSaving}
-              className="min-h-11 px-5 py-2.5 bg-white border border-slate-300 hover:bg-slate-50 disabled:bg-slate-100 text-slate-700 font-bold text-xs sm:text-sm rounded-sm cursor-pointer transition-colors"
+              className="min-h-11 px-5 py-2.5 bg-white border border-slate-300 hover:bg-slate-50 disabled:bg-slate-100 text-slate-700 font-semibold text-sm rounded-sm cursor-pointer transition-colors"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isSaving}
-              className="min-h-11 px-6 py-2.5 bg-[#C8102E] hover:bg-[#A00D26] disabled:bg-slate-400 text-white font-bold text-xs sm:text-sm rounded-sm shadow-xs cursor-pointer transition-colors inline-flex items-center gap-2"
+              className="min-h-11 px-6 py-2.5 bg-[#C8102E] hover:bg-[#A00D26] disabled:bg-slate-400 text-white font-semibold text-sm rounded-sm shadow-2xs cursor-pointer transition-colors inline-flex items-center gap-2"
             >
-              {isSaving && <RotateCcw className="w-4 h-4 animate-spin" />}
+              {isSaving && <RotateCcw className="w-4 h-4 animate-spin" aria-hidden="true" />}
               {isSaving ? 'Saving...' : editingMeeting ? 'Save Changes' : 'Save Inception Schedule'}
             </button>
           </div>
         </form>
-      </div>
+      </section>
     );
   }
 
@@ -1178,7 +1175,7 @@ export const InceptionSchedulingManager: React.FC = () => {
             className="min-h-11 self-start inline-flex items-center gap-2 font-semibold text-slate-600 hover:text-[#C8102E] text-sm cursor-pointer transition-colors"
           >
             <ArrowLeft className="w-4 h-4" aria-hidden="true" />
-            Back to inception meetings
+            Back to Inception Meetings
           </button>
 
           <div className="grid grid-cols-1 sm:flex sm:flex-wrap gap-2">
@@ -1232,13 +1229,9 @@ export const InceptionSchedulingManager: React.FC = () => {
         )}
 
         {/* Header card: proposal, schedule, status */}
-        <section className="bg-white border border-slate-200 rounded-sm shadow-xs" aria-labelledby="meeting-heading">
-          <div className="p-6 sm:p-7 space-y-3">
-            <div className="flex flex-wrap items-center gap-2.5">
-              <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-[#C8102E]">
-                <Calendar className="w-4 h-4" aria-hidden="true" />
-                Inception meeting
-              </span>
+        <section className="bg-white border border-slate-200 rounded-sm shadow-2xs" aria-labelledby="meeting-heading">
+          <div className="p-5 sm:p-6 space-y-3">
+            <div className="flex flex-wrap items-center gap-2">
               <InceptionStatusChip status={selectedMeeting.status} size="md" />
               {renderSoStatusBadge(selectedMeeting.specialOrderStatus, 'md')}
             </div>
@@ -1347,14 +1340,22 @@ export const InceptionSchedulingManager: React.FC = () => {
   // -------------------------------------------------------------
   if (viewMode === 'memo' && selectedMeeting) {
     return (
-      <div className="max-w-7xl mx-auto">
-        <div className="bg-white rounded-md border border-slate-200 shadow-xs py-20 px-6 text-center space-y-5">
-          <div className="w-16 h-16 mx-auto rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center">
-            <FileText className="w-8 h-8 text-slate-400" aria-hidden="true" />
+      <section className="mx-auto max-w-5xl space-y-6 pb-10">
+        <button
+          type="button"
+          onClick={() => setViewMode('list')}
+          className="inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-slate-600 hover:text-[#C8102E] cursor-pointer transition-colors"
+        >
+          <ArrowLeft className="w-4 h-4" aria-hidden="true" />
+          Back to Inception Meetings
+        </button>
+        <div className="bg-white rounded-sm border border-slate-200 shadow-2xs py-16 px-6 text-center space-y-4">
+          <div className="w-14 h-14 mx-auto rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center">
+            <FileText className="w-7 h-7 text-slate-400" aria-hidden="true" />
           </div>
           <div>
             <h2 className="text-xl font-bold text-slate-900">Official Special Order Memo Format Pending</h2>
-            <p className="text-sm text-slate-500 mt-2 max-w-lg mx-auto leading-relaxed">
+            <p className="text-sm text-slate-600 mt-2 max-w-lg mx-auto leading-relaxed">
               The official university memorandum template for Inception Special Orders is currently being finalized. This document format will be activated once the standard institutional format is released.
             </p>
           </div>
@@ -1362,426 +1363,310 @@ export const InceptionSchedulingManager: React.FC = () => {
             <button
               type="button"
               onClick={() => setViewMode('list')}
-              className="min-h-11 px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs sm:text-sm rounded-sm inline-flex items-center gap-2 cursor-pointer transition-colors"
+              className="min-h-11 px-5 py-2.5 bg-[#C8102E] hover:bg-[#A00D26] text-white font-semibold text-sm rounded-sm inline-flex items-center gap-2 cursor-pointer transition-colors"
             >
               <ArrowLeft className="w-4 h-4" aria-hidden="true" /> Back to Inception Meetings
             </button>
           </div>
         </div>
-      </div>
+      </section>
     );
   }
 
   // -------------------------------------------------------------
   // VIEW: LIST (DEFAULT DASHBOARD VIEW)
   // -------------------------------------------------------------
-  return (
-    <div className="space-y-6 pb-10">
-      {/* Header Bar */}
-      <div className="bg-white p-6 sm:p-8 rounded-md border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#C8102E]">
-            <Calendar className="w-4 h-4 text-[#C8102E]" aria-hidden="true" />
-            <span>Orientation Kickoff &amp; Inception Workspace</span>
-          </div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 mt-1">
-            Inception Meetings &amp; Scheduling
-          </h1>
-          <p className="text-sm text-slate-500 mt-1">
-            Coordinate kickoff orientations, track Special Order (SO) endorsement status, log attendee roll-call, and upload official minutes &amp; resolutions.
-          </p>
-        </div>
+  const totalCount = meetings.length;
+  const notScheduledCount = meetings.filter((m) => m.status === 'not_scheduled').length;
+  const scheduledCount = meetings.filter((m) => m.status === 'scheduled').length;
+  const completedCount = meetings.filter((m) => m.status === 'completed').length;
+  const otherCount = meetings.filter((m) => m.status === 'rescheduled' || m.status === 'cancelled').length;
+  const activeFilterCount = Number(Boolean(searchTerm.trim())) + Number(statusFilter !== 'all');
 
-        <button
-          type="button"
-          onClick={openCreateForm}
-          className="min-h-12 px-5 py-3 bg-[#C8102E] hover:bg-[#A00D26] text-white font-bold text-sm rounded-sm shadow-xs transition-colors cursor-pointer flex items-center justify-center gap-2 w-full sm:w-auto self-start md:self-auto shrink-0"
-        >
-          <Plus className="w-4 h-4" aria-hidden="true" /> Schedule Inception Meeting
-        </button>
-      </div>
+  const handleResetFilters = () => {
+    setSearchTerm('');
+    setStatusFilter('all');
+  };
+
+  const meetingSummaryOf = (meeting: InceptionMeeting) => {
+    const projectList = Array.isArray(meeting.projects) && meeting.projects.length > 0 ? meeting.projects : null;
+    const isJoint = Boolean(projectList && projectList.length > 1);
+    const primaryTitle = isJoint
+      ? meeting.meetingTitle || `Joint Inception Meeting (${projectList!.length} Projects)`
+      : meeting.projectTitle || meeting.meetingTitle || 'Untitled Research Project';
+    const uniqueLeaders = projectList
+      ? Array.from(new Set(projectList.map((p) => p.leadInvestigator).filter(Boolean)))
+      : [];
+    const subtitle = isJoint
+      ? `${uniqueLeaders.slice(0, 3).join(', ')}${uniqueLeaders.length > 3 ? ` +${uniqueLeaders.length - 3} more` : ''}`
+      : [meeting.leadInvestigator, meeting.studyLeaderCollege].filter(Boolean).join(' · ');
+    return { primaryTitle, subtitle, isJoint, projectCount: projectList?.length ?? 1 };
+  };
+
+  return (
+    <section className="space-y-6 text-slate-900" aria-labelledby="inception-scheduling-title">
+      {/* Unboxed Page Header matching Technical Evaluations */}
+      <header>
+        <h1 id="inception-scheduling-title" className="text-2xl font-bold tracking-tight text-slate-900">
+          Inception Meetings &amp; Scheduling
+        </h1>
+        <p className="mt-2 max-w-3xl text-base text-slate-600">
+          Coordinate kickoff orientations, track Special Order (SO) endorsement status, log attendee roll-call, and upload official minutes &amp; resolutions.
+        </p>
+      </header>
 
       {apiError && (
-        <div className="p-4 bg-amber-50 border border-amber-200 text-amber-800 rounded-md text-xs sm:text-sm flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
+        <div role="alert" className="p-4 bg-amber-50 border border-amber-200 text-amber-800 rounded-sm text-xs sm:text-sm flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5 min-w-0">
             <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" aria-hidden="true" />
-            <span>Server sync notice: {apiError} (Displaying cached records)</span>
+            <span className="break-words">Server sync notice: {apiError} (Displaying cached records)</span>
           </div>
           <button
             type="button"
             onClick={() => setApiError(null)}
-            className="font-bold text-amber-700 hover:text-amber-900 underline ml-2 cursor-pointer"
+            className="font-bold text-amber-700 hover:text-amber-900 underline shrink-0 cursor-pointer"
           >
             Dismiss
           </button>
         </div>
       )}
 
-      {/* Table Section */}
-      <div className="bg-white rounded-md border border-slate-200 shadow-xs overflow-hidden">
-        <div className="p-5 sm:p-6 border-b border-slate-100 flex flex-col xl:flex-row xl:items-center justify-between gap-4 bg-slate-50/50">
-          {/* Search Input */}
-          <div className="relative w-full xl:flex-1 xl:max-w-md">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" aria-hidden="true" />
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search by project, leader, SO status, or venue..."
-              className="w-full min-h-11 pl-10 pr-3.5 py-2.5 bg-white border border-slate-200 rounded-sm text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-[#C8102E]"
-            />
-          </div>
-
-          {/* Status Filter Tabs */}
-          <div className="flex flex-wrap items-center gap-1.5 self-start xl:self-auto">
-            <button
-              type="button"
-              onClick={() => setStatusFilter('all')}
-              className={`min-h-11 shrink-0 whitespace-nowrap px-3.5 py-2 text-xs sm:text-sm font-semibold rounded-sm transition-colors cursor-pointer ${
-                statusFilter === 'all'
-                  ? 'bg-slate-900 text-white font-bold'
-                  : 'bg-white text-slate-600 hover:text-slate-900 border border-slate-200'
-              }`}
+      {/* Search, Status Filter & Primary CTA Toolbar matching Technical Evaluations */}
+      <div className="flex flex-col gap-2.5 lg:flex-row lg:items-start">
+        <div className="min-w-0 flex-1">
+          <ProposalSearchBar
+            value={searchTerm}
+            onChange={setSearchTerm}
+            placeholder="Search by project title, study leader, SO status, or venue..."
+            ariaLabel="Search inception meetings"
+            activeFilterCount={activeFilterCount}
+            onReset={handleResetFilters}
+            resultSummary={
+              activeFilterCount > 0 && !isLoading
+                ? `${filteredMeetings.length} matching meeting${filteredMeetings.length === 1 ? '' : 's'}`
+                : undefined
+            }
+          >
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)}
+              aria-label="Filter by meeting status"
+              className="min-h-11 rounded-sm border border-slate-200 bg-white px-3 text-sm text-slate-700 focus:border-[#C8102E] focus:outline-none focus:ring-2 focus:ring-[#C8102E]/20 cursor-pointer"
             >
-              All ({meetings.length})
-            </button>
-            <button
-              type="button"
-              onClick={() => setStatusFilter('not_scheduled')}
-              className={`min-h-11 shrink-0 whitespace-nowrap px-3.5 py-2 text-xs sm:text-sm font-semibold rounded-sm transition-colors cursor-pointer ${
-                statusFilter === 'not_scheduled'
-                  ? 'bg-slate-700 text-white font-bold'
-                  : 'bg-white text-slate-600 hover:text-slate-900 border border-slate-200'
-              }`}
-            >
-              Not Scheduled ({meetings.filter((m) => m.status === 'not_scheduled').length})
-            </button>
-            <button
-              type="button"
-              onClick={() => setStatusFilter('scheduled')}
-              className={`min-h-11 shrink-0 whitespace-nowrap px-3.5 py-2 text-xs sm:text-sm font-semibold rounded-sm transition-colors cursor-pointer ${
-                statusFilter === 'scheduled'
-                  ? 'bg-blue-700 text-white font-bold'
-                  : 'bg-white text-slate-600 hover:text-slate-900 border border-slate-200'
-              }`}
-            >
-              Scheduled ({meetings.filter((m) => m.status === 'scheduled').length})
-            </button>
-            <button
-              type="button"
-              onClick={() => setStatusFilter('completed')}
-              className={`min-h-11 shrink-0 whitespace-nowrap px-3.5 py-2 text-xs sm:text-sm font-semibold rounded-sm transition-colors cursor-pointer ${
-                statusFilter === 'completed'
-                  ? 'bg-emerald-700 text-white font-bold'
-                  : 'bg-white text-slate-600 hover:text-slate-900 border border-slate-200'
-              }`}
-            >
-              Completed ({meetings.filter((m) => m.status === 'completed').length})
-            </button>
-            <button
-              type="button"
-              onClick={() => setStatusFilter('other')}
-              className={`min-h-11 shrink-0 whitespace-nowrap px-3.5 py-2 text-xs sm:text-sm font-semibold rounded-sm transition-colors cursor-pointer ${
-                statusFilter === 'other'
-                  ? 'bg-amber-600 text-white font-bold'
-                  : 'bg-white text-slate-600 hover:text-slate-900 border border-slate-200'
-              }`}
-            >
-              Rescheduled / Cancelled (
-              {meetings.filter((m) => m.status === 'rescheduled' || m.status === 'cancelled').length})
-            </button>
-          </div>
+              <option value="all">All statuses ({totalCount})</option>
+              <option value="not_scheduled">Not Scheduled ({notScheduledCount})</option>
+              <option value="scheduled">Scheduled ({scheduledCount})</option>
+              <option value="completed">Completed ({completedCount})</option>
+              <option value="other">Rescheduled / Cancelled ({otherCount})</option>
+            </select>
+          </ProposalSearchBar>
         </div>
 
-        {(() => {
-          const renderMeetingActions = (meeting: InceptionMeeting, align: 'start' | 'end' = 'end') => {
+        <button
+          type="button"
+          onClick={openCreateForm}
+          className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-sm bg-[#C8102E] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#A00D26] cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#C8102E] w-full sm:w-auto"
+        >
+          <Plus className="w-4 h-4" aria-hidden="true" />
+          Schedule Inception Meeting
+        </button>
+      </div>
+
+      {/* Structured Row List matching Technical Evaluations & AIHR / En Banc */}
+      {isLoading ? (
+        <div role="status" aria-busy="true" className="divide-y divide-slate-100 rounded-sm border border-slate-200 bg-white shadow-2xs">
+          <span className="sr-only">Loading inception meetings</span>
+          {[0, 1, 2].map((item) => (
+            <div key={item} aria-hidden="true" className="flex flex-col gap-4 p-5 sm:p-6 lg:flex-row lg:items-center lg:justify-between motion-safe:animate-pulse">
+              <div className="min-w-0 flex-1 space-y-2.5">
+                <div className="flex flex-wrap items-center gap-2">
+                  <div className="h-6 w-24 rounded-none bg-slate-200" />
+                  <div className="h-6 w-28 rounded-none bg-slate-100" />
+                </div>
+                <div className="h-5 w-3/4 max-w-lg rounded-sm bg-slate-200" />
+                <div className="flex flex-wrap gap-4">
+                  <div className="h-4 w-36 rounded-sm bg-slate-100" />
+                  <div className="h-4 w-56 rounded-sm bg-slate-100" />
+                </div>
+              </div>
+              <div className="flex flex-wrap items-center gap-2 lg:shrink-0">
+                <div className="h-11 w-36 rounded-sm bg-slate-200" />
+                <div className="h-11 w-28 rounded-sm bg-slate-100" />
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : filteredMeetings.length === 0 ? (
+        <div className="rounded-sm border border-slate-200 bg-white p-6 shadow-2xs">
+          <EmptyState
+            icon={Calendar}
+            title={meetings.length === 0 ? 'No inception meetings scheduled yet' : 'No inception meetings match'}
+            description={
+              meetings.length === 0
+                ? 'Click "Schedule Inception Meeting" to select approved projects with acknowledged contracts and prepare a Special Order request.'
+                : 'Try a different search term or status filter.'
+            }
+          />
+        </div>
+      ) : (
+        <ul className="divide-y divide-slate-200 rounded-sm border border-slate-200 bg-white shadow-2xs">
+          {filteredMeetings.map((meeting) => {
+            const summary = meetingSummaryOf(meeting);
             const normalizedSo = normalizeSpecialOrderStatus(meeting.specialOrderStatus);
             return (
-              <div
-                className={`flex flex-wrap items-center gap-1.5 ${
-                  align === 'end' ? 'justify-end' : 'justify-start'
-                }`}
+              <li
+                key={meeting.id}
+                className="flex flex-col gap-4 p-5 transition-colors hover:bg-slate-50/60 sm:p-6 lg:flex-row lg:items-center lg:justify-between"
               >
-                {/* Primary Workspace Action: Roster, Minutes & Details */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSelectedMeeting(meeting);
-                    setViewMode('details');
-                  }}
-                  className="px-2.5 py-1.5 text-xs font-bold text-[#C8102E] bg-red-50/70 hover:bg-[#C8102E] hover:text-white border border-red-200 rounded-sm shadow-2xs transition-colors cursor-pointer inline-flex items-center gap-1.5 whitespace-nowrap shrink-0"
-                  title="Open Meeting Details, Roster &amp; Minutes Workspace"
-                >
-                  <ClipboardCheck className="w-3.5 h-3.5" aria-hidden="true" />
-                  Roster &amp; Minutes
-                </button>
+                <div className="min-w-0 flex-1 space-y-2">
+                  {/* Status Badges Row */}
+                  <div className="flex flex-wrap items-center gap-2">
+                    <InceptionStatusChip status={meeting.status} size="sm" />
+                    {renderSoStatusBadge(meeting.specialOrderStatus, 'sm')}
+                    {summary.isJoint && (
+                      <span className="inline-flex items-center gap-1 rounded-none border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-semibold text-slate-700">
+                        <Layers className="h-3.5 w-3.5 text-slate-500" aria-hidden="true" />
+                        {summary.projectCount} Projects
+                      </span>
+                    )}
+                  </div>
 
-                {/* 1a. Forward SO Request (Step 10.2) */}
-                {normalizedSo === 'pending_request' && (
-                  <button
-                    type="button"
-                    onClick={() => handleUpdateSoStatus(meeting.id, 'forwarded_to_op')}
-                    className="px-2.5 py-1.5 text-xs font-semibold text-blue-700 bg-white hover:bg-blue-50 border border-blue-200 rounded-sm shadow-2xs transition-colors cursor-pointer inline-flex items-center gap-1.5 whitespace-nowrap shrink-0"
-                    title="Forward SO Request to Office of the President (Meeting remains Not Scheduled)"
-                  >
-                    <Send className="w-3.5 h-3.5 text-blue-600" aria-hidden="true" /> Forward SO
-                  </button>
-                )}
+                  {/* Project / Session Title */}
+                  <h2 className="break-words text-base font-bold leading-snug text-slate-900">
+                    {summary.primaryTitle}
+                  </h2>
 
-                {/* 1b. Approve SO (transitions Meeting Status from Not Scheduled -> Scheduled) */}
-                {normalizedSo === 'forwarded_to_op' && (
-                  <button
-                    type="button"
-                    onClick={() => handleUpdateSoStatus(meeting.id, 'approved')}
-                    className="px-2.5 py-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50/70 hover:bg-emerald-100 border border-emerald-200 rounded-sm shadow-2xs transition-colors cursor-pointer inline-flex items-center gap-1.5 whitespace-nowrap shrink-0"
-                    title="Mark Special Order as Approved (updates Meeting Status to Scheduled)"
-                  >
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" aria-hidden="true" /> Approve SO
-                  </button>
-                )}
+                  {/* Meta Info matching Preliminary Screening */}
+                  <div className="flex flex-wrap items-center gap-y-1.5 gap-x-4 text-xs text-slate-600">
+                    {summary.subtitle && (
+                      <span className="flex items-center gap-1.5">
+                        <strong className="text-slate-800">Study Leader{summary.isJoint ? 's' : ''}:</strong>
+                        <span className="break-words">{summary.subtitle}</span>
+                      </span>
+                    )}
+                    <span className="flex items-center gap-1.5 min-w-0">
+                      <MapPin className="w-3.5 h-3.5 shrink-0 text-slate-400" aria-hidden="true" />
+                      <span className="break-words [overflow-wrap:anywhere]">{meeting.venue || 'Venue not set'}</span>
+                    </span>
+                    <span className="flex items-center gap-1.5">
+                      <Calendar className="w-3.5 h-3.5 shrink-0 text-slate-400" aria-hidden="true" />
+                      <span>
+                        {meeting.meetingDate ? formatDate(meeting.meetingDate) : 'Date not set'}
+                        {meeting.meetingTime ? ` · ${formatMeetingTime(meeting.meetingTime)}` : ''}
+                      </span>
+                    </span>
+                  </div>
+                </div>
 
-                {/* 2. Mark Meeting Completed (only once SO is Approved and Meeting is Scheduled) */}
-                {meeting.status === 'scheduled' && (
-                  <button
-                    type="button"
-                    onClick={() => handleMarkMeetingCompleted(meeting.id)}
-                    className="px-2.5 py-1.5 text-xs font-semibold text-emerald-700 bg-white hover:bg-emerald-50 border border-emerald-200 rounded-sm shadow-2xs transition-colors cursor-pointer inline-flex items-center gap-1.5 whitespace-nowrap shrink-0"
-                    title="Mark as Completed"
-                  >
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" aria-hidden="true" /> Complete
-                  </button>
-                )}
-
-                <div className="flex items-center gap-1 pl-0.5">
-                  {/* 3. View Special Order Memo */}
+                {/* Actions Row */}
+                <div className="flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3 lg:shrink-0 lg:justify-end lg:border-t-0 lg:pt-0">
                   <button
                     type="button"
                     onClick={() => {
                       setSelectedMeeting(meeting);
-                      setViewMode('memo');
+                      setViewMode('details');
                     }}
-                    className="p-1.5 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-sm transition-colors cursor-pointer shrink-0"
-                    title="View Special Order Request Memo"
-                    aria-label="View Special Order Request Memo"
+                    className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-sm bg-[#C8102E] px-4 text-sm font-semibold text-white transition-colors hover:bg-[#A00D26] cursor-pointer whitespace-nowrap"
+                    title="Open Meeting Details, Roster &amp; Minutes Workspace"
                   >
-                    <FileText className="w-4 h-4" aria-hidden="true" />
+                    <ClipboardCheck className="h-4 w-4 shrink-0" aria-hidden="true" />
+                    Roster &amp; Minutes
                   </button>
 
-                  {/* 4. Edit */}
-                  <button
-                    type="button"
-                    onClick={() => openEditForm(meeting)}
-                    className="p-1.5 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-sm transition-colors cursor-pointer shrink-0"
-                    title="Edit Meeting"
-                    aria-label="Edit Meeting"
-                  >
-                    <Edit2 className="w-4 h-4" aria-hidden="true" />
-                  </button>
+                  {normalizedSo === 'pending_request' && (
+                    <button
+                      type="button"
+                      onClick={() => handleUpdateSoStatus(meeting.id, 'forwarded_to_op')}
+                      className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-sm border border-slate-300 bg-white px-3.5 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 cursor-pointer whitespace-nowrap"
+                      title="Forward SO Request to Office of the President (Meeting remains Not Scheduled)"
+                    >
+                      <Send className="h-4 w-4 shrink-0 text-blue-600" aria-hidden="true" />
+                      Forward SO
+                    </button>
+                  )}
 
-                  {/* 5. Delete */}
-                  <button
-                    type="button"
-                    onClick={() => handleDeleteMeeting(meeting.id)}
-                    className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-sm transition-colors cursor-pointer shrink-0"
-                    title="Delete Meeting"
-                    aria-label="Delete Meeting"
-                  >
-                    <Trash2 className="w-4 h-4" aria-hidden="true" />
-                  </button>
-                </div>
-              </div>
-            );
-          };
+                  {normalizedSo === 'forwarded_to_op' && (
+                    <button
+                      type="button"
+                      onClick={() => handleUpdateSoStatus(meeting.id, 'approved')}
+                      className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-sm border border-emerald-300 bg-emerald-50 px-3.5 text-sm font-semibold text-emerald-800 transition-colors hover:bg-emerald-100 cursor-pointer whitespace-nowrap"
+                      title="Mark Special Order as Approved (updates Meeting Status to Scheduled)"
+                    >
+                      <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" aria-hidden="true" />
+                      Approve SO
+                    </button>
+                  )}
 
-          if (isLoading) {
-            return (
-              <div role="status" aria-busy="true">
-                <span className="sr-only">Loading inception meetings</span>
-                <div aria-hidden="true">
-                  {/* Mobile & Compact Laptop (< 1280px): responsive card skeleton, zero horizontal scrollbar */}
-                  <div className="xl:hidden divide-y divide-slate-100 motion-safe:animate-pulse">
-                    {[0, 1, 2, 3].map((item) => (
-                      <div key={item} className="p-4 sm:p-5 space-y-3 bg-white">
-                        <div className="flex flex-wrap items-start justify-between gap-2.5">
-                          <div className="space-y-1.5">
-                            <div className="h-4 w-32 rounded-sm bg-slate-200" />
-                            <div className="h-3 w-20 rounded-sm bg-slate-100" />
-                          </div>
-                          <div className="flex flex-wrap items-center gap-1.5">
-                            <div className="h-6 w-24 rounded-sm bg-slate-200" />
-                            <div className="h-6 w-20 rounded-sm bg-slate-100" />
-                          </div>
-                        </div>
-                        <div className="h-4 w-3/4 max-w-full rounded-sm bg-slate-200" />
-                        <div className="flex flex-wrap items-center gap-1.5 pt-1">
-                          <div className="h-7 w-28 rounded-sm bg-slate-200" />
-                          <div className="h-7 w-24 rounded-sm bg-slate-100" />
-                          <div className="h-7 w-7 rounded-sm bg-slate-100" />
-                          <div className="h-7 w-7 rounded-sm bg-slate-100" />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+                  {meeting.status === 'scheduled' && (
+                    <button
+                      type="button"
+                      onClick={() => handleMarkMeetingCompleted(meeting.id)}
+                      className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-sm border border-emerald-300 bg-white px-3.5 text-sm font-semibold text-emerald-800 transition-colors hover:bg-emerald-50 cursor-pointer whitespace-nowrap"
+                      title="Mark as Completed"
+                    >
+                      <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" aria-hidden="true" />
+                      Complete
+                    </button>
+                  )}
 
-                  {/* Desktop (>= 1280px): 5-column table skeleton fitted to container */}
-                  <div className="hidden xl:block">
-                    <table className="w-full text-left text-sm text-slate-600">
-                      <thead className="bg-slate-50 text-xs uppercase tracking-wider font-bold text-slate-500 border-b border-slate-200">
-                        <tr>
-                          <th className="py-3.5 px-4 whitespace-nowrap">Date &amp; Time</th>
-                          <th className="py-3.5 px-4">Venue</th>
-                          <th className="py-3.5 px-4 whitespace-nowrap">SO Status</th>
-                          <th className="py-3.5 px-4 text-center whitespace-nowrap">Meeting Status</th>
-                          <th className="py-3.5 px-4 text-right whitespace-nowrap">Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100 motion-safe:animate-pulse">
-                        {[0, 1, 2, 3].map((item) => (
-                          <tr key={item}>
-                            <td className="py-4 px-4 align-middle whitespace-nowrap">
-                              <div className="space-y-1.5">
-                                <div className="h-4 w-28 rounded-sm bg-slate-200" />
-                                <div className="h-3 w-20 rounded-sm bg-slate-100" />
-                              </div>
-                            </td>
-                            <td className="py-4 px-4 align-middle min-w-[180px]">
-                              <div className="space-y-1.5">
-                                <div className="h-4 w-56 max-w-full rounded-sm bg-slate-200" />
-                                <div className="h-3 w-36 max-w-full rounded-sm bg-slate-100" />
-                              </div>
-                            </td>
-                            <td className="py-4 px-4 align-middle whitespace-nowrap">
-                              <div className="h-6 w-28 rounded-sm bg-slate-200" />
-                            </td>
-                            <td className="py-4 px-4 align-middle text-center whitespace-nowrap">
-                              <div className="mx-auto h-6 w-24 rounded-sm bg-slate-200" />
-                            </td>
-                            <td className="py-4 px-4 align-middle text-right">
-                              <div className="flex items-center justify-end gap-1.5">
-                                <div className="h-7 w-28 rounded-sm bg-slate-200" />
-                                <div className="h-7 w-24 rounded-sm bg-slate-100" />
-                                <div className="h-7 w-7 rounded-sm bg-slate-100" />
-                              </div>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                  <div className="flex items-center gap-1 border-l border-slate-200 pl-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedMeeting(meeting);
+                        setViewMode('memo');
+                      }}
+                      className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-sm text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 cursor-pointer"
+                      title="View Special Order Request Memo"
+                      aria-label="View Special Order Request Memo"
+                    >
+                      <FileText className="h-4 w-4" aria-hidden="true" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => openEditForm(meeting)}
+                      className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-sm text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 cursor-pointer"
+                      title="Edit Meeting"
+                      aria-label="Edit Meeting"
+                    >
+                      <Edit2 className="h-4 w-4" aria-hidden="true" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setMeetingToDelete(meeting)}
+                      className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-sm text-slate-400 transition-colors hover:bg-red-50 hover:text-red-700 cursor-pointer"
+                      title="Delete Meeting"
+                      aria-label="Delete Meeting"
+                    >
+                      <Trash2 className="h-4 w-4" aria-hidden="true" />
+                    </button>
                   </div>
                 </div>
-              </div>
+              </li>
             );
-          }
+          })}
+        </ul>
+      )}
 
-          if (filteredMeetings.length === 0) {
-            return (
-              <div className="py-16 px-4 text-center text-slate-400">
-                <Calendar className="w-10 h-10 mx-auto mb-2.5 text-slate-300 stroke-1" aria-hidden="true" />
-                <p className="font-semibold text-slate-700 text-sm">No Inception Meetings matching criteria.</p>
-                <p className="text-xs sm:text-sm text-slate-400 mt-1">
-                  Click &ldquo;Schedule Inception Meeting&rdquo; to select approved projects and schedule kickoff.
-                </p>
-              </div>
-            );
-          }
-
-          return (
-            <>
-              {/* Mobile & Compact Laptop (< 1280px): responsive card list, zero horizontal scrollbar */}
-              <div className="xl:hidden divide-y divide-slate-100">
-                {filteredMeetings.map((meeting) => (
-                  <div key={meeting.id} className="p-4 sm:p-5 space-y-3 hover:bg-slate-50/70 transition-colors">
-                    <div className="flex flex-wrap items-start justify-between gap-2.5">
-                      <div>
-                        <div className="font-bold text-slate-900 text-sm">
-                          {meeting.meetingDate ? formatDate(meeting.meetingDate) : '—'}
-                        </div>
-                        <div className="text-xs text-slate-500 flex items-center gap-1 mt-0.5">
-                          <Clock className="w-3.5 h-3.5 text-slate-400" aria-hidden="true" />{' '}
-                          {formatMeetingTime(meeting.meetingTime)}
-                        </div>
-                      </div>
-                      <div className="flex flex-wrap items-center gap-1.5">
-                        {renderSoStatusBadge(meeting.specialOrderStatus, 'sm')}
-                        <InceptionStatusChip status={meeting.status} size="sm" />
-                      </div>
-                    </div>
-
-                    <div className="flex items-start gap-2 text-sm text-slate-800 font-medium min-w-0">
-                      <MapPin className="w-4 h-4 text-[#C8102E] shrink-0 mt-0.5" aria-hidden="true" />
-                      <span className="break-words [overflow-wrap:anywhere] min-w-0" title={meeting.venue}>
-                        {meeting.venue}
-                      </span>
-                    </div>
-
-                    <div className="pt-1">{renderMeetingActions(meeting, 'start')}</div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Desktop (>= 1280px): table fitted to container with zero horizontal scrollbar */}
-              <div className="hidden xl:block">
-                <table className="w-full text-left text-sm text-slate-600">
-                  <thead className="bg-slate-50 text-xs uppercase tracking-wider font-bold text-slate-500 border-b border-slate-200">
-                    <tr>
-                      <th className="py-3.5 px-4 whitespace-nowrap">Date &amp; Time</th>
-                      <th className="py-3.5 px-4">Venue</th>
-                      <th className="py-3.5 px-4 whitespace-nowrap">SO Status</th>
-                      <th className="py-3.5 px-4 text-center whitespace-nowrap">Meeting Status</th>
-                      <th className="py-3.5 px-4 text-right whitespace-nowrap">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {filteredMeetings.map((meeting) => (
-                      <tr key={meeting.id} className="hover:bg-slate-50/70 transition-colors">
-                        {/* Date & Time */}
-                        <td className="py-4 px-4 align-middle whitespace-nowrap">
-                          <div className="font-bold text-slate-900 text-sm">
-                            {meeting.meetingDate ? formatDate(meeting.meetingDate) : '—'}
-                          </div>
-                          <div className="text-xs text-slate-500 flex items-center gap-1 mt-0.5">
-                            <Clock className="w-3.5 h-3.5 text-slate-400" aria-hidden="true" />{' '}
-                            {formatMeetingTime(meeting.meetingTime)}
-                          </div>
-                        </td>
-
-                        {/* Venue */}
-                        <td className="py-4 px-4 align-middle min-w-[180px]">
-                          <div className="flex items-start gap-2 text-sm text-slate-800 font-medium min-w-0">
-                            <MapPin className="w-4 h-4 text-[#C8102E] shrink-0 mt-0.5" aria-hidden="true" />
-                            <span
-                              className="break-words [overflow-wrap:anywhere] line-clamp-2 leading-snug min-w-0"
-                              title={meeting.venue}
-                            >
-                              {meeting.venue}
-                            </span>
-                          </div>
-                        </td>
-
-                        {/* Special Order Status */}
-                        <td className="py-4 px-4 align-middle whitespace-nowrap">
-                          {renderSoStatusBadge(meeting.specialOrderStatus, 'sm')}
-                        </td>
-
-                        {/* Meeting Lifecycle Status */}
-                        <td className="py-4 px-4 align-middle text-center whitespace-nowrap">
-                          <InceptionStatusChip status={meeting.status} size="sm" />
-                        </td>
-
-                        {/* Actions */}
-                        <td className="py-4 px-4 align-middle text-right">
-                          {renderMeetingActions(meeting, 'end')}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </>
-          );
-        })()}
-      </div>
-    </div>
+      <ConfirmDialog
+        isOpen={Boolean(meetingToDelete)}
+        onClose={() => {
+          if (!isDeleting) setMeetingToDelete(null);
+        }}
+        onConfirm={confirmDeleteMeeting}
+        loading={isDeleting}
+        tone="danger"
+        icon={Trash2}
+        title="Delete Inception Meeting?"
+        description={
+          meetingToDelete
+            ? `This will permanently remove "${meetingSummaryOf(meetingToDelete).primaryTitle}" from the inception scheduling records.`
+            : ''
+        }
+        confirmLabel="Delete Meeting"
+        cancelLabel="Cancel"
+      />
+    </section>
   );
 };
 
